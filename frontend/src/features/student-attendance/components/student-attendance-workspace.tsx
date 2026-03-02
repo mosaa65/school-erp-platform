@@ -1,0 +1,831 @@
+﻿"use client";
+
+import * as React from "react";
+import {
+  ClipboardCheck,
+  LoaderCircle,
+  PencilLine,
+  RefreshCw,
+  Search,
+  Trash2,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useRbac } from "@/features/auth/hooks/use-rbac";
+import {
+  useCreateStudentAttendanceMutation,
+  useDeleteStudentAttendanceMutation,
+  useUpdateStudentAttendanceMutation,
+} from "@/features/student-attendance/hooks/use-student-attendance-mutations";
+import { useStudentAttendanceQuery } from "@/features/student-attendance/hooks/use-student-attendance-query";
+import { useStudentOptionsQuery } from "@/features/student-attendance/hooks/use-student-options-query";
+import { useStudentEnrollmentOptionsQuery } from "@/features/student-attendance/hooks/use-student-enrollment-options-query";
+import type {
+  StudentAttendanceListItem,
+  StudentAttendanceStatus,
+} from "@/lib/api/client";
+
+type AttendanceFormState = {
+  studentEnrollmentId: string;
+  attendanceDate: string;
+  status: StudentAttendanceStatus;
+  checkInAt: string;
+  checkOutAt: string;
+  notes: string;
+  isActive: boolean;
+};
+
+const PAGE_SIZE = 12;
+
+const STATUS_OPTIONS: StudentAttendanceStatus[] = [
+  "PRESENT",
+  "ABSENT",
+  "LATE",
+  "EXCUSED_ABSENCE",
+  "EARLY_LEAVE",
+];
+
+const DEFAULT_FORM_STATE: AttendanceFormState = {
+  studentEnrollmentId: "",
+  attendanceDate: "",
+  status: "PRESENT",
+  checkInAt: "",
+  checkOutAt: "",
+  notes: "",
+  isActive: true,
+};
+
+function toOptionalString(value: string): string | undefined {
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+function toDateInput(isoDate: string | null): string {
+  if (!isoDate) {
+    return "";
+  }
+
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toISOString().slice(0, 10);
+}
+
+function toDateIso(dateInput: string): string {
+  return `${dateInput}T00:00:00.000Z`;
+}
+
+function toDateTimeLocalInput(isoDateTime: string | null): string {
+  if (!isoDateTime) {
+    return "";
+  }
+
+  const date = new Date(isoDateTime);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toISOString().slice(0, 16);
+}
+
+function toDateTimeIso(dateTimeLocalInput: string): string {
+  return new Date(dateTimeLocalInput).toISOString();
+}
+
+function formatDate(value: string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  return date.toLocaleDateString("en-GB");
+}
+
+function formatDateTime(value: string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  return date.toLocaleString("en-GB", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function studentAttendanceStatusLabel(status: StudentAttendanceStatus): string {
+  switch (status) {
+    case "PRESENT":
+      return "حاضر";
+    case "ABSENT":
+      return "غائب";
+    case "LATE":
+      return "متأخر";
+    case "EXCUSED_ABSENCE":
+      return "غياب بعذر";
+    case "EARLY_LEAVE":
+      return "انصراف مبكر";
+    default:
+      return status;
+  }
+}
+
+function toFormState(attendance: StudentAttendanceListItem): AttendanceFormState {
+  return {
+    studentEnrollmentId: attendance.studentEnrollmentId,
+    attendanceDate: toDateInput(attendance.attendanceDate),
+    status: attendance.status,
+    checkInAt: toDateTimeLocalInput(attendance.checkInAt),
+    checkOutAt: toDateTimeLocalInput(attendance.checkOutAt),
+    notes: attendance.notes ?? "",
+    isActive: attendance.isActive,
+  };
+}
+
+function enrollmentLabel(item: {
+  studentEnrollment: {
+    student: { fullName: string; admissionNo: string | null };
+    academicYear: { code: string };
+    section: { code: string };
+  };
+}) {
+  const admission = item.studentEnrollment.student.admissionNo ?? "غير متوفر";
+  return `${item.studentEnrollment.student.fullName} (${admission}) - ${item.studentEnrollment.academicYear.code} / ${item.studentEnrollment.section.code}`;
+}
+
+export function StudentAttendanceWorkspace() {
+  const { hasPermission } = useRbac();
+  const canCreate = hasPermission("student-attendance.create");
+  const canUpdate = hasPermission("student-attendance.update");
+  const canDelete = hasPermission("student-attendance.delete");
+  const canReadStudents = hasPermission("students.read");
+  const canReadStudentEnrollments = hasPermission("student-enrollments.read");
+
+  const [page, setPage] = React.useState(1);
+  const [searchInput, setSearchInput] = React.useState("");
+  const [search, setSearch] = React.useState("");
+  const [studentFilter, setStudentFilter] = React.useState("all");
+  const [enrollmentFilter, setEnrollmentFilter] = React.useState("all");
+  const [statusFilter, setStatusFilter] = React.useState<StudentAttendanceStatus | "all">(
+    "all",
+  );
+  const [fromDateInput, setFromDateInput] = React.useState("");
+  const [toDateInputValue, setToDateInputValue] = React.useState("");
+  const [fromDateFilter, setFromDateFilter] = React.useState("");
+  const [toDateFilter, setToDateFilter] = React.useState("");
+  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
+    "all",
+  );
+
+  const [editingAttendanceId, setEditingAttendanceId] = React.useState<string | null>(
+    null,
+  );
+  const [formState, setFormState] = React.useState<AttendanceFormState>(DEFAULT_FORM_STATE);
+  const [formError, setFormError] = React.useState<string | null>(null);
+
+  const attendanceQuery = useStudentAttendanceQuery({
+    page,
+    limit: PAGE_SIZE,
+    search: search || undefined,
+    studentEnrollmentId: enrollmentFilter === "all" ? undefined : enrollmentFilter,
+    studentId: studentFilter === "all" ? undefined : studentFilter,
+    status: statusFilter === "all" ? undefined : statusFilter,
+    fromDate: fromDateFilter ? toDateIso(fromDateFilter) : undefined,
+    toDate: toDateFilter ? toDateIso(toDateFilter) : undefined,
+    isActive: activeFilter === "all" ? undefined : activeFilter === "active",
+  });
+
+  const studentsQuery = useStudentOptionsQuery();
+  const enrollmentsQuery = useStudentEnrollmentOptionsQuery();
+
+  const createMutation = useCreateStudentAttendanceMutation();
+  const updateMutation = useUpdateStudentAttendanceMutation();
+  const deleteMutation = useDeleteStudentAttendanceMutation();
+
+  const records = React.useMemo(() => attendanceQuery.data?.data ?? [], [attendanceQuery.data?.data]);
+  const pagination = attendanceQuery.data?.pagination;
+  const isEditing = editingAttendanceId !== null;
+
+  const enrollmentOptions = React.useMemo(
+    () =>
+      (enrollmentsQuery.data ?? []).filter((item) =>
+        formState.studentEnrollmentId
+          ? true
+          : studentFilter === "all" || item.student.id === studentFilter,
+      ),
+    [enrollmentsQuery.data, formState.studentEnrollmentId, studentFilter],
+  );
+
+  const mutationError =
+    (createMutation.error as Error | null)?.message ??
+    (updateMutation.error as Error | null)?.message ??
+    (deleteMutation.error as Error | null)?.message ??
+    null;
+
+  React.useEffect(() => {
+    if (!isEditing) {
+      return;
+    }
+
+    const stillExists = records.some((item) => item.id === editingAttendanceId);
+    if (!stillExists) {
+      setEditingAttendanceId(null);
+      setFormState(DEFAULT_FORM_STATE);
+      setFormError(null);
+    }
+  }, [records, editingAttendanceId, isEditing]);
+
+  const resetForm = () => {
+    setEditingAttendanceId(null);
+    setFormState(DEFAULT_FORM_STATE);
+    setFormError(null);
+  };
+
+  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setPage(1);
+    setSearch(searchInput.trim());
+    setFromDateFilter(fromDateInput);
+    setToDateFilter(toDateInputValue);
+  };
+
+  const validateForm = (): boolean => {
+    if (!formState.studentEnrollmentId) {
+      setFormError("قيد الطالب مطلوب.");
+      return false;
+    }
+
+    if (!formState.attendanceDate) {
+      setFormError("تاريخ الحضور مطلوب.");
+      return false;
+    }
+
+    if (formState.notes.trim().length > 255) {
+      setFormError("notes يجب ألا يتجاوز 255 حرف.");
+      return false;
+    }
+
+    if (formState.checkInAt && formState.checkOutAt) {
+      const checkIn = new Date(formState.checkInAt);
+      const checkOut = new Date(formState.checkOutAt);
+      if (checkOut <= checkIn) {
+        setFormError("checkOutAt يجب أن يكون بعد checkInAt.");
+        return false;
+      }
+    }
+
+    setFormError(null);
+    return true;
+  };
+
+  const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
+    const payload = {
+      studentEnrollmentId: formState.studentEnrollmentId,
+      attendanceDate: toDateIso(formState.attendanceDate),
+      status: formState.status,
+      checkInAt: formState.checkInAt ? toDateTimeIso(formState.checkInAt) : undefined,
+      checkOutAt: formState.checkOutAt ? toDateTimeIso(formState.checkOutAt) : undefined,
+      notes: toOptionalString(formState.notes),
+      isActive: formState.isActive,
+    };
+
+    if (isEditing && editingAttendanceId) {
+      if (!canUpdate) {
+        setFormError("لا تملك صلاحية student-attendance.update.");
+        return;
+      }
+
+      updateMutation.mutate(
+        {
+          attendanceId: editingAttendanceId,
+          payload,
+        },
+        {
+          onSuccess: () => {
+            resetForm();
+          },
+        },
+      );
+      return;
+    }
+
+    if (!canCreate) {
+      setFormError("لا تملك صلاحية student-attendance.create.");
+      return;
+    }
+
+    createMutation.mutate(payload, {
+      onSuccess: () => {
+        resetForm();
+        setPage(1);
+      },
+    });
+  };
+
+  const handleStartEdit = (attendance: StudentAttendanceListItem) => {
+    if (!canUpdate) {
+      return;
+    }
+
+    setFormError(null);
+    setEditingAttendanceId(attendance.id);
+    setFormState(toFormState(attendance));
+  };
+
+  const handleToggleActive = (attendance: StudentAttendanceListItem) => {
+    if (!canUpdate) {
+      return;
+    }
+
+    updateMutation.mutate({
+      attendanceId: attendance.id,
+      payload: {
+        isActive: !attendance.isActive,
+      },
+    });
+  };
+
+  const handleDelete = (attendance: StudentAttendanceListItem) => {
+    if (!canDelete) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `تأكيد حذف حضور ${attendance.studentEnrollment.student.fullName} بتاريخ ${formatDate(
+        attendance.attendanceDate,
+      )}؟`,
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    deleteMutation.mutate(attendance.id, {
+      onSuccess: () => {
+        if (editingAttendanceId === attendance.id) {
+          resetForm();
+        }
+      },
+    });
+  };
+
+  const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
+  const hasDependenciesReadPermissions = canReadStudentEnrollments;
+
+  return (
+    <div className="grid gap-4 xl:grid-cols-[430px_1fr]">
+      <Card className="h-fit border-border/70 bg-card/80 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ClipboardCheck className="h-5 w-5 text-primary" />
+            {isEditing ? "تعديل حضور طالب" : "إنشاء حضور طالب"}
+          </CardTitle>
+          <CardDescription>
+            {isEditing ? "تحديث سجل حضور الطالب." : "إضافة سجل حضور جديد للطالب."}
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent>
+          {!canCreate && !isEditing ? (
+            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+              لا تملك صلاحية <code>student-attendance.create</code>.
+            </div>
+          ) : (
+            <form className="space-y-3" onSubmit={handleSubmitForm}>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  القيد الطلابي *
+                </label>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={formState.studentEnrollmentId}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      studentEnrollmentId: event.target.value,
+                    }))
+                  }
+                  disabled={!canReadStudentEnrollments}
+                >
+                  <option value="">اختر القيد</option>
+                  {(enrollmentsQuery.data ?? []).map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.student.fullName} ({item.student.admissionNo ?? "غير متوفر"}) -{" "}
+                      {item.academicYear.code} / {item.section.code}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  تاريخ الحضور *
+                </label>
+                <Input
+                  type="date"
+                  value={formState.attendanceDate}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      attendanceDate: event.target.value,
+                    }))
+                  }
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">الحالة *</label>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={formState.status}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      status: event.target.value as StudentAttendanceStatus,
+                    }))
+                  }
+                >
+                  {STATUS_OPTIONS.map((status) => (
+                    <option key={status} value={status}>
+                      {studentAttendanceStatusLabel(status)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">الدخول</label>
+                  <Input
+                    type="datetime-local"
+                    value={formState.checkInAt}
+                    onChange={(event) =>
+                      setFormState((prev) => ({ ...prev, checkInAt: event.target.value }))
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">الخروج</label>
+                  <Input
+                    type="datetime-local"
+                    value={formState.checkOutAt}
+                    onChange={(event) =>
+                      setFormState((prev) => ({ ...prev, checkOutAt: event.target.value }))
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
+                <Input
+                  value={formState.notes}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, notes: event.target.value }))
+                  }
+                  placeholder="مثال: تأخر 5 دقائق"
+                />
+              </div>
+
+              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                <span>نشط</span>
+                <input
+                  type="checkbox"
+                  checked={formState.isActive}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                  }
+                />
+              </label>
+
+              {formError ? (
+                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                  {formError}
+                </div>
+              ) : null}
+
+              {mutationError ? (
+                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                  {mutationError}
+                </div>
+              ) : null}
+
+              {!hasDependenciesReadPermissions ? (
+                <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+                  يلزم صلاحية <code>student-enrollments.read</code> لاختيار القيد.
+                </div>
+              ) : null}
+
+              <div className="flex gap-2">
+                <Button
+                  type="submit"
+                  className="flex-1 gap-2"
+                  disabled={
+                    isFormSubmitting ||
+                    (!canCreate && !isEditing) ||
+                    !hasDependenciesReadPermissions
+                  }
+                >
+                  {isFormSubmitting ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ClipboardCheck className="h-4 w-4" />
+                  )}
+                  {isEditing ? "حفظ التعديلات" : "إنشاء سجل حضور"}
+                </Button>
+                {isEditing ? (
+                  <Button type="button" variant="outline" onClick={resetForm}>
+                    إلغاء
+                  </Button>
+                ) : null}
+              </div>
+            </form>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+        <CardHeader className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle>حضور الطلاب</CardTitle>
+            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+          </div>
+          <CardDescription>
+            إدارة حضور الطلاب مع فلترة حسب الطالب والقيد والحالة ونطاق التاريخ.
+          </CardDescription>
+
+          <form
+            onSubmit={handleSearchSubmit}
+            className="grid gap-2 md:grid-cols-[1fr_170px_200px_170px_150px_150px_130px_auto]"
+          >
+            <div className="relative">
+              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                placeholder="بحث بالطالب/الرقم/ملاحظات..."
+                className="pr-8"
+              />
+            </div>
+
+            <select
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              value={studentFilter}
+              onChange={(event) => {
+                setPage(1);
+                setStudentFilter(event.target.value);
+                if (event.target.value !== "all") {
+                  setEnrollmentFilter("all");
+                }
+              }}
+              disabled={!canReadStudents}
+            >
+              <option value="all">كل الطلاب</option>
+              {(studentsQuery.data ?? []).map((student) => (
+                <option key={student.id} value={student.id}>
+                  {student.admissionNo ?? student.fullName}
+                </option>
+              ))}
+            </select>
+
+            <select
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              value={enrollmentFilter}
+              onChange={(event) => {
+                setPage(1);
+                setEnrollmentFilter(event.target.value);
+              }}
+              disabled={!canReadStudentEnrollments}
+            >
+              <option value="all">كل القيود</option>
+              {enrollmentOptions.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {enrollmentLabel({
+                    studentEnrollment: {
+                      student: item.student,
+                      academicYear: item.academicYear,
+                      section: item.section,
+                    },
+                  })}
+                </option>
+              ))}
+            </select>
+
+            <select
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              value={statusFilter}
+              onChange={(event) => {
+                setPage(1);
+                setStatusFilter(event.target.value as StudentAttendanceStatus | "all");
+              }}
+            >
+              <option value="all">كل الحالات</option>
+              {STATUS_OPTIONS.map((status) => (
+                <option key={status} value={status}>
+                  {studentAttendanceStatusLabel(status)}
+                </option>
+              ))}
+            </select>
+
+            <Input
+              type="date"
+              value={fromDateInput}
+              onChange={(event) => setFromDateInput(event.target.value)}
+            />
+
+            <Input
+              type="date"
+              value={toDateInputValue}
+              onChange={(event) => setToDateInputValue(event.target.value)}
+            />
+
+            <select
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              value={activeFilter}
+              onChange={(event) => {
+                setPage(1);
+                setActiveFilter(event.target.value as "all" | "active" | "inactive");
+              }}
+            >
+              <option value="all">كل الحالات</option>
+              <option value="active">النشطة فقط</option>
+              <option value="inactive">غير النشطة فقط</option>
+            </select>
+
+            <Button type="submit" variant="outline" className="gap-2">
+              <Search className="h-4 w-4" />
+              تطبيق
+            </Button>
+          </form>
+        </CardHeader>
+
+        <CardContent className="space-y-3">
+          {attendanceQuery.isPending ? (
+            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+              جارٍ التحميل...
+            </div>
+          ) : null}
+
+          {attendanceQuery.error ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              {attendanceQuery.error instanceof Error
+                ? attendanceQuery.error.message
+                : "فشل التحميل"}
+            </div>
+          ) : null}
+
+          {!attendanceQuery.isPending && records.length === 0 ? (
+            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+              لا توجد نتائج مطابقة.
+            </div>
+          ) : null}
+
+          {records.map((record) => (
+            <div
+              key={record.id}
+              className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="space-y-1">
+                  <p className="font-medium">
+                    {record.studentEnrollment.student.fullName} (
+                    {record.studentEnrollment.student.admissionNo ?? "غير متوفر"})
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    القيد: {record.studentEnrollment.academicYear.code} /{" "}
+                    {record.studentEnrollment.section.code}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    التاريخ: {formatDate(record.attendanceDate)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    الدخول: {formatDateTime(record.checkInAt)} | الخروج:{" "}
+                    {formatDateTime(record.checkOutAt)}
+                  </p>
+                  {record.notes ? (
+                    <p className="text-xs text-muted-foreground">ملاحظات: {record.notes}</p>
+                  ) : null}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Badge variant="secondary">{studentAttendanceStatusLabel(record.status)}</Badge>
+                  <Badge variant={record.isActive ? "default" : "outline"}>
+                    {record.isActive ? "نشط" : "غير نشط"}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => handleStartEdit(record)}
+                  disabled={!canUpdate || updateMutation.isPending}
+                >
+                  <PencilLine className="h-3.5 w-3.5" />
+                  تعديل
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleToggleActive(record)}
+                  disabled={!canUpdate || updateMutation.isPending}
+                >
+                  {record.isActive ? "تعطيل" : "تفعيل"}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => handleDelete(record)}
+                  disabled={!canDelete || deleteMutation.isPending}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  حذف
+                </Button>
+              </div>
+            </div>
+          ))}
+
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
+            <p className="text-xs text-muted-foreground">
+              الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                disabled={!pagination || pagination.page <= 1 || attendanceQuery.isFetching}
+              >
+                السابق
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setPage((prev) =>
+                    pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
+                  )
+                }
+                disabled={
+                  !pagination ||
+                  pagination.page >= pagination.totalPages ||
+                  attendanceQuery.isFetching
+                }
+              >
+                التالي
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => void attendanceQuery.refetch()}
+                disabled={attendanceQuery.isFetching}
+              >
+                <RefreshCw
+                  className={`h-4 w-4 ${attendanceQuery.isFetching ? "animate-spin" : ""}`}
+                />
+                تحديث
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+
+
+
+
+
