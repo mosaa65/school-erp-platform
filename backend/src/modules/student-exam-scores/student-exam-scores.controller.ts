@@ -58,15 +58,18 @@ export class StudentExamScoresController {
   @ApiQuery({ name: 'isPresent', required: false, type: Boolean })
   @ApiQuery({ name: 'absenceType', required: false, enum: ExamAbsenceType })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
-  findAll(@Query() query: ListStudentExamScoresDto) {
-    return this.studentExamScoresService.findAll(query);
+  findAll(
+    @Query() query: ListStudentExamScoresDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.studentExamScoresService.findAll(query, user.userId);
   }
 
   @Get(':id')
   @RequirePermissions('student-exam-scores.read')
   @ApiOperation({ summary: 'Get student exam score by ID' })
-  findOne(@Param('id') id: string) {
-    return this.studentExamScoresService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.studentExamScoresService.findOne(id, user.userId);
   }
 
   @Patch(':id')

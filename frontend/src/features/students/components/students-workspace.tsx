@@ -13,12 +13,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
+import { useLookupOrphanStatusesQuery } from "@/features/lookup-orphan-statuses/hooks/use-lookup-orphan-statuses-query";
 import {
   useCreateStudentMutation,
   useDeleteStudentMutation,
   useUpdateStudentMutation,
 } from "@/features/students/hooks/use-students-mutations";
 import { useBloodTypeOptionsQuery } from "@/features/students/hooks/use-blood-type-options-query";
+import { useStudentGenderOptionsQuery } from "@/features/students/hooks/use-gender-options-query";
+import { useHealthStatusOptionsQuery } from "@/features/students/hooks/use-health-status-options-query";
 import { useStudentsQuery } from "@/features/students/hooks/use-students-query";
 import {
   translateStudentEnrollmentStatus,
@@ -36,19 +39,19 @@ import type {
 type StudentFormState = {
   admissionNo: string;
   fullName: string;
-  gender: StudentGender;
+  genderId: string;
   birthDate: string;
   bloodTypeId: string;
-  healthStatus: StudentHealthStatus | "";
+  healthStatusId: string;
   healthNotes: string;
-  orphanStatus: StudentOrphanStatus;
+  orphanStatusId: string;
   isActive: boolean;
 };
 
 const PAGE_SIZE = 12;
 
-const GENDER_OPTIONS: StudentGender[] = ["MALE", "FEMALE", "OTHER"];
-const HEALTH_OPTIONS: StudentHealthStatus[] = [
+const STUDENT_GENDER_CODES: StudentGender[] = ["MALE", "FEMALE", "OTHER"];
+const STUDENT_HEALTH_STATUS_CODES: StudentHealthStatus[] = [
   "HEALTHY",
   "CHRONIC_DISEASE",
   "SPECIAL_NEEDS",
@@ -62,17 +65,40 @@ const ORPHAN_OPTIONS: StudentOrphanStatus[] = [
   "BOTH_DECEASED",
 ];
 
+const ORPHAN_STATUS_FALLBACK_OPTIONS: Array<{
+  id: number;
+  code: StudentOrphanStatus;
+  nameAr: string;
+}> = [
+  { id: -1, code: "NONE", nameAr: "غير يتيم" },
+  { id: -2, code: "FATHER_DECEASED", nameAr: "يتيم الأب" },
+  { id: -3, code: "MOTHER_DECEASED", nameAr: "يتيم الأم" },
+  { id: -4, code: "BOTH_DECEASED", nameAr: "يتيم الأبوين" },
+];
+
+function isStudentOrphanStatus(value: string): value is StudentOrphanStatus {
+  return ORPHAN_OPTIONS.includes(value as StudentOrphanStatus);
+}
+
 const DEFAULT_FORM_STATE: StudentFormState = {
   admissionNo: "",
   fullName: "",
-  gender: "MALE",
+  genderId: "",
   birthDate: "",
   bloodTypeId: "",
-  healthStatus: "",
+  healthStatusId: "",
   healthNotes: "",
-  orphanStatus: "NONE",
+  orphanStatusId: "",
   isActive: true,
 };
+
+function isStudentGenderCode(value: string): value is StudentGender {
+  return STUDENT_GENDER_CODES.includes(value as StudentGender);
+}
+
+function isStudentHealthStatusCode(value: string): value is StudentHealthStatus {
+  return STUDENT_HEALTH_STATUS_CODES.includes(value as StudentHealthStatus);
+}
 
 function toDateInput(isoDate: string | null): string {
   if (!isoDate) {
@@ -113,12 +139,12 @@ function toFormState(student: StudentListItem): StudentFormState {
   return {
     admissionNo: student.admissionNo ?? "",
     fullName: student.fullName,
-    gender: student.gender,
+    genderId: student.genderId ? String(student.genderId) : "",
     birthDate: toDateInput(student.birthDate),
     bloodTypeId: student.bloodTypeId ? String(student.bloodTypeId) : "",
-    healthStatus: student.healthStatus ?? "",
+    healthStatusId: student.healthStatusId ? String(student.healthStatusId) : "",
     healthNotes: student.healthNotes ?? "",
-    orphanStatus: student.orphanStatus,
+    orphanStatusId: student.orphanStatusId ? String(student.orphanStatusId) : "",
     isActive: student.isActive,
   };
 }
@@ -156,14 +182,17 @@ export function StudentsWorkspace() {
   const canCreate = hasPermission("students.create");
   const canUpdate = hasPermission("students.update");
   const canDelete = hasPermission("students.delete");
+  const canReadGenders = hasPermission("lookup-genders.read");
   const canReadBloodTypes = hasPermission("lookup-blood-types.read");
+  const canReadHealthStatuses = hasPermission("lookup-health-statuses.read");
+  const canReadOrphanStatuses = hasPermission("lookup-orphan-statuses.read");
 
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
-  const [genderFilter, setGenderFilter] = React.useState<StudentGender | "all">("all");
+  const [genderFilter, setGenderFilter] = React.useState<string>("all");
   const [bloodTypeFilter, setBloodTypeFilter] = React.useState<string>("all");
-  const [orphanFilter, setOrphanFilter] = React.useState<StudentOrphanStatus | "all">("all");
+  const [orphanFilter, setOrphanFilter] = React.useState<string>("all");
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
     "all",
   );
@@ -176,19 +205,52 @@ export function StudentsWorkspace() {
     page,
     limit: PAGE_SIZE,
     search: search || undefined,
-    gender: genderFilter === "all" ? undefined : genderFilter,
+    genderId: genderFilter === "all" ? undefined : Number(genderFilter),
     bloodTypeId: bloodTypeFilter === "all" ? undefined : Number(bloodTypeFilter),
-    orphanStatus: orphanFilter === "all" ? undefined : orphanFilter,
+    orphanStatusId: orphanFilter === "all" ? undefined : Number(orphanFilter),
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
   });
+  const genderOptionsQuery = useStudentGenderOptionsQuery();
   const bloodTypeOptionsQuery = useBloodTypeOptionsQuery();
+  const healthStatusOptionsQuery = useHealthStatusOptionsQuery();
+  const orphanStatusesQuery = useLookupOrphanStatusesQuery({
+    page: 1,
+    limit: 100,
+    isActive: true,
+    enabled: canReadOrphanStatuses,
+  });
 
   const createMutation = useCreateStudentMutation();
   const updateMutation = useUpdateStudentMutation();
   const deleteMutation = useDeleteStudentMutation();
 
   const students = React.useMemo(() => studentsQuery.data?.data ?? [], [studentsQuery.data?.data]);
-  const bloodTypeOptions = bloodTypeOptionsQuery.data ?? [];
+  const genderOptions = React.useMemo(
+    () => genderOptionsQuery.data ?? [],
+    [genderOptionsQuery.data],
+  );
+  const bloodTypeOptions = React.useMemo(
+    () => bloodTypeOptionsQuery.data ?? [],
+    [bloodTypeOptionsQuery.data],
+  );
+  const healthStatusOptions = React.useMemo(
+    () => healthStatusOptionsQuery.data ?? [],
+    [healthStatusOptionsQuery.data],
+  );
+  const orphanStatusOptions = React.useMemo(() => {
+    const items = orphanStatusesQuery.data?.data ?? [];
+    const normalized = items.filter((item) => isStudentOrphanStatus(item.code));
+
+    return normalized.length > 0 ? normalized : ORPHAN_STATUS_FALLBACK_OPTIONS;
+  }, [orphanStatusesQuery.data?.data]);
+  const orphanStatusOptionsById = React.useMemo(
+    () => new Map(orphanStatusOptions.map((item) => [item.id, item])),
+    [orphanStatusOptions],
+  );
+  const orphanStatusLabels = React.useMemo(
+    () => new Map(orphanStatusOptions.map((item) => [item.code, item.nameAr])),
+    [orphanStatusOptions],
+  );
   const pagination = studentsQuery.data?.pagination;
   const isEditing = editingStudentId !== null;
 
@@ -211,6 +273,48 @@ export function StudentsWorkspace() {
     }
   }, [editingStudentId, isEditing, students]);
 
+  React.useEffect(() => {
+    if (isEditing || formState.genderId || !canReadGenders) {
+      return;
+    }
+
+    if (genderOptions.length === 0) {
+      return;
+    }
+
+    const preferred = genderOptions.find((option) => option.code === "MALE");
+    const defaultGender = preferred ?? genderOptions[0];
+    setFormState((prev) =>
+      prev.genderId
+        ? prev
+        : {
+            ...prev,
+            genderId: String(defaultGender.id),
+          },
+    );
+  }, [canReadGenders, formState.genderId, genderOptions, isEditing]);
+
+  React.useEffect(() => {
+    if (isEditing || formState.orphanStatusId) {
+      return;
+    }
+
+    if (orphanStatusOptions.length === 0) {
+      return;
+    }
+
+    const preferred = orphanStatusOptions.find((item) => item.code === "NONE");
+    const defaultOrphan = preferred ?? orphanStatusOptions[0];
+    setFormState((prev) =>
+      prev.orphanStatusId
+        ? prev
+        : {
+            ...prev,
+            orphanStatusId: String(defaultOrphan.id),
+          },
+    );
+  }, [formState.orphanStatusId, isEditing, orphanStatusOptions]);
+
   const resetForm = () => {
     setEditingStudentId(null);
     setFormState(DEFAULT_FORM_STATE);
@@ -229,18 +333,28 @@ export function StudentsWorkspace() {
       return false;
     }
 
+    if (!formState.genderId) {
+      setFormError("الجنس مطلوب.");
+      return false;
+    }
+
+    if (!formState.orphanStatusId) {
+      setFormError("حالة اليتم مطلوبة.");
+      return false;
+    }
+
     if (formState.admissionNo.trim().length > 40) {
-      setFormError("admissionNo يجب ألا يتجاوز 40 حرف.");
+      setFormError("رقم القيد يجب ألا يتجاوز 40 حرفًا.");
       return false;
     }
 
     if (formState.fullName.trim().length > 150) {
-      setFormError("fullName يجب ألا يتجاوز 150 حرف.");
+      setFormError("الاسم الكامل يجب ألا يتجاوز 150 حرفًا.");
       return false;
     }
 
     if (formState.healthNotes.trim().length > 1000) {
-      setFormError("healthNotes يجب ألا يتجاوز 1000 حرف.");
+      setFormError("الملاحظات الصحية يجب ألا تتجاوز 1000 حرف.");
       return false;
     }
 
@@ -255,15 +369,47 @@ export function StudentsWorkspace() {
       return;
     }
 
+    const selectedGender = genderOptions.find(
+      (option) => option.id === Number(formState.genderId),
+    );
+    const selectedOrphanStatus = orphanStatusOptionsById.get(
+      Number(formState.orphanStatusId),
+    );
+    const selectedHealthStatus = healthStatusOptions.find(
+      (option) => option.id === Number(formState.healthStatusId),
+    );
+    const orphanStatusIdNumeric = Number(formState.orphanStatusId);
+    const mappedGender =
+      selectedGender?.code && isStudentGenderCode(selectedGender.code)
+        ? selectedGender.code
+        : undefined;
+    const mappedOrphanStatus =
+      selectedOrphanStatus?.code && isStudentOrphanStatus(selectedOrphanStatus.code)
+        ? selectedOrphanStatus.code
+        : undefined;
+    const mappedHealthStatus =
+      selectedHealthStatus?.code &&
+      isStudentHealthStatusCode(selectedHealthStatus.code)
+        ? selectedHealthStatus.code
+        : undefined;
+
     const payload = {
       admissionNo: toOptionalString(formState.admissionNo),
       fullName: formState.fullName.trim(),
-      gender: formState.gender,
+      gender: mappedGender,
+      genderId: formState.genderId ? Number(formState.genderId) : undefined,
       birthDate: formState.birthDate ? toDateIso(formState.birthDate) : undefined,
       bloodTypeId: formState.bloodTypeId ? Number(formState.bloodTypeId) : null,
-      healthStatus: formState.healthStatus || undefined,
+      healthStatus: mappedHealthStatus,
+      healthStatusId: formState.healthStatusId
+        ? Number(formState.healthStatusId)
+        : undefined,
       healthNotes: toOptionalString(formState.healthNotes),
-      orphanStatus: formState.orphanStatus,
+      orphanStatus: mappedOrphanStatus,
+      orphanStatusId:
+        formState.orphanStatusId && orphanStatusIdNumeric > 0
+          ? orphanStatusIdNumeric
+          : undefined,
       isActive: formState.isActive,
     };
 
@@ -307,7 +453,48 @@ export function StudentsWorkspace() {
 
     setFormError(null);
     setEditingStudentId(student.id);
-    setFormState(toFormState(student));
+    const nextState = toFormState(student);
+    if (!nextState.genderId) {
+      const mapped = genderOptions.find((option) => option.code === student.gender);
+      if (mapped) {
+        nextState.genderId = String(mapped.id);
+      }
+    }
+    if (!nextState.orphanStatusId) {
+      const mapped = orphanStatusOptions.find(
+        (option) => option.code === student.orphanStatus,
+      );
+      if (mapped) {
+        nextState.orphanStatusId = String(mapped.id);
+      }
+    }
+    if (!nextState.healthStatusId && student.healthStatus) {
+      const mapped = healthStatusOptions.find((option) => {
+        const code = option.code?.toUpperCase();
+
+        if (!code) {
+          return false;
+        }
+
+        if (code === student.healthStatus) {
+          return true;
+        }
+
+        if (student.healthStatus === "CHRONIC_DISEASE" && code === "SICK") {
+          return true;
+        }
+
+        if (student.healthStatus === "DISABILITY" && code === "DISABLED") {
+          return true;
+        }
+
+        return false;
+      });
+      if (mapped) {
+        nextState.healthStatusId = String(mapped.id);
+      }
+    }
+    setFormState(nextState);
   };
 
   const handleToggleActive = (student: StudentListItem) => {
@@ -343,6 +530,8 @@ export function StudentsWorkspace() {
   };
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
+  const getOrphanStatusLabel = (value: StudentOrphanStatus) =>
+    orphanStatusLabels.get(value) ?? translateStudentOrphanStatus(value);
 
   return (
     <div className="grid gap-4 xl:grid-cols-[390px_1fr]">
@@ -394,19 +583,28 @@ export function StudentsWorkspace() {
                   <label className="text-xs font-medium text-muted-foreground">الجنس *</label>
                   <select
                     className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    value={formState.gender}
+                    value={formState.genderId}
                     onChange={(event) =>
                       setFormState((prev) => ({
                         ...prev,
-                        gender: event.target.value as StudentGender,
+                        genderId: event.target.value,
                       }))
                     }
+                    disabled={!canReadGenders || genderOptionsQuery.isLoading}
                   >
-                    {GENDER_OPTIONS.map((gender) => (
-                      <option key={gender} value={gender}>
-                        {translateStudentGender(gender)}
-                      </option>
-                    ))}
+                    <option value="">اختر الجنس</option>
+                    {genderOptions.map((option) => {
+                      const translated =
+                        option.code && isStudentGenderCode(option.code)
+                          ? translateStudentGender(option.code)
+                          : option.nameAr ?? option.name ?? option.code ?? String(option.id);
+
+                      return (
+                        <option key={option.id} value={option.id}>
+                          {option.nameAr ?? translated}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
 
@@ -449,18 +647,22 @@ export function StudentsWorkspace() {
                   <label className="text-xs font-medium text-muted-foreground">الحالة الصحية</label>
                   <select
                     className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    value={formState.healthStatus}
+                    value={formState.healthStatusId}
                     onChange={(event) =>
                       setFormState((prev) => ({
                         ...prev,
-                        healthStatus: event.target.value as StudentHealthStatus | "",
+                        healthStatusId: event.target.value,
                       }))
                     }
+                    disabled={!canReadHealthStatuses || healthStatusOptionsQuery.isLoading}
                   >
                     <option value="">غير محدد</option>
-                    {HEALTH_OPTIONS.map((status) => (
-                      <option key={status} value={status}>
-                        {translateStudentHealthStatus(status)}
+                    {healthStatusOptions.map((status) => (
+                      <option key={status.id} value={status.id}>
+                        {status.nameAr ??
+                          (status.code && isStudentHealthStatusCode(status.code)
+                            ? translateStudentHealthStatus(status.code)
+                            : status.code ?? String(status.id))}
                       </option>
                     ))}
                   </select>
@@ -470,17 +672,19 @@ export function StudentsWorkspace() {
                   <label className="text-xs font-medium text-muted-foreground">حالة اليتم *</label>
                   <select
                     className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    value={formState.orphanStatus}
+                    value={formState.orphanStatusId}
                     onChange={(event) =>
                       setFormState((prev) => ({
                         ...prev,
-                        orphanStatus: event.target.value as StudentOrphanStatus,
+                        orphanStatusId: event.target.value,
                       }))
                     }
+                    disabled={!canReadOrphanStatuses || orphanStatusesQuery.isLoading}
                   >
-                    {ORPHAN_OPTIONS.map((orphanStatus) => (
-                      <option key={orphanStatus} value={orphanStatus}>
-                        {translateStudentOrphanStatus(orphanStatus)}
+                    <option value="">اختر حالة اليتم</option>
+                    {orphanStatusOptions.map((orphanStatus) => (
+                      <option key={orphanStatus.id} value={orphanStatus.id}>
+                        {orphanStatus.nameAr}
                       </option>
                     ))}
                   </select>
@@ -573,15 +777,23 @@ export function StudentsWorkspace() {
               value={genderFilter}
               onChange={(event) => {
                 setPage(1);
-                setGenderFilter(event.target.value as StudentGender | "all");
+                setGenderFilter(event.target.value);
               }}
+              disabled={!canReadGenders || genderOptionsQuery.isLoading}
             >
               <option value="all">كل الأجناس</option>
-              {GENDER_OPTIONS.map((gender) => (
-                <option key={gender} value={gender}>
-                  {translateStudentGender(gender)}
-                </option>
-              ))}
+              {genderOptions.map((option) => {
+                const translated =
+                  option.code && isStudentGenderCode(option.code)
+                    ? translateStudentGender(option.code)
+                    : option.nameAr ?? option.name ?? option.code ?? String(option.id);
+
+                return (
+                  <option key={option.id} value={option.id}>
+                    {option.nameAr ?? translated}
+                  </option>
+                );
+              })}
             </select>
 
             <select
@@ -606,13 +818,14 @@ export function StudentsWorkspace() {
               value={orphanFilter}
               onChange={(event) => {
                 setPage(1);
-                setOrphanFilter(event.target.value as StudentOrphanStatus | "all");
+                setOrphanFilter(event.target.value);
               }}
+              disabled={!canReadOrphanStatuses || orphanStatusesQuery.isLoading}
             >
               <option value="all">كل حالات اليتم</option>
-              {ORPHAN_OPTIONS.map((orphanStatus) => (
-                <option key={orphanStatus} value={orphanStatus}>
-                  {translateStudentOrphanStatus(orphanStatus)}
+              {orphanStatusOptions.map((orphanStatus) => (
+                <option key={orphanStatus.id} value={orphanStatus.id}>
+                  {orphanStatus.nameAr}
                 </option>
               ))}
             </select>
@@ -685,17 +898,20 @@ export function StudentsWorkspace() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge variant="outline">{translateStudentGender(student.gender)}</Badge>
+                    <Badge variant="outline">
+                      {student.genderLookup?.nameAr ?? translateStudentGender(student.gender)}
+                    </Badge>
                     <Badge variant="outline">
                       {student.bloodType ? student.bloodType.name : "بدون فصيلة"}
                     </Badge>
                     <Badge variant={orphanBadgeVariant(student.orphanStatus)}>
-                      {translateStudentOrphanStatus(student.orphanStatus)}
+                      {student.orphanStatusLookup?.nameAr ?? getOrphanStatusLabel(student.orphanStatus)}
                     </Badge>
                     <Badge variant={healthBadgeVariant(student.healthStatus)}>
-                      {student.healthStatus
-                        ? translateStudentHealthStatus(student.healthStatus)
-                        : "غير محدد"}
+                      {student.healthStatusLookup?.nameAr ??
+                        (student.healthStatus
+                          ? translateStudentHealthStatus(student.healthStatus)
+                          : "غير محدد")}
                     </Badge>
                     <Badge variant={student.isActive ? "default" : "outline"}>
                       {student.isActive ? "نشط" : "غير نشط"}

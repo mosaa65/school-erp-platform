@@ -9,7 +9,11 @@ import {
   Min,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { StudentGender, StudentOrphanStatus } from '@prisma/client';
+import {
+  StudentGender,
+  StudentHealthStatus,
+  StudentOrphanStatus,
+} from '@prisma/client';
 
 export class ListStudentsDto {
   @ApiPropertyOptional({ example: 1 })
@@ -42,12 +46,38 @@ export class ListStudentsDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  genderId?: number;
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
   bloodTypeId?: number;
+
+  @ApiPropertyOptional({ enum: StudentHealthStatus })
+  @IsOptional()
+  @IsEnum(StudentHealthStatus)
+  healthStatus?: StudentHealthStatus;
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  healthStatusId?: number;
 
   @ApiPropertyOptional({ enum: StudentOrphanStatus })
   @IsOptional()
   @IsEnum(StudentOrphanStatus)
   orphanStatus?: StudentOrphanStatus;
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  orphanStatusId?: number;
 
   @ApiPropertyOptional({ example: true })
   @IsOptional()

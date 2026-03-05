@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AuditStatus, Employee, Prisma } from '@prisma/client';
+import { AuditStatus, Employee, EmployeeGender, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
@@ -32,6 +32,33 @@ const employeeInclude = {
       isActive: true,
     },
   },
+  genderLookup: {
+    select: {
+      id: true,
+      code: true,
+      nameAr: true,
+      nameEn: true,
+      isActive: true,
+    },
+  },
+  qualificationLookup: {
+    select: {
+      id: true,
+      code: true,
+      nameAr: true,
+      sortOrder: true,
+      isActive: true,
+    },
+  },
+  jobRoleLookup: {
+    select: {
+      id: true,
+      code: true,
+      nameAr: true,
+      nameArFemale: true,
+      isActive: true,
+    },
+  },
 } as const;
 
 @Injectable()
@@ -46,18 +73,24 @@ export class EmployeesService {
       await this.ensureIdTypeExists(payload.idTypeId);
     }
 
+    const gender = await this.resolveGenderOnCreate(payload);
+    const qualification = await this.resolveQualificationOnCreate(payload);
+    const jobRole = await this.resolveJobRoleOnCreate(payload);
+
     try {
       const employee = await this.prisma.employee.create({
         data: {
           jobNumber: payload.jobNumber,
           financialNumber: payload.financialNumber,
           fullName: payload.fullName,
-          gender: payload.gender,
+          gender: gender.gender,
+          genderId: gender.genderId,
           birthDate: payload.birthDate,
           phonePrimary: payload.phonePrimary,
           phoneSecondary: payload.phoneSecondary,
           hasWhatsapp: payload.hasWhatsapp ?? true,
-          qualification: payload.qualification,
+          qualification: qualification.qualification,
+          qualificationId: qualification.qualificationId,
           qualificationDate: payload.qualificationDate,
           specialization: payload.specialization,
           idNumber: payload.idNumber,
@@ -65,7 +98,8 @@ export class EmployeesService {
           idExpiryDate: payload.idExpiryDate,
           experienceYears: payload.experienceYears ?? 0,
           employmentType: payload.employmentType,
-          jobTitle: payload.jobTitle,
+          jobTitle: jobRole.jobTitle,
+          jobRoleId: jobRole.jobRoleId,
           hireDate: payload.hireDate,
           previousSchool: payload.previousSchool,
           salaryApproved: payload.salaryApproved ?? false,
@@ -114,8 +148,11 @@ export class EmployeesService {
     const where: Prisma.EmployeeWhereInput = {
       deletedAt: null,
       gender: query.gender,
+      genderId: query.genderId,
       employmentType: query.employmentType,
       idTypeId: query.idTypeId,
+      qualificationId: query.qualificationId,
+      jobRoleId: query.jobRoleId,
       isActive: query.isActive,
       jobTitle: query.jobTitle
         ? {
@@ -189,11 +226,18 @@ export class EmployeesService {
   }
 
   async update(id: string, payload: UpdateEmployeeDto, actorUserId: string) {
-    await this.ensureEmployeeExists(id);
+    const existing = await this.ensureEmployeeExists(id);
 
     if (payload.idTypeId !== undefined && payload.idTypeId !== null) {
       await this.ensureIdTypeExists(payload.idTypeId);
     }
+
+    const gender = await this.resolveGenderOnUpdate(existing, payload);
+    const qualification = await this.resolveQualificationOnUpdate(
+      existing,
+      payload,
+    );
+    const jobRole = await this.resolveJobRoleOnUpdate(existing, payload);
 
     try {
       const employee = await this.prisma.employee.update({
@@ -204,12 +248,14 @@ export class EmployeesService {
           jobNumber: payload.jobNumber,
           financialNumber: payload.financialNumber,
           fullName: payload.fullName,
-          gender: payload.gender,
+          gender: gender.gender,
+          genderId: gender.genderId,
           birthDate: payload.birthDate,
           phonePrimary: payload.phonePrimary,
           phoneSecondary: payload.phoneSecondary,
           hasWhatsapp: payload.hasWhatsapp,
-          qualification: payload.qualification,
+          qualification: qualification.qualification,
+          qualificationId: qualification.qualificationId,
           qualificationDate: payload.qualificationDate,
           specialization: payload.specialization,
           idNumber: payload.idNumber,
@@ -217,7 +263,8 @@ export class EmployeesService {
           idExpiryDate: payload.idExpiryDate,
           experienceYears: payload.experienceYears,
           employmentType: payload.employmentType,
-          jobTitle: payload.jobTitle,
+          jobTitle: jobRole.jobTitle,
+          jobRoleId: jobRole.jobRoleId,
           hireDate: payload.hireDate,
           previousSchool: payload.previousSchool,
           salaryApproved: payload.salaryApproved,
@@ -321,6 +368,372 @@ export class EmployeesService {
     if (!idType) {
       throw new BadRequestException('idTypeId is not valid');
     }
+  }
+
+  private mapLookupGenderCodeToEnum(code: string): EmployeeGender {
+    const normalized = code.trim().toUpperCase();
+
+    if (
+      normalized !== EmployeeGender.MALE &&
+      normalized !== EmployeeGender.FEMALE &&
+      normalized !== EmployeeGender.OTHER
+    ) {
+      throw new BadRequestException(
+        `Unsupported lookup gender code for employees: ${code}`,
+      );
+    }
+
+    return normalized as EmployeeGender;
+  }
+
+  private async findGenderLookupByCode(code: string) {
+    return this.prisma.lookupGender.findFirst({
+      where: {
+        code: code.trim().toUpperCase(),
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        code: true,
+      },
+    });
+  }
+
+  private async ensureGenderLookupExists(genderId: number) {
+    const gender = await this.prisma.lookupGender.findFirst({
+      where: {
+        id: genderId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        code: true,
+      },
+    });
+
+    if (!gender) {
+      throw new BadRequestException('genderId is not valid');
+    }
+
+    return gender;
+  }
+
+  private async ensureQualificationLookupExists(qualificationId: number) {
+    const qualification = await this.prisma.lookupQualification.findFirst({
+      where: {
+        id: qualificationId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        nameAr: true,
+      },
+    });
+
+    if (!qualification) {
+      throw new BadRequestException('qualificationId is not valid');
+    }
+
+    return qualification;
+  }
+
+  private async ensureJobRoleLookupExists(jobRoleId: number) {
+    const jobRole = await this.prisma.lookupJobRole.findFirst({
+      where: {
+        id: jobRoleId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        nameAr: true,
+        nameArFemale: true,
+      },
+    });
+
+    if (!jobRole) {
+      throw new BadRequestException('jobRoleId is not valid');
+    }
+
+    return jobRole;
+  }
+
+  private async findQualificationLookupByText(raw: string) {
+    const normalized = raw.trim();
+
+    if (!normalized) {
+      return null;
+    }
+
+    return this.prisma.lookupQualification.findFirst({
+      where: {
+        deletedAt: null,
+        OR: [
+          { code: normalized.toUpperCase() },
+          { nameAr: normalized },
+        ],
+      },
+      select: {
+        id: true,
+        nameAr: true,
+      },
+    });
+  }
+
+  private async findJobRoleLookupByText(raw: string) {
+    const normalized = raw.trim();
+
+    if (!normalized) {
+      return null;
+    }
+
+    return this.prisma.lookupJobRole.findFirst({
+      where: {
+        deletedAt: null,
+        OR: [
+          { code: normalized.toUpperCase() },
+          { nameAr: normalized },
+          { nameArFemale: normalized },
+        ],
+      },
+      select: {
+        id: true,
+        nameAr: true,
+        nameArFemale: true,
+      },
+    });
+  }
+
+  private async resolveGenderOnCreate(payload: CreateEmployeeDto) {
+    if (payload.genderId !== undefined) {
+      const lookup = await this.ensureGenderLookupExists(payload.genderId);
+      const mappedGender = this.mapLookupGenderCodeToEnum(lookup.code);
+
+      if (payload.gender && payload.gender !== mappedGender) {
+        throw new BadRequestException(
+          'gender and genderId do not refer to the same lookup value',
+        );
+      }
+
+      return {
+        gender: payload.gender ?? mappedGender,
+        genderId: lookup.id,
+      };
+    }
+
+    if (!payload.gender) {
+      throw new BadRequestException('Either gender or genderId is required');
+    }
+
+    const lookup = await this.findGenderLookupByCode(payload.gender);
+
+    return {
+      gender: payload.gender,
+      genderId: lookup?.id ?? null,
+    };
+  }
+
+  private async resolveGenderOnUpdate(existing: Employee, payload: UpdateEmployeeDto) {
+    if (payload.genderId !== undefined) {
+      const lookup = await this.ensureGenderLookupExists(payload.genderId);
+      const mappedGender = this.mapLookupGenderCodeToEnum(lookup.code);
+
+      if (payload.gender && payload.gender !== mappedGender) {
+        throw new BadRequestException(
+          'gender and genderId do not refer to the same lookup value',
+        );
+      }
+
+      return {
+        gender: payload.gender ?? mappedGender,
+        genderId: lookup.id,
+      };
+    }
+
+    if (payload.gender !== undefined) {
+      const lookup = await this.findGenderLookupByCode(payload.gender);
+
+      return {
+        gender: payload.gender,
+        genderId: lookup?.id ?? existing.genderId ?? null,
+      };
+    }
+
+    return {
+      gender: existing.gender,
+      genderId: existing.genderId ?? null,
+    };
+  }
+
+  private async resolveQualificationOnCreate(payload: CreateEmployeeDto) {
+    if (payload.qualificationId !== undefined) {
+      if (payload.qualificationId === null) {
+        return {
+          qualificationId: null,
+          qualification: payload.qualification?.trim() || null,
+        };
+      }
+
+      const lookup = await this.ensureQualificationLookupExists(
+        payload.qualificationId,
+      );
+
+      return {
+        qualificationId: lookup.id,
+        qualification: payload.qualification?.trim() || lookup.nameAr,
+      };
+    }
+
+    if (!payload.qualification) {
+      return {
+        qualificationId: null,
+        qualification: undefined,
+      };
+    }
+
+    const matched = await this.findQualificationLookupByText(payload.qualification);
+    return {
+      qualificationId: matched?.id ?? null,
+      qualification: payload.qualification.trim(),
+    };
+  }
+
+  private async resolveQualificationOnUpdate(
+    existing: Employee,
+    payload: UpdateEmployeeDto,
+  ) {
+    if (
+      payload.qualificationId === undefined &&
+      payload.qualification === undefined
+    ) {
+      return {
+        qualificationId: existing.qualificationId ?? null,
+        qualification: existing.qualification,
+      };
+    }
+
+    if (payload.qualificationId !== undefined) {
+      if (payload.qualificationId === null) {
+        return {
+          qualificationId: null,
+          qualification:
+            payload.qualification?.trim() === ''
+              ? null
+              : (payload.qualification?.trim() ?? null),
+        };
+      }
+
+      const lookup = await this.ensureQualificationLookupExists(
+        payload.qualificationId,
+      );
+
+      return {
+        qualificationId: lookup.id,
+        qualification: payload.qualification?.trim() || lookup.nameAr,
+      };
+    }
+
+    const normalized = payload.qualification?.trim();
+
+    if (!normalized) {
+      return {
+        qualificationId: existing.qualificationId ?? null,
+        qualification: null,
+      };
+    }
+
+    const matched = await this.findQualificationLookupByText(normalized);
+
+    return {
+      qualificationId: matched?.id ?? existing.qualificationId ?? null,
+      qualification: normalized,
+    };
+  }
+
+  private async resolveJobRoleOnCreate(payload: CreateEmployeeDto) {
+    if (payload.jobRoleId !== undefined) {
+      if (payload.jobRoleId === null) {
+        return {
+          jobRoleId: null,
+          jobTitle: payload.jobTitle?.trim() || null,
+        };
+      }
+
+      const lookup = await this.ensureJobRoleLookupExists(payload.jobRoleId);
+
+      return {
+        jobRoleId: lookup.id,
+        jobTitle:
+          payload.jobTitle?.trim() ||
+          lookup.nameAr ||
+          lookup.nameArFemale ||
+          null,
+      };
+    }
+
+    if (!payload.jobTitle) {
+      return {
+        jobRoleId: null,
+        jobTitle: undefined,
+      };
+    }
+
+    const matched = await this.findJobRoleLookupByText(payload.jobTitle);
+
+    return {
+      jobRoleId: matched?.id ?? null,
+      jobTitle: payload.jobTitle.trim(),
+    };
+  }
+
+  private async resolveJobRoleOnUpdate(
+    existing: Employee,
+    payload: UpdateEmployeeDto,
+  ) {
+    if (payload.jobRoleId === undefined && payload.jobTitle === undefined) {
+      return {
+        jobRoleId: existing.jobRoleId ?? null,
+        jobTitle: existing.jobTitle,
+      };
+    }
+
+    if (payload.jobRoleId !== undefined) {
+      if (payload.jobRoleId === null) {
+        return {
+          jobRoleId: null,
+          jobTitle:
+            payload.jobTitle?.trim() === ''
+              ? null
+              : (payload.jobTitle?.trim() ?? null),
+        };
+      }
+
+      const lookup = await this.ensureJobRoleLookupExists(payload.jobRoleId);
+
+      return {
+        jobRoleId: lookup.id,
+        jobTitle:
+          payload.jobTitle?.trim() ||
+          lookup.nameAr ||
+          lookup.nameArFemale ||
+          null,
+      };
+    }
+
+    const normalized = payload.jobTitle?.trim();
+
+    if (!normalized) {
+      return {
+        jobRoleId: existing.jobRoleId ?? null,
+        jobTitle: null,
+      };
+    }
+
+    const matched = await this.findJobRoleLookupByText(normalized);
+
+    return {
+      jobRoleId: matched?.id ?? existing.jobRoleId ?? null,
+      jobTitle: normalized,
+    };
   }
 
   private throwKnownDatabaseErrors(error: unknown): never {

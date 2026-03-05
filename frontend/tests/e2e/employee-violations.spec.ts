@@ -49,7 +49,7 @@ test.describe("Employee Violations", () => {
       reportedByEmployeeId: "emp-2",
       submit: true,
     });
-    await expectValidationMessage(page, "actionTaken مطلوب للمخالفات HIGH/CRITICAL.");
+    await expectValidationMessage(page, "الإجراء المتخذ مطلوب للمخالفات العالية والحرجة.");
     expect(violationsApi.getPostCount()).toBe(0);
 
     await fillEmployeeViolationForm(page, {
@@ -58,7 +58,7 @@ test.describe("Employee Violations", () => {
     });
 
     await expectCardsCount(page, "violation-card", 2);
-    await expect(page.getByTestId("violation-card").first().getByText("CRITICAL")).toBeVisible();
+    await expect(page.getByTestId("violation-card").first().getByText("حرجة")).toBeVisible();
     expect(violationsApi.getPostCount()).toBe(1);
     expect(violationsApi.getLastCreatePayload()?.["severity"]).toBe("CRITICAL");
   });

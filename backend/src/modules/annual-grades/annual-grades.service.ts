@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -14,6 +13,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { DataScopeService } from '../data-scope/data-scope.service';
 import { CreateAnnualGradeDto } from './dto/create-annual-grade.dto';
 import { ListAnnualGradesDto } from './dto/list-annual-grades.dto';
 import { UpdateAnnualGradeDto } from './dto/update-annual-grade.dto';
@@ -116,6 +116,7 @@ export class AnnualGradesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLogsService: AuditLogsService,
+    private readonly dataScopeService: DataScopeService,
   ) {}
 
   async create(payload: CreateAnnualGradeDto, actorUserId: string) {
@@ -229,7 +230,7 @@ export class AnnualGradesService {
     }
   }
 
-  async findAll(query: ListAnnualGradesDto) {
+  async findAll(query: ListAnnualGradesDto, actorUserId: string) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
 
@@ -289,6 +290,42 @@ export class AnnualGradesService {
         : undefined,
     };
 
+    const scope = await this.dataScopeService.getSectionSubjectYearGrants({
+      actorUserId,
+      capability: 'MANAGE_GRADES',
+      academicYearId: query.academicYearId,
+    });
+
+    if (!scope.isPrivileged) {
+      if (scope.grants.length === 0) {
+        return {
+          data: [],
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            totalPages: 0,
+          },
+        };
+      }
+
+      const scopedOr: Prisma.AnnualGradeWhereInput[] = scope.grants.map(
+        (grant) => ({
+          academicYearId: grant.academicYearId,
+          subjectId: grant.subjectId,
+          studentEnrollment: {
+            sectionId: grant.sectionId,
+          },
+        }),
+      );
+
+      where.AND = [
+        {
+          OR: scopedOr,
+        },
+      ];
+    }
+
     const [total, items] = await this.prisma.$transaction([
       this.prisma.annualGrade.count({ where }),
       this.prisma.annualGrade.findMany({
@@ -324,7 +361,7 @@ export class AnnualGradesService {
     };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, actorUserId: string) {
     const annualGrade = await this.prisma.annualGrade.findFirst({
       where: {
         id,
@@ -336,6 +373,13 @@ export class AnnualGradesService {
     if (!annualGrade) {
       throw new NotFoundException('Annual grade not found');
     }
+
+    await this.ensureActorAuthorized(
+      actorUserId,
+      annualGrade.studentEnrollment.sectionId,
+      annualGrade.subject.id,
+      annualGrade.academicYear.id,
+    );
 
     return annualGrade;
   }
@@ -811,45 +855,13 @@ export class AnnualGradesService {
     subjectId: string,
     academicYearId: string,
   ) {
-    const user = await this.prisma.user.findFirst({
-      where: {
-        id: actorUserId,
-        deletedAt: null,
-        isActive: true,
-      },
-      select: {
-        id: true,
-        employeeId: true,
-      },
+    await this.dataScopeService.ensureCanManageSectionSubjectYear({
+      actorUserId,
+      sectionId,
+      subjectId,
+      academicYearId,
+      capability: 'MANAGE_GRADES',
     });
-
-    if (!user) {
-      throw new ForbiddenException('Authenticated user is not active');
-    }
-
-    if (!user.employeeId) {
-      // Allow privileged users without linked employee profile.
-      return;
-    }
-
-    const assignmentsCount = await this.prisma.employeeTeachingAssignment.count(
-      {
-        where: {
-          employeeId: user.employeeId,
-          sectionId,
-          subjectId,
-          academicYearId,
-          deletedAt: null,
-          isActive: true,
-        },
-      },
-    );
-
-    if (assignmentsCount === 0) {
-      throw new ForbiddenException(
-        'You are not assigned to this subject and section for the selected academic year',
-      );
-    }
   }
 
   private decimalToNumber(

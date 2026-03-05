@@ -192,20 +192,20 @@ export function TermSubjectOfferingsWorkspace() {
 
   const validateForm = (): boolean => {
     if (!formState.academicTermId || !formState.gradeLevelSubjectId) {
-      setFormError("الحقول الأساسية مطلوبة: academic term, grade-level subject mapping.");
+      setFormError("الحقول الأساسية مطلوبة: الفصل الأكاديمي وربط الصف مع المادة.");
       return false;
     }
 
     const weeklyPeriods = Number(formState.weeklyPeriods);
     if (!Number.isInteger(weeklyPeriods) || weeklyPeriods < 1 || weeklyPeriods > 60) {
-      setFormError("weeklyPeriods يجب أن يكون رقمًا صحيحًا بين 1 و 60.");
+      setFormError("عدد الحصص الأسبوعية يجب أن يكون رقمًا صحيحًا بين 1 و 60.");
       return false;
     }
 
     if (formState.displayOrder.trim()) {
       const displayOrder = Number(formState.displayOrder);
       if (!Number.isInteger(displayOrder) || displayOrder < 1 || displayOrder > 500) {
-        setFormError("displayOrder يجب أن يكون رقمًا صحيحًا بين 1 و 500.");
+        setFormError("ترتيب العرض يجب أن يكون رقمًا صحيحًا بين 1 و 500.");
         return false;
       }
     }
@@ -216,7 +216,7 @@ export function TermSubjectOfferingsWorkspace() {
     if (selectedTerm && selectedMapping) {
       if (selectedTerm.academicYearId !== selectedMapping.academicYearId) {
         setFormError(
-          "الفصل الأكاديمي والـGrade-Level Subject يجب أن يكونا ضمن نفس السنة الأكاديمية.",
+          "الفصل الأكاديمي وربط الصف مع المادة يجب أن يكونا ضمن نفس السنة الأكاديمية.",
         );
         return false;
       }
@@ -320,7 +320,7 @@ export function TermSubjectOfferingsWorkspace() {
           <CardDescription>
             {isEditing
               ? "تعديل ربط المادة بالفصل وعدد الحصص الأسبوعية."
-              : "إنشاء Term Subject Offering ضمن فصل أكاديمي محدد."}
+              : "إنشاء عرض مادة ضمن فصل أكاديمي محدد."}
           </CardDescription>
         </CardHeader>
 
@@ -330,10 +330,10 @@ export function TermSubjectOfferingsWorkspace() {
               لا تملك صلاحية <code>term-subject-offerings.create</code>.
             </div>
           ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm}>
+            <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="offering-form">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Academic Term *
+                  الفصل الأكاديمي *
                 </label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -345,6 +345,7 @@ export function TermSubjectOfferingsWorkspace() {
                     }))
                   }
                   disabled={!canReadAcademicTerms}
+                  data-testid="offering-form-term"
                 >
                   <option value="">اختر الفصل الدراسي</option>
                   {allAcademicTerms.map((term) => (
@@ -357,7 +358,7 @@ export function TermSubjectOfferingsWorkspace() {
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Grade-Level Subject Mapping *
+                  ربط الصف مع المادة *
                 </label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -369,6 +370,7 @@ export function TermSubjectOfferingsWorkspace() {
                     }))
                   }
                   disabled={!canReadGradeLevelSubjects}
+                  data-testid="offering-form-mapping"
                 >
                   <option value="">اختر الربط</option>
                   {formMappingOptions.map((mapping) => (
@@ -382,7 +384,7 @@ export function TermSubjectOfferingsWorkspace() {
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">
-                    Weekly Periods *
+                    الحصص الأسبوعية *
                   </label>
                   <Input
                     type="number"
@@ -396,11 +398,12 @@ export function TermSubjectOfferingsWorkspace() {
                       }))
                     }
                     required
+                    data-testid="offering-form-weekly-periods"
                   />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">
-                    Display Order
+                    ترتيب العرض
                   </label>
                   <Input
                     type="number"
@@ -414,6 +417,7 @@ export function TermSubjectOfferingsWorkspace() {
                       }))
                     }
                     placeholder="1"
+                    data-testid="offering-form-display-order"
                   />
                 </div>
               </div>
@@ -426,6 +430,7 @@ export function TermSubjectOfferingsWorkspace() {
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
                   }
+                  data-testid="offering-form-active"
                 />
               </label>
 
@@ -457,13 +462,14 @@ export function TermSubjectOfferingsWorkspace() {
                     (!canCreate && !isEditing) ||
                     !hasDependenciesReadPermissions
                   }
+                  data-testid="offering-form-submit"
                 >
                   {isFormSubmitting ? (
                     <LoaderCircle className="h-4 w-4 animate-spin" />
                   ) : (
                     <Cable className="h-4 w-4" />
                   )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء Offering"}
+                  {isEditing ? "حفظ التعديلات" : "إنشاء عرض مادة"}
                 </Button>
                 {isEditing ? (
                   <Button type="button" variant="outline" onClick={resetForm}>
@@ -479,7 +485,7 @@ export function TermSubjectOfferingsWorkspace() {
       <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Term Subject Offerings</CardTitle>
+            <CardTitle>عروض المواد للفصول</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <CardDescription>
@@ -489,6 +495,7 @@ export function TermSubjectOfferingsWorkspace() {
           <form
             onSubmit={handleSearchSubmit}
             className="grid gap-2 md:grid-cols-[1fr_170px_170px_220px_140px_auto]"
+            data-testid="offering-filters-form"
           >
             <div className="relative">
               <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -497,6 +504,7 @@ export function TermSubjectOfferingsWorkspace() {
                 onChange={(event) => setSearchInput(event.target.value)}
                 placeholder="بحث بالفصل/الصف/المادة..."
                 className="pr-8"
+                data-testid="offering-filter-search"
               />
             </div>
 
@@ -510,6 +518,7 @@ export function TermSubjectOfferingsWorkspace() {
                 setMappingFilter("all");
               }}
               disabled={!canReadAcademicYears}
+              data-testid="offering-filter-year"
             >
               <option value="all">كل السنوات</option>
               {yearOptions.map((year) => (
@@ -527,8 +536,9 @@ export function TermSubjectOfferingsWorkspace() {
                 setTermFilter(event.target.value);
               }}
               disabled={!canReadAcademicTerms}
+              data-testid="offering-filter-term"
             >
-              <option value="all">All terms</option>
+              <option value="all">كل الفصول</option>
               {filterTermOptions.map((term) => (
                 <option key={term.id} value={term.id}>
                   {term.code}
@@ -544,8 +554,9 @@ export function TermSubjectOfferingsWorkspace() {
                 setMappingFilter(event.target.value);
               }}
               disabled={!canReadGradeLevelSubjects}
+              data-testid="offering-filter-mapping"
             >
-              <option value="all">All mappings</option>
+              <option value="all">كل الربوط</option>
               {filterMappingOptions.map((mapping) => (
                 <option key={mapping.id} value={mapping.id}>
                   {mapping.gradeLevel.code} - {mapping.subject.code}
@@ -560,6 +571,7 @@ export function TermSubjectOfferingsWorkspace() {
                 setPage(1);
                 setActiveFilter(event.target.value as "all" | "active" | "inactive");
               }}
+              data-testid="offering-filter-active"
             >
               <option value="all">كل الحالات</option>
               <option value="active">النشطة فقط</option>
@@ -598,6 +610,7 @@ export function TermSubjectOfferingsWorkspace() {
             <div
               key={offering.id}
               className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+              data-testid="offering-card"
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="space-y-1">
@@ -605,22 +618,22 @@ export function TermSubjectOfferingsWorkspace() {
                     {offering.gradeLevelSubject.subject.name} - {offering.academicTerm.name}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Term: <code>{offering.academicTerm.code}</code> | Year:{" "}
+                    الفصل: <code>{offering.academicTerm.code}</code> | السنة:{" "}
                     <code>{offering.gradeLevelSubject.academicYear.code}</code>
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Grade: {offering.gradeLevelSubject.gradeLevel.name} (
+                    الصف: {offering.gradeLevelSubject.gradeLevel.name} (
                     {offering.gradeLevelSubject.gradeLevel.code})
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Weekly Periods: {offering.weeklyPeriods}
-                    {offering.displayOrder !== null ? ` | Display Order: ${offering.displayOrder}` : ""}
+                    الحصص الأسبوعية: {offering.weeklyPeriods}
+                    {offering.displayOrder !== null ? ` | ترتيب العرض: ${offering.displayOrder}` : ""}
                   </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
                   <Badge variant={offering.gradeLevelSubject.isMandatory ? "default" : "secondary"}>
-                    {offering.gradeLevelSubject.isMandatory ? "Mandatory" : "Optional"}
+                    {offering.gradeLevelSubject.isMandatory ? "إلزامية" : "اختيارية"}
                   </Badge>
                   <Badge variant={offering.isActive ? "default" : "outline"}>
                     {offering.isActive ? "نشط" : "غير نشط"}

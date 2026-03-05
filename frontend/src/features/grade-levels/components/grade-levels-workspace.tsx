@@ -54,6 +54,14 @@ const STAGE_OPTIONS: GradeStage[] = [
   "OTHER",
 ];
 
+const STAGE_LABELS: Record<GradeStage, string> = {
+  PRE_SCHOOL: "ما قبل المدرسة",
+  PRIMARY: "ابتدائي",
+  MIDDLE: "إعدادي",
+  HIGH: "ثانوي",
+  OTHER: "أخرى",
+};
+
 function normalizeCode(value: string): string {
   return value.trim().toLowerCase();
 }
@@ -166,12 +174,12 @@ export function GradeLevelsWorkspace() {
     }
 
     if (!/^[a-z0-9_.:-]+$/.test(code)) {
-      setFormError("صيغة code غير صحيحة.");
+      setFormError("صيغة الكود غير صحيحة.");
       return false;
     }
 
     if (!Number.isInteger(sequence) || sequence < 1 || sequence > 1000) {
-      setFormError("sequence يجب أن يكون رقمًا صحيحًا بين 1 و 1000.");
+      setFormError("الترتيب يجب أن يكون رقمًا صحيحًا بين 1 و 1000.");
       return false;
     }
 
@@ -281,7 +289,7 @@ export function GradeLevelsWorkspace() {
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Code *</label>
+                <label className="text-xs font-medium text-muted-foreground">الكود *</label>
                 <Input
                   value={formState.code}
                   onChange={(event) =>
@@ -299,14 +307,14 @@ export function GradeLevelsWorkspace() {
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, name: event.target.value }))
                   }
-                  placeholder="Grade 1"
+                  placeholder="الصف الأول"
                   required
                 />
               </div>
 
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Stage *</label>
+                  <label className="text-xs font-medium text-muted-foreground">المرحلة *</label>
                   <select
                     className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                     value={formState.stage}
@@ -319,14 +327,14 @@ export function GradeLevelsWorkspace() {
                   >
                     {STAGE_OPTIONS.map((stage) => (
                       <option key={stage} value={stage}>
-                        {stage}
+                        {STAGE_LABELS[stage]}
                       </option>
                     ))}
                   </select>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Sequence *</label>
+                  <label className="text-xs font-medium text-muted-foreground">الترتيب *</label>
                   <Input
                     type="number"
                     min={1}
@@ -374,7 +382,7 @@ export function GradeLevelsWorkspace() {
                   ) : (
                     <Layers3 className="h-4 w-4" />
                   )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء Grade Level"}
+                  {isEditing ? "حفظ التعديلات" : "إنشاء مرحلة/صف"}
                 </Button>
                 {isEditing ? (
                   <Button type="button" variant="outline" onClick={resetForm}>
@@ -390,7 +398,7 @@ export function GradeLevelsWorkspace() {
       <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Grade Levels List</CardTitle>
+            <CardTitle>قائمة المراحل/الصفوف</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <CardDescription>
@@ -419,10 +427,10 @@ export function GradeLevelsWorkspace() {
                 setStageFilter(event.target.value as GradeStage | "all");
               }}
             >
-              <option value="all">All stages</option>
+              <option value="all">كل المراحل</option>
               {STAGE_OPTIONS.map((stage) => (
                 <option key={stage} value={stage}>
-                  {stage}
+                  {STAGE_LABELS[stage]}
                 </option>
               ))}
             </select>
@@ -477,15 +485,17 @@ export function GradeLevelsWorkspace() {
                 <div className="space-y-1">
                   <p className="font-medium">{gradeLevel.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    <code>{gradeLevel.code}</code> - Seq: {gradeLevel.sequence}
+                    <code>{gradeLevel.code}</code> - الترتيب: {gradeLevel.sequence}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Sections: {gradeLevel.sections.length}
+                    الشعب: {gradeLevel.sections.length}
                   </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant={stageBadgeVariant(gradeLevel.stage)}>{gradeLevel.stage}</Badge>
+                  <Badge variant={stageBadgeVariant(gradeLevel.stage)}>
+                    {STAGE_LABELS[gradeLevel.stage]}
+                  </Badge>
                   <Badge variant={gradeLevel.isActive ? "default" : "outline"}>
                     {gradeLevel.isActive ? "نشط" : "غير نشط"}
                   </Badge>

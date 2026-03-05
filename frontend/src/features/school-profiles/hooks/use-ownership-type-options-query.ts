@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useQuery } from "@tanstack/react-query";
 import { ApiError, apiClient } from "@/lib/api/client";
@@ -14,7 +14,7 @@ export function useOwnershipTypeOptionsQuery() {
       try {
         const response = await apiClient.listLookupOwnershipTypes({
           page: 1,
-          limit: 200,
+          limit: 100,
           isActive: true,
         });
 

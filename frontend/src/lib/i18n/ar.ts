@@ -1,13 +1,20 @@
-﻿import type {
+import type {
+  EmployeeAttendanceStatus,
   EmployeeGender,
   EmployeeSystemAccessStatus,
   EmploymentType,
+  GuardianRelationship,
   GradingWorkflowStatus,
+  PerformanceRatingLevel,
+  StudentAttendanceStatus,
+  StudentBookStatus,
   StudentEnrollmentStatus,
   StudentGender,
   StudentHealthStatus,
   StudentOrphanStatus,
+  TimetableDay,
   TieBreakStrategy,
+  ViolationSeverity,
 } from "@/lib/api/client";
 
 const STUDENT_GENDER_LABELS: Record<StudentGender, string> = {
@@ -48,6 +55,16 @@ const EMPLOYEE_SYSTEM_ACCESS_STATUS_LABELS: Record<EmployeeSystemAccessStatus, s
   SUSPENDED: "موقوف",
 };
 
+type AttendanceStatus = EmployeeAttendanceStatus | StudentAttendanceStatus;
+
+const ATTENDANCE_STATUS_LABELS: Record<AttendanceStatus, string> = {
+  PRESENT: "حاضر",
+  ABSENT: "غائب",
+  LATE: "متأخر",
+  EXCUSED_ABSENCE: "غياب بعذر",
+  EARLY_LEAVE: "انصراف مبكر",
+};
+
 const STUDENT_ENROLLMENT_STATUS_LABELS: Record<StudentEnrollmentStatus, string> = {
   NEW: "مستجد",
   TRANSFERRED: "منقول",
@@ -72,6 +89,50 @@ const TIE_BREAK_STRATEGY_LABELS: Record<TieBreakStrategy, string> = {
   PERCENTAGE_THEN_NAME: "بالنسبة ثم الاسم",
 };
 
+const GUARDIAN_RELATIONSHIP_LABELS: Record<GuardianRelationship, string> = {
+  FATHER: "الأب",
+  MOTHER: "الأم",
+  BROTHER: "الأخ",
+  SISTER: "الأخت",
+  UNCLE: "العم/الخال",
+  AUNT: "العمة/الخالة",
+  GRANDFATHER: "الجد",
+  GRANDMOTHER: "الجدة",
+  OTHER: "أخرى",
+};
+
+const VIOLATION_SEVERITY_LABELS: Record<ViolationSeverity, string> = {
+  LOW: "منخفضة",
+  MEDIUM: "متوسطة",
+  HIGH: "عالية",
+  CRITICAL: "حرجة",
+};
+
+const PERFORMANCE_RATING_LEVEL_LABELS: Record<PerformanceRatingLevel, string> = {
+  EXCELLENT: "ممتاز",
+  VERY_GOOD: "جيد جدًا",
+  GOOD: "جيد",
+  ACCEPTABLE: "مقبول",
+  POOR: "ضعيف",
+};
+
+const STUDENT_BOOK_STATUS_LABELS: Record<StudentBookStatus, string> = {
+  ISSUED: "مسلّم",
+  RETURNED: "مُعاد",
+  LOST: "مفقود",
+  DAMAGED: "تالف",
+};
+
+const TIMETABLE_DAY_LABELS: Record<TimetableDay, string> = {
+  MONDAY: "الاثنين",
+  TUESDAY: "الثلاثاء",
+  WEDNESDAY: "الأربعاء",
+  THURSDAY: "الخميس",
+  FRIDAY: "الجمعة",
+  SATURDAY: "السبت",
+  SUNDAY: "الأحد",
+};
+
 const ROLE_CODE_LABELS: Record<string, string> = {
   super_admin: "مدير النظام",
 };
@@ -88,6 +149,10 @@ const PERMISSION_RESOURCE_LABELS: Record<string, string> = {
   "school-profiles": "ملف المدرسة",
   "lookup-blood-types": "فصائل الدم",
   "lookup-id-types": "أنواع الهوية",
+  "lookup-enrollment-statuses": "حالات القيد",
+  "lookup-orphan-statuses": "حالات اليتم",
+  "lookup-ability-levels": "مستويات القدرة",
+  "lookup-activity-types": "أنواع الأنشطة",
   "lookup-ownership-types": "أنواع الملكية",
   "lookup-periods": "فترات الدوام",
   "lookup-catalog": "قاموس المرجعيات",
@@ -113,6 +178,7 @@ const PERMISSION_RESOURCE_LABELS: Record<string, string> = {
   "employee-violations": "مخالفات الموظفين",
   "employee-tasks": "مهام الموظفين",
   "employee-teaching-assignments": "إسناد التدريس",
+  "employee-section-supervisions": "نطاقات الإشراف",
   "employee-attendance": "حضور الموظفين",
   "employee-performance-evaluations": "تقييمات الأداء",
   "hr-reports": "تقارير الموارد البشرية",
@@ -173,6 +239,10 @@ export function translateEmployeeSystemAccessStatus(
   return EMPLOYEE_SYSTEM_ACCESS_STATUS_LABELS[value] ?? value;
 }
 
+export function translateAttendanceStatus(value: AttendanceStatus): string {
+  return ATTENDANCE_STATUS_LABELS[value] ?? value;
+}
+
 export function translateStudentEnrollmentStatus(value: StudentEnrollmentStatus): string {
   return STUDENT_ENROLLMENT_STATUS_LABELS[value] ?? value;
 }
@@ -183,6 +253,26 @@ export function translateGradingWorkflowStatus(value: GradingWorkflowStatus): st
 
 export function translateTieBreakStrategy(value: TieBreakStrategy): string {
   return TIE_BREAK_STRATEGY_LABELS[value] ?? value;
+}
+
+export function translateGuardianRelationship(value: GuardianRelationship): string {
+  return GUARDIAN_RELATIONSHIP_LABELS[value] ?? value;
+}
+
+export function translateViolationSeverity(value: ViolationSeverity): string {
+  return VIOLATION_SEVERITY_LABELS[value] ?? value;
+}
+
+export function translatePerformanceRatingLevel(value: PerformanceRatingLevel): string {
+  return PERFORMANCE_RATING_LEVEL_LABELS[value] ?? value;
+}
+
+export function translateStudentBookStatus(value: StudentBookStatus): string {
+  return STUDENT_BOOK_STATUS_LABELS[value] ?? value;
+}
+
+export function translateTimetableDay(value: TimetableDay): string {
+  return TIMETABLE_DAY_LABELS[value] ?? value;
 }
 
 export function translateRoleCode(roleCode: string): string {
@@ -196,5 +286,3 @@ export function translatePermissionCode(permissionCode: string): string {
 
   return actionLabel ? `${resourceLabel} - ${actionLabel}` : resourceLabel;
 }
-
-

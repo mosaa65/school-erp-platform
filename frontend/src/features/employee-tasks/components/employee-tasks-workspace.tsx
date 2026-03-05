@@ -29,6 +29,7 @@ import {
 } from "@/features/employee-tasks/hooks/use-employee-tasks-mutations";
 import { useEmployeeTasksQuery } from "@/features/employee-tasks/hooks/use-employee-tasks-query";
 import type { EmployeeTaskListItem, TimetableDay } from "@/lib/api/client";
+import { translateTimetableDay } from "@/lib/i18n/ar";
 
 type EmployeeTaskFormState = {
   employeeId: string;
@@ -106,7 +107,15 @@ function formatDate(value: string | null): string {
     return "-";
   }
 
-  return date.toLocaleDateString("en-GB");
+  return date.toLocaleDateString("ar-SA");
+}
+
+function formatDay(value: TimetableDay | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return translateTimetableDay(value);
 }
 
 export function EmployeeTasksWorkspace() {
@@ -301,9 +310,9 @@ export function EmployeeTasksWorkspace() {
               لا تملك صلاحية <code>employee-tasks.create</code>.
             </div>
           ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm}>
+            <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="task-form">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Employee *</label>
+                <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={formState.employeeId}
@@ -311,18 +320,19 @@ export function EmployeeTasksWorkspace() {
                     setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
                   }
                   disabled={!canReadEmployees}
+                  data-testid="task-form-employee"
                 >
                   <option value="">اختر الموظف</option>
                   {(employeesQuery.data ?? []).map((employee) => (
                     <option key={employee.id} value={employee.id}>
-                      {employee.fullName} ({employee.jobNumber ?? "N/A"})
+                      {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
                     </option>
                   ))}
                 </select>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Task الاسم *</label>
+                <label className="text-xs font-medium text-muted-foreground">اسم المهمة *</label>
                 <Input
                   value={formState.taskName}
                   onChange={(event) =>
@@ -330,12 +340,13 @@ export function EmployeeTasksWorkspace() {
                   }
                   placeholder="إشراف صباحي"
                   required
+                  data-testid="task-form-name"
                 />
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Academic Year
+                  السنة الأكاديمية
                 </label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -347,8 +358,9 @@ export function EmployeeTasksWorkspace() {
                     }))
                   }
                   disabled={!canReadAcademicYears}
+                  data-testid="task-form-year"
                 >
-                  <option value="">Not linked</option>
+                  <option value="">غير مرتبطة</option>
                   {(academicYearsQuery.data ?? []).map((year) => (
                     <option key={year.id} value={year.id}>
                       {year.name} ({year.code})
@@ -359,7 +371,7 @@ export function EmployeeTasksWorkspace() {
 
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Day</label>
+                  <label className="text-xs font-medium text-muted-foreground">اليوم</label>
                   <select
                     className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                     value={formState.dayOfWeek}
@@ -369,18 +381,19 @@ export function EmployeeTasksWorkspace() {
                         dayOfWeek: event.target.value as TimetableDay | "",
                       }))
                     }
+                    data-testid="task-form-day"
                   >
-                    <option value="">Not specified</option>
+                    <option value="">غير محدد</option>
                     {DAY_OPTIONS.map((day) => (
                       <option key={day} value={day}>
-                        {day}
+                        {translateTimetableDay(day)}
                       </option>
                     ))}
                   </select>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">
-                    Assignment Date
+                    تاريخ الإسناد
                   </label>
                   <Input
                     type="date"
@@ -391,18 +404,20 @@ export function EmployeeTasksWorkspace() {
                         assignmentDate: event.target.value,
                       }))
                     }
+                    data-testid="task-form-date"
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Notes</label>
+                <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
                 <Input
                   value={formState.notes}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, notes: event.target.value }))
                   }
                   placeholder="مناوبة البوابة قبل الحصة الأولى"
+                  data-testid="task-form-notes"
                 />
               </div>
 
@@ -414,6 +429,7 @@ export function EmployeeTasksWorkspace() {
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
                   }
+                  data-testid="task-form-active"
                 />
               </label>
 
@@ -445,13 +461,14 @@ export function EmployeeTasksWorkspace() {
                     (!canCreate && !isEditing) ||
                     !hasDependenciesReadPermissions
                   }
+                  data-testid="task-form-submit"
                 >
                   {isFormSubmitting ? (
                     <LoaderCircle className="h-4 w-4 animate-spin" />
                   ) : (
                     <ClipboardList className="h-4 w-4" />
                   )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء Task"}
+                  {isEditing ? "حفظ التعديلات" : "إنشاء مهمة"}
                 </Button>
                 {isEditing ? (
                   <Button type="button" variant="outline" onClick={resetForm}>
@@ -467,7 +484,7 @@ export function EmployeeTasksWorkspace() {
       <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Employee Tasks</CardTitle>
+            <CardTitle>مهام الموظفين</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <CardDescription>
@@ -477,6 +494,7 @@ export function EmployeeTasksWorkspace() {
           <form
             onSubmit={handleSearchSubmit}
             className="grid gap-2 md:grid-cols-[1fr_170px_170px_160px_130px_auto]"
+            data-testid="task-filters-form"
           >
             <div className="relative">
               <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -485,6 +503,7 @@ export function EmployeeTasksWorkspace() {
                 onChange={(event) => setSearchInput(event.target.value)}
                 placeholder="بحث بالموظف أو اسم المهمة..."
                 className="pr-8"
+                data-testid="task-filter-search"
               />
             </div>
 
@@ -495,6 +514,7 @@ export function EmployeeTasksWorkspace() {
                 setPage(1);
                 setEmployeeFilter(event.target.value);
               }}
+              data-testid="task-filter-employee"
             >
               <option value="all">كل الموظفين</option>
               {(employeesQuery.data ?? []).map((employee) => (
@@ -511,6 +531,7 @@ export function EmployeeTasksWorkspace() {
                 setPage(1);
                 setAcademicYearFilter(event.target.value);
               }}
+              data-testid="task-filter-year"
             >
               <option value="all">كل السنوات</option>
               {(academicYearsQuery.data ?? []).map((year) => (
@@ -527,11 +548,12 @@ export function EmployeeTasksWorkspace() {
                 setPage(1);
                 setDayFilter(event.target.value as TimetableDay | "all");
               }}
+              data-testid="task-filter-day"
             >
-              <option value="all">All days</option>
+              <option value="all">كل الأيام</option>
               {DAY_OPTIONS.map((day) => (
                 <option key={day} value={day}>
-                  {day}
+                  {translateTimetableDay(day)}
                 </option>
               ))}
             </select>
@@ -543,6 +565,7 @@ export function EmployeeTasksWorkspace() {
                 setPage(1);
                 setActiveFilter(event.target.value as "all" | "active" | "inactive");
               }}
+              data-testid="task-filter-active"
             >
               <option value="all">كل الحالات</option>
               <option value="active">النشطة فقط</option>
@@ -581,30 +604,33 @@ export function EmployeeTasksWorkspace() {
             <div
               key={task.id}
               className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+              data-testid="task-card"
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="space-y-1">
                   <p className="font-medium">{task.taskName}</p>
                   <p className="text-xs text-muted-foreground">
-                    Employee: {task.employee.fullName} ({task.employee.jobNumber ?? "N/A"})
+                    الموظف: {task.employee.fullName} ({task.employee.jobNumber ?? "بدون رقم"})
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Year:{" "}
+                    السنة:{" "}
                     {task.academicYear
                       ? `${task.academicYear.name} (${task.academicYear.code})`
-                      : "Not linked"}
+                      : "غير مرتبطة"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Day: {task.dayOfWeek ?? "-"} | Assignment Date:{" "}
+                    اليوم: {formatDay(task.dayOfWeek)} | تاريخ الإسناد:{" "}
                     {formatDate(task.assignmentDate)}
                   </p>
                   {task.notes ? (
-                    <p className="text-xs text-muted-foreground">Notes: {task.notes}</p>
+                    <p className="text-xs text-muted-foreground">ملاحظات: {task.notes}</p>
                   ) : null}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
-                  {task.dayOfWeek ? <Badge variant="secondary">{task.dayOfWeek}</Badge> : null}
+                  {task.dayOfWeek ? (
+                    <Badge variant="secondary">{formatDay(task.dayOfWeek)}</Badge>
+                  ) : null}
                   <Badge variant={task.isActive ? "default" : "outline"}>
                     {task.isActive ? "نشط" : "غير نشط"}
                   </Badge>

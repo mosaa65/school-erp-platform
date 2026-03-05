@@ -61,6 +61,17 @@ function toFormState(section: SectionListItem): SectionFormState {
   };
 }
 
+function translateStage(stage: string): string {
+  const labels: Record<string, string> = {
+    KINDERGARTEN: "رياض الأطفال",
+    PRIMARY: "ابتدائي",
+    MIDDLE: "إعدادي/متوسط",
+    SECONDARY: "ثانوي",
+  };
+
+  return labels[stage] ?? stage;
+}
+
 export function SectionsWorkspace() {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("sections.create");
@@ -143,14 +154,14 @@ export function SectionsWorkspace() {
     }
 
     if (!/^[a-z0-9_.:-]+$/.test(code)) {
-      setFormError("صيغة code غير صحيحة.");
+      setFormError("صيغة الكود غير صحيحة.");
       return false;
     }
 
     if (formState.capacity.trim()) {
       const capacity = Number(formState.capacity);
       if (!Number.isInteger(capacity) || capacity < 1 || capacity > 1000) {
-        setFormError("capacity يجب أن يكون رقمًا صحيحًا بين 1 و 1000.");
+        setFormError("السعة يجب أن تكون رقمًا صحيحًا بين 1 و 1000.");
         return false;
       }
     }
@@ -261,7 +272,7 @@ export function SectionsWorkspace() {
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Grade Level *</label>
+                <label className="text-xs font-medium text-muted-foreground">الصف/المرحلة *</label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={formState.gradeLevelId}
@@ -284,18 +295,18 @@ export function SectionsWorkspace() {
 
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Code *</label>
+                  <label className="text-xs font-medium text-muted-foreground">الكود *</label>
                   <Input
                     value={formState.code}
                     onChange={(event) =>
                       setFormState((prev) => ({ ...prev, code: event.target.value }))
                     }
-                    placeholder="section-a"
+                    placeholder="مثال: g1-a"
                     required
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Capacity</label>
+                  <label className="text-xs font-medium text-muted-foreground">السعة</label>
                   <Input
                     type="number"
                     min={1}
@@ -363,7 +374,7 @@ export function SectionsWorkspace() {
                   ) : (
                     <Layers2 className="h-4 w-4" />
                   )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء Section"}
+                  {isEditing ? "حفظ التعديلات" : "إنشاء شعبة"}
                 </Button>
                 {isEditing ? (
                   <Button type="button" variant="outline" onClick={resetForm}>
@@ -379,7 +390,7 @@ export function SectionsWorkspace() {
       <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Sections List</CardTitle>
+            <CardTitle>قائمة الشعب</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <CardDescription>
@@ -408,7 +419,7 @@ export function SectionsWorkspace() {
                 setGradeLevelFilter(event.target.value);
               }}
             >
-              <option value="all">All grade levels</option>
+              <option value="all">كل الصفوف</option>
               {gradeLevelOptions.map((gradeLevel) => (
                 <option key={gradeLevel.id} value={gradeLevel.id}>
                   {gradeLevel.code}
@@ -467,15 +478,15 @@ export function SectionsWorkspace() {
                   <p className="font-medium">{section.name}</p>
                   <p className="text-xs text-muted-foreground">
                     <code>{section.code}</code>
-                    {section.capacity !== null ? ` - Capacity: ${section.capacity}` : ""}
+                    {section.capacity !== null ? ` - السعة: ${section.capacity}` : ""}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Grade: {section.gradeLevel.name} ({section.gradeLevel.code})
+                    الصف: {section.gradeLevel.name} ({section.gradeLevel.code})
                   </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant="outline">{section.gradeLevel.stage}</Badge>
+                  <Badge variant="outline">{translateStage(section.gradeLevel.stage)}</Badge>
                   <Badge variant={section.isActive ? "default" : "outline"}>
                     {section.isActive ? "نشط" : "غير نشط"}
                   </Badge>

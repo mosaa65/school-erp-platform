@@ -182,6 +182,41 @@ export type UserPermissionListItem = {
   } | null;
 };
 
+export type EmployeeSectionSupervisionListItem = {
+  id: string;
+  employeeId: string;
+  sectionId: string;
+  academicYearId: string;
+  canViewStudents: boolean;
+  canManageHomeworks: boolean;
+  canManageGrades: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  employee: {
+    id: string;
+    fullName: string;
+    jobNumber: string;
+    jobTitle: string;
+  };
+  section: {
+    id: string;
+    code: string;
+    name: string;
+    gradeLevel: {
+      id: string;
+      code: string;
+      name: string;
+    } | null;
+  };
+  academicYear: {
+    id: string;
+    code: string;
+    name: string;
+    status: string;
+  };
+};
+
 export type AuditStatus = "SUCCESS" | "FAILURE";
 
 export type AuditLogListItem = {
@@ -275,7 +310,79 @@ export type LookupPeriodListItem = {
   } | null;
 };
 
+export type LookupEnrollmentStatusListItem = {
+  id: number;
+  code: string;
+  nameAr: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: {
+    id: string;
+    email: string;
+  } | null;
+  updatedBy: {
+    id: string;
+    email: string;
+  } | null;
+};
+
+export type LookupOrphanStatusListItem = {
+  id: number;
+  code: string;
+  nameAr: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: {
+    id: string;
+    email: string;
+  } | null;
+  updatedBy: {
+    id: string;
+    email: string;
+  } | null;
+};
+
+export type LookupAbilityLevelListItem = {
+  id: number;
+  code: string;
+  nameAr: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: {
+    id: string;
+    email: string;
+  } | null;
+  updatedBy: {
+    id: string;
+    email: string;
+  } | null;
+};
+
+export type LookupActivityTypeListItem = {
+  id: number;
+  code: string;
+  nameAr: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: {
+    id: string;
+    email: string;
+  } | null;
+  updatedBy: {
+    id: string;
+    email: string;
+  } | null;
+};
+
 export type LookupCatalogType =
+  | "blood-types"
+  | "id-types"
+  | "ownership-types"
+  | "periods"
   | "school-types"
   | "genders"
   | "qualifications"
@@ -284,6 +391,10 @@ export type LookupCatalogType =
   | "attendance-statuses"
   | "marital-statuses"
   | "health-statuses"
+  | "enrollment-statuses"
+  | "orphan-statuses"
+  | "ability-levels"
+  | "activity-types"
   | "relationship-types"
   | "talents"
   | "hijri-months"
@@ -297,7 +408,8 @@ export type LookupCatalogType =
 
 export type LookupCatalogListItem = {
   id: number;
-  code: string;
+  code?: string;
+  name?: string;
   nameAr?: string;
   nameEn?: string | null;
   sortOrder?: number;
@@ -667,11 +779,14 @@ export type StudentListItem = {
   admissionNo: string | null;
   fullName: string;
   gender: StudentGender;
+  genderId: number | null;
   birthDate: string | null;
   bloodTypeId: number | null;
   healthStatus: StudentHealthStatus | null;
+  healthStatusId: number | null;
   healthNotes: string | null;
   orphanStatus: StudentOrphanStatus;
+  orphanStatusId: number | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -686,6 +801,26 @@ export type StudentListItem = {
   bloodType: {
     id: number;
     name: string;
+    isActive: boolean;
+  } | null;
+  genderLookup: {
+    id: number;
+    code: string;
+    nameAr: string;
+    nameEn: string | null;
+    isActive: boolean;
+  } | null;
+  orphanStatusLookup: {
+    id: number;
+    code: string;
+    nameAr: string;
+    isActive: boolean;
+  } | null;
+  healthStatusLookup: {
+    id: number;
+    code: string;
+    nameAr: string;
+    requiresDetails: boolean;
     isActive: boolean;
   } | null;
   guardians: Array<{
@@ -730,6 +865,7 @@ export type GuardianListItem = {
   id: string;
   fullName: string;
   gender: StudentGender;
+  genderId: number | null;
   idNumber: string | null;
   idTypeId: number | null;
   phonePrimary: string | null;
@@ -753,6 +889,13 @@ export type GuardianListItem = {
     nameAr: string;
     isActive: boolean;
   } | null;
+  genderLookup: {
+    id: number;
+    code: string;
+    nameAr: string;
+    nameEn: string | null;
+    isActive: boolean;
+  } | null;
   students: Array<{
     id: string;
     isPrimary: boolean;
@@ -771,6 +914,7 @@ export type StudentGuardianListItem = {
   studentId: string;
   guardianId: string;
   relationship: GuardianRelationship;
+  relationshipTypeId: number | null;
   isPrimary: boolean;
   canReceiveNotifications: boolean;
   canPickup: boolean;
@@ -801,6 +945,13 @@ export type StudentGuardianListItem = {
     whatsappNumber: string | null;
     isActive: boolean;
   };
+  relationshipTypeLookup: {
+    id: number;
+    code: string;
+    nameAr: string;
+    gender: "MALE" | "FEMALE" | "ALL";
+    isActive: boolean;
+  } | null;
 };
 
 export type StudentEnrollmentListItem = {
@@ -1894,11 +2045,13 @@ export type EmployeeListItem = {
   financialNumber: string | null;
   fullName: string;
   gender: EmployeeGender;
+  genderId: number | null;
   birthDate: string | null;
   phonePrimary: string | null;
   phoneSecondary: string | null;
   hasWhatsapp: boolean;
   qualification: string | null;
+  qualificationId: number | null;
   qualificationDate: string | null;
   specialization: string | null;
   idNumber: string | null;
@@ -1907,6 +2060,7 @@ export type EmployeeListItem = {
   experienceYears: number;
   employmentType: EmploymentType | null;
   jobTitle: string | null;
+  jobRoleId: number | null;
   hireDate: string | null;
   previousSchool: string | null;
   salaryApproved: boolean;
@@ -1926,6 +2080,27 @@ export type EmployeeListItem = {
     id: number;
     code: string;
     nameAr: string;
+    isActive: boolean;
+  } | null;
+  genderLookup: {
+    id: number;
+    code: string;
+    nameAr: string;
+    nameEn: string | null;
+    isActive: boolean;
+  } | null;
+  qualificationLookup: {
+    id: number;
+    code: string;
+    nameAr: string;
+    sortOrder: number;
+    isActive: boolean;
+  } | null;
+  jobRoleLookup: {
+    id: number;
+    code: string;
+    nameAr: string;
+    nameArFemale: string | null;
     isActive: boolean;
   } | null;
 };
@@ -2396,6 +2571,26 @@ export type RevokeUserPermissionPayload = {
   revokeReason?: string;
 };
 
+export type CreateEmployeeSectionSupervisionPayload = {
+  employeeId: string;
+  sectionId: string;
+  academicYearId: string;
+  canViewStudents?: boolean;
+  canManageHomeworks?: boolean;
+  canManageGrades?: boolean;
+  isActive?: boolean;
+};
+
+export type UpdateEmployeeSectionSupervisionPayload = {
+  employeeId?: string;
+  sectionId?: string;
+  academicYearId?: string;
+  canViewStudents?: boolean;
+  canManageHomeworks?: boolean;
+  canManageGrades?: boolean;
+  isActive?: boolean;
+};
+
 export type CreateLookupBloodTypePayload = {
   name: string;
   isActive?: boolean;
@@ -2442,7 +2637,56 @@ export type UpdateLookupPeriodPayload = {
   isActive?: boolean;
 };
 
+export type CreateLookupEnrollmentStatusPayload = {
+  code: string;
+  nameAr: string;
+  isActive?: boolean;
+};
+
+export type UpdateLookupEnrollmentStatusPayload = {
+  code?: string;
+  nameAr?: string;
+  isActive?: boolean;
+};
+
+export type CreateLookupOrphanStatusPayload = {
+  code: string;
+  nameAr: string;
+  isActive?: boolean;
+};
+
+export type UpdateLookupOrphanStatusPayload = {
+  code?: string;
+  nameAr?: string;
+  isActive?: boolean;
+};
+
+export type CreateLookupAbilityLevelPayload = {
+  code: string;
+  nameAr: string;
+  isActive?: boolean;
+};
+
+export type UpdateLookupAbilityLevelPayload = {
+  code?: string;
+  nameAr?: string;
+  isActive?: boolean;
+};
+
+export type CreateLookupActivityTypePayload = {
+  code: string;
+  nameAr: string;
+  isActive?: boolean;
+};
+
+export type UpdateLookupActivityTypePayload = {
+  code?: string;
+  nameAr?: string;
+  isActive?: boolean;
+};
+
 export type CreateLookupCatalogItemPayload = {
+  name?: string;
   code?: string;
   nameAr?: string;
   nameEn?: string;
@@ -2662,12 +2906,15 @@ export type UpdateTimetableEntryPayload = {
 export type CreateStudentPayload = {
   admissionNo?: string;
   fullName: string;
-  gender: StudentGender;
+  gender?: StudentGender;
+  genderId?: number;
   birthDate?: string;
   bloodTypeId?: number | null;
   healthStatus?: StudentHealthStatus;
+  healthStatusId?: number;
   healthNotes?: string;
   orphanStatus?: StudentOrphanStatus;
+  orphanStatusId?: number;
   isActive?: boolean;
 };
 
@@ -2675,17 +2922,21 @@ export type UpdateStudentPayload = {
   admissionNo?: string;
   fullName?: string;
   gender?: StudentGender;
+  genderId?: number;
   birthDate?: string;
   bloodTypeId?: number | null;
   healthStatus?: StudentHealthStatus;
+  healthStatusId?: number;
   healthNotes?: string;
   orphanStatus?: StudentOrphanStatus;
+  orphanStatusId?: number;
   isActive?: boolean;
 };
 
 export type CreateGuardianPayload = {
   fullName: string;
-  gender: StudentGender;
+  gender?: StudentGender;
+  genderId?: number;
   idNumber?: string;
   idTypeId?: number | null;
   phonePrimary?: string;
@@ -2698,6 +2949,7 @@ export type CreateGuardianPayload = {
 export type UpdateGuardianPayload = {
   fullName?: string;
   gender?: StudentGender;
+  genderId?: number;
   idNumber?: string;
   idTypeId?: number | null;
   phonePrimary?: string;
@@ -2710,7 +2962,8 @@ export type UpdateGuardianPayload = {
 export type CreateStudentGuardianPayload = {
   studentId: string;
   guardianId: string;
-  relationship: GuardianRelationship;
+  relationship?: GuardianRelationship;
+  relationshipTypeId?: number;
   isPrimary?: boolean;
   canReceiveNotifications?: boolean;
   canPickup?: boolean;
@@ -2724,6 +2977,7 @@ export type UpdateStudentGuardianPayload = {
   studentId?: string;
   guardianId?: string;
   relationship?: GuardianRelationship;
+  relationshipTypeId?: number;
   isPrimary?: boolean;
   canReceiveNotifications?: boolean;
   canPickup?: boolean;
@@ -3210,12 +3464,14 @@ export type CreateEmployeePayload = {
   jobNumber?: string;
   financialNumber?: string;
   fullName: string;
-  gender: EmployeeGender;
+  gender?: EmployeeGender;
+  genderId?: number;
   birthDate?: string;
   phonePrimary?: string;
   phoneSecondary?: string;
   hasWhatsapp?: boolean;
   qualification?: string;
+  qualificationId?: number | null;
   qualificationDate?: string;
   specialization?: string;
   idNumber?: string;
@@ -3224,6 +3480,7 @@ export type CreateEmployeePayload = {
   experienceYears?: number;
   employmentType?: EmploymentType;
   jobTitle?: string;
+  jobRoleId?: number | null;
   hireDate?: string;
   previousSchool?: string;
   salaryApproved?: boolean;
@@ -3236,11 +3493,13 @@ export type UpdateEmployeePayload = {
   financialNumber?: string;
   fullName?: string;
   gender?: EmployeeGender;
+  genderId?: number;
   birthDate?: string;
   phonePrimary?: string;
   phoneSecondary?: string;
   hasWhatsapp?: boolean;
   qualification?: string;
+  qualificationId?: number | null;
   qualificationDate?: string;
   specialization?: string;
   idNumber?: string;
@@ -3249,6 +3508,7 @@ export type UpdateEmployeePayload = {
   experienceYears?: number;
   employmentType?: EmploymentType;
   jobTitle?: string;
+  jobRoleId?: number | null;
   hireDate?: string;
   previousSchool?: string;
   salaryApproved?: boolean;
@@ -3775,6 +4035,57 @@ export const apiClient = {
     request<DeleteEntityResponse>(`/user-permissions/${userPermissionId}`, "DELETE", {
       withAuth: true,
     }),
+  listEmployeeSectionSupervisions: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    employeeId?: string;
+    sectionId?: string;
+    academicYearId?: string;
+    canViewStudents?: boolean;
+    canManageHomeworks?: boolean;
+    canManageGrades?: boolean;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<EmployeeSectionSupervisionListItem>>(
+      `/employee-section-supervisions${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        employeeId: query?.employeeId,
+        sectionId: query?.sectionId,
+        academicYearId: query?.academicYearId,
+        canViewStudents: query?.canViewStudents,
+        canManageHomeworks: query?.canManageHomeworks,
+        canManageGrades: query?.canManageGrades,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createEmployeeSectionSupervision: (payload: CreateEmployeeSectionSupervisionPayload) =>
+    request<EmployeeSectionSupervisionListItem>("/employee-section-supervisions", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateEmployeeSectionSupervision: (
+    supervisionId: string,
+    payload: UpdateEmployeeSectionSupervisionPayload,
+  ) =>
+    request<EmployeeSectionSupervisionListItem>(
+      `/employee-section-supervisions/${supervisionId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  deleteEmployeeSectionSupervision: (supervisionId: string) =>
+    request<DeleteEntityResponse>(`/employee-section-supervisions/${supervisionId}`, "DELETE", {
+      withAuth: true,
+    }),
   listLookupBloodTypes: (query?: {
     page?: number;
     limit?: number;
@@ -3915,6 +4226,150 @@ export const apiClient = {
     }),
   deleteLookupPeriod: (lookupPeriodId: number) =>
     request<DeleteEntityResponse>(`/lookup/periods/${lookupPeriodId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listLookupEnrollmentStatuses: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<LookupEnrollmentStatusListItem>>(
+      `/lookup/enrollment-statuses${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createLookupEnrollmentStatus: (payload: CreateLookupEnrollmentStatusPayload) =>
+    request<LookupEnrollmentStatusListItem>("/lookup/enrollment-statuses", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateLookupEnrollmentStatus: (
+    lookupEnrollmentStatusId: number,
+    payload: UpdateLookupEnrollmentStatusPayload,
+  ) =>
+    request<LookupEnrollmentStatusListItem>(
+      `/lookup/enrollment-statuses/${lookupEnrollmentStatusId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  deleteLookupEnrollmentStatus: (lookupEnrollmentStatusId: number) =>
+    request<DeleteEntityResponse>(`/lookup/enrollment-statuses/${lookupEnrollmentStatusId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listLookupOrphanStatuses: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<LookupOrphanStatusListItem>>(
+      `/lookup/orphan-statuses${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createLookupOrphanStatus: (payload: CreateLookupOrphanStatusPayload) =>
+    request<LookupOrphanStatusListItem>("/lookup/orphan-statuses", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateLookupOrphanStatus: (
+    lookupOrphanStatusId: number,
+    payload: UpdateLookupOrphanStatusPayload,
+  ) =>
+    request<LookupOrphanStatusListItem>(`/lookup/orphan-statuses/${lookupOrphanStatusId}`, "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  deleteLookupOrphanStatus: (lookupOrphanStatusId: number) =>
+    request<DeleteEntityResponse>(`/lookup/orphan-statuses/${lookupOrphanStatusId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listLookupAbilityLevels: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<LookupAbilityLevelListItem>>(
+      `/lookup/ability-levels${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createLookupAbilityLevel: (payload: CreateLookupAbilityLevelPayload) =>
+    request<LookupAbilityLevelListItem>("/lookup/ability-levels", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateLookupAbilityLevel: (
+    lookupAbilityLevelId: number,
+    payload: UpdateLookupAbilityLevelPayload,
+  ) =>
+    request<LookupAbilityLevelListItem>(`/lookup/ability-levels/${lookupAbilityLevelId}`, "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  deleteLookupAbilityLevel: (lookupAbilityLevelId: number) =>
+    request<DeleteEntityResponse>(`/lookup/ability-levels/${lookupAbilityLevelId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listLookupActivityTypes: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<LookupActivityTypeListItem>>(
+      `/lookup/activity-types${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createLookupActivityType: (payload: CreateLookupActivityTypePayload) =>
+    request<LookupActivityTypeListItem>("/lookup/activity-types", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateLookupActivityType: (
+    lookupActivityTypeId: number,
+    payload: UpdateLookupActivityTypePayload,
+  ) =>
+    request<LookupActivityTypeListItem>(`/lookup/activity-types/${lookupActivityTypeId}`, "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  deleteLookupActivityType: (lookupActivityTypeId: number) =>
+    request<DeleteEntityResponse>(`/lookup/activity-types/${lookupActivityTypeId}`, "DELETE", {
       withAuth: true,
     }),
   listLookupCatalogItems: (
@@ -4554,8 +5009,12 @@ export const apiClient = {
     limit?: number;
     search?: string;
     gender?: StudentGender;
+    genderId?: number;
     bloodTypeId?: number;
+    healthStatus?: StudentHealthStatus;
+    healthStatusId?: number;
     orphanStatus?: StudentOrphanStatus;
+    orphanStatusId?: number;
     isActive?: boolean;
   }) =>
     request<PaginatedResponse<StudentListItem>>(
@@ -4564,8 +5023,12 @@ export const apiClient = {
         limit: query?.limit,
         search: query?.search,
         gender: query?.gender,
+        genderId: query?.genderId,
         bloodTypeId: query?.bloodTypeId,
+        healthStatus: query?.healthStatus,
+        healthStatusId: query?.healthStatusId,
         orphanStatus: query?.orphanStatus,
+        orphanStatusId: query?.orphanStatusId,
         isActive: query?.isActive,
       })}`,
       "GET",
@@ -4592,6 +5055,7 @@ export const apiClient = {
     limit?: number;
     search?: string;
     gender?: StudentGender;
+    genderId?: number;
     idTypeId?: number;
     isActive?: boolean;
   }) =>
@@ -4601,6 +5065,7 @@ export const apiClient = {
         limit: query?.limit,
         search: query?.search,
         gender: query?.gender,
+        genderId: query?.genderId,
         idTypeId: query?.idTypeId,
         isActive: query?.isActive,
       })}`,
@@ -4630,6 +5095,7 @@ export const apiClient = {
     studentId?: string;
     guardianId?: string;
     relationship?: GuardianRelationship;
+    relationshipTypeId?: number;
     isPrimary?: boolean;
     isActive?: boolean;
   }) =>
@@ -4641,6 +5107,7 @@ export const apiClient = {
         studentId: query?.studentId,
         guardianId: query?.guardianId,
         relationship: query?.relationship,
+        relationshipTypeId: query?.relationshipTypeId,
         isPrimary: query?.isPrimary,
         isActive: query?.isActive,
       })}`,
@@ -5382,9 +5849,12 @@ export const apiClient = {
     limit?: number;
     search?: string;
     gender?: EmployeeGender;
+    genderId?: number;
     employmentType?: EmploymentType;
     idTypeId?: number;
     jobTitle?: string;
+    qualificationId?: number;
+    jobRoleId?: number;
     isActive?: boolean;
   }) =>
     request<PaginatedResponse<EmployeeListItem>>(
@@ -5393,9 +5863,12 @@ export const apiClient = {
         limit: query?.limit,
         search: query?.search,
         gender: query?.gender,
+        genderId: query?.genderId,
         employmentType: query?.employmentType,
         idTypeId: query?.idTypeId,
         jobTitle: query?.jobTitle,
+        qualificationId: query?.qualificationId,
+        jobRoleId: query?.jobRoleId,
         isActive: query?.isActive,
       })}`,
       "GET",

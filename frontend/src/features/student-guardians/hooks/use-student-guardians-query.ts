@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ApiError, apiClient, type GuardianRelationship } from "@/lib/api/client";
+import { ApiError, apiClient } from "@/lib/api/client";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 
 type UseStudentGuardiansQueryOptions = {
@@ -10,7 +10,7 @@ type UseStudentGuardiansQueryOptions = {
   search?: string;
   studentId?: string;
   guardianId?: string;
-  relationship?: GuardianRelationship;
+  relationshipTypeId?: number;
   isPrimary?: boolean;
   isActive?: boolean;
 };
@@ -27,7 +27,7 @@ export function useStudentGuardiansQuery(options: UseStudentGuardiansQueryOption
       options.search ?? "",
       options.studentId ?? "all",
       options.guardianId ?? "all",
-      options.relationship ?? "all",
+      options.relationshipTypeId ?? "all",
       options.isPrimary === undefined ? "all" : options.isPrimary ? "primary" : "secondary",
       options.isActive === undefined ? "all" : options.isActive ? "active" : "inactive",
     ],
@@ -40,7 +40,7 @@ export function useStudentGuardiansQuery(options: UseStudentGuardiansQueryOption
           search: options.search,
           studentId: options.studentId,
           guardianId: options.guardianId,
-          relationship: options.relationship,
+          relationshipTypeId: options.relationshipTypeId,
           isPrimary: options.isPrimary,
           isActive: options.isActive,
         });

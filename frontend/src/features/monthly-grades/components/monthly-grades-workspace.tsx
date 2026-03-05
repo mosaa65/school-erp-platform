@@ -58,6 +58,12 @@ type CalculateFormState = {
 };
 
 const PAGE_SIZE = 12;
+const WORKFLOW_STATUS_LABELS: Record<GradingWorkflowStatus, string> = {
+  DRAFT: "مسودة",
+  IN_REVIEW: "قيد المراجعة",
+  APPROVED: "معتمد",
+  ARCHIVED: "مؤرشف",
+};
 
 const DEFAULT_FORM: FormState = {
   academicMonthId: "",
@@ -104,6 +110,10 @@ function toFormState(item: MonthlyGradeListItem): FormState {
     notes: item.notes ?? "",
     isActive: item.isActive,
   };
+}
+
+function getWorkflowStatusLabel(status: GradingWorkflowStatus): string {
+  return WORKFLOW_STATUS_LABELS[status] ?? status;
 }
 
 export function MonthlyGradesWorkspace() {
@@ -182,17 +192,17 @@ export function MonthlyGradesWorkspace() {
       return false;
     }
     if (form.notes.trim().length > 255) {
-      setFormError("notes يجب ألا يتجاوز 255 حرف.");
+      setFormError("الملاحظات يجب ألا تتجاوز 255 حرفًا.");
       return false;
     }
     const activityScore = parseOptionalNumber(form.activityScore);
     const contributionScore = parseOptionalNumber(form.contributionScore);
     if (activityScore !== undefined && activityScore < 0) {
-      setFormError("activityScore يجب أن يكون >= 0.");
+      setFormError("درجة النشاط يجب أن تكون أكبر من أو تساوي 0.");
       return false;
     }
     if (contributionScore !== undefined && contributionScore < 0) {
-      setFormError("contributionScore يجب أن يكون >= 0.");
+      setFormError("درجة المشاركة يجب أن تكون أكبر من أو تساوي 0.");
       return false;
     }
     if (editingItem) {
@@ -200,7 +210,7 @@ export function MonthlyGradesWorkspace() {
         activityScore !== undefined &&
         activityScore > editingItem.gradingPolicy.maxActivityScore
       ) {
-        setFormError(`activityScore يجب ألا يتجاوز ${editingItem.gradingPolicy.maxActivityScore}.`);
+        setFormError(`درجة النشاط يجب ألا تتجاوز ${editingItem.gradingPolicy.maxActivityScore}.`);
         return false;
       }
       if (
@@ -208,7 +218,7 @@ export function MonthlyGradesWorkspace() {
         contributionScore > editingItem.gradingPolicy.maxContributionScore
       ) {
         setFormError(
-          `contributionScore يجب ألا يتجاوز ${editingItem.gradingPolicy.maxContributionScore}.`,
+          `درجة المشاركة يجب ألا تتجاوز ${editingItem.gradingPolicy.maxContributionScore}.`,
         );
         return false;
       }
@@ -239,20 +249,20 @@ export function MonthlyGradesWorkspace() {
             <p className="text-sm font-medium">الاحتساب</p>
             <div className="grid gap-2 md:grid-cols-3">
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={calcForm.academicMonthId} onChange={(event) => setCalcForm((prev) => ({ ...prev, academicMonthId: event.target.value }))}>
-                <option value="">Month</option>
+                <option value="">الشهر</option>
                 {(monthsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={calcForm.sectionId} onChange={(event) => setCalcForm((prev) => ({ ...prev, sectionId: event.target.value }))}>
-                <option value="">Section</option>
+                <option value="">الشعبة</option>
                 {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={calcForm.subjectId} onChange={(event) => setCalcForm((prev) => ({ ...prev, subjectId: event.target.value }))}>
-                <option value="">Subject</option>
+                <option value="">المادة</option>
                 {(subjectsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
               </select>
             </div>
             <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>Overwrite manual</span>
+              <span>استبدال الإدخال اليدوي</span>
               <input type="checkbox" checked={calcForm.overwriteManual} onChange={(event) => setCalcForm((prev) => ({ ...prev, overwriteManual: event.target.checked }))} />
             </label>
             <Button type="button" variant="outline" className="w-full gap-2" disabled={!canCalculate || calculateMutation.isPending} onClick={() => {
@@ -261,10 +271,10 @@ export function MonthlyGradesWorkspace() {
                 setCalcInfo("اختر الشهر والشعبة والمادة.");
                 return;
               }
-              calculateMutation.mutate(calcForm, { onSuccess: (result) => setCalcInfo(`${result.message} | total=${result.summary.totalEnrollments}, created=${result.summary.created}, updated=${result.summary.updated}, skipped=${result.summary.skippedLocked}`) });
+              calculateMutation.mutate(calcForm, { onSuccess: (result) => setCalcInfo(`${result.message} | الإجمالي=${result.summary.totalEnrollments}, الجديد=${result.summary.created}, المحدّث=${result.summary.updated}, المتجاوز=${result.summary.skippedLocked}`) });
             }}>
               {calculateMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Calculator className="h-4 w-4" />}
-              Calculate
+              احتساب
             </Button>
             {calcInfo ? <div className="rounded-md border border-primary/30 bg-primary/10 p-2 text-xs text-primary">{calcInfo}</div> : null}
           </div>
@@ -284,7 +294,7 @@ export function MonthlyGradesWorkspace() {
           }}>
             <div className="grid gap-2 md:grid-cols-2">
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.academicMonthId} disabled={editingId !== null} onChange={(event) => setForm((prev) => ({ ...prev, academicMonthId: event.target.value, studentEnrollmentId: "" }))}>
-                <option value="">Month *</option>
+                <option value="">الشهر *</option>
                 {(monthsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.sectionId} disabled={editingId !== null} onChange={(event) => setForm((prev) => ({ ...prev, sectionId: event.target.value, studentEnrollmentId: "" }))}>
@@ -303,8 +313,8 @@ export function MonthlyGradesWorkspace() {
               </select>
             </div>
             <div className="grid gap-2 md:grid-cols-2">
-              <Input type="number" min={0} step={0.01} value={form.activityScore} onChange={(event) => setForm((prev) => ({ ...prev, activityScore: event.target.value }))} placeholder="Activity" />
-              <Input type="number" min={0} step={0.01} value={form.contributionScore} onChange={(event) => setForm((prev) => ({ ...prev, contributionScore: event.target.value }))} placeholder="Contribution" />
+              <Input type="number" min={0} step={0.01} value={form.activityScore} onChange={(event) => setForm((prev) => ({ ...prev, activityScore: event.target.value }))} placeholder="النشاط" />
+              <Input type="number" min={0} step={0.01} value={form.contributionScore} onChange={(event) => setForm((prev) => ({ ...prev, contributionScore: event.target.value }))} placeholder="المشاركة" />
             </div>
             {editingId ? (
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.status} onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value as GradingWorkflowStatus }))}>
@@ -324,7 +334,7 @@ export function MonthlyGradesWorkspace() {
             <div className="flex gap-2">
               <Button type="submit" className="flex-1 gap-2" disabled={isSubmitting}>
                 {isSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Medal className="h-4 w-4" />}
-                {editingId ? "حفظ التعديلات" : "إنشاء Monthly Grade"}
+                {editingId ? "حفظ التعديلات" : "إنشاء درجة شهرية"}
               </Button>
               {editingId ? <Button type="button" variant="outline" onClick={resetForm}>إلغاء</Button> : null}
             </div>
@@ -335,7 +345,7 @@ export function MonthlyGradesWorkspace() {
       <Card className="border-border/70 bg-card/80">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Monthly Grades</CardTitle>
+            <CardTitle>الدرجات الشهرية</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <form onSubmit={(event) => { event.preventDefault(); setPage(1); setSearch(searchInput.trim()); }} className="grid gap-2 md:grid-cols-[1fr_170px_150px_150px_110px_auto]">
@@ -344,7 +354,7 @@ export function MonthlyGradesWorkspace() {
               <Input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="بحث..." className="pr-8" />
             </div>
             <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={monthFilter} onChange={(event) => { setPage(1); setMonthFilter(event.target.value); }}>
-              <option value="all">All months</option>
+              <option value="all">كل الأشهر</option>
               {(monthsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
             </select>
             <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={sectionFilter} onChange={(event) => { setPage(1); setSectionFilter(event.target.value); }}>
@@ -374,10 +384,10 @@ export function MonthlyGradesWorkspace() {
                 <div className="space-y-1">
                   <p className="font-medium">{item.studentEnrollment.student.fullName} - {item.subject.code}</p>
                   <p className="text-xs text-muted-foreground">{item.academicMonth.code} | {item.studentEnrollment.section.code}</p>
-                  <p className="text-xs text-muted-foreground">Attendance {item.attendanceScore} | Homework {item.homeworkScore} | Activity {item.activityScore} | Contribution {item.contributionScore} | Exam {item.examScore} | Total {item.monthlyTotal}</p>
+                  <p className="text-xs text-muted-foreground">الحضور {item.attendanceScore} | الواجب {item.homeworkScore} | النشاط {item.activityScore} | المشاركة {item.contributionScore} | الاختبار {item.examScore} | الإجمالي {item.monthlyTotal}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant={item.status === "APPROVED" ? "default" : "secondary"}>{item.status}</Badge>
+                  <Badge variant={item.status === "APPROVED" ? "default" : "secondary"}>{getWorkflowStatusLabel(item.status)}</Badge>
                   <Badge variant={item.isLocked ? "default" : "secondary"}>{item.isLocked ? "مقفل" : "غير مقفل"}</Badge>
                   <Badge variant={item.isActive ? "default" : "outline"}>{item.isActive ? "نشط" : "غير نشط"}</Badge>
                 </div>

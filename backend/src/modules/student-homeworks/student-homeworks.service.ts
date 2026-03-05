@@ -1,13 +1,13 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { AuditStatus, Prisma, StudentHomework } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { DataScopeService } from '../data-scope/data-scope.service';
 import { CreateStudentHomeworkDto } from './dto/create-student-homework.dto';
 import { ListStudentHomeworksDto } from './dto/list-student-homeworks.dto';
 import { UpdateStudentHomeworkDto } from './dto/update-student-homework.dto';
@@ -101,6 +101,7 @@ export class StudentHomeworksService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLogsService: AuditLogsService,
+    private readonly dataScopeService: DataScopeService,
   ) {}
 
   async create(payload: CreateStudentHomeworkDto, actorUserId: string) {
@@ -216,7 +217,7 @@ export class StudentHomeworksService {
     }
   }
 
-  async findAll(query: ListStudentHomeworksDto) {
+  async findAll(query: ListStudentHomeworksDto, actorUserId: string) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
 
@@ -282,6 +283,42 @@ export class StudentHomeworksService {
         : undefined,
     };
 
+    const scope = await this.dataScopeService.getSectionSubjectYearGrants({
+      actorUserId,
+      capability: 'MANAGE_HOMEWORKS',
+      academicYearId: query.academicYearId,
+    });
+
+    if (!scope.isPrivileged) {
+      if (scope.grants.length === 0) {
+        return {
+          data: [],
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            totalPages: 0,
+          },
+        };
+      }
+
+      const scopedHomeworkWhere: Prisma.HomeworkWhereInput = {
+        OR: scope.grants.map((grant) => ({
+          sectionId: grant.sectionId,
+          academicYearId: grant.academicYearId,
+          subjectId: grant.subjectId,
+        })),
+      };
+
+      if (where.homework) {
+        where.homework = {
+          AND: [where.homework, scopedHomeworkWhere],
+        };
+      } else {
+        where.homework = scopedHomeworkWhere;
+      }
+    }
+
     const [total, items] = await this.prisma.$transaction([
       this.prisma.studentHomework.count({ where }),
       this.prisma.studentHomework.findMany({
@@ -313,7 +350,7 @@ export class StudentHomeworksService {
     };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, actorUserId: string) {
     const studentHomework = await this.prisma.studentHomework.findFirst({
       where: {
         id,
@@ -325,6 +362,13 @@ export class StudentHomeworksService {
     if (!studentHomework) {
       throw new NotFoundException('Student homework record not found');
     }
+
+    await this.ensureActorAuthorized(
+      actorUserId,
+      studentHomework.homework.sectionId,
+      studentHomework.homework.subjectId,
+      studentHomework.homework.academicYearId,
+    );
 
     return studentHomework;
   }
@@ -591,45 +635,13 @@ export class StudentHomeworksService {
     subjectId: string,
     academicYearId: string,
   ) {
-    const user = await this.prisma.user.findFirst({
-      where: {
-        id: actorUserId,
-        deletedAt: null,
-        isActive: true,
-      },
-      select: {
-        id: true,
-        employeeId: true,
-      },
+    await this.dataScopeService.ensureCanManageSectionSubjectYear({
+      actorUserId,
+      sectionId,
+      subjectId,
+      academicYearId,
+      capability: 'MANAGE_HOMEWORKS',
     });
-
-    if (!user) {
-      throw new ForbiddenException('Authenticated user is not active');
-    }
-
-    if (!user.employeeId) {
-      // Allow privileged users without linked employee profile.
-      return;
-    }
-
-    const assignmentsCount = await this.prisma.employeeTeachingAssignment.count(
-      {
-        where: {
-          employeeId: user.employeeId,
-          sectionId,
-          subjectId,
-          academicYearId,
-          deletedAt: null,
-          isActive: true,
-        },
-      },
-    );
-
-    if (assignmentsCount === 0) {
-      throw new ForbiddenException(
-        'You are not assigned to this subject and section for the selected academic year',
-      );
-    }
   }
 
   private throwKnownDatabaseErrors(error: unknown): never {

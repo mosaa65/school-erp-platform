@@ -47,6 +47,13 @@ export class ListStudentGuardiansDto {
   @IsEnum(GuardianRelationship)
   relationship?: GuardianRelationship;
 
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  relationshipTypeId?: number;
+
   @ApiPropertyOptional({ example: true })
   @IsOptional()
   @Type(() => Boolean)

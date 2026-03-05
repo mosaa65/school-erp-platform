@@ -183,7 +183,7 @@ export function AcademicYearsWorkspace() {
     }
 
     if (!/^[a-z0-9_.:-]+$/.test(code)) {
-      setFormError("صيغة code غير صحيحة.");
+      setFormError("صيغة الكود غير صحيحة.");
       return false;
     }
 
@@ -295,7 +295,7 @@ export function AcademicYearsWorkspace() {
           <CardDescription>
             {isEditing
               ? "تعديل البيانات الزمنية والحالة للسنة الأكاديمية."
-              : "إضافة سنة أكاديمية جديدة (System 02 - Academic Core)."}
+              : "إضافة سنة أكاديمية جديدة (النظام 02 - النواة الأكاديمية)."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -306,7 +306,7 @@ export function AcademicYearsWorkspace() {
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Code *</label>
+                <label className="text-xs font-medium text-muted-foreground">الكود *</label>
                 <Input
                   value={formState.code}
                   onChange={(event) =>

@@ -269,7 +269,7 @@ export function SystemSettingsWorkspace() {
               لا تملك صلاحية <code>system-settings.create</code>.
             </div>
           ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm}>
+            <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="setting-form">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">المفتاح *</label>
                 <Input
@@ -280,6 +280,7 @@ export function SystemSettingsWorkspace() {
                   placeholder="default_date_format"
                   required
                   disabled={isEditing}
+                  data-testid="setting-form-key"
                 />
               </div>
 
@@ -294,6 +295,7 @@ export function SystemSettingsWorkspace() {
                       settingType: event.target.value as SystemSettingType,
                     }))
                   }
+                  data-testid="setting-form-type"
                 >
                   {SETTING_TYPE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -311,6 +313,7 @@ export function SystemSettingsWorkspace() {
                     setFormState((prev) => ({ ...prev, settingValue: event.target.value }))
                   }
                   placeholder="hijri"
+                  data-testid="setting-form-value"
                 />
               </div>
 
@@ -322,6 +325,7 @@ export function SystemSettingsWorkspace() {
                     setFormState((prev) => ({ ...prev, category: event.target.value }))
                   }
                   placeholder="general"
+                  data-testid="setting-form-category"
                 />
               </div>
 
@@ -333,6 +337,7 @@ export function SystemSettingsWorkspace() {
                     setFormState((prev) => ({ ...prev, description: event.target.value }))
                   }
                   placeholder="صيغة التاريخ الافتراضية"
+                  data-testid="setting-form-description"
                 />
               </div>
 
@@ -344,6 +349,7 @@ export function SystemSettingsWorkspace() {
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, isEditable: event.target.checked }))
                   }
+                  data-testid="setting-form-editable"
                 />
               </label>
 
@@ -364,6 +370,7 @@ export function SystemSettingsWorkspace() {
                   type="submit"
                   className="flex-1 gap-2"
                   disabled={isFormSubmitting || (!canCreate && !isEditing)}
+                  data-testid="setting-form-submit"
                 >
                   {isFormSubmitting ? (
                     <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -399,6 +406,7 @@ export function SystemSettingsWorkspace() {
                 onChange={(event) => setSearchInput(event.target.value)}
                 placeholder="بحث بالمفتاح أو التصنيف..."
                 className="pr-8"
+                data-testid="setting-filter-search"
               />
             </div>
             <select
@@ -408,6 +416,7 @@ export function SystemSettingsWorkspace() {
                 setPage(1);
                 setEditableFilter(event.target.value as "all" | "editable" | "readonly");
               }}
+              data-testid="setting-filter-editable"
             >
               <option value="all">كل الأنواع</option>
               <option value="editable">قابل للتعديل</option>
@@ -444,6 +453,7 @@ export function SystemSettingsWorkspace() {
             <div
               key={item.id}
               className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+              data-testid="setting-card"
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="space-y-1">

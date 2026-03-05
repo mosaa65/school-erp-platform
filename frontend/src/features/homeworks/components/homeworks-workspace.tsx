@@ -52,6 +52,7 @@ type HomeworkFormState = {
 };
 
 const PAGE_SIZE = 12;
+const DEFAULT_DUE_DATE_OFFSET_DAYS = 5;
 
 const DEFAULT_FORM_STATE: HomeworkFormState = {
   academicYearId: "",
@@ -68,6 +69,33 @@ const DEFAULT_FORM_STATE: HomeworkFormState = {
   autoPopulateStudents: true,
   isActive: true,
 };
+
+function toLocalDateInput(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function fromDateInput(value: string): Date {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function addDaysToDateInput(value: string, days: number): string {
+  const baseDate = fromDateInput(value);
+  baseDate.setDate(baseDate.getDate() + days);
+  return toLocalDateInput(baseDate);
+}
+
+function createDefaultFormState(): HomeworkFormState {
+  const homeworkDate = toLocalDateInput(new Date());
+  return {
+    ...DEFAULT_FORM_STATE,
+    homeworkDate,
+    dueDate: addDaysToDateInput(homeworkDate, DEFAULT_DUE_DATE_OFFSET_DAYS),
+  };
+}
 
 function toOptionalString(value: string): string | undefined {
   const normalized = value.trim();
@@ -144,7 +172,9 @@ export function HomeworksWorkspace() {
   );
 
   const [editingHomeworkId, setEditingHomeworkId] = React.useState<string | null>(null);
-  const [formState, setFormState] = React.useState<HomeworkFormState>(DEFAULT_FORM_STATE);
+  const [formState, setFormState] = React.useState<HomeworkFormState>(
+    createDefaultFormState,
+  );
   const [formError, setFormError] = React.useState<string | null>(null);
   const [actionInfo, setActionInfo] = React.useState<string | null>(null);
 
@@ -191,7 +221,7 @@ export function HomeworksWorkspace() {
     const stillExists = homeworks.some((item) => item.id === editingHomeworkId);
     if (!stillExists) {
       setEditingHomeworkId(null);
-      setFormState(DEFAULT_FORM_STATE);
+      setFormState(createDefaultFormState());
       setFormError(null);
       setActionInfo(null);
     }
@@ -199,7 +229,7 @@ export function HomeworksWorkspace() {
 
   const resetForm = () => {
     setEditingHomeworkId(null);
-    setFormState(DEFAULT_FORM_STATE);
+    setFormState(createDefaultFormState());
     setFormError(null);
     setActionInfo(null);
   };
@@ -226,7 +256,7 @@ export function HomeworksWorkspace() {
 
     const maxScore = Number(formState.maxScore);
     if (!Number.isFinite(maxScore) || maxScore < 0.01) {
-      setFormError("maxScore يجب أن يكون أكبر من 0.");
+      setFormError("الدرجة القصوى يجب أن تكون أكبر من 0.");
       return false;
     }
 
@@ -235,22 +265,22 @@ export function HomeworksWorkspace() {
       formState.homeworkDate &&
       formState.dueDate.localeCompare(formState.homeworkDate) < 0
     ) {
-      setFormError("dueDate يجب أن يكون في أو بعد homeworkDate.");
+      setFormError("تاريخ التسليم يجب أن يكون في نفس يوم تاريخ الواجب أو بعده.");
       return false;
     }
 
     if (formState.title.trim().length > 120) {
-      setFormError("title يجب ألا يتجاوز 120 حرف.");
+      setFormError("عنوان الواجب يجب ألا يتجاوز 120 حرفًا.");
       return false;
     }
 
     if (formState.content.trim().length > 5000) {
-      setFormError("content يجب ألا يتجاوز 5000 حرف.");
+      setFormError("المحتوى يجب ألا يتجاوز 5000 حرف.");
       return false;
     }
 
     if (formState.notes.trim().length > 255) {
-      setFormError("notes يجب ألا يتجاوز 255 حرف.");
+      setFormError("الملاحظات يجب ألا تتجاوز 255 حرفًا.");
       return false;
     }
 
@@ -349,7 +379,7 @@ export function HomeworksWorkspace() {
     populateMutation.mutate(item.id, {
       onSuccess: (result) => {
         setActionInfo(
-          `Populate done: inserted=${result.insertedCount}, restored=${result.restoredCount}, activeEnrollments=${result.activeEnrollmentCount}`,
+          `تمت تعبئة الطلاب: مضاف=${result.insertedCount}، مستعاد=${result.restoredCount}، التسجيلات النشطة=${result.activeEnrollmentCount}`,
         );
       },
     });
@@ -491,7 +521,7 @@ export function HomeworksWorkspace() {
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, title: event.target.value }))
                 }
-                placeholder="Homework title"
+                placeholder="عنوان الواجب"
                 required
               />
 
@@ -537,13 +567,13 @@ export function HomeworksWorkspace() {
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, content: event.target.value }))
                 }
-                placeholder="Content"
+                placeholder="المحتوى"
               />
 
               <div className="grid gap-2 md:grid-cols-2">
                 {!isEditing ? (
                   <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                    <span>Auto Populate Students</span>
+                    <span>تعبئة الطلاب تلقائيًا</span>
                     <input
                       type="checkbox"
                       checked={formState.autoPopulateStudents}
@@ -557,7 +587,7 @@ export function HomeworksWorkspace() {
                   </label>
                 ) : (
                   <div className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                    Use <code>Populate Students</code> action after editing.
+                    بعد التعديل استخدم إجراء <code>تعبئة الطلاب</code>.
                   </div>
                 )}
                 <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
@@ -589,7 +619,7 @@ export function HomeworksWorkspace() {
               ) : null}
               {!hasDependenciesReadPermissions ? (
                 <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يلزم صلاحيات قراءة المراجع (years/terms/sections/subjects/homework-types).
+                  يلزم صلاحيات قراءة المراجع (السنة/الفصل/الشعبة/المادة/نوع الواجب).
                 </div>
               ) : null}
 
@@ -608,7 +638,7 @@ export function HomeworksWorkspace() {
                   ) : (
                     <ClipboardList className="h-4 w-4" />
                   )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء Homework"}
+                  {isEditing ? "حفظ التعديلات" : "إنشاء واجب"}
                 </Button>
                 {isEditing ? (
                   <Button type="button" variant="outline" onClick={resetForm}>
@@ -624,7 +654,7 @@ export function HomeworksWorkspace() {
       <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Homeworks</CardTitle>
+            <CardTitle>الواجبات</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <CardDescription>قائمة الواجبات مع عمليات التحديث والتعبئة والحذف.</CardDescription>
@@ -666,7 +696,7 @@ export function HomeworksWorkspace() {
                 setAcademicTermFilter(event.target.value);
               }}
             >
-              <option value="all">All terms</option>
+              <option value="all">كل الفصول</option>
               {(academicTermsQuery.data ?? []).map((term) => (
                 <option key={term.id} value={term.id}>
                   {term.code}
@@ -769,15 +799,15 @@ export function HomeworksWorkspace() {
                     {item.subject.code} - {item.homeworkType.code}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Homework: {formatDate(item.homeworkDate)} | Due: {formatDate(item.dueDate)} |
-                    Max: {item.maxScore}
+                    الواجب: {formatDate(item.homeworkDate)} | الاستحقاق: {formatDate(item.dueDate)} |
+                    الدرجة القصوى: {item.maxScore}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Students linked: {item._count.studentHomeworks}
+                    الطلاب المرتبطون: {item._count.studentHomeworks}
                   </p>
                 </div>
                 <Badge variant={item.isActive ? "default" : "outline"}>
-                  {item.isActive ? "Active" : "Inactive"}
+                  {item.isActive ? "نشط" : "غير نشط"}
                 </Badge>
               </div>
 
@@ -800,7 +830,7 @@ export function HomeworksWorkspace() {
                   disabled={!canUpdate || populateMutation.isPending}
                 >
                   <UsersRound className="h-3.5 w-3.5" />
-                  Populate
+                  تعبئة الطلاب
                 </Button>
                 <Button
                   variant="outline"

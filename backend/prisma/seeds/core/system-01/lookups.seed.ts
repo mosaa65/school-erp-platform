@@ -92,6 +92,108 @@ export async function seedSystem01Lookups(prisma: PrismaClient) {
     });
   }
 
+  const defaultEnrollmentStatuses = [
+    { code: 'NEW', nameAr: 'مستجد' },
+    { code: 'TRANSFERRED', nameAr: 'منقول' },
+    { code: 'ACTIVE', nameAr: 'منتظم' },
+    { code: 'PROMOTED', nameAr: 'مُرَقّى' },
+    { code: 'REPEATED', nameAr: 'معيد' },
+    { code: 'WITHDRAWN', nameAr: 'منسحب' },
+    { code: 'GRADUATED', nameAr: 'متخرج' },
+    { code: 'SUSPENDED', nameAr: 'موقوف' },
+  ];
+
+  for (const item of defaultEnrollmentStatuses) {
+    await prisma.lookupEnrollmentStatus.upsert({
+      where: { code: item.code },
+      update: {
+        nameAr: item.nameAr,
+        isActive: true,
+        deletedAt: null,
+        updatedById: null,
+      },
+      create: {
+        code: item.code,
+        nameAr: item.nameAr,
+        isActive: true,
+      },
+    });
+  }
+
+  const defaultOrphanStatuses = [
+    { code: 'NONE', nameAr: 'غير يتيم' },
+    { code: 'FATHER_DECEASED', nameAr: 'يتيم الأب' },
+    { code: 'MOTHER_DECEASED', nameAr: 'يتيم الأم' },
+    { code: 'BOTH_DECEASED', nameAr: 'يتيم الأبوين (لطيم)' },
+  ];
+
+  for (const item of defaultOrphanStatuses) {
+    await prisma.lookupOrphanStatus.upsert({
+      where: { code: item.code },
+      update: {
+        nameAr: item.nameAr,
+        isActive: true,
+        deletedAt: null,
+        updatedById: null,
+      },
+      create: {
+        code: item.code,
+        nameAr: item.nameAr,
+        isActive: true,
+      },
+    });
+  }
+
+  const defaultAbilityLevels = [
+    { code: 'EXCELLENT', nameAr: 'ممتاز' },
+    { code: 'VERY_GOOD', nameAr: 'جيد جداً' },
+    { code: 'GOOD', nameAr: 'جيد' },
+    { code: 'AVERAGE', nameAr: 'متوسط' },
+    { code: 'WEAK', nameAr: 'ضعيف' },
+  ];
+
+  for (const item of defaultAbilityLevels) {
+    await prisma.lookupAbilityLevel.upsert({
+      where: { code: item.code },
+      update: {
+        nameAr: item.nameAr,
+        isActive: true,
+        deletedAt: null,
+        updatedById: null,
+      },
+      create: {
+        code: item.code,
+        nameAr: item.nameAr,
+        isActive: true,
+      },
+    });
+  }
+
+  const defaultActivityTypes = [
+    { code: 'SCIENTIFIC', nameAr: 'علمي' },
+    { code: 'CULTURAL', nameAr: 'ثقافي' },
+    { code: 'SPORTS', nameAr: 'رياضي' },
+    { code: 'SOCIAL', nameAr: 'اجتماعي' },
+    { code: 'SCOUT', nameAr: 'كشفي' },
+  ];
+
+  for (const item of defaultActivityTypes) {
+    await prisma.lookupActivityType.upsert({
+      where: { code: item.code },
+      update: {
+        nameAr: item.nameAr,
+        isActive: true,
+        deletedAt: null,
+        updatedById: null,
+      },
+      create: {
+        code: item.code,
+        nameAr: item.nameAr,
+        isActive: true,
+      },
+    });
+  }
+
   const schoolTypes = [
     { code: 'PRIMARY', nameAr: 'أساسية', nameEn: 'Primary' },
     { code: 'SECONDARY', nameAr: 'ثانوية', nameEn: 'Secondary' },
@@ -120,6 +222,7 @@ export async function seedSystem01Lookups(prisma: PrismaClient) {
   const genders = [
     { code: 'MALE', nameAr: 'ذكر', nameEn: 'Male' },
     { code: 'FEMALE', nameAr: 'أنثى', nameEn: 'Female' },
+    { code: 'OTHER', nameAr: 'آخر', nameEn: 'Other' },
   ];
 
   for (const item of genders) {
@@ -321,8 +424,10 @@ export async function seedSystem01Lookups(prisma: PrismaClient) {
 
   const healthStatuses = [
     { code: 'HEALTHY', nameAr: 'سليم', requiresDetails: false },
-    { code: 'SICK', nameAr: 'مريض', requiresDetails: true },
-    { code: 'DISABLED', nameAr: 'معاق', requiresDetails: true },
+    { code: 'CHRONIC_DISEASE', nameAr: 'مرض مزمن', requiresDetails: true },
+    { code: 'SPECIAL_NEEDS', nameAr: 'احتياجات خاصة', requiresDetails: true },
+    { code: 'DISABILITY', nameAr: 'إعاقة', requiresDetails: true },
+    { code: 'OTHER', nameAr: 'أخرى', requiresDetails: true },
   ];
 
   for (const item of healthStatuses) {
@@ -344,11 +449,26 @@ export async function seedSystem01Lookups(prisma: PrismaClient) {
     });
   }
 
+  // Keep backward compatibility with older seeded codes while hiding them from forms.
+  await prisma.lookupHealthStatus.updateMany({
+    where: {
+      code: {
+        in: ['SICK', 'DISABLED'],
+      },
+    },
+    data: {
+      isActive: false,
+      updatedById: null,
+    },
+  });
+
   const relationshipTypes = [
     { code: 'FATHER', nameAr: 'أب', gender: LookupRelationshipGender.MALE },
     { code: 'MOTHER', nameAr: 'أم', gender: LookupRelationshipGender.FEMALE },
     { code: 'BROTHER', nameAr: 'أخ', gender: LookupRelationshipGender.MALE },
     { code: 'SISTER', nameAr: 'أخت', gender: LookupRelationshipGender.FEMALE },
+    { code: 'UNCLE', nameAr: 'عم/خال', gender: LookupRelationshipGender.MALE },
+    { code: 'AUNT', nameAr: 'عمة/خالة', gender: LookupRelationshipGender.FEMALE },
     { code: 'UNCLE_PATERNAL', nameAr: 'عم', gender: LookupRelationshipGender.MALE },
     { code: 'AUNT_PATERNAL', nameAr: 'عمة', gender: LookupRelationshipGender.FEMALE },
     { code: 'UNCLE_MATERNAL', nameAr: 'خال', gender: LookupRelationshipGender.MALE },

@@ -1,14 +1,14 @@
 ﻿"use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ApiError, apiClient, type StudentGender } from "@/lib/api/client";
+import { ApiError, apiClient } from "@/lib/api/client";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 
 type UseGuardiansQueryOptions = {
   page?: number;
   limit?: number;
   search?: string;
-  gender?: StudentGender;
+  genderId?: number;
   idTypeId?: number;
   isActive?: boolean;
 };
@@ -23,7 +23,7 @@ export function useGuardiansQuery(options: UseGuardiansQueryOptions = {}) {
       options.page ?? 1,
       options.limit ?? 12,
       options.search ?? "",
-      options.gender ?? "all",
+      options.genderId ?? "all",
       options.idTypeId ?? "all",
       options.isActive === undefined ? "all" : options.isActive ? "active" : "inactive",
     ],
@@ -34,7 +34,7 @@ export function useGuardiansQuery(options: UseGuardiansQueryOptions = {}) {
           page: options.page ?? 1,
           limit: options.limit ?? 12,
           search: options.search,
-          gender: options.gender,
+          genderId: options.genderId,
           idTypeId: options.idTypeId,
           isActive: options.isActive,
         });

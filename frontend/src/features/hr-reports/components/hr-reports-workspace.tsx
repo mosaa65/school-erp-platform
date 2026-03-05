@@ -14,6 +14,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useEmployeeOptionsQuery } from "@/features/hr-reports/hooks/use-employee-options-query";
 import { useHrSummaryReportQuery } from "@/features/hr-reports/hooks/use-hr-summary-report-query";
+import type {
+  EmployeeAttendanceStatus,
+} from "@/lib/api/client";
+import {
+  translateAttendanceStatus,
+  translatePerformanceRatingLevel,
+  translateViolationSeverity,
+} from "@/lib/i18n/ar";
 
 type FiltersState = {
   employeeId: string;
@@ -62,7 +70,7 @@ export function HrReportsWorkspace() {
         <CardHeader className="space-y-3">
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-primary" />
-            HR Operational Summary
+            ملخص عمليات الموارد البشرية
           </CardTitle>
           <CardDescription>
             تقرير موحد للحضور والمخالفات والعبء الوظيفي والتقييمات.
@@ -115,7 +123,7 @@ export function HrReportsWorkspace() {
               data-testid="hr-report-filters-submit"
             >
               <Search className="h-4 w-4" />
-              Apply
+              تطبيق
             </Button>
 
             <Button
@@ -128,7 +136,7 @@ export function HrReportsWorkspace() {
               }}
               data-testid="hr-report-filters-clear"
             >
-              Clear
+              مسح
             </Button>
           </form>
         </CardHeader>
@@ -157,29 +165,30 @@ export function HrReportsWorkspace() {
           <div className="grid gap-3 md:grid-cols-3">
             <Card className="border-border/70 bg-card/80" data-testid="hr-report-employees-card">
               <CardHeader className="space-y-1 pb-2">
-                <CardTitle className="text-sm">Employees</CardTitle>
+                <CardTitle className="text-sm">الموظفون</CardTitle>
                 <CardDescription>الإجمالي: {report.employees.total}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-1 text-sm">
                 <p>النشط: {report.employees.active}</p>
                 <p>غير نشط: {report.employees.inactive}</p>
-                <p>With account: {report.employees.withUserAccount}</p>
-                <p>Without account: {report.employees.withoutUserAccount}</p>
+                <p>لديهم حساب: {report.employees.withUserAccount}</p>
+                <p>بدون حساب: {report.employees.withoutUserAccount}</p>
               </CardContent>
             </Card>
 
             <Card className="border-border/70 bg-card/80" data-testid="hr-report-attendance-card">
               <CardHeader className="space-y-1 pb-2">
-                <CardTitle className="text-sm">Attendance</CardTitle>
+                <CardTitle className="text-sm">الحضور</CardTitle>
                 <CardDescription>الإجمالي: {report.attendance.total}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-1 text-sm">
                 {report.attendance.byStatus.length === 0 ? (
-                  <p className="text-muted-foreground">No data.</p>
+                  <p className="text-muted-foreground">لا توجد بيانات.</p>
                 ) : (
                   report.attendance.byStatus.map((item) => (
                     <Badge key={item.status} variant="outline" className="mr-1 mb-1">
-                      {item.status}: {item.count}
+                      {translateAttendanceStatus(item.status as EmployeeAttendanceStatus)}:{" "}
+                      {item.count}
                     </Badge>
                   ))
                 )}
@@ -188,18 +197,18 @@ export function HrReportsWorkspace() {
 
             <Card className="border-border/70 bg-card/80" data-testid="hr-report-violations-card">
               <CardHeader className="space-y-1 pb-2">
-                <CardTitle className="text-sm">Violations</CardTitle>
+                <CardTitle className="text-sm">المخالفات</CardTitle>
                 <CardDescription>الإجمالي: {report.violations.total}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-1 text-sm">
-                <p>With warning: {report.violations.withWarning}</p>
+                <p>مع إنذار: {report.violations.withWarning}</p>
                 <div>
                   {report.violations.bySeverity.length === 0 ? (
-                    <p className="text-muted-foreground">No data.</p>
+                    <p className="text-muted-foreground">لا توجد بيانات.</p>
                   ) : (
                     report.violations.bySeverity.map((item) => (
                       <Badge key={item.severity} variant="outline" className="mr-1 mb-1">
-                        {item.severity}: {item.count}
+                        {translateViolationSeverity(item.severity)}: {item.count}
                       </Badge>
                     ))
                   )}
@@ -211,29 +220,29 @@ export function HrReportsWorkspace() {
           <div className="grid gap-3 md:grid-cols-2">
             <Card className="border-border/70 bg-card/80" data-testid="hr-report-workload-card">
               <CardHeader className="space-y-1 pb-2">
-                <CardTitle className="text-sm">Workload</CardTitle>
+                <CardTitle className="text-sm">عبء العمل</CardTitle>
               </CardHeader>
               <CardContent className="space-y-1 text-sm">
                 <p>تكاليف التدريس النشطة: {report.workload.activeTeachingAssignments}</p>
                 <p>المهام النشطة: {report.workload.activeTasks}</p>
-                <p>Courses in range: {report.courses.total}</p>
+                <p>الدورات ضمن النطاق: {report.courses.total}</p>
               </CardContent>
             </Card>
 
             <Card className="border-border/70 bg-card/80" data-testid="hr-report-performance-card">
               <CardHeader className="space-y-1 pb-2">
-                <CardTitle className="text-sm">Performance</CardTitle>
+                <CardTitle className="text-sm">الأداء</CardTitle>
                 <CardDescription>
-                  Total evaluations: {report.performance.totalEvaluations}
+                  إجمالي التقييمات: {report.performance.totalEvaluations}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-1 text-sm">
                 {report.performance.byRating.length === 0 ? (
-                  <p className="text-muted-foreground">No data.</p>
+                  <p className="text-muted-foreground">لا توجد بيانات.</p>
                 ) : (
                   report.performance.byRating.map((item) => (
                     <Badge key={item.ratingLevel} variant="outline" className="mr-1 mb-1">
-                      {item.ratingLevel}: {item.count}
+                      {translatePerformanceRatingLevel(item.ratingLevel)}: {item.count}
                     </Badge>
                   ))
                 )}

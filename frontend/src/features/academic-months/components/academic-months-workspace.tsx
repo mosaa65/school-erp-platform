@@ -204,18 +204,18 @@ export function AcademicMonthsWorkspace() {
     }
 
     if (code.length > 40) {
-      setFormError("code يجب ألا يتجاوز 40 حرف.");
+      setFormError("الكود يجب ألا يتجاوز 40 حرفًا.");
       return false;
     }
 
     if (name.length > 120) {
-      setFormError("name يجب ألا يتجاوز 120 حرف.");
+      setFormError("الاسم يجب ألا يتجاوز 120 حرفًا.");
       return false;
     }
 
     const sequence = Number(formState.sequence);
     if (!Number.isInteger(sequence) || sequence < 1 || sequence > 24) {
-      setFormError("sequence يجب أن يكون رقمًا صحيحًا بين 1 و 24.");
+      setFormError("الترتيب يجب أن يكون رقمًا صحيحًا بين 1 و 24.");
       return false;
     }
 
@@ -227,7 +227,7 @@ export function AcademicMonthsWorkspace() {
     const start = new Date(toUtcStartIso(formState.startDate));
     const end = new Date(toUtcEndIso(formState.endDate));
     if (start >= end) {
-      setFormError("startDate يجب أن يكون قبل endDate.");
+      setFormError("تاريخ البداية يجب أن يكون قبل تاريخ النهاية.");
       return false;
     }
 

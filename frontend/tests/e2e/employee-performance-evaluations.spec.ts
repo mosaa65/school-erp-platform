@@ -73,7 +73,7 @@ test.describe("Employee Performance Evaluations", () => {
     });
 
     await expectCardsCount(page, "evaluation-card", 2);
-    await expectTextVisible(page, "Score: 95");
+    await expectTextVisible(page, "الدرجة: 95");
 
     const lastCreatePayload = evaluationsApi.getLastCreatePayload();
     expect(lastCreatePayload).not.toBeNull();
@@ -116,7 +116,7 @@ test.describe("Employee Performance Evaluations", () => {
 
     await expectValidationMessage(
       page,
-      "ratingLevel الحالي لا يطابق score. المتوقع: EXCELLENT.",
+      "مستوى التقييم الحالي لا يطابق الدرجة. المتوقع: ممتاز.",
     );
     await expect(page.getByTestId("evaluation-form-submit")).toBeDisabled();
   });

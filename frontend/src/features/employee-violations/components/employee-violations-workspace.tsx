@@ -28,6 +28,7 @@ import {
 import { useEmployeeViolationsQuery } from "@/features/employee-violations/hooks/use-employee-violations-query";
 import { useEmployeeOptionsQuery } from "@/features/employee-violations/hooks/use-employee-options-query";
 import type { EmployeeViolationListItem, ViolationSeverity } from "@/lib/api/client";
+import { translateViolationSeverity } from "@/lib/i18n/ar";
 
 type ViolationFormState = {
   employeeId: string;
@@ -102,7 +103,7 @@ function formatDate(value: string): string {
     return value;
   }
 
-  return date.toLocaleDateString("en-GB");
+  return date.toLocaleDateString("ar-SA");
 }
 
 function toFormState(violation: EmployeeViolationListItem): ViolationFormState {
@@ -253,7 +254,7 @@ export function EmployeeViolationsWorkspace() {
       (formState.severity === "HIGH" || formState.severity === "CRITICAL") &&
       !formState.actionTaken.trim()
     ) {
-      setFormError("actionTaken مطلوب للمخالفات HIGH/CRITICAL.");
+      setFormError("الإجراء المتخذ مطلوب للمخالفات العالية والحرجة.");
       return false;
     }
 
@@ -372,7 +373,7 @@ export function EmployeeViolationsWorkspace() {
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Employee *</label>
+                <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
                 <select
                   data-testid="violation-form-employee"
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -385,7 +386,7 @@ export function EmployeeViolationsWorkspace() {
                   <option value="">اختر الموظف</option>
                   {(employeesQuery.data ?? []).map((employee) => (
                     <option key={employee.id} value={employee.id}>
-                      {employee.fullName} ({employee.jobNumber ?? "N/A"})
+                      {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
                     </option>
                   ))}
                 </select>
@@ -393,7 +394,7 @@ export function EmployeeViolationsWorkspace() {
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Violation Date *
+                  تاريخ المخالفة *
                 </label>
                 <Input
                   data-testid="violation-form-date"
@@ -411,7 +412,7 @@ export function EmployeeViolationsWorkspace() {
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Violation Aspect *
+                  نوع المخالفة *
                 </label>
                 <Input
                   data-testid="violation-form-aspect"
@@ -429,7 +430,7 @@ export function EmployeeViolationsWorkspace() {
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Violation Text *
+                  وصف المخالفة *
                 </label>
                 <Input
                   data-testid="violation-form-text"
@@ -446,7 +447,7 @@ export function EmployeeViolationsWorkspace() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Action Taken</label>
+                <label className="text-xs font-medium text-muted-foreground">الإجراء المتخذ</label>
                 <Input
                   data-testid="violation-form-action-taken"
                   value={formState.actionTaken}
@@ -458,7 +459,7 @@ export function EmployeeViolationsWorkspace() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Severity</label>
+                <label className="text-xs font-medium text-muted-foreground">الشدة</label>
                 <select
                   data-testid="violation-form-severity"
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -472,20 +473,20 @@ export function EmployeeViolationsWorkspace() {
                 >
                   {SEVERITY_OPTIONS.map((severity) => (
                     <option key={severity} value={severity}>
-                      {severity}
+                      {translateViolationSeverity(severity)}
                     </option>
                   ))}
                 </select>
                 {formState.severity === "HIGH" || formState.severity === "CRITICAL" ? (
                   <p className="text-xs text-destructive">
-                    للمستويات الحرجة يجب توثيق الإجراء المتخذ في Action Taken.
+                    للمستويات العالية والحرجة يجب توثيق الإجراء المتخذ.
                   </p>
                 ) : null}
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Reported By Employee
+                  الموظف المُبلِّغ
                 </label>
                 <select
                   data-testid="violation-form-reporter"
@@ -499,10 +500,10 @@ export function EmployeeViolationsWorkspace() {
                   }
                   disabled={!canReadEmployees}
                 >
-                  <option value="">Not specified</option>
+                  <option value="">غير محدد</option>
                   {(employeesQuery.data ?? []).map((employee) => (
                     <option key={employee.id} value={employee.id}>
-                      {employee.fullName} ({employee.jobNumber ?? "N/A"})
+                      {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
                     </option>
                   ))}
                 </select>
@@ -510,7 +511,7 @@ export function EmployeeViolationsWorkspace() {
 
               <div className="grid gap-2 md:grid-cols-3">
                 <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>Has Warning</span>
+                  <span>يوجد إنذار</span>
                   <input
                     type="checkbox"
                     checked={formState.hasWarning}
@@ -523,7 +524,7 @@ export function EmployeeViolationsWorkspace() {
                   />
                 </label>
                 <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>Has Minutes</span>
+                  <span>يوجد محضر</span>
                   <input
                     type="checkbox"
                     checked={formState.hasMinutes}
@@ -577,7 +578,7 @@ export function EmployeeViolationsWorkspace() {
                   ) : (
                     <AlertTriangle className="h-4 w-4" />
                   )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء Violation"}
+                  {isEditing ? "حفظ التعديلات" : "إنشاء مخالفة"}
                 </Button>
                 {isEditing ? (
                   <Button type="button" variant="outline" onClick={resetForm}>
@@ -593,7 +594,7 @@ export function EmployeeViolationsWorkspace() {
       <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Employee Violations</CardTitle>
+            <CardTitle>مخالفات الموظفين</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <CardDescription>
@@ -639,7 +640,7 @@ export function EmployeeViolationsWorkspace() {
                 setReporterFilter(event.target.value);
               }}
             >
-              <option value="all">All reporters</option>
+              <option value="all">كل المُبلِّغين</option>
               {(employeesQuery.data ?? []).map((employee) => (
                 <option key={employee.id} value={employee.id}>
                   {employee.jobNumber ?? employee.fullName}
@@ -655,10 +656,10 @@ export function EmployeeViolationsWorkspace() {
                 setSeverityFilter(event.target.value as ViolationSeverity | "all");
               }}
             >
-              <option value="all">All severities</option>
+              <option value="all">كل مستويات الشدة</option>
               {SEVERITY_OPTIONS.map((severity) => (
                 <option key={severity} value={severity}>
-                  {severity}
+                  {translateViolationSeverity(severity)}
                 </option>
               ))}
             </select>
@@ -748,26 +749,26 @@ export function EmployeeViolationsWorkspace() {
                 <div className="space-y-1">
                   <p className="font-medium">{violation.employee.fullName}</p>
                   <p className="text-xs text-muted-foreground">
-                    Date: {formatDate(violation.violationDate)} | Aspect:{" "}
+                    التاريخ: {formatDate(violation.violationDate)} | النوع:{" "}
                     {violation.violationAspect}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Reporter: {violation.reportedBy?.fullName ?? "Not specified"}
+                    المُبلِّغ: {violation.reportedBy?.fullName ?? "غير محدد"}
                   </p>
                   <p className="text-xs text-muted-foreground">{violation.violationText}</p>
                   {violation.actionTaken ? (
                     <p className="text-xs text-muted-foreground">
-                      Action: {violation.actionTaken}
+                      الإجراء: {violation.actionTaken}
                     </p>
                   ) : null}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
                   <Badge variant="outline" className={severityBadgeClass(violation.severity)}>
-                    {violation.severity}
+                    {translateViolationSeverity(violation.severity)}
                   </Badge>
-                  {violation.hasWarning ? <Badge variant="secondary">Warning</Badge> : null}
-                  {violation.hasMinutes ? <Badge variant="secondary">Minutes</Badge> : null}
+                  {violation.hasWarning ? <Badge variant="secondary">إنذار</Badge> : null}
+                  {violation.hasMinutes ? <Badge variant="secondary">محضر</Badge> : null}
                   <Badge variant={violation.isActive ? "default" : "outline"}>
                     {violation.isActive ? "نشط" : "غير نشط"}
                   </Badge>

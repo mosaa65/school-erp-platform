@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -15,6 +14,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { DataScopeService } from '../data-scope/data-scope.service';
 import { CalculateMonthlyGradesDto } from './dto/calculate-monthly-grades.dto';
 import { CreateMonthlyGradeDto } from './dto/create-monthly-grade.dto';
 import { ListMonthlyGradesDto } from './dto/list-monthly-grades.dto';
@@ -195,6 +195,7 @@ export class MonthlyGradesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLogsService: AuditLogsService,
+    private readonly dataScopeService: DataScopeService,
   ) {}
 
   async create(payload: CreateMonthlyGradeDto, actorUserId: string) {
@@ -514,7 +515,7 @@ export class MonthlyGradesService {
     };
   }
 
-  async findAll(query: ListMonthlyGradesDto) {
+  async findAll(query: ListMonthlyGradesDto, actorUserId: string) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
 
@@ -582,6 +583,42 @@ export class MonthlyGradesService {
         : undefined,
     };
 
+    const scope = await this.dataScopeService.getSectionSubjectYearGrants({
+      actorUserId,
+      capability: 'MANAGE_GRADES',
+      academicYearId: query.academicYearId,
+    });
+
+    if (!scope.isPrivileged) {
+      if (scope.grants.length === 0) {
+        return {
+          data: [],
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            totalPages: 0,
+          },
+        };
+      }
+
+      const scopedOr: Prisma.MonthlyGradeWhereInput[] = scope.grants.map(
+        (grant) => ({
+          academicYearId: grant.academicYearId,
+          subjectId: grant.subjectId,
+          studentEnrollment: {
+            sectionId: grant.sectionId,
+          },
+        }),
+      );
+
+      where.AND = [
+        {
+          OR: scopedOr,
+        },
+      ];
+    }
+
     const [total, items] = await this.prisma.$transaction([
       this.prisma.monthlyGrade.count({ where }),
       this.prisma.monthlyGrade.findMany({
@@ -627,7 +664,7 @@ export class MonthlyGradesService {
     };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, actorUserId: string) {
     const monthlyGrade = await this.prisma.monthlyGrade.findFirst({
       where: {
         id,
@@ -639,6 +676,13 @@ export class MonthlyGradesService {
     if (!monthlyGrade) {
       throw new NotFoundException('Monthly grade not found');
     }
+
+    await this.ensureActorAuthorized(
+      actorUserId,
+      monthlyGrade.studentEnrollment.sectionId,
+      monthlyGrade.subject.id,
+      monthlyGrade.academicYear.id,
+    );
 
     return monthlyGrade;
   }
@@ -1399,45 +1443,13 @@ export class MonthlyGradesService {
     subjectId: string,
     academicYearId: string,
   ) {
-    const user = await this.prisma.user.findFirst({
-      where: {
-        id: actorUserId,
-        deletedAt: null,
-        isActive: true,
-      },
-      select: {
-        id: true,
-        employeeId: true,
-      },
+    await this.dataScopeService.ensureCanManageSectionSubjectYear({
+      actorUserId,
+      sectionId,
+      subjectId,
+      academicYearId,
+      capability: 'MANAGE_GRADES',
     });
-
-    if (!user) {
-      throw new ForbiddenException('Authenticated user is not active');
-    }
-
-    if (!user.employeeId) {
-      // Allow privileged users without linked employee profile.
-      return;
-    }
-
-    const assignmentsCount = await this.prisma.employeeTeachingAssignment.count(
-      {
-        where: {
-          employeeId: user.employeeId,
-          sectionId,
-          subjectId,
-          academicYearId,
-          deletedAt: null,
-          isActive: true,
-        },
-      },
-    );
-
-    if (assignmentsCount === 0) {
-      throw new ForbiddenException(
-        'You are not assigned to this subject and section for the selected academic year',
-      );
-    }
   }
 
   private throwKnownDatabaseErrors(error: unknown): never {

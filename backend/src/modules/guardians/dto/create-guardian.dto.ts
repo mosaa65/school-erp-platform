@@ -17,9 +17,17 @@ export class CreateGuardianDto {
   @MaxLength(150)
   fullName!: string;
 
-  @ApiProperty({ enum: StudentGender, example: StudentGender.MALE })
+  @ApiPropertyOptional({ enum: StudentGender, example: StudentGender.MALE })
+  @IsOptional()
   @IsEnum(StudentGender)
-  gender!: StudentGender;
+  gender?: StudentGender;
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  genderId?: number;
 
   @ApiPropertyOptional({ example: 'ID-90909012' })
   @IsOptional()

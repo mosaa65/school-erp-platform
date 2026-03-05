@@ -3,6 +3,7 @@ import { seedSystem01Permissions } from './system-01/permissions.runner';
 import { seedSystem01Lookups } from './system-01/lookups.seed';
 import { seedSystem01SchoolProfile } from './system-01/school-profile.seed';
 import { seedSystem01Settings } from './system-01/settings.seed';
+import { seedSystem02AcademicCore } from './system-02/academic-core.seed';
 import { seedSystem05Lookups } from './system-05/lookups.seed';
 import { seedSuperAdmin } from './shared/admin.seed';
 
@@ -13,6 +14,7 @@ export async function runCoreSeed(prisma: PrismaClient) {
   await seedSystem01Lookups(prisma);
   await seedSystem01Settings(prisma);
   await seedSystem01SchoolProfile(prisma);
+  await seedSystem02AcademicCore(prisma);
   await seedSystem05Lookups(prisma);
 
   return {

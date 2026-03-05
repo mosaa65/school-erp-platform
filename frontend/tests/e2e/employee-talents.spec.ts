@@ -54,7 +54,7 @@ test.describe("Employee Talents", () => {
       page
         .getByTestId("talent-mapping-card")
         .first()
-        .getByText("Talent: Robotics Coach (TAL-ROBO)"),
+        .getByText("الموهبة: Robotics Coach (TAL-ROBO)"),
     ).toBeVisible();
 
     const lastCreatePayload = mappingsApi.getLastCreatePayload();

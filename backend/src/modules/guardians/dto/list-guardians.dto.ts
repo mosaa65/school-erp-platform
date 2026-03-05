@@ -42,6 +42,13 @@ export class ListGuardiansDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  genderId?: number;
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
   idTypeId?: number;
 
   @ApiPropertyOptional({ example: true })

@@ -28,9 +28,17 @@ export class CreateStudentDto {
   @MaxLength(150)
   fullName!: string;
 
-  @ApiProperty({ enum: StudentGender, example: StudentGender.MALE })
+  @ApiPropertyOptional({ enum: StudentGender, example: StudentGender.MALE })
+  @IsOptional()
   @IsEnum(StudentGender)
-  gender!: StudentGender;
+  gender?: StudentGender;
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  genderId?: number;
 
   @ApiPropertyOptional({ example: '2014-05-10T00:00:00.000Z' })
   @IsOptional()
@@ -52,6 +60,13 @@ export class CreateStudentDto {
   @IsEnum(StudentHealthStatus)
   healthStatus?: StudentHealthStatus;
 
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  healthStatusId?: number;
+
   @ApiPropertyOptional({ example: 'No chronic conditions' })
   @IsOptional()
   @IsString()
@@ -65,6 +80,13 @@ export class CreateStudentDto {
   @IsOptional()
   @IsEnum(StudentOrphanStatus)
   orphanStatus?: StudentOrphanStatus;
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  orphanStatusId?: number;
 
   @ApiPropertyOptional({ example: true })
   @IsOptional()

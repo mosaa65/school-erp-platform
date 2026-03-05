@@ -20,6 +20,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
+import { useLookupEnrollmentStatusesQuery } from "@/features/lookup-enrollment-statuses/hooks/use-lookup-enrollment-statuses-query";
 import {
   useCreateStudentEnrollmentMutation,
   useDeleteStudentEnrollmentMutation,
@@ -56,6 +57,24 @@ const STATUS_OPTIONS: StudentEnrollmentStatus[] = [
   "GRADUATED",
   "SUSPENDED",
 ];
+
+const ENROLLMENT_STATUS_FALLBACK_OPTIONS: Array<{
+  code: StudentEnrollmentStatus;
+  nameAr: string;
+}> = [
+  { code: "NEW", nameAr: "مستجد" },
+  { code: "TRANSFERRED", nameAr: "منقول" },
+  { code: "ACTIVE", nameAr: "منتظم" },
+  { code: "PROMOTED", nameAr: "مُرَقّى" },
+  { code: "REPEATED", nameAr: "إعادة" },
+  { code: "WITHDRAWN", nameAr: "منسحب" },
+  { code: "GRADUATED", nameAr: "متخرج" },
+  { code: "SUSPENDED", nameAr: "موقوف" },
+];
+
+function isStudentEnrollmentStatus(value: string): value is StudentEnrollmentStatus {
+  return STATUS_OPTIONS.includes(value as StudentEnrollmentStatus);
+}
 
 const DEFAULT_FORM_STATE: EnrollmentFormState = {
   studentId: "",
@@ -99,7 +118,7 @@ function formatDate(value: string | null): string {
     return "-";
   }
 
-  return date.toLocaleDateString("en-GB");
+  return date.toLocaleDateString("ar-SA");
 }
 
 function toFormState(enrollment: StudentEnrollmentListItem): EnrollmentFormState {
@@ -122,6 +141,7 @@ export function StudentEnrollmentsWorkspace() {
   const canReadStudents = hasPermission("students.read");
   const canReadAcademicYears = hasPermission("academic-years.read");
   const canReadSections = hasPermission("sections.read");
+  const canReadEnrollmentStatuses = hasPermission("lookup-enrollment-statuses.read");
 
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
@@ -154,6 +174,12 @@ export function StudentEnrollmentsWorkspace() {
   const studentsQuery = useStudentOptionsQuery();
   const academicYearsQuery = useAcademicYearOptionsQuery();
   const sectionsQuery = useSectionOptionsQuery();
+  const enrollmentStatusesQuery = useLookupEnrollmentStatusesQuery({
+    page: 1,
+    limit: 100,
+    isActive: true,
+    enabled: canReadEnrollmentStatuses,
+  });
 
   const createMutation = useCreateStudentEnrollmentMutation();
   const updateMutation = useUpdateStudentEnrollmentMutation();
@@ -162,6 +188,18 @@ export function StudentEnrollmentsWorkspace() {
   const enrollments = React.useMemo(
     () => enrollmentsQuery.data?.data ?? [],
     [enrollmentsQuery.data?.data],
+  );
+  const enrollmentStatusOptions = React.useMemo(() => {
+    const items = enrollmentStatusesQuery.data?.data ?? [];
+    const normalized = items
+      .filter((item) => isStudentEnrollmentStatus(item.code))
+      .map((item) => ({ code: item.code, nameAr: item.nameAr }));
+
+    return normalized.length > 0 ? normalized : ENROLLMENT_STATUS_FALLBACK_OPTIONS;
+  }, [enrollmentStatusesQuery.data?.data]);
+  const enrollmentStatusLabels = React.useMemo(
+    () => new Map(enrollmentStatusOptions.map((item) => [item.code, item.nameAr])),
+    [enrollmentStatusOptions],
   );
   const pagination = enrollmentsQuery.data?.pagination;
   const isEditing = editingEnrollmentId !== null;
@@ -206,7 +244,7 @@ export function StudentEnrollmentsWorkspace() {
     }
 
     if (formState.notes.trim().length > 255) {
-      setFormError("notes يجب ألا يتجاوز 255 حرف.");
+      setFormError("الملاحظات يجب ألا تتجاوز 255 حرفًا.");
       return false;
     }
 
@@ -309,6 +347,8 @@ export function StudentEnrollmentsWorkspace() {
   };
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
+  const getStatusLabel = (value: StudentEnrollmentStatus) =>
+    enrollmentStatusLabels.get(value) ?? value;
 
   return (
     <div className="grid gap-4 xl:grid-cols-[440px_1fr]">
@@ -333,7 +373,7 @@ export function StudentEnrollmentsWorkspace() {
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Student *</label>
+                <label className="text-xs font-medium text-muted-foreground">الطالب *</label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={formState.studentId}
@@ -345,7 +385,7 @@ export function StudentEnrollmentsWorkspace() {
                   <option value="">اختر الطالب</option>
                   {(studentsQuery.data ?? []).map((student) => (
                     <option key={student.id} value={student.id}>
-                      {student.fullName} ({student.admissionNo ?? "N/A"})
+                      {student.fullName} ({student.admissionNo ?? "بدون رقم قيد"})
                     </option>
                   ))}
                 </select>
@@ -353,7 +393,7 @@ export function StudentEnrollmentsWorkspace() {
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Academic Year *
+                  السنة الأكاديمية *
                 </label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -392,7 +432,7 @@ export function StudentEnrollmentsWorkspace() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Enrollment Date</label>
+                <label className="text-xs font-medium text-muted-foreground">تاريخ القيد</label>
                 <Input
                   type="date"
                   value={formState.enrollmentDate}
@@ -403,7 +443,7 @@ export function StudentEnrollmentsWorkspace() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Status *</label>
+                <label className="text-xs font-medium text-muted-foreground">الحالة *</label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={formState.status}
@@ -414,22 +454,22 @@ export function StudentEnrollmentsWorkspace() {
                     }))
                   }
                 >
-                  {STATUS_OPTIONS.map((status) => (
-                    <option key={status} value={status}>
-                      {status}
+                  {enrollmentStatusOptions.map((status) => (
+                    <option key={status.code} value={status.code}>
+                      {status.nameAr}
                     </option>
                   ))}
                 </select>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Notes</label>
+                <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
                 <Input
                   value={formState.notes}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, notes: event.target.value }))
                   }
-                  placeholder="Transferred from another school"
+                  placeholder="منقول من مدرسة أخرى"
                 />
               </div>
 
@@ -478,7 +518,7 @@ export function StudentEnrollmentsWorkspace() {
                   ) : (
                     <GraduationCap className="h-4 w-4" />
                   )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء Enrollment"}
+                  {isEditing ? "حفظ التعديلات" : "إنشاء قيد"}
                 </Button>
                 {isEditing ? (
                   <Button type="button" variant="outline" onClick={resetForm}>
@@ -494,7 +534,7 @@ export function StudentEnrollmentsWorkspace() {
       <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Student Enrollments</CardTitle>
+            <CardTitle>قيود الطلاب</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <CardDescription>إدارة القيود الدراسية للطلاب حسب السنة والشعبة والحالة.</CardDescription>
@@ -569,10 +609,10 @@ export function StudentEnrollmentsWorkspace() {
                 setStatusFilter(event.target.value as StudentEnrollmentStatus | "all");
               }}
             >
-              <option value="all">All statuses</option>
-              {STATUS_OPTIONS.map((status) => (
-                <option key={status} value={status}>
-                  {status}
+              <option value="all">كل الحالات</option>
+              {enrollmentStatusOptions.map((status) => (
+                <option key={status.code} value={status.code}>
+                  {status.nameAr}
                 </option>
               ))}
             </select>
@@ -626,25 +666,25 @@ export function StudentEnrollmentsWorkspace() {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="space-y-1">
                   <p className="font-medium">
-                    {enrollment.student.fullName} ({enrollment.student.admissionNo ?? "N/A"})
+                    {enrollment.student.fullName} ({enrollment.student.admissionNo ?? "بدون رقم قيد"})
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Year: {enrollment.academicYear.name} ({enrollment.academicYear.code})
+                    السنة: {enrollment.academicYear.name} ({enrollment.academicYear.code})
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Section: {enrollment.section.name} ({enrollment.section.code}) -{" "}
+                    الشعبة: {enrollment.section.name} ({enrollment.section.code}) -{" "}
                     {enrollment.section.gradeLevel.name}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Enrollment Date: {formatDate(enrollment.enrollmentDate)}
+                    تاريخ القيد: {formatDate(enrollment.enrollmentDate)}
                   </p>
-                  <p className="text-xs text-muted-foreground">Notes: {enrollment.notes ?? "-"}</p>
+                  <p className="text-xs text-muted-foreground">ملاحظات: {enrollment.notes ?? "-"}</p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant="secondary">{enrollment.status}</Badge>
+                  <Badge variant="secondary">{getStatusLabel(enrollment.status)}</Badge>
                   <Badge variant={enrollment.isActive ? "default" : "outline"}>
-                    {enrollment.isActive ? "Active" : "Inactive"}
+                    {enrollment.isActive ? "نشط" : "غير نشط"}
                   </Badge>
                 </div>
               </div>

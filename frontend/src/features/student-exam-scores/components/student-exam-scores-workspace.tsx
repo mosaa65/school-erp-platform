@@ -45,6 +45,10 @@ type FormState = {
 };
 
 const PAGE_SIZE = 12;
+const ABSENCE_TYPE_LABELS: Record<ExamAbsenceType, string> = {
+  UNEXCUSED: "بدون عذر",
+  EXCUSED: "بعذر",
+};
 
 const DEFAULT_FORM: FormState = {
   examPeriodId: "",
@@ -75,6 +79,10 @@ function toFormState(item: StudentExamScoreListItem): FormState {
     teacherNotes: item.teacherNotes ?? "",
     isActive: item.isActive,
   };
+}
+
+function getAbsenceTypeLabel(value: ExamAbsenceType): string {
+  return ABSENCE_TYPE_LABELS[value] ?? value;
 }
 
 export function StudentExamScoresWorkspace() {
@@ -151,7 +159,7 @@ export function StudentExamScoresWorkspace() {
       return false;
     }
     if (form.teacherNotes.trim().length > 255 || form.excuseDetails.trim().length > 255) {
-      setFormError("teacherNotes/excuseDetails يجب ألا تتجاوز 255 حرف.");
+      setFormError("ملاحظات المعلم وتفاصيل العذر يجب ألا تتجاوز 255 حرفًا.");
       return false;
     }
     if (!selectedAssessment) {
@@ -180,11 +188,11 @@ export function StudentExamScoresWorkspace() {
 
     const score = Number(form.score || "0");
     if (!Number.isFinite(score) || score < 0) {
-      setFormError("score يجب أن يكون رقمًا صالحًا >= 0.");
+      setFormError("الدرجة يجب أن تكون رقمًا صالحًا أكبر من أو يساوي 0.");
       return false;
     }
     if (form.isPresent && score > selectedAssessment.maxScore) {
-      setFormError(`score يجب ألا يتجاوز ${selectedAssessment.maxScore}.`);
+      setFormError(`الدرجة يجب ألا تتجاوز ${selectedAssessment.maxScore}.`);
       return false;
     }
 
@@ -292,7 +300,7 @@ export function StudentExamScoresWorkspace() {
 
             <div className="grid gap-3 md:grid-cols-2">
               <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>Present</span>
+                <span>حاضر</span>
                 <input
                   type="checkbox"
                   checked={form.isPresent}
@@ -307,7 +315,7 @@ export function StudentExamScoresWorkspace() {
                 step={0.01}
                 value={form.score}
                 onChange={(event) => setForm((prev) => ({ ...prev, score: event.target.value }))}
-                placeholder="Score"
+                placeholder="الدرجة"
                 disabled={!form.isPresent}
               />
             </div>
@@ -319,13 +327,13 @@ export function StudentExamScoresWorkspace() {
                 onChange={(event) => setForm((prev) => ({ ...prev, absenceType: event.target.value as ExamAbsenceType }))}
                 disabled={form.isPresent}
               >
-                <option value="UNEXCUSED">Unexcused</option>
-                <option value="EXCUSED">Excused</option>
+                <option value="UNEXCUSED">بدون عذر</option>
+                <option value="EXCUSED">بعذر</option>
               </select>
               <Input
                 value={form.excuseDetails}
                 onChange={(event) => setForm((prev) => ({ ...prev, excuseDetails: event.target.value }))}
-                placeholder="Excuse details"
+                placeholder="تفاصيل العذر"
                 disabled={form.isPresent}
               />
             </div>
@@ -333,7 +341,7 @@ export function StudentExamScoresWorkspace() {
             <Input
               value={form.teacherNotes}
               onChange={(event) => setForm((prev) => ({ ...prev, teacherNotes: event.target.value }))}
-              placeholder="Teacher notes"
+              placeholder="ملاحظات المعلم"
             />
 
             {formError ? <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">{formError}</div> : null}
@@ -342,7 +350,7 @@ export function StudentExamScoresWorkspace() {
             <div className="flex gap-2">
               <Button type="submit" className="flex-1 gap-2" disabled={isSubmitting}>
                 {isSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CalendarCheck2 className="h-4 w-4" />}
-                {editingId ? "حفظ التعديلات" : "إنشاء Student Exam Score"}
+                {editingId ? "حفظ التعديلات" : "إنشاء درجة اختبار"}
               </Button>
               {editingId ? (
                 <Button type="button" variant="outline" onClick={resetForm}>
@@ -357,7 +365,7 @@ export function StudentExamScoresWorkspace() {
       <Card className="border-border/70 bg-card/80">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Student Exam Scores</CardTitle>
+            <CardTitle>درجات اختبارات الطلاب</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <form onSubmit={(event) => { event.preventDefault(); setPage(1); setSearch(searchInput.trim()); }} className="grid gap-2 md:grid-cols-[1fr_170px_170px_130px_110px_110px_auto]">
@@ -374,9 +382,9 @@ export function StudentExamScoresWorkspace() {
               {(assessmentsForFilterQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
             </select>
             <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={presenceFilter} onChange={(event) => { setPage(1); setPresenceFilter(event.target.value as "all" | "present" | "absent"); }}>
-              <option value="all">Presence: all</option>
-              <option value="present">Present</option>
-              <option value="absent">Absent</option>
+              <option value="all">حالة الحضور: الكل</option>
+              <option value="present">حاضر</option>
+              <option value="absent">غائب</option>
             </select>
             <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={activeFilter} onChange={(event) => { setPage(1); setActiveFilter(event.target.value as "all" | "active" | "inactive"); }}>
               <option value="all">الكل</option>
@@ -399,10 +407,12 @@ export function StudentExamScoresWorkspace() {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="space-y-1">
                   <p className="font-medium">{item.studentEnrollment.student.fullName} - {item.examAssessment.title}</p>
-                  <p className="text-xs text-muted-foreground">Score: {item.score}/{item.examAssessment.maxScore}</p>
+                  <p className="text-xs text-muted-foreground">الدرجة: {item.score}/{item.examAssessment.maxScore}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant={item.isPresent ? "default" : "secondary"}>{item.isPresent ? "Present" : `Absent (${item.absenceType ?? "UNEXCUSED"})`}</Badge>
+                  <Badge variant={item.isPresent ? "default" : "secondary"}>
+                    {item.isPresent ? "حاضر" : `غائب (${getAbsenceTypeLabel(item.absenceType ?? "UNEXCUSED")})`}
+                  </Badge>
                   {item.examAssessment.examPeriod.isLocked ? <Badge variant="outline" className="gap-1.5"><Lock className="h-3.5 w-3.5" />مقفل</Badge> : null}
                   <Badge variant={item.isActive ? "default" : "outline"}>{item.isActive ? "نشط" : "غير نشط"}</Badge>
                 </div>

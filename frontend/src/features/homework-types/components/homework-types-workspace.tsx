@@ -159,22 +159,22 @@ export function HomeworkTypesWorkspace() {
     const name = formState.name.trim();
 
     if (!code || !name) {
-      setFormError("الحقول المطلوبة: code, name.");
+      setFormError("الحقول المطلوبة: الكود والاسم.");
       return false;
     }
 
     if (code.length > 40 || !/^[A-Z0-9_]+$/.test(code)) {
-      setFormError("code يجب أن يحتوي أحرف كبيرة/أرقام/underscore فقط وبحد أقصى 40.");
+      setFormError("الكود يجب أن يحتوي أحرفًا كبيرة وأرقامًا وشرطة سفلية (_) فقط، وبحد أقصى 40 حرفًا.");
       return false;
     }
 
     if (name.length > 120) {
-      setFormError("name يجب ألا يتجاوز 120 حرف.");
+      setFormError("الاسم يجب ألا يتجاوز 120 حرفًا.");
       return false;
     }
 
     if (formState.description.trim().length > 255) {
-      setFormError("description يجب ألا يتجاوز 255 حرف.");
+      setFormError("الوصف يجب ألا يتجاوز 255 حرفًا.");
       return false;
     }
 
@@ -277,7 +277,7 @@ export function HomeworkTypesWorkspace() {
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Code *</label>
+                <label className="text-xs font-medium text-muted-foreground">الكود *</label>
                 <Input
                   value={formState.code}
                   onChange={(event) =>
@@ -295,25 +295,25 @@ export function HomeworkTypesWorkspace() {
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, name: event.target.value }))
                   }
-                  placeholder="Homework Assignment"
+                  placeholder="واجب منزلي"
                   required
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Description</label>
+                <label className="text-xs font-medium text-muted-foreground">الوصف</label>
                 <Input
                   value={formState.description}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, description: event.target.value }))
                   }
-                  placeholder="Standard take-home assignment"
+                  placeholder="واجب منزلي قياسي"
                 />
               </div>
 
               <div className="grid gap-2 md:grid-cols-2">
                 <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>System Type</span>
+                  <span>نوع نظامي</span>
                   <input
                     type="checkbox"
                     checked={formState.isSystem}
@@ -357,7 +357,7 @@ export function HomeworkTypesWorkspace() {
                   ) : (
                     <BookOpenText className="h-4 w-4" />
                   )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء Homework Type"}
+                  {isEditing ? "حفظ التعديلات" : "إنشاء نوع واجب"}
                 </Button>
                 {isEditing ? (
                   <Button type="button" variant="outline" onClick={resetForm}>
@@ -373,7 +373,7 @@ export function HomeworkTypesWorkspace() {
       <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Homework Types</CardTitle>
+            <CardTitle>أنواع الواجبات</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <CardDescription>إدارة أنواع الواجبات مع حماية الأنواع النظامية.</CardDescription>
@@ -401,8 +401,8 @@ export function HomeworkTypesWorkspace() {
               }}
             >
               <option value="all">كل الأنواع</option>
-              <option value="system">System only</option>
-              <option value="custom">Custom only</option>
+              <option value="system">النظامية فقط</option>
+              <option value="custom">المخصصة فقط</option>
             </select>
 
             <select
@@ -460,7 +460,7 @@ export function HomeworkTypesWorkspace() {
                     {item.description ?? "-"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Linked homeworks: {item._count.homeworks}
+                    عدد الواجبات المرتبطة: {item._count.homeworks}
                   </p>
                 </div>
 
@@ -468,13 +468,13 @@ export function HomeworkTypesWorkspace() {
                   {item.isSystem ? (
                     <Badge variant="outline" className="gap-1.5">
                       <ShieldAlert className="h-3.5 w-3.5" />
-                      System
+                      نظامي
                     </Badge>
                   ) : (
-                    <Badge variant="secondary">Custom</Badge>
+                    <Badge variant="secondary">مخصص</Badge>
                   )}
                   <Badge variant={item.isActive ? "default" : "outline"}>
-                    {item.isActive ? "Active" : "Inactive"}
+                    {item.isActive ? "نشط" : "غير نشط"}
                   </Badge>
                 </div>
               </div>

@@ -47,6 +47,7 @@ export class GuardiansController {
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'search', required: false, type: String })
   @ApiQuery({ name: 'gender', required: false, enum: StudentGender })
+  @ApiQuery({ name: 'genderId', required: false, type: Number })
   @ApiQuery({ name: 'idTypeId', required: false, type: Number })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
   findAll(@Query() query: ListGuardiansDto) {

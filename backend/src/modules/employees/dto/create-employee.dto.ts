@@ -35,9 +35,17 @@ export class CreateEmployeeDto {
   @MaxLength(150)
   fullName!: string;
 
-  @ApiProperty({ enum: EmployeeGender, example: EmployeeGender.MALE })
+  @ApiPropertyOptional({ enum: EmployeeGender, example: EmployeeGender.MALE })
+  @IsOptional()
   @IsEnum(EmployeeGender)
-  gender!: EmployeeGender;
+  gender?: EmployeeGender;
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  genderId?: number;
 
   @ApiPropertyOptional({ example: '1990-05-12T00:00:00.000Z' })
   @IsOptional()
@@ -67,6 +75,13 @@ export class CreateEmployeeDto {
   @IsString()
   @MaxLength(120)
   qualification?: string;
+
+  @ApiPropertyOptional({ example: 3 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  qualificationId?: number | null;
 
   @ApiPropertyOptional({ example: '2014-07-01T00:00:00.000Z' })
   @IsOptional()
@@ -118,6 +133,13 @@ export class CreateEmployeeDto {
   @IsString()
   @MaxLength(120)
   jobTitle?: string;
+
+  @ApiPropertyOptional({ example: 2 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  jobRoleId?: number | null;
 
   @ApiPropertyOptional({ example: '2020-09-01T00:00:00.000Z' })
   @IsOptional()

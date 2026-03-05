@@ -4,33 +4,33 @@ export async function seedSystem05Lookups(prisma: PrismaClient) {
   const defaultHomeworkTypes = [
     {
       code: 'HOMEWORK',
-      name: 'Homework Assignment',
-      description: 'Standard take-home assignment',
+      name: 'واجب منزلي',
+      description: 'واجب مدرسي قياسي يُكلّف به الطالب خارج الحصة',
     },
     {
       code: 'RESEARCH',
-      name: 'Research Task',
-      description: 'Research-based homework task',
+      name: 'مهمة بحثية',
+      description: 'واجب مبني على البحث وجمع المعلومات',
     },
     {
       code: 'PROJECT',
-      name: 'Project',
-      description: 'Project-based assignment',
+      name: 'مشروع',
+      description: 'تكليف على شكل مشروع فردي أو جماعي',
     },
     {
       code: 'REPORT',
-      name: 'Report',
-      description: 'Written report assignment',
+      name: 'تقرير',
+      description: 'تكليف بإعداد تقرير كتابي',
     },
     {
       code: 'CLASS_ACTIVITY',
-      name: 'Class Activity',
-      description: 'In-class activity assigned as tracked homework',
+      name: 'نشاط صفي',
+      description: 'نشاط داخل الصف يُتابَع كسجل واجب',
     },
     {
       code: 'OTHER',
-      name: 'Other',
-      description: 'Other homework type',
+      name: 'أخرى',
+      description: 'نوع واجب آخر',
     },
   ];
 
@@ -60,23 +60,23 @@ export async function seedSystem05Lookups(prisma: PrismaClient) {
   const defaultAnnualStatuses = [
     {
       code: 'PASS',
-      name: 'Passed',
-      description: 'Student passed subject in annual outcome',
+      name: 'ناجح',
+      description: 'حقق الطالب درجة النجاح في المادة ضمن النتيجة السنوية',
     },
     {
       code: 'FAIL',
-      name: 'Failed',
-      description: 'Student failed subject in annual outcome',
+      name: 'راسب',
+      description: 'لم يحقق الطالب درجة النجاح في المادة ضمن النتيجة السنوية',
     },
     {
       code: 'MAKEUP',
-      name: 'Makeup Required',
-      description: 'Student requires makeup exam for this subject',
+      name: 'مكمل',
+      description: 'الطالب يحتاج اختبار تعويض/دور ثاني في المادة',
     },
     {
       code: 'DEPRIVED',
-      name: 'Deprived',
-      description: 'Student deprived from annual subject result',
+      name: 'محروم',
+      description: 'الطالب محروم من نتيجة المادة سنويًا وفق الضوابط',
     },
   ];
 
@@ -106,23 +106,23 @@ export async function seedSystem05Lookups(prisma: PrismaClient) {
   const defaultPromotionDecisions = [
     {
       code: 'PROMOTED',
-      name: 'Promoted to next grade',
-      description: 'Student promoted without conditions',
+      name: 'مُرَقّى',
+      description: 'تمت ترقية الطالب للصف التالي دون شروط',
     },
     {
       code: 'RETAINED',
-      name: 'Retained in same grade',
-      description: 'Student repeats current grade',
+      name: 'إعادة',
+      description: 'يبقى الطالب في نفس الصف ويعيد العام',
     },
     {
       code: 'DISMISSED',
-      name: 'Dismissed',
-      description: 'Student dismissed based on policy',
+      name: 'مفصول',
+      description: 'تم فصل الطالب وفق السياسة المعتمدة',
     },
     {
       code: 'CONDITIONAL',
-      name: 'Conditionally promoted',
-      description: 'Student promoted with conditions',
+      name: 'ترقية مشروطة',
+      description: 'ترقية الطالب للصف التالي مشروطة بمعالجات محددة',
     },
   ];
 

@@ -33,6 +33,7 @@ import {
 import { useLookupCatalogQuery } from "@/features/lookup-catalog/hooks/use-lookup-catalog-query";
 
 type LookupCatalogFormState = {
+  name: string;
   code: string;
   nameAr: string;
   nameEn: string;
@@ -56,6 +57,7 @@ type LookupCatalogFormState = {
 const PAGE_SIZE = 12;
 
 const DEFAULT_FORM_STATE: LookupCatalogFormState = {
+  name: "",
   code: "",
   nameAr: "",
   nameEn: "",
@@ -82,7 +84,8 @@ function normalizeCode(value: string): string {
 
 function toFormState(item: LookupCatalogListItem): LookupCatalogFormState {
   return {
-    code: item.code,
+    name: item.name ?? "",
+    code: item.code ?? "",
     nameAr: item.nameAr ?? "",
     nameEn: item.nameEn ?? "",
     sortOrder: item.sortOrder === undefined ? "" : String(item.sortOrder),
@@ -342,7 +345,9 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
       return;
     }
 
-    const confirmed = window.confirm(`تأكيد حذف ${item.nameAr ?? item.code}؟`);
+    const confirmed = window.confirm(
+      `تأكيد حذف ${item.nameAr ?? item.name ?? item.code ?? `#${item.id}` }؟`,
+    );
     if (!confirmed) {
       return;
     }
@@ -374,7 +379,7 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
               لا تملك صلاحية <code>{definition.createPermission}</code>.
             </div>
           ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm}>
+            <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="lookup-catalog-form">
               {definition.fields.map((field) => {
                 if (field.type === "checkbox") {
                   return (
@@ -384,6 +389,7 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
                     >
                       <span>{field.label}</span>
                       <input
+                        data-testid={`lookup-catalog-form-${field.key}`}
                         type="checkbox"
                         checked={Boolean((formState as Record<string, unknown>)[field.key])}
                         onChange={(event) =>
@@ -405,6 +411,7 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
                         {field.required ? " *" : ""}
                       </label>
                       <select
+                        data-testid={`lookup-catalog-form-${field.key}`}
                         className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                         value={String((formState as Record<string, unknown>)[field.key] ?? "")}
                         onChange={(event) =>
@@ -431,6 +438,7 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
                       {field.required ? " *" : ""}
                     </label>
                     <Input
+                      data-testid={`lookup-catalog-form-${field.key}`}
                       type={field.type === "number" ? "number" : field.type === "color" ? "color" : "text"}
                       value={String((formState as Record<string, unknown>)[field.key] ?? "")}
                       onChange={(event) =>
@@ -449,6 +457,7 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
               <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
                 <span>نشط</span>
                 <input
+                  data-testid="lookup-catalog-form-is-active"
                   type="checkbox"
                   checked={formState.isActive}
                   onChange={(event) =>
@@ -471,6 +480,7 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
 
               <div className="flex gap-2">
                 <Button
+                  data-testid="lookup-catalog-form-submit"
                   type="submit"
                   className="flex-1 gap-2"
                   disabled={isFormSubmitting || (!canCreate && !isEditing)}
@@ -554,14 +564,17 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
           {items.map((item) => (
             <div
               key={item.id}
+              data-testid="lookup-catalog-card"
               className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="space-y-1">
-                  <p className="font-medium">{item.nameAr ?? item.code}</p>
-                  <p className="text-xs text-muted-foreground">
-                    <code>{item.code}</code>
-                  </p>
+                  <p className="font-medium">{item.nameAr ?? item.name ?? item.code ?? `#${item.id}`}</p>
+                  {item.code ? (
+                    <p className="text-xs text-muted-foreground">
+                      <code>{item.code}</code>
+                    </p>
+                  ) : null}
                 </div>
                 <Badge variant={item.isActive ? "default" : "outline"}>
                   {item.isActive ? "نشط" : "غير نشط"}
@@ -570,7 +583,7 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
 
               <div className="grid gap-1 text-xs text-muted-foreground md:grid-cols-2">
                 {definition.fields
-                  .filter((field) => field.key !== "code" && field.key !== "nameAr")
+                  .filter((field) => field.key !== "code" && field.key !== "nameAr" && field.key !== "name")
                   .map((field) => (
                     <p key={`${item.id}-${field.key}`}>
                       {field.label}: {resolveDisplayValue(item, field.key)}

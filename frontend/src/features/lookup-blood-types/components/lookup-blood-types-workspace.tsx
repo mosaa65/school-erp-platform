@@ -231,7 +231,7 @@ export function LookupBloodTypesWorkspace() {
               لا تملك صلاحية <code>lookup-blood-types.create</code>.
             </div>
           ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm}>
+            <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="blood-form">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
                 <Input
@@ -241,6 +241,7 @@ export function LookupBloodTypesWorkspace() {
                   }
                   placeholder="A+"
                   required
+                  data-testid="blood-form-name"
                 />
               </div>
 
@@ -252,6 +253,7 @@ export function LookupBloodTypesWorkspace() {
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
                   }
+                  data-testid="blood-form-active"
                 />
               </label>
 
@@ -272,6 +274,7 @@ export function LookupBloodTypesWorkspace() {
                   type="submit"
                   className="flex-1 gap-2"
                   disabled={isFormSubmitting || (!canCreate && !isEditing)}
+                  data-testid="blood-form-submit"
                 >
                   {isFormSubmitting ? (
                     <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -355,6 +358,7 @@ export function LookupBloodTypesWorkspace() {
             <div
               key={item.id}
               className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+              data-testid="blood-card"
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <p className="font-medium">{item.name}</p>

@@ -1,10 +1,19 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AuditStatus, Prisma, Student } from '@prisma/client';
+import {
+  AuditStatus,
+  Prisma,
+  Student,
+  StudentGender,
+  StudentHealthStatus,
+  StudentOrphanStatus,
+} from '@prisma/client';
+import { DataScopeService } from '../data-scope/data-scope.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { CreateStudentDto } from './dto/create-student.dto';
@@ -28,6 +37,32 @@ const studentInclude: Prisma.StudentInclude = {
     select: {
       id: true,
       name: true,
+      isActive: true,
+    },
+  },
+  genderLookup: {
+    select: {
+      id: true,
+      code: true,
+      nameAr: true,
+      nameEn: true,
+      isActive: true,
+    },
+  },
+  orphanStatusLookup: {
+    select: {
+      id: true,
+      code: true,
+      nameAr: true,
+      isActive: true,
+    },
+  },
+  healthStatusLookup: {
+    select: {
+      id: true,
+      code: true,
+      nameAr: true,
+      requiresDetails: true,
       isActive: true,
     },
   },
@@ -105,6 +140,7 @@ export class StudentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLogsService: AuditLogsService,
+    private readonly dataScopeService: DataScopeService,
   ) {}
 
   async create(payload: CreateStudentDto, actorUserId: string) {
@@ -115,18 +151,25 @@ export class StudentsService {
       await this.ensureBloodTypeExists(payload.bloodTypeId);
     }
 
+    const gender = await this.resolveGenderOnCreate(payload);
+    const healthStatus = await this.resolveHealthStatusOnCreate(payload);
+    const orphanStatus = await this.resolveOrphanStatusOnCreate(payload);
+
     try {
       const student = await this.prisma.student.create({
         data: {
           admissionNo,
           fullName,
-          gender: payload.gender,
+          gender: gender.gender,
+          genderId: gender.genderId,
           birthDate: payload.birthDate,
           bloodTypeId:
             payload.bloodTypeId === null ? null : payload.bloodTypeId,
-          healthStatus: payload.healthStatus,
+          healthStatus: healthStatus.healthStatus,
+          healthStatusId: healthStatus.healthStatusId,
           healthNotes: payload.healthNotes,
-          orphanStatus: payload.orphanStatus,
+          orphanStatus: orphanStatus.orphanStatus,
+          orphanStatusId: orphanStatus.orphanStatusId,
           isActive: payload.isActive ?? true,
           createdById: actorUserId,
           updatedById: actorUserId,
@@ -163,15 +206,19 @@ export class StudentsService {
     }
   }
 
-  async findAll(query: ListStudentsDto) {
+  async findAll(query: ListStudentsDto, actorUserId: string) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
 
     const where: Prisma.StudentWhereInput = {
       deletedAt: null,
       gender: query.gender,
+      genderId: query.genderId,
       bloodTypeId: query.bloodTypeId,
+      healthStatus: query.healthStatus,
+      healthStatusId: query.healthStatusId,
       orphanStatus: query.orphanStatus,
+      orphanStatusId: query.orphanStatusId,
       isActive: query.isActive,
       OR: query.search
         ? [
@@ -188,6 +235,42 @@ export class StudentsService {
           ]
         : undefined,
     };
+
+    const scope = await this.dataScopeService.getStudentSectionYearGrants({
+      actorUserId,
+    });
+
+    if (!scope.isPrivileged) {
+      if (scope.grants.length === 0) {
+        return {
+          data: [],
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            totalPages: 0,
+          },
+        };
+      }
+
+      const scopedEnrollments: Prisma.StudentEnrollmentWhereInput[] =
+        scope.grants.map((grant) => ({
+          sectionId: grant.sectionId,
+          academicYearId: grant.academicYearId,
+          deletedAt: null,
+          isActive: true,
+        }));
+
+      where.AND = [
+        {
+          enrollments: {
+            some: {
+              OR: scopedEnrollments,
+            },
+          },
+        },
+      ];
+    }
 
     const [total, items] = await this.prisma.$transaction([
       this.prisma.student.count({ where }),
@@ -211,7 +294,7 @@ export class StudentsService {
     };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, actorUserId: string) {
     const student = await this.prisma.student.findFirst({
       where: {
         id,
@@ -224,15 +307,40 @@ export class StudentsService {
       throw new NotFoundException('Student not found');
     }
 
+    const scope = await this.dataScopeService.getStudentSectionYearGrants({
+      actorUserId,
+    });
+    if (!scope.isPrivileged) {
+      const grantSet = new Set(
+        scope.grants.map((item) => `${item.sectionId}|${item.academicYearId}`),
+      );
+      const isAllowed = student.enrollments.some((enrollment) =>
+        grantSet.has(`${enrollment.sectionId}|${enrollment.academicYearId}`),
+      );
+
+      if (!isAllowed) {
+        throw new ForbiddenException(
+          'You are not allowed to access this student profile',
+        );
+      }
+    }
+
     return student;
   }
 
   async update(id: string, payload: UpdateStudentDto, actorUserId: string) {
-    await this.ensureStudentExists(id);
+    const existing = await this.ensureStudentExists(id);
 
     if (payload.bloodTypeId !== undefined && payload.bloodTypeId !== null) {
       await this.ensureBloodTypeExists(payload.bloodTypeId);
     }
+
+    const gender = await this.resolveGenderOnUpdate(existing, payload);
+    const healthStatus = await this.resolveHealthStatusOnUpdate(existing, payload);
+    const orphanStatus = await this.resolveOrphanStatusOnUpdate(
+      existing,
+      payload,
+    );
 
     try {
       const student = await this.prisma.student.update({
@@ -242,13 +350,16 @@ export class StudentsService {
         data: {
           admissionNo: payload.admissionNo?.trim().toUpperCase(),
           fullName: payload.fullName?.trim(),
-          gender: payload.gender,
+          gender: gender.gender,
+          genderId: gender.genderId,
           birthDate: payload.birthDate,
           bloodTypeId:
             payload.bloodTypeId === null ? null : payload.bloodTypeId,
-          healthStatus: payload.healthStatus,
+          healthStatus: healthStatus.healthStatus,
+          healthStatusId: healthStatus.healthStatusId,
           healthNotes: payload.healthNotes,
-          orphanStatus: payload.orphanStatus,
+          orphanStatus: orphanStatus.orphanStatus,
+          orphanStatusId: orphanStatus.orphanStatusId,
           isActive: payload.isActive,
           updatedById: actorUserId,
         },
@@ -348,6 +459,368 @@ export class StudentsService {
     if (!bloodType) {
       throw new BadRequestException('bloodTypeId is not valid');
     }
+  }
+
+  private mapLookupGenderCodeToEnum(code: string): StudentGender {
+    const normalized = code.trim().toUpperCase();
+
+    if (
+      normalized !== StudentGender.MALE &&
+      normalized !== StudentGender.FEMALE &&
+      normalized !== StudentGender.OTHER
+    ) {
+      throw new BadRequestException(
+        `Unsupported lookup gender code for students: ${code}`,
+      );
+    }
+
+    return normalized as StudentGender;
+  }
+
+  private mapLookupOrphanCodeToEnum(code: string): StudentOrphanStatus {
+    const normalized = code.trim().toUpperCase();
+
+    if (
+      normalized !== StudentOrphanStatus.NONE &&
+      normalized !== StudentOrphanStatus.FATHER_DECEASED &&
+      normalized !== StudentOrphanStatus.MOTHER_DECEASED &&
+      normalized !== StudentOrphanStatus.BOTH_DECEASED
+    ) {
+      throw new BadRequestException(
+        `Unsupported lookup orphan status code for students: ${code}`,
+      );
+    }
+
+    return normalized as StudentOrphanStatus;
+  }
+
+  private mapLookupHealthCodeToEnum(code: string): StudentHealthStatus {
+    const normalized = code.trim().toUpperCase();
+
+    if (
+      normalized === StudentHealthStatus.HEALTHY ||
+      normalized === StudentHealthStatus.CHRONIC_DISEASE ||
+      normalized === StudentHealthStatus.SPECIAL_NEEDS ||
+      normalized === StudentHealthStatus.DISABILITY ||
+      normalized === StudentHealthStatus.OTHER
+    ) {
+      return normalized as StudentHealthStatus;
+    }
+
+    // Legacy compatibility for older lookup codes.
+    if (normalized === 'SICK') {
+      return StudentHealthStatus.CHRONIC_DISEASE;
+    }
+
+    if (normalized === 'DISABLED') {
+      return StudentHealthStatus.DISABILITY;
+    }
+
+    throw new BadRequestException(
+      `Unsupported lookup health status code for students: ${code}`,
+    );
+  }
+
+  private async findGenderLookupByCode(code: string) {
+    return this.prisma.lookupGender.findFirst({
+      where: {
+        code: code.trim().toUpperCase(),
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        code: true,
+      },
+    });
+  }
+
+  private async findOrphanStatusLookupByCode(code: string) {
+    return this.prisma.lookupOrphanStatus.findFirst({
+      where: {
+        code: code.trim().toUpperCase(),
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        code: true,
+      },
+    });
+  }
+
+  private async findHealthStatusLookupByCode(code: string) {
+    return this.prisma.lookupHealthStatus.findFirst({
+      where: {
+        code: code.trim().toUpperCase(),
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        code: true,
+      },
+    });
+  }
+
+  private async ensureGenderLookupExists(genderId: number) {
+    const gender = await this.prisma.lookupGender.findFirst({
+      where: {
+        id: genderId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        code: true,
+      },
+    });
+
+    if (!gender) {
+      throw new BadRequestException('genderId is not valid');
+    }
+
+    return gender;
+  }
+
+  private async ensureOrphanStatusLookupExists(orphanStatusId: number) {
+    const orphanStatus = await this.prisma.lookupOrphanStatus.findFirst({
+      where: {
+        id: orphanStatusId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        code: true,
+      },
+    });
+
+    if (!orphanStatus) {
+      throw new BadRequestException('orphanStatusId is not valid');
+    }
+
+    return orphanStatus;
+  }
+
+  private async ensureHealthStatusLookupExists(healthStatusId: number) {
+    const healthStatus = await this.prisma.lookupHealthStatus.findFirst({
+      where: {
+        id: healthStatusId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        code: true,
+      },
+    });
+
+    if (!healthStatus) {
+      throw new BadRequestException('healthStatusId is not valid');
+    }
+
+    return healthStatus;
+  }
+
+  private async resolveGenderOnCreate(payload: CreateStudentDto) {
+    if (payload.genderId !== undefined) {
+      const lookup = await this.ensureGenderLookupExists(payload.genderId);
+      const mappedGender = this.mapLookupGenderCodeToEnum(lookup.code);
+
+      if (payload.gender && payload.gender !== mappedGender) {
+        throw new BadRequestException(
+          'gender and genderId do not refer to the same lookup value',
+        );
+      }
+
+      return {
+        gender: payload.gender ?? mappedGender,
+        genderId: lookup.id,
+      };
+    }
+
+    if (!payload.gender) {
+      throw new BadRequestException('Either gender or genderId is required');
+    }
+
+    const lookup = await this.findGenderLookupByCode(payload.gender);
+
+    return {
+      gender: payload.gender,
+      genderId: lookup?.id ?? null,
+    };
+  }
+
+  private async resolveHealthStatusOnCreate(payload: CreateStudentDto) {
+    if (payload.healthStatusId !== undefined) {
+      const lookup = await this.ensureHealthStatusLookupExists(
+        payload.healthStatusId,
+      );
+      const mappedHealthStatus = this.mapLookupHealthCodeToEnum(lookup.code);
+
+      if (payload.healthStatus && payload.healthStatus !== mappedHealthStatus) {
+        throw new BadRequestException(
+          'healthStatus and healthStatusId do not refer to the same lookup value',
+        );
+      }
+
+      return {
+        healthStatus: payload.healthStatus ?? mappedHealthStatus,
+        healthStatusId: lookup.id,
+      };
+    }
+
+    if (!payload.healthStatus) {
+      return {
+        healthStatus: undefined,
+        healthStatusId: null,
+      };
+    }
+
+    const lookup = await this.findHealthStatusLookupByCode(payload.healthStatus);
+    return {
+      healthStatus: payload.healthStatus,
+      healthStatusId: lookup?.id ?? null,
+    };
+  }
+
+  private async resolveGenderOnUpdate(
+    existing: Student,
+    payload: UpdateStudentDto,
+  ) {
+    if (payload.genderId !== undefined) {
+      const lookup = await this.ensureGenderLookupExists(payload.genderId);
+      const mappedGender = this.mapLookupGenderCodeToEnum(lookup.code);
+
+      if (payload.gender && payload.gender !== mappedGender) {
+        throw new BadRequestException(
+          'gender and genderId do not refer to the same lookup value',
+        );
+      }
+
+      return {
+        gender: payload.gender ?? mappedGender,
+        genderId: lookup.id,
+      };
+    }
+
+    if (payload.gender !== undefined) {
+      const lookup = await this.findGenderLookupByCode(payload.gender);
+
+      return {
+        gender: payload.gender,
+        genderId: lookup?.id ?? existing.genderId ?? null,
+      };
+    }
+
+    return {
+      gender: existing.gender,
+      genderId: existing.genderId ?? null,
+    };
+  }
+
+  private async resolveHealthStatusOnUpdate(
+    existing: Student,
+    payload: UpdateStudentDto,
+  ) {
+    if (payload.healthStatusId !== undefined) {
+      const lookup = await this.ensureHealthStatusLookupExists(
+        payload.healthStatusId,
+      );
+      const mappedHealthStatus = this.mapLookupHealthCodeToEnum(lookup.code);
+
+      if (payload.healthStatus && payload.healthStatus !== mappedHealthStatus) {
+        throw new BadRequestException(
+          'healthStatus and healthStatusId do not refer to the same lookup value',
+        );
+      }
+
+      return {
+        healthStatus: payload.healthStatus ?? mappedHealthStatus,
+        healthStatusId: lookup.id,
+      };
+    }
+
+    if (payload.healthStatus !== undefined) {
+      const lookup = await this.findHealthStatusLookupByCode(payload.healthStatus);
+
+      return {
+        healthStatus: payload.healthStatus,
+        healthStatusId: lookup?.id ?? existing.healthStatusId ?? null,
+      };
+    }
+
+    return {
+      healthStatus: existing.healthStatus,
+      healthStatusId: existing.healthStatusId ?? null,
+    };
+  }
+
+  private async resolveOrphanStatusOnCreate(payload: CreateStudentDto) {
+    if (payload.orphanStatusId !== undefined) {
+      const lookup = await this.ensureOrphanStatusLookupExists(
+        payload.orphanStatusId,
+      );
+      const mappedOrphanStatus = this.mapLookupOrphanCodeToEnum(lookup.code);
+
+      if (payload.orphanStatus && payload.orphanStatus !== mappedOrphanStatus) {
+        throw new BadRequestException(
+          'orphanStatus and orphanStatusId do not refer to the same lookup value',
+        );
+      }
+
+      return {
+        orphanStatus: payload.orphanStatus ?? mappedOrphanStatus,
+        orphanStatusId: lookup.id,
+      };
+    }
+
+    if (payload.orphanStatus) {
+      const lookup = await this.findOrphanStatusLookupByCode(payload.orphanStatus);
+      return {
+        orphanStatus: payload.orphanStatus,
+        orphanStatusId: lookup?.id ?? null,
+      };
+    }
+
+    const fallbackLookup = await this.findOrphanStatusLookupByCode(
+      StudentOrphanStatus.NONE,
+    );
+    return {
+      orphanStatus: StudentOrphanStatus.NONE,
+      orphanStatusId: fallbackLookup?.id ?? null,
+    };
+  }
+
+  private async resolveOrphanStatusOnUpdate(
+    existing: Student,
+    payload: UpdateStudentDto,
+  ) {
+    if (payload.orphanStatusId !== undefined) {
+      const lookup = await this.ensureOrphanStatusLookupExists(
+        payload.orphanStatusId,
+      );
+      const mappedOrphanStatus = this.mapLookupOrphanCodeToEnum(lookup.code);
+
+      if (payload.orphanStatus && payload.orphanStatus !== mappedOrphanStatus) {
+        throw new BadRequestException(
+          'orphanStatus and orphanStatusId do not refer to the same lookup value',
+        );
+      }
+
+      return {
+        orphanStatus: payload.orphanStatus ?? mappedOrphanStatus,
+        orphanStatusId: lookup.id,
+      };
+    }
+
+    if (payload.orphanStatus !== undefined) {
+      const lookup = await this.findOrphanStatusLookupByCode(payload.orphanStatus);
+      return {
+        orphanStatus: payload.orphanStatus,
+        orphanStatusId: lookup?.id ?? existing.orphanStatusId ?? null,
+      };
+    }
+
+    return {
+      orphanStatus: existing.orphanStatus,
+      orphanStatusId: existing.orphanStatusId ?? null,
+    };
   }
 
   private throwKnownDatabaseErrors(error: unknown): never {

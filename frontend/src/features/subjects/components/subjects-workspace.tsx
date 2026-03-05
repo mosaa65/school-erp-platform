@@ -190,17 +190,17 @@ export function SubjectsWorkspace() {
     }
 
     if (!/^[a-z0-9_.:-]+$/.test(code)) {
-      setFormError("صيغة code غير صحيحة.");
+      setFormError("صيغة الكود غير صحيحة.");
       return false;
     }
 
     if (name.length > 120) {
-      setFormError("name يجب ألا يتجاوز 120 حرف.");
+      setFormError("الاسم يجب ألا يتجاوز 120 حرفًا.");
       return false;
     }
 
     if (formState.shortName.trim().length > 50) {
-      setFormError("shortName يجب ألا يتجاوز 50 حرف.");
+      setFormError("الاسم المختصر يجب ألا يتجاوز 50 حرفًا.");
       return false;
     }
 

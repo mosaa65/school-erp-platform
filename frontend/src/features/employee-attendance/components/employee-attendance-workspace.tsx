@@ -31,6 +31,7 @@ import type {
   EmployeeAttendanceListItem,
   EmployeeAttendanceStatus,
 } from "@/lib/api/client";
+import { translateAttendanceStatus } from "@/lib/i18n/ar";
 
 type AttendanceFormState = {
   employeeId: string;
@@ -107,7 +108,7 @@ function formatDate(value: string): string {
     return value;
   }
 
-  return date.toLocaleDateString("en-GB");
+  return date.toLocaleDateString("ar-YE");
 }
 
 function formatDateTime(value: string | null): string {
@@ -120,7 +121,7 @@ function formatDateTime(value: string | null): string {
     return "-";
   }
 
-  return date.toLocaleString("en-GB", {
+  return date.toLocaleString("ar-YE", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -240,7 +241,7 @@ export function EmployeeAttendanceWorkspace() {
       const checkIn = new Date(formState.checkInAt);
       const checkOut = new Date(formState.checkOutAt);
       if (checkOut <= checkIn) {
-        setFormError("checkOutAt يجب أن يكون بعد checkInAt.");
+        setFormError("وقت الخروج يجب أن يكون بعد وقت الدخول.");
         return false;
       }
     }
@@ -357,7 +358,7 @@ export function EmployeeAttendanceWorkspace() {
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Employee *</label>
+                <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={formState.employeeId}
@@ -369,7 +370,7 @@ export function EmployeeAttendanceWorkspace() {
                   <option value="">اختر الموظف</option>
                   {(employeesQuery.data ?? []).map((employee) => (
                     <option key={employee.id} value={employee.id}>
-                      {employee.fullName} ({employee.jobNumber ?? "N/A"})
+                      {employee.fullName} ({employee.jobNumber ?? "غير متوفر"})
                     </option>
                   ))}
                 </select>
@@ -393,7 +394,7 @@ export function EmployeeAttendanceWorkspace() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Status *</label>
+                <label className="text-xs font-medium text-muted-foreground">الحالة *</label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={formState.status}
@@ -406,7 +407,7 @@ export function EmployeeAttendanceWorkspace() {
                 >
                   {STATUS_OPTIONS.map((status) => (
                     <option key={status} value={status}>
-                      {status}
+                      {translateAttendanceStatus(status)}
                     </option>
                   ))}
                 </select>
@@ -414,7 +415,7 @@ export function EmployeeAttendanceWorkspace() {
 
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Check-in</label>
+                  <label className="text-xs font-medium text-muted-foreground">وقت الدخول</label>
                   <Input
                     type="datetime-local"
                     value={formState.checkInAt}
@@ -424,7 +425,7 @@ export function EmployeeAttendanceWorkspace() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Check-out</label>
+                  <label className="text-xs font-medium text-muted-foreground">وقت الخروج</label>
                   <Input
                     type="datetime-local"
                     value={formState.checkOutAt}
@@ -436,7 +437,7 @@ export function EmployeeAttendanceWorkspace() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Notes</label>
+                <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
                 <Input
                   value={formState.notes}
                   onChange={(event) =>
@@ -486,7 +487,7 @@ export function EmployeeAttendanceWorkspace() {
                   ) : (
                     <ClipboardCheck className="h-4 w-4" />
                   )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء Attendance"}
+                  {isEditing ? "حفظ التعديلات" : "إنشاء سجل حضور"}
                 </Button>
                 {isEditing ? (
                   <Button type="button" variant="outline" onClick={resetForm}>
@@ -502,7 +503,7 @@ export function EmployeeAttendanceWorkspace() {
       <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Employee Attendance</CardTitle>
+            <CardTitle>حضور الموظفين</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <CardDescription>
@@ -547,10 +548,10 @@ export function EmployeeAttendanceWorkspace() {
                 setStatusFilter(event.target.value as EmployeeAttendanceStatus | "all");
               }}
             >
-              <option value="all">All statuses</option>
+              <option value="all">كل الحالات</option>
               {STATUS_OPTIONS.map((status) => (
                 <option key={status} value={status}>
-                  {status}
+                  {translateAttendanceStatus(status)}
                 </option>
               ))}
             </select>
@@ -617,20 +618,22 @@ export function EmployeeAttendanceWorkspace() {
                 <div className="space-y-1">
                   <p className="font-medium">{record.employee.fullName}</p>
                   <p className="text-xs text-muted-foreground">
-                    Date: {formatDate(record.attendanceDate)} | Job:{" "}
+                    التاريخ: {formatDate(record.attendanceDate)} | الرقم الوظيفي:{" "}
                     {record.employee.jobNumber ?? "-"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Check-in: {formatDateTime(record.checkInAt)} | Check-out:{" "}
+                    دخول: {formatDateTime(record.checkInAt)} | خروج:{" "}
                     {formatDateTime(record.checkOutAt)}
                   </p>
                   {record.notes ? (
-                    <p className="text-xs text-muted-foreground">Notes: {record.notes}</p>
+                    <p className="text-xs text-muted-foreground">ملاحظات: {record.notes}</p>
                   ) : null}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant="secondary">{record.status}</Badge>
+                  <Badge variant="secondary">
+                    {translateAttendanceStatus(record.status)}
+                  </Badge>
                   <Badge variant={record.isActive ? "default" : "outline"}>
                     {record.isActive ? "نشط" : "غير نشط"}
                   </Badge>

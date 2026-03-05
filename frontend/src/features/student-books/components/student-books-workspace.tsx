@@ -33,6 +33,7 @@ import type {
   StudentBookListItem,
   StudentBookStatus,
 } from "@/lib/api/client";
+import { translateStudentBookStatus } from "@/lib/i18n/ar";
 
 type StudentBookFormState = {
   studentEnrollmentId: string;
@@ -94,22 +95,7 @@ function formatDate(value: string | null): string {
     return "-";
   }
 
-  return date.toLocaleDateString("en-GB");
-}
-
-function studentBookStatusLabel(status: StudentBookStatus): string {
-  switch (status) {
-    case "ISSUED":
-      return "مسلّم";
-    case "RETURNED":
-      return "مُعاد";
-    case "LOST":
-      return "مفقود";
-    case "DAMAGED":
-      return "تالف";
-    default:
-      return status;
-  }
+  return date.toLocaleDateString("ar-YE");
 }
 
 function toFormState(item: StudentBookListItem): StudentBookFormState {
@@ -231,12 +217,12 @@ export function StudentBooksWorkspace() {
     }
 
     if (formState.bookPart.trim().length > 50) {
-      setFormError("bookPart يجب ألا يتجاوز 50 حرف.");
+      setFormError("جزء الكتاب يجب ألا يتجاوز 50 حرفًا.");
       return false;
     }
 
     if (formState.notes.trim().length > 255) {
-      setFormError("notes يجب ألا يتجاوز 255 حرف.");
+      setFormError("الملاحظات يجب ألا تتجاوز 255 حرفًا.");
       return false;
     }
 
@@ -245,7 +231,7 @@ export function StudentBooksWorkspace() {
       formState.issuedDate &&
       formState.dueDate.localeCompare(formState.issuedDate) < 0
     ) {
-      setFormError("dueDate يجب أن يكون في أو بعد issuedDate.");
+      setFormError("تاريخ الاستحقاق يجب أن يكون في نفس يوم التسليم أو بعده.");
       return false;
     }
 
@@ -254,12 +240,12 @@ export function StudentBooksWorkspace() {
       formState.issuedDate &&
       formState.returnedDate.localeCompare(formState.issuedDate) < 0
     ) {
-      setFormError("returnedDate يجب أن يكون في أو بعد issuedDate.");
+      setFormError("تاريخ الإرجاع يجب أن يكون في نفس يوم التسليم أو بعده.");
       return false;
     }
 
     if (formState.status === "RETURNED" && !formState.returnedDate) {
-      setFormError("returnedDate مطلوب عندما الحالة RETURNED.");
+      setFormError("تاريخ الإرجاع مطلوب عندما تكون الحالة مُعاد.");
       return false;
     }
 
@@ -437,7 +423,7 @@ export function StudentBooksWorkspace() {
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, bookPart: event.target.value }))
                   }
-                  placeholder="PART_1"
+                  placeholder="مثال: الجزء الأول"
                 />
               </div>
 
@@ -496,7 +482,7 @@ export function StudentBooksWorkspace() {
                   >
                     {STATUS_OPTIONS.map((status) => (
                       <option key={status} value={status}>
-                        {studentBookStatusLabel(status)}
+                        {translateStudentBookStatus(status)}
                       </option>
                     ))}
                   </select>
@@ -662,7 +648,7 @@ export function StudentBooksWorkspace() {
               <option value="all">كل الحالات</option>
               {STATUS_OPTIONS.map((status) => (
                 <option key={status} value={status}>
-                  {studentBookStatusLabel(status)}
+                  {translateStudentBookStatus(status)}
                 </option>
               ))}
             </select>
@@ -743,7 +729,9 @@ export function StudentBooksWorkspace() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant="secondary">{studentBookStatusLabel(item.status)}</Badge>
+                  <Badge variant="secondary">
+                    {translateStudentBookStatus(item.status)}
+                  </Badge>
                   <Badge variant={item.isActive ? "default" : "outline"}>
                     {item.isActive ? "نشط" : "غير نشط"}
                   </Badge>

@@ -273,7 +273,7 @@ export function RemindersTickerWorkspace() {
               لا تملك صلاحية <code>reminders-ticker.create</code>.
             </div>
           ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm}>
+            <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="reminder-form">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">المحتوى *</label>
                 <textarea
@@ -284,6 +284,7 @@ export function RemindersTickerWorkspace() {
                   }
                   placeholder="اكتب نص التذكير أو الإعلان..."
                   required
+                  data-testid="reminder-form-content"
                 />
               </div>
 
@@ -299,6 +300,7 @@ export function RemindersTickerWorkspace() {
                         tickerType: event.target.value as ReminderTickerType,
                       }))
                     }
+                    data-testid="reminder-form-type"
                   >
                     {TICKER_TYPE_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -319,6 +321,7 @@ export function RemindersTickerWorkspace() {
                         displayOrder: Number(event.target.value || "0"),
                       }))
                     }
+                    data-testid="reminder-form-order"
                   />
                 </div>
               </div>
@@ -332,6 +335,7 @@ export function RemindersTickerWorkspace() {
                     onChange={(event) =>
                       setFormState((prev) => ({ ...prev, startDate: event.target.value }))
                     }
+                    data-testid="reminder-form-start-date"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -342,6 +346,7 @@ export function RemindersTickerWorkspace() {
                     onChange={(event) =>
                       setFormState((prev) => ({ ...prev, endDate: event.target.value }))
                     }
+                    data-testid="reminder-form-end-date"
                   />
                 </div>
               </div>
@@ -354,6 +359,7 @@ export function RemindersTickerWorkspace() {
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
                   }
+                  data-testid="reminder-form-active"
                 />
               </label>
 
@@ -374,6 +380,7 @@ export function RemindersTickerWorkspace() {
                   type="submit"
                   className="flex-1 gap-2"
                   disabled={isFormSubmitting || (!canCreate && !isEditing)}
+                  data-testid="reminder-form-submit"
                 >
                   {isFormSubmitting ? (
                     <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -404,6 +411,7 @@ export function RemindersTickerWorkspace() {
           <form
             onSubmit={handleSearchSubmit}
             className="grid gap-2 md:grid-cols-[1fr_140px_130px_auto]"
+            data-testid="reminder-filters-form"
           >
             <div className="relative">
               <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -412,6 +420,7 @@ export function RemindersTickerWorkspace() {
                 onChange={(event) => setSearchInput(event.target.value)}
                 placeholder="بحث في المحتوى..."
                 className="pr-8"
+                data-testid="reminder-filter-search"
               />
             </div>
 
@@ -422,6 +431,7 @@ export function RemindersTickerWorkspace() {
                 setPage(1);
                 setTypeFilter(event.target.value as ReminderTickerType | "all");
               }}
+              data-testid="reminder-filter-type"
             >
               <option value="all">كل الأنواع</option>
               {TICKER_TYPE_OPTIONS.map((option) => (
@@ -438,6 +448,7 @@ export function RemindersTickerWorkspace() {
                 setPage(1);
                 setActiveFilter(event.target.value as "all" | "active" | "inactive");
               }}
+              data-testid="reminder-filter-active"
             >
               <option value="all">كل الحالات</option>
               <option value="active">نشط</option>
@@ -475,6 +486,7 @@ export function RemindersTickerWorkspace() {
             <div
               key={item.id}
               className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+              data-testid="reminder-card"
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="space-y-1">

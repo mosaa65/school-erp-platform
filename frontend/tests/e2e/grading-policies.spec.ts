@@ -100,7 +100,7 @@ test.describe("Grading Policies", () => {
       submit: true,
     });
 
-    await expectValidationMessage(page, "الحقول الأساسية مطلوبة: year, grade, subject.");
+    await expectValidationMessage(page, "الحقول الأساسية مطلوبة: السنة والصف والمادة.");
     expect(policiesApi.getPostCount()).toBe(0);
   });
 });

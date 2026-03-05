@@ -57,15 +57,15 @@ export class HomeworksController {
   @ApiQuery({ name: 'fromDueDate', required: false, type: String })
   @ApiQuery({ name: 'toDueDate', required: false, type: String })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
-  findAll(@Query() query: ListHomeworksDto) {
-    return this.homeworksService.findAll(query);
+  findAll(@Query() query: ListHomeworksDto, @CurrentUser() user: AuthUser) {
+    return this.homeworksService.findAll(query, user.userId);
   }
 
   @Get(':id')
   @RequirePermissions('homeworks.read')
   @ApiOperation({ summary: 'Get homework by ID' })
-  findOne(@Param('id') id: string) {
-    return this.homeworksService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.homeworksService.findOne(id, user.userId);
   }
 
   @Patch(':id')

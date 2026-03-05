@@ -85,7 +85,7 @@ function formatDate(value: string | null): string {
     return "-";
   }
 
-  return date.toLocaleDateString("en-GB");
+  return date.toLocaleDateString("ar-SA");
 }
 
 function formatDateTime(value: string | null): string {
@@ -98,7 +98,7 @@ function formatDateTime(value: string | null): string {
     return "-";
   }
 
-  return date.toLocaleString("en-GB", {
+  return date.toLocaleString("ar-SA", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -243,18 +243,18 @@ export function StudentHomeworksWorkspace() {
     }
 
     if (formState.teacherNotes.trim().length > 255) {
-      setFormError("teacherNotes يجب ألا يتجاوز 255 حرف.");
+      setFormError("ملاحظات المعلم يجب ألا تتجاوز 255 حرفًا.");
       return false;
     }
 
     const score = formState.manualScore.trim() ? Number(formState.manualScore) : null;
     if (score !== null && (!Number.isFinite(score) || score < 0)) {
-      setFormError("manualScore يجب أن يكون رقمًا صالحًا >= 0.");
+      setFormError("الدرجة اليدوية يجب أن تكون رقمًا صالحًا أكبر من أو يساوي 0.");
       return false;
     }
 
     if (score !== null && selectedHomeworkForForm && score > selectedHomeworkForForm.maxScore) {
-      setFormError(`manualScore يجب أن لا يتجاوز ${selectedHomeworkForForm.maxScore}.`);
+      setFormError(`الدرجة اليدوية يجب ألا تتجاوز ${selectedHomeworkForForm.maxScore}.`);
       return false;
     }
 
@@ -425,7 +425,7 @@ export function StudentHomeworksWorkspace() {
                 <option value="">اختر القيد *</option>
                 {formEnrollmentOptions.map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.student.fullName} ({item.student.admissionNo ?? "N/A"}) -{" "}
+                    {item.student.fullName} ({item.student.admissionNo ?? "بدون رقم قيد"}) -{" "}
                     {item.academicYear.code}/{item.section.code}
                   </option>
                 ))}
@@ -433,7 +433,7 @@ export function StudentHomeworksWorkspace() {
 
               <div className="grid gap-3 md:grid-cols-2">
                 <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>Completed</span>
+                  <span>مكتمل</span>
                   <input
                     type="checkbox"
                     checked={formState.isCompleted}
@@ -461,7 +461,7 @@ export function StudentHomeworksWorkspace() {
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, submittedAt: event.target.value }))
                   }
-                  placeholder="submittedAt"
+                  placeholder="وقت التسليم"
                 />
                 <Input
                   type="number"
@@ -471,7 +471,7 @@ export function StudentHomeworksWorkspace() {
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, manualScore: event.target.value }))
                   }
-                  placeholder="manualScore"
+                  placeholder="الدرجة اليدوية"
                 />
               </div>
 
@@ -480,7 +480,7 @@ export function StudentHomeworksWorkspace() {
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, teacherNotes: event.target.value }))
                 }
-                placeholder="Teacher notes"
+                placeholder="ملاحظات المعلم"
               />
 
               {formError ? (
@@ -515,7 +515,7 @@ export function StudentHomeworksWorkspace() {
                   ) : (
                     <ClipboardCheck className="h-4 w-4" />
                   )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء Student Homework"}
+                  {isEditing ? "حفظ التعديلات" : "إنشاء واجب طالب"}
                 </Button>
                 {isEditing ? (
                   <Button type="button" variant="outline" onClick={resetForm}>
@@ -531,7 +531,7 @@ export function StudentHomeworksWorkspace() {
       <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Student Homeworks</CardTitle>
+            <CardTitle>واجبات الطلاب</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <CardDescription>فلترة ومراجعة حالة إنجاز الواجب لكل طالب.</CardDescription>
@@ -572,7 +572,7 @@ export function StudentHomeworksWorkspace() {
                 setEnrollmentFilter(event.target.value);
               }}
             >
-              <option value="all">All enrollments</option>
+              <option value="all">كل القيود</option>
               {filteredEnrollmentOptions.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.student.fullName} ({item.academicYear.code}/{item.section.code})
@@ -587,7 +587,7 @@ export function StudentHomeworksWorkspace() {
                 setHomeworkFilter(event.target.value);
               }}
             >
-              <option value="all">All homeworks</option>
+              <option value="all">كل الواجبات</option>
               {(homeworksQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.title}
@@ -603,8 +603,8 @@ export function StudentHomeworksWorkspace() {
               }}
             >
               <option value="all">كل الحالات</option>
-              <option value="completed">Completed</option>
-              <option value="pending">Pending</option>
+              <option value="completed">مكتمل</option>
+              <option value="pending">قيد الإنجاز</option>
             </select>
             <Input
               type="date"
@@ -665,24 +665,24 @@ export function StudentHomeworksWorkspace() {
                     {item.studentEnrollment.student.fullName} - {item.homework.title}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Homework: {formatDate(item.homework.homeworkDate)} | Due:{" "}
-                    {formatDate(item.homework.dueDate)} | Max: {item.homework.maxScore}
+                    الواجب: {formatDate(item.homework.homeworkDate)} | الاستحقاق:{" "}
+                    {formatDate(item.homework.dueDate)} | العظمى: {item.homework.maxScore}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Submitted: {formatDateTime(item.submittedAt)} | Score:{" "}
+                    التسليم: {formatDateTime(item.submittedAt)} | الدرجة:{" "}
                     {item.manualScore === null ? "-" : item.manualScore}
                   </p>
                   {item.teacherNotes ? (
-                    <p className="text-xs text-muted-foreground">Notes: {item.teacherNotes}</p>
+                    <p className="text-xs text-muted-foreground">ملاحظات: {item.teacherNotes}</p>
                   ) : null}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
                   <Badge variant={item.isCompleted ? "default" : "secondary"}>
-                    {item.isCompleted ? "Completed" : "Pending"}
+                    {item.isCompleted ? "مكتمل" : "قيد الإنجاز"}
                   </Badge>
                   <Badge variant={item.isActive ? "default" : "outline"}>
-                    {item.isActive ? "Active" : "Inactive"}
+                    {item.isActive ? "نشط" : "غير نشط"}
                   </Badge>
                 </div>
               </div>

@@ -14,6 +14,38 @@ import { ListLookupCatalogItemsDto } from './dto/list-lookup-catalog-items.dto';
 import { UpdateLookupCatalogItemDto } from './dto/update-lookup-catalog-item.dto';
 
 const LOOKUP_CATALOG_CONFIG = {
+  'blood-types': {
+    prismaDelegate: 'lookupBloodType',
+    permissionResource: 'lookup-blood-types',
+    requiredOnCreate: ['name'],
+    searchableFields: ['name'],
+    allowedFields: ['name', 'isActive'],
+    orderBy: [{ name: 'asc' }],
+  },
+  'id-types': {
+    prismaDelegate: 'lookupIdType',
+    permissionResource: 'lookup-id-types',
+    requiredOnCreate: ['code', 'nameAr'],
+    searchableFields: ['code', 'nameAr'],
+    allowedFields: ['code', 'nameAr', 'isActive'],
+    orderBy: [{ nameAr: 'asc' }],
+  },
+  'ownership-types': {
+    prismaDelegate: 'lookupOwnershipType',
+    permissionResource: 'lookup-ownership-types',
+    requiredOnCreate: ['code', 'nameAr'],
+    searchableFields: ['code', 'nameAr'],
+    allowedFields: ['code', 'nameAr', 'isActive'],
+    orderBy: [{ nameAr: 'asc' }],
+  },
+  periods: {
+    prismaDelegate: 'lookupPeriod',
+    permissionResource: 'lookup-periods',
+    requiredOnCreate: ['code', 'nameAr'],
+    searchableFields: ['code', 'nameAr'],
+    allowedFields: ['code', 'nameAr', 'isActive'],
+    orderBy: [{ nameAr: 'asc' }],
+  },
   'school-types': {
     prismaDelegate: 'lookupSchoolType',
     permissionResource: 'lookup-school-types',
@@ -83,6 +115,38 @@ const LOOKUP_CATALOG_CONFIG = {
     requiredOnCreate: ['code', 'nameAr'],
     searchableFields: ['code', 'nameAr'],
     allowedFields: ['code', 'nameAr', 'requiresDetails', 'isActive'],
+    orderBy: [{ nameAr: 'asc' }],
+  },
+  'enrollment-statuses': {
+    prismaDelegate: 'lookupEnrollmentStatus',
+    permissionResource: 'lookup-enrollment-statuses',
+    requiredOnCreate: ['code', 'nameAr'],
+    searchableFields: ['code', 'nameAr'],
+    allowedFields: ['code', 'nameAr', 'isActive'],
+    orderBy: [{ nameAr: 'asc' }],
+  },
+  'orphan-statuses': {
+    prismaDelegate: 'lookupOrphanStatus',
+    permissionResource: 'lookup-orphan-statuses',
+    requiredOnCreate: ['code', 'nameAr'],
+    searchableFields: ['code', 'nameAr'],
+    allowedFields: ['code', 'nameAr', 'isActive'],
+    orderBy: [{ nameAr: 'asc' }],
+  },
+  'ability-levels': {
+    prismaDelegate: 'lookupAbilityLevel',
+    permissionResource: 'lookup-ability-levels',
+    requiredOnCreate: ['code', 'nameAr'],
+    searchableFields: ['code', 'nameAr'],
+    allowedFields: ['code', 'nameAr', 'isActive'],
+    orderBy: [{ nameAr: 'asc' }],
+  },
+  'activity-types': {
+    prismaDelegate: 'lookupActivityType',
+    permissionResource: 'lookup-activity-types',
+    requiredOnCreate: ['code', 'nameAr'],
+    searchableFields: ['code', 'nameAr'],
+    allowedFields: ['code', 'nameAr', 'isActive'],
     orderBy: [{ nameAr: 'asc' }],
   },
   'relationship-types': {
@@ -488,13 +552,18 @@ export class LookupCatalogService {
     }
 
     if (
-      ['nameAr', 'nameEn', 'nameArFemale', 'category', 'colorCode'].includes(
-        fieldName,
-      ) &&
+      [
+        'name',
+        'nameAr',
+        'nameEn',
+        'nameArFemale',
+        'category',
+        'colorCode',
+      ].includes(fieldName) &&
       typeof value === 'string'
     ) {
       const normalized = value.trim();
-      if (['nameAr'].includes(fieldName) && normalized.length === 0) {
+      if (['name', 'nameAr'].includes(fieldName) && normalized.length === 0) {
         throw new BadRequestException(`${fieldName} cannot be empty`);
       }
 

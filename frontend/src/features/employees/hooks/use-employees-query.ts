@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ApiError,
   apiClient,
-  type EmployeeGender,
   type EmploymentType,
 } from "@/lib/api/client";
 import { useAuth } from "@/features/auth/providers/auth-provider";
@@ -13,10 +12,11 @@ type UseEmployeesQueryOptions = {
   page?: number;
   limit?: number;
   search?: string;
-  gender?: EmployeeGender;
+  genderId?: number;
   employmentType?: EmploymentType;
   idTypeId?: number;
-  jobTitle?: string;
+  qualificationId?: number;
+  jobRoleId?: number;
   isActive?: boolean;
 };
 
@@ -30,10 +30,11 @@ export function useEmployeesQuery(options: UseEmployeesQueryOptions = {}) {
       options.page ?? 1,
       options.limit ?? 12,
       options.search ?? "",
-      options.gender ?? "all",
+      options.genderId ?? "all",
       options.employmentType ?? "all",
       options.idTypeId ?? "all",
-      options.jobTitle ?? "",
+      options.qualificationId ?? "all",
+      options.jobRoleId ?? "all",
       options.isActive === undefined ? "all" : options.isActive ? "active" : "inactive",
     ],
     enabled: auth.isHydrated && auth.isAuthenticated,
@@ -43,10 +44,11 @@ export function useEmployeesQuery(options: UseEmployeesQueryOptions = {}) {
           page: options.page ?? 1,
           limit: options.limit ?? 12,
           search: options.search,
-          gender: options.gender,
+          genderId: options.genderId,
           employmentType: options.employmentType,
           idTypeId: options.idTypeId,
-          jobTitle: options.jobTitle,
+          qualificationId: options.qualificationId,
+          jobRoleId: options.jobRoleId,
           isActive: options.isActive,
         });
       } catch (error) {

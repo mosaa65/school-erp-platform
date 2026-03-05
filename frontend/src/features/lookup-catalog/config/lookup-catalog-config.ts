@@ -4,6 +4,7 @@ export type LookupCatalogFieldType = "text" | "number" | "checkbox" | "select" |
 
 export type LookupCatalogField = {
   key:
+    | "name"
     | "code"
     | "nameAr"
     | "nameEn"
@@ -57,6 +58,55 @@ const LOCALITY_TYPE_OPTIONS = [
 ];
 
 export const LOOKUP_CATALOG_DEFINITIONS: Record<LookupCatalogType, LookupCatalogDefinition> = {
+  "blood-types": {
+    type: "blood-types",
+    title: "فصائل الدم",
+    description: "مرجعية فصائل الدم المستخدمة في بيانات الطلاب.",
+    readPermission: "lookup-blood-types.read",
+    createPermission: "lookup-blood-types.create",
+    updatePermission: "lookup-blood-types.update",
+    deletePermission: "lookup-blood-types.delete",
+    fields: [{ key: "name", label: "اسم الفصيلة", type: "text", required: true, placeholder: "A+" }],
+  },
+  "id-types": {
+    type: "id-types",
+    title: "أنواع الهوية",
+    description: "مرجعية أنواع الوثائق والهوية.",
+    readPermission: "lookup-id-types.read",
+    createPermission: "lookup-id-types.create",
+    updatePermission: "lookup-id-types.update",
+    deletePermission: "lookup-id-types.delete",
+    fields: [
+      { key: "code", label: "الكود", type: "text", required: true, placeholder: "NATIONAL_ID" },
+      { key: "nameAr", label: "الاسم بالعربية", type: "text", required: true, placeholder: "بطاقة شخصية" },
+    ],
+  },
+  "ownership-types": {
+    type: "ownership-types",
+    title: "أنواع الملكية",
+    description: "مرجعية نوع ملكية المدرسة.",
+    readPermission: "lookup-ownership-types.read",
+    createPermission: "lookup-ownership-types.create",
+    updatePermission: "lookup-ownership-types.update",
+    deletePermission: "lookup-ownership-types.delete",
+    fields: [
+      { key: "code", label: "الكود", type: "text", required: true, placeholder: "PRIVATE" },
+      { key: "nameAr", label: "الاسم بالعربية", type: "text", required: true, placeholder: "خاصة" },
+    ],
+  },
+  periods: {
+    type: "periods",
+    title: "فترات الدوام",
+    description: "مرجعية فترات الدوام المدرسي.",
+    readPermission: "lookup-periods.read",
+    createPermission: "lookup-periods.create",
+    updatePermission: "lookup-periods.update",
+    deletePermission: "lookup-periods.delete",
+    fields: [
+      { key: "code", label: "الكود", type: "text", required: true, placeholder: "MORNING" },
+      { key: "nameAr", label: "الاسم بالعربية", type: "text", required: true, placeholder: "صباحية" },
+    ],
+  },
   "school-types": {
     type: "school-types",
     title: "أنواع المدارس",
@@ -175,6 +225,58 @@ export const LOOKUP_CATALOG_DEFINITIONS: Record<LookupCatalogType, LookupCatalog
       { key: "code", label: "الكود", type: "text", required: true, placeholder: "HEALTHY" },
       { key: "nameAr", label: "الاسم بالعربية", type: "text", required: true, placeholder: "سليم" },
       { key: "requiresDetails", label: "يتطلب تفاصيل", type: "checkbox" },
+    ],
+  },
+  "enrollment-statuses": {
+    type: "enrollment-statuses",
+    title: "حالات القيد",
+    description: "مرجعية حالات قيد الطالب في المدرسة.",
+    readPermission: "lookup-enrollment-statuses.read",
+    createPermission: "lookup-enrollment-statuses.create",
+    updatePermission: "lookup-enrollment-statuses.update",
+    deletePermission: "lookup-enrollment-statuses.delete",
+    fields: [
+      { key: "code", label: "الكود", type: "text", required: true, placeholder: "ACTIVE" },
+      { key: "nameAr", label: "الاسم بالعربية", type: "text", required: true, placeholder: "منتظم" },
+    ],
+  },
+  "orphan-statuses": {
+    type: "orphan-statuses",
+    title: "حالات اليتم",
+    description: "مرجعية حالة يتم الطالب.",
+    readPermission: "lookup-orphan-statuses.read",
+    createPermission: "lookup-orphan-statuses.create",
+    updatePermission: "lookup-orphan-statuses.update",
+    deletePermission: "lookup-orphan-statuses.delete",
+    fields: [
+      { key: "code", label: "الكود", type: "text", required: true, placeholder: "NONE" },
+      { key: "nameAr", label: "الاسم بالعربية", type: "text", required: true, placeholder: "غير يتيم" },
+    ],
+  },
+  "ability-levels": {
+    type: "ability-levels",
+    title: "مستويات القدرة",
+    description: "مرجعية مستويات القدرات الدراسية والسلوكية.",
+    readPermission: "lookup-ability-levels.read",
+    createPermission: "lookup-ability-levels.create",
+    updatePermission: "lookup-ability-levels.update",
+    deletePermission: "lookup-ability-levels.delete",
+    fields: [
+      { key: "code", label: "الكود", type: "text", required: true, placeholder: "EXCELLENT" },
+      { key: "nameAr", label: "الاسم بالعربية", type: "text", required: true, placeholder: "ممتاز" },
+    ],
+  },
+  "activity-types": {
+    type: "activity-types",
+    title: "أنواع الأنشطة",
+    description: "مرجعية الأنشطة الطلابية.",
+    readPermission: "lookup-activity-types.read",
+    createPermission: "lookup-activity-types.create",
+    updatePermission: "lookup-activity-types.update",
+    deletePermission: "lookup-activity-types.delete",
+    fields: [
+      { key: "code", label: "الكود", type: "text", required: true, placeholder: "SPORTS" },
+      { key: "nameAr", label: "الاسم بالعربية", type: "text", required: true, placeholder: "رياضي" },
     ],
   },
   "relationship-types": {
@@ -336,6 +438,55 @@ export const LOOKUP_CATALOG_DEFINITIONS: Record<LookupCatalogType, LookupCatalog
 };
 
 export const LOOKUP_CATALOG_LIST = Object.values(LOOKUP_CATALOG_DEFINITIONS);
+
+export type LookupCatalogGroup = {
+  id: "system-01" | "system-04";
+  label: string;
+  description: string;
+  types: LookupCatalogType[];
+};
+
+export const LOOKUP_CATALOG_GROUPS: LookupCatalogGroup[] = [
+  {
+    id: "system-01",
+    label: "النظام 01 - البنية المشتركة",
+    description: "مرجعيات المؤسسة الأساسية المشتركة بين جميع الأنظمة.",
+    types: [
+      "blood-types",
+      "id-types",
+      "ownership-types",
+      "periods",
+      "school-types",
+      "genders",
+      "qualifications",
+      "job-roles",
+      "days",
+      "attendance-statuses",
+      "marital-statuses",
+      "health-statuses",
+      "relationship-types",
+      "talents",
+      "hijri-months",
+      "weeks",
+      "buildings",
+      "governorates",
+      "directorates",
+      "sub-districts",
+      "villages",
+      "localities",
+    ],
+  },
+  {
+    id: "system-04",
+    label: "النظام 04 - الطلاب",
+    description: "مرجعيات مرتبطة مباشرة بتشغيل بيانات الطلاب.",
+    types: ["enrollment-statuses", "orphan-statuses", "ability-levels", "activity-types"],
+  },
+];
+
+export function getLookupCatalogGroupByType(type: LookupCatalogType): LookupCatalogGroup {
+  return LOOKUP_CATALOG_GROUPS.find((group) => group.types.includes(type)) ?? LOOKUP_CATALOG_GROUPS[0];
+}
 
 export function getLookupCatalogDefinition(type: string) {
   if (type in LOOKUP_CATALOG_DEFINITIONS) {

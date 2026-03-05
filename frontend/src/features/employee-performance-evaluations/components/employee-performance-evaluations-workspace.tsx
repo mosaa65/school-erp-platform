@@ -32,6 +32,7 @@ import type {
   EmployeePerformanceEvaluationListItem,
   PerformanceRatingLevel,
 } from "@/lib/api/client";
+import { translatePerformanceRatingLevel } from "@/lib/i18n/ar";
 
 type EvaluationFormState = {
   employeeId: string;
@@ -117,7 +118,7 @@ function formatDate(value: string): string {
     return value;
   }
 
-  return date.toLocaleDateString("en-GB");
+  return date.toLocaleDateString("ar-SA");
 }
 
 function toFormState(evaluation: EmployeePerformanceEvaluationListItem): EvaluationFormState {
@@ -255,12 +256,14 @@ export function EmployeePerformanceEvaluationsWorkspace() {
 
     const score = Number(formState.score);
     if (!Number.isInteger(score) || score < 0 || score > 100) {
-      setFormError("score يجب أن يكون رقمًا صحيحًا بين 0 و 100.");
+      setFormError("الدرجة يجب أن تكون رقمًا صحيحًا بين 0 و100.");
       return false;
     }
 
     if (hasRatingMismatch && computedRating) {
-      setFormError(`ratingLevel لا يطابق score. المتوقع: ${computedRating}.`);
+      setFormError(
+        `مستوى التقييم لا يطابق الدرجة. المتوقع: ${translatePerformanceRatingLevel(computedRating)}.`,
+      );
       return false;
     }
 
@@ -378,7 +381,7 @@ export function EmployeePerformanceEvaluationsWorkspace() {
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Employee *</label>
+                <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
                 <select
                   data-testid="evaluation-form-employee"
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -391,7 +394,7 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                   <option value="">اختر الموظف</option>
                   {(employeesQuery.data ?? []).map((employee) => (
                     <option key={employee.id} value={employee.id}>
-                      {employee.fullName} ({employee.jobNumber ?? "N/A"})
+                      {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
                     </option>
                   ))}
                 </select>
@@ -399,7 +402,7 @@ export function EmployeePerformanceEvaluationsWorkspace() {
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Academic Year *
+                  السنة الأكاديمية *
                 </label>
                 <select
                   data-testid="evaluation-form-academic-year"
@@ -441,7 +444,7 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Score *</label>
+                  <label className="text-xs font-medium text-muted-foreground">الدرجة *</label>
                   <Input
                     data-testid="evaluation-form-score"
                     type="number"
@@ -458,16 +461,16 @@ export function EmployeePerformanceEvaluationsWorkspace() {
 
               <div className="rounded-md border border-dashed p-2 text-xs">
                 <p className="font-medium text-muted-foreground">
-                  Auto rating: {computedRating ?? "N/A"}
+                  التقدير التلقائي:{" "}
+                  {computedRating ? translatePerformanceRatingLevel(computedRating) : "-"}
                 </p>
                 <p className="mt-1 text-muted-foreground">
-                  90-100: EXCELLENT | 80-89: VERY_GOOD | 70-79: GOOD | 50-69:
-                  ACCEPTABLE | 0-49: POOR
+                  100-90: ممتاز | 89-80: جيد جدًا | 79-70: جيد | 69-50: مقبول | 49-0: ضعيف
                 </p>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Rating Level</label>
+                <label className="text-xs font-medium text-muted-foreground">مستوى التقييم</label>
                 <select
                   data-testid="evaluation-form-rating-level"
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -479,23 +482,24 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                     }))
                   }
                 >
-                  <option value="">Auto by score</option>
+                  <option value="">تلقائي حسب الدرجة</option>
                   {RATING_OPTIONS.map((rating) => (
                     <option key={rating} value={rating}>
-                      {rating}
+                      {translatePerformanceRatingLevel(rating)}
                     </option>
                   ))}
                 </select>
                 {hasRatingMismatch && computedRating ? (
                   <p className="text-xs text-destructive">
-                    ratingLevel الحالي لا يطابق score. المتوقع: {computedRating}.
+                    مستوى التقييم الحالي لا يطابق الدرجة. المتوقع:{" "}
+                    {translatePerformanceRatingLevel(computedRating)}.
                   </p>
                 ) : null}
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Evaluator Employee
+                  الموظف المقيّم
                 </label>
                 <select
                   data-testid="evaluation-form-evaluator"
@@ -509,17 +513,17 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                   }
                   disabled={!canReadEmployees}
                 >
-                  <option value="">Not specified</option>
+                  <option value="">غير محدد</option>
                   {(employeesQuery.data ?? []).map((employee) => (
                     <option key={employee.id} value={employee.id}>
-                      {employee.fullName} ({employee.jobNumber ?? "N/A"})
+                      {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
                     </option>
                   ))}
                 </select>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Strengths</label>
+                <label className="text-xs font-medium text-muted-foreground">نقاط القوة</label>
                 <Input
                   data-testid="evaluation-form-strengths"
                   value={formState.strengths}
@@ -531,7 +535,7 @@ export function EmployeePerformanceEvaluationsWorkspace() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Weaknesses</label>
+                <label className="text-xs font-medium text-muted-foreground">نقاط التحسين</label>
                 <Input
                   data-testid="evaluation-form-weaknesses"
                   value={formState.weaknesses}
@@ -544,7 +548,7 @@ export function EmployeePerformanceEvaluationsWorkspace() {
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Recommendations
+                  التوصيات
                 </label>
                 <Input
                   data-testid="evaluation-form-recommendations"
@@ -606,7 +610,7 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                   ) : (
                     <Medal className="h-4 w-4" />
                   )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء Evaluation"}
+                  {isEditing ? "حفظ التعديلات" : "إنشاء تقييم"}
                 </Button>
                 {isEditing ? (
                   <Button type="button" variant="outline" onClick={resetForm}>
@@ -622,7 +626,7 @@ export function EmployeePerformanceEvaluationsWorkspace() {
       <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Performance Evaluations</CardTitle>
+            <CardTitle>تقييمات الأداء</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <CardDescription>
@@ -687,7 +691,7 @@ export function EmployeePerformanceEvaluationsWorkspace() {
               <option value="all">كل التقييمات</option>
               {RATING_OPTIONS.map((rating) => (
                 <option key={rating} value={rating}>
-                  {rating}
+                  {translatePerformanceRatingLevel(rating)}
                 </option>
               ))}
             </select>
@@ -767,22 +771,24 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                 <div className="space-y-1">
                   <p className="font-medium">{evaluation.employee.fullName}</p>
                   <p className="text-xs text-muted-foreground">
-                    Year: {evaluation.academicYear.name} ({evaluation.academicYear.code}) | Date:{" "}
+                    السنة: {evaluation.academicYear.name} ({evaluation.academicYear.code}) | التاريخ:{" "}
                     {formatDate(evaluation.evaluationDate)}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Evaluator: {evaluation.evaluator?.fullName ?? "Not specified"}
+                    المقيّم: {evaluation.evaluator?.fullName ?? "غير محدد"}
                   </p>
                   {evaluation.recommendations ? (
                     <p className="text-xs text-muted-foreground">
-                      Recommendation: {evaluation.recommendations}
+                      التوصيات: {evaluation.recommendations}
                     </p>
                   ) : null}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant="secondary">Score: {evaluation.score}</Badge>
-                  <Badge variant="outline">{evaluation.ratingLevel}</Badge>
+                  <Badge variant="secondary">الدرجة: {evaluation.score}</Badge>
+                  <Badge variant="outline">
+                    {translatePerformanceRatingLevel(evaluation.ratingLevel)}
+                  </Badge>
                   <Badge variant={evaluation.isActive ? "default" : "outline"}>
                     {evaluation.isActive ? "نشط" : "غير نشط"}
                   </Badge>

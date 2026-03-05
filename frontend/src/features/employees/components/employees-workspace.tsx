@@ -25,8 +25,11 @@ import {
   useDeleteEmployeeMutation,
   useUpdateEmployeeMutation,
 } from "@/features/employees/hooks/use-employees-mutations";
+import { useGenderOptionsQuery } from "@/features/employees/hooks/use-gender-options-query";
 import { useIdTypeOptionsQuery } from "@/features/employees/hooks/use-id-type-options-query";
+import { useJobRoleOptionsQuery } from "@/features/employees/hooks/use-job-role-options-query";
 import { useEmployeesQuery } from "@/features/employees/hooks/use-employees-query";
+import { useQualificationOptionsQuery } from "@/features/employees/hooks/use-qualification-options-query";
 import {
   translateEmployeeGender,
   translateEmployeeSystemAccessStatus,
@@ -37,18 +40,19 @@ import type {
   EmployeeListItem,
   EmployeeSystemAccessStatus,
   EmploymentType,
+  LookupCatalogListItem,
 } from "@/lib/api/client";
 
 type EmployeeFormState = {
   jobNumber: string;
   financialNumber: string;
   fullName: string;
-  gender: EmployeeGender;
+  genderId: string;
   birthDate: string;
   phonePrimary: string;
   phoneSecondary: string;
   hasWhatsapp: boolean;
-  qualification: string;
+  qualificationId: string;
   qualificationDate: string;
   specialization: string;
   idNumber: string;
@@ -56,7 +60,7 @@ type EmployeeFormState = {
   idExpiryDate: string;
   experienceYears: string;
   employmentType: EmploymentType | "";
-  jobTitle: string;
+  jobRoleId: string;
   hireDate: string;
   previousSchool: string;
   salaryApproved: boolean;
@@ -70,12 +74,12 @@ const DEFAULT_FORM_STATE: EmployeeFormState = {
   jobNumber: "",
   financialNumber: "",
   fullName: "",
-  gender: "MALE",
+  genderId: "",
   birthDate: "",
   phonePrimary: "",
   phoneSecondary: "",
   hasWhatsapp: true,
-  qualification: "",
+  qualificationId: "",
   qualificationDate: "",
   specialization: "",
   idNumber: "",
@@ -83,13 +87,19 @@ const DEFAULT_FORM_STATE: EmployeeFormState = {
   idExpiryDate: "",
   experienceYears: "0",
   employmentType: "",
-  jobTitle: "",
+  jobRoleId: "",
   hireDate: "",
   previousSchool: "",
   salaryApproved: false,
   systemAccessStatus: "GRANTED",
   isActive: true,
 };
+
+const EMPLOYEE_GENDER_CODES: EmployeeGender[] = ["MALE", "FEMALE", "OTHER"];
+
+function isEmployeeGenderCode(value: string): value is EmployeeGender {
+  return EMPLOYEE_GENDER_CODES.includes(value as EmployeeGender);
+}
 
 function toOptionalString(value: string): string | undefined {
   const normalized = value.trim();
@@ -118,12 +128,12 @@ function toFormState(employee: EmployeeListItem): EmployeeFormState {
     jobNumber: employee.jobNumber ?? "",
     financialNumber: employee.financialNumber ?? "",
     fullName: employee.fullName,
-    gender: employee.gender,
+    genderId: employee.genderId ? String(employee.genderId) : "",
     birthDate: toDateInput(employee.birthDate),
     phonePrimary: employee.phonePrimary ?? "",
     phoneSecondary: employee.phoneSecondary ?? "",
     hasWhatsapp: employee.hasWhatsapp,
-    qualification: employee.qualification ?? "",
+    qualificationId: employee.qualificationId ? String(employee.qualificationId) : "",
     qualificationDate: toDateInput(employee.qualificationDate),
     specialization: employee.specialization ?? "",
     idNumber: employee.idNumber ?? "",
@@ -131,7 +141,7 @@ function toFormState(employee: EmployeeListItem): EmployeeFormState {
     idExpiryDate: toDateInput(employee.idExpiryDate),
     experienceYears: String(employee.experienceYears),
     employmentType: employee.employmentType ?? "",
-    jobTitle: employee.jobTitle ?? "",
+    jobRoleId: employee.jobRoleId ? String(employee.jobRoleId) : "",
     hireDate: toDateInput(employee.hireDate),
     previousSchool: employee.previousSchool ?? "",
     salaryApproved: employee.salaryApproved,
@@ -140,23 +150,51 @@ function toFormState(employee: EmployeeListItem): EmployeeFormState {
   };
 }
 
+function findLookupByText(
+  options: LookupCatalogListItem[],
+  value: string,
+): LookupCatalogListItem | undefined {
+  const normalized = value.trim().toLowerCase();
+
+  if (!normalized) {
+    return undefined;
+  }
+
+  return options.find((option) => {
+    const haystack = [
+      option.code,
+      option.name,
+      option.nameAr,
+      option.nameEn,
+      option.nameArFemale,
+    ]
+      .filter((field): field is string => Boolean(field))
+      .map((field) => field.toLowerCase());
+
+    return haystack.includes(normalized);
+  });
+}
+
 export function EmployeesWorkspace() {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("employees.create");
   const canUpdate = hasPermission("employees.update");
   const canDelete = hasPermission("employees.delete");
   const canReadIdTypes = hasPermission("lookup-id-types.read");
+  const canReadGenders = hasPermission("lookup-genders.read");
+  const canReadQualifications = hasPermission("lookup-qualifications.read");
+  const canReadJobRoles = hasPermission("lookup-job-roles.read");
 
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
-  const [genderFilter, setGenderFilter] = React.useState<EmployeeGender | "all">("all");
+  const [genderFilter, setGenderFilter] = React.useState<string>("all");
   const [employmentTypeFilter, setEmploymentTypeFilter] = React.useState<
     EmploymentType | "all"
   >("all");
   const [idTypeFilter, setIdTypeFilter] = React.useState<string>("all");
-  const [jobTitleInput, setJobTitleInput] = React.useState("");
-  const [jobTitleFilter, setJobTitleFilter] = React.useState("");
+  const [qualificationFilter, setQualificationFilter] = React.useState<string>("all");
+  const [jobRoleFilter, setJobRoleFilter] = React.useState<string>("all");
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
     "all",
   );
@@ -169,13 +207,18 @@ export function EmployeesWorkspace() {
     page,
     limit: PAGE_SIZE,
     search: search || undefined,
-    gender: genderFilter === "all" ? undefined : genderFilter,
+    genderId: genderFilter === "all" ? undefined : Number(genderFilter),
     employmentType: employmentTypeFilter === "all" ? undefined : employmentTypeFilter,
     idTypeId: idTypeFilter === "all" ? undefined : Number(idTypeFilter),
-    jobTitle: jobTitleFilter || undefined,
+    qualificationId:
+      qualificationFilter === "all" ? undefined : Number(qualificationFilter),
+    jobRoleId: jobRoleFilter === "all" ? undefined : Number(jobRoleFilter),
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
   });
   const idTypeOptionsQuery = useIdTypeOptionsQuery();
+  const genderOptionsQuery = useGenderOptionsQuery();
+  const qualificationOptionsQuery = useQualificationOptionsQuery();
+  const jobRoleOptionsQuery = useJobRoleOptionsQuery();
 
   const createMutation = useCreateEmployeeMutation();
   const updateMutation = useUpdateEmployeeMutation();
@@ -185,7 +228,22 @@ export function EmployeesWorkspace() {
     () => employeesQuery.data?.data ?? [],
     [employeesQuery.data?.data],
   );
-  const idTypeOptions = idTypeOptionsQuery.data ?? [];
+  const idTypeOptions = React.useMemo(
+    () => idTypeOptionsQuery.data ?? [],
+    [idTypeOptionsQuery.data],
+  );
+  const genderOptions = React.useMemo(
+    () => genderOptionsQuery.data ?? [],
+    [genderOptionsQuery.data],
+  );
+  const qualificationOptions = React.useMemo(
+    () => qualificationOptionsQuery.data ?? [],
+    [qualificationOptionsQuery.data],
+  );
+  const jobRoleOptions = React.useMemo(
+    () => jobRoleOptionsQuery.data ?? [],
+    [jobRoleOptionsQuery.data],
+  );
   const pagination = employeesQuery.data?.pagination;
   const isEditing = editingEmployeeId !== null;
 
@@ -208,6 +266,27 @@ export function EmployeesWorkspace() {
     }
   }, [editingEmployeeId, employees, isEditing]);
 
+  React.useEffect(() => {
+    if (isEditing || formState.genderId || !canReadGenders) {
+      return;
+    }
+
+    if (genderOptions.length === 0) {
+      return;
+    }
+
+    const preferred = genderOptions.find((option) => option.code === "MALE");
+    const defaultGender = preferred ?? genderOptions[0];
+    setFormState((prev) =>
+      prev.genderId
+        ? prev
+        : {
+            ...prev,
+            genderId: String(defaultGender.id),
+          },
+    );
+  }, [canReadGenders, formState.genderId, genderOptions, isEditing]);
+
   const resetForm = () => {
     setEditingEmployeeId(null);
     setFormState(DEFAULT_FORM_STATE);
@@ -218,7 +297,6 @@ export function EmployeesWorkspace() {
     event.preventDefault();
     setPage(1);
     setSearch(searchInput.trim());
-    setJobTitleFilter(jobTitleInput.trim());
   };
 
   const validateForm = (): boolean => {
@@ -227,9 +305,14 @@ export function EmployeesWorkspace() {
       return false;
     }
 
+    if (!formState.genderId) {
+      setFormError("الجنس مطلوب.");
+      return false;
+    }
+
     const experienceYears = Number(formState.experienceYears);
     if (!Number.isInteger(experienceYears) || experienceYears < 0 || experienceYears > 80) {
-      setFormError("experienceYears يجب أن يكون رقمًا صحيحًا بين 0 و 80.");
+      setFormError("سنوات الخبرة يجب أن تكون رقمًا صحيحًا بين 0 و80.");
       return false;
     }
 
@@ -244,16 +327,34 @@ export function EmployeesWorkspace() {
       return;
     }
 
+    const selectedGender = genderOptions.find(
+      (option) => option.id === Number(formState.genderId),
+    );
+    const selectedQualification = qualificationOptions.find(
+      (option) => option.id === Number(formState.qualificationId),
+    );
+    const selectedJobRole = jobRoleOptions.find(
+      (option) => option.id === Number(formState.jobRoleId),
+    );
+    const mappedGender =
+      selectedGender?.code && isEmployeeGenderCode(selectedGender.code)
+        ? selectedGender.code
+        : undefined;
+
     const payload = {
       jobNumber: toOptionalString(formState.jobNumber),
       financialNumber: toOptionalString(formState.financialNumber),
       fullName: formState.fullName.trim(),
-      gender: formState.gender,
+      gender: mappedGender,
+      genderId: formState.genderId ? Number(formState.genderId) : undefined,
       birthDate: formState.birthDate ? toDateIso(formState.birthDate) : undefined,
       phonePrimary: toOptionalString(formState.phonePrimary),
       phoneSecondary: toOptionalString(formState.phoneSecondary),
       hasWhatsapp: formState.hasWhatsapp,
-      qualification: toOptionalString(formState.qualification),
+      qualification: toOptionalString(selectedQualification?.nameAr ?? ""),
+      qualificationId: formState.qualificationId
+        ? Number(formState.qualificationId)
+        : null,
       qualificationDate: formState.qualificationDate
         ? toDateIso(formState.qualificationDate)
         : undefined,
@@ -263,7 +364,8 @@ export function EmployeesWorkspace() {
       idExpiryDate: formState.idExpiryDate ? toDateIso(formState.idExpiryDate) : undefined,
       experienceYears: Number(formState.experienceYears),
       employmentType: formState.employmentType || undefined,
-      jobTitle: toOptionalString(formState.jobTitle),
+      jobTitle: toOptionalString(selectedJobRole?.nameAr ?? selectedJobRole?.name ?? ""),
+      jobRoleId: formState.jobRoleId ? Number(formState.jobRoleId) : null,
       hireDate: formState.hireDate ? toDateIso(formState.hireDate) : undefined,
       previousSchool: toOptionalString(formState.previousSchool),
       salaryApproved: formState.salaryApproved,
@@ -311,7 +413,27 @@ export function EmployeesWorkspace() {
 
     setFormError(null);
     setEditingEmployeeId(employee.id);
-    setFormState(toFormState(employee));
+    const nextState = toFormState(employee);
+    if (!nextState.genderId) {
+      const mapped = genderOptions.find((option) => option.code === employee.gender);
+      if (mapped) {
+        nextState.genderId = String(mapped.id);
+      }
+    }
+    if (!nextState.qualificationId && employee.qualification) {
+      const mapped = findLookupByText(qualificationOptions, employee.qualification);
+      if (mapped) {
+        nextState.qualificationId = String(mapped.id);
+      }
+    }
+    if (!nextState.jobRoleId && employee.jobTitle) {
+      const mapped = findLookupByText(jobRoleOptions, employee.jobTitle);
+      if (mapped) {
+        nextState.jobRoleId = String(mapped.id);
+      }
+    }
+
+    setFormState(nextState);
   };
 
   const handleToggleActive = (employee: EmployeeListItem) => {
@@ -417,17 +539,28 @@ export function EmployeesWorkspace() {
                   <label className="text-xs font-medium text-muted-foreground">الجنس *</label>
                   <select
                     className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    value={formState.gender}
+                    value={formState.genderId}
                     onChange={(event) =>
                       setFormState((prev) => ({
                         ...prev,
-                        gender: event.target.value as EmployeeGender,
+                        genderId: event.target.value,
                       }))
                     }
+                    disabled={!canReadGenders || genderOptionsQuery.isLoading}
                   >
-                    <option value="MALE">{translateEmployeeGender("MALE")}</option>
-                    <option value="FEMALE">{translateEmployeeGender("FEMALE")}</option>
-                    <option value="OTHER">{translateEmployeeGender("OTHER")}</option>
+                    <option value="">اختر الجنس</option>
+                    {genderOptions.map((option) => {
+                      const translated =
+                        option.code && isEmployeeGenderCode(option.code)
+                          ? translateEmployeeGender(option.code)
+                          : option.nameAr ?? option.name ?? option.code ?? String(option.id);
+
+                      return (
+                        <option key={option.id} value={option.id}>
+                          {option.nameAr ?? translated}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
                 <div className="space-y-1.5">
@@ -474,13 +607,24 @@ export function EmployeesWorkspace() {
                   <label className="text-xs font-medium text-muted-foreground">
                     المؤهل العلمي
                   </label>
-                  <Input
-                    value={formState.qualification}
+                  <select
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    value={formState.qualificationId}
                     onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, qualification: event.target.value }))
+                      setFormState((prev) => ({
+                        ...prev,
+                        qualificationId: event.target.value,
+                      }))
                     }
-                    placeholder="بكالوريوس تربية"
-                  />
+                    disabled={!canReadQualifications || qualificationOptionsQuery.isLoading}
+                  >
+                    <option value="">غير محدد</option>
+                    {qualificationOptions.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.nameAr ?? option.name ?? option.code ?? String(option.id)}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">
@@ -594,14 +738,27 @@ export function EmployeesWorkspace() {
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">المسمى الوظيفي</label>
-                  <Input
-                    value={formState.jobTitle}
+                  <label className="text-xs font-medium text-muted-foreground">
+                    المسمى الوظيفي
+                  </label>
+                  <select
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    value={formState.jobRoleId}
                     onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, jobTitle: event.target.value }))
+                      setFormState((prev) => ({
+                        ...prev,
+                        jobRoleId: event.target.value,
+                      }))
                     }
-                    placeholder="معلم لغة عربية أول"
-                  />
+                    disabled={!canReadJobRoles || jobRoleOptionsQuery.isLoading}
+                  >
+                    <option value="">غير محدد</option>
+                    {jobRoleOptions.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.nameAr ?? option.name ?? option.code ?? String(option.id)}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -738,12 +895,12 @@ export function EmployeesWorkspace() {
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <CardDescription>
-            إدارة الموظفين مع فلترة بالبحث والجنس ونوع التوظيف والمسمى الوظيفي.
+            إدارة الموظفين مع فلترة بالبحث والجنس ونوع التوظيف والمسمى والمؤهل.
           </CardDescription>
 
           <form
             onSubmit={handleSearchSubmit}
-            className="grid gap-2 md:grid-cols-[1fr_150px_170px_170px_1fr_130px_auto]"
+            className="grid gap-2 md:grid-cols-[1fr_150px_170px_170px_170px_170px_130px_auto]"
           >
             <div className="relative">
               <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -760,13 +917,23 @@ export function EmployeesWorkspace() {
               value={genderFilter}
               onChange={(event) => {
                 setPage(1);
-                setGenderFilter(event.target.value as EmployeeGender | "all");
+                setGenderFilter(event.target.value);
               }}
+              disabled={!canReadGenders || genderOptionsQuery.isLoading}
             >
               <option value="all">كل الأجناس</option>
-              <option value="MALE">{translateEmployeeGender("MALE")}</option>
-              <option value="FEMALE">{translateEmployeeGender("FEMALE")}</option>
-              <option value="OTHER">{translateEmployeeGender("OTHER")}</option>
+              {genderOptions.map((option) => {
+                const translated =
+                  option.code && isEmployeeGenderCode(option.code)
+                    ? translateEmployeeGender(option.code)
+                    : option.nameAr ?? option.name ?? option.code ?? String(option.id);
+
+                return (
+                  <option key={option.id} value={option.id}>
+                    {option.nameAr ?? translated}
+                  </option>
+                );
+              })}
             </select>
 
             <select
@@ -800,11 +967,39 @@ export function EmployeesWorkspace() {
               ))}
             </select>
 
-            <Input
-              value={jobTitleInput}
-              onChange={(event) => setJobTitleInput(event.target.value)}
-              placeholder="فلترة بالمسمى الوظيفي..."
-            />
+            <select
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              value={qualificationFilter}
+              onChange={(event) => {
+                setPage(1);
+                setQualificationFilter(event.target.value);
+              }}
+              disabled={!canReadQualifications || qualificationOptionsQuery.isLoading}
+            >
+              <option value="all">كل المؤهلات</option>
+              {qualificationOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.nameAr ?? option.name ?? option.code ?? String(option.id)}
+                </option>
+              ))}
+            </select>
+
+            <select
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              value={jobRoleFilter}
+              onChange={(event) => {
+                setPage(1);
+                setJobRoleFilter(event.target.value);
+              }}
+              disabled={!canReadJobRoles || jobRoleOptionsQuery.isLoading}
+            >
+              <option value="all">كل المسميات</option>
+              {jobRoleOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.nameAr ?? option.name ?? option.code ?? String(option.id)}
+                </option>
+              ))}
+            </select>
 
             <select
               className="h-10 rounded-md border border-input bg-background px-3 text-sm"
@@ -856,10 +1051,14 @@ export function EmployeesWorkspace() {
                 <div className="space-y-1">
                   <p className="font-medium">{employee.fullName}</p>
                   <p className="text-xs text-muted-foreground">
-                    المسمى: {employee.jobTitle ?? "-"} | الرقم الوظيفي: {employee.jobNumber ?? "-"}
+                    المسمى: {employee.jobRoleLookup?.nameAr ?? employee.jobTitle ?? "-"} | الرقم
+                    الوظيفي: {employee.jobNumber ?? "-"}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     الرقم المالي: {employee.financialNumber ?? "-"} | الخبرة: {employee.experienceYears}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    المؤهل: {employee.qualificationLookup?.nameAr ?? employee.qualification ?? "-"}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     الهوية: {employee.idNumber ?? "-"} | النوع: {employee.idType?.nameAr ?? "غير محدد"}
@@ -867,7 +1066,9 @@ export function EmployeesWorkspace() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant="outline">{translateEmployeeGender(employee.gender)}</Badge>
+                  <Badge variant="outline">
+                    {employee.genderLookup?.nameAr ?? translateEmployeeGender(employee.gender)}
+                  </Badge>
                   <Badge variant="secondary">
                     {employee.employmentType
                       ? translateEmploymentType(employee.employmentType)

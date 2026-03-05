@@ -12,6 +12,7 @@ export async function seedSystem01Permissions(prisma: PrismaClient) {
       update: {
         resource,
         action: action ?? 'manage',
+        description: `صلاحية نظامية: ${code}`,
         isSystem: true,
         deletedAt: null,
         updatedById: null,
@@ -20,7 +21,7 @@ export async function seedSystem01Permissions(prisma: PrismaClient) {
         code,
         resource,
         action: action ?? 'manage',
-        description: `System permission for ${code}`,
+        description: `صلاحية نظامية: ${code}`,
         isSystem: true,
       },
       select: {

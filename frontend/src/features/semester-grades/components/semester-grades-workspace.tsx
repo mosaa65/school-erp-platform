@@ -38,6 +38,7 @@ import {
 import { useAcademicTermOptionsQuery } from "@/features/semester-grades/hooks/use-academic-term-options-query";
 import { useSemesterGradesQuery } from "@/features/semester-grades/hooks/use-semester-grades-query";
 import type { GradingWorkflowStatus, SemesterGradeListItem } from "@/lib/api/client";
+import { translateGradingWorkflowStatus } from "@/lib/i18n/ar";
 
 type FormState = {
   academicTermId: string;
@@ -187,17 +188,17 @@ export function SemesterGradesWorkspace() {
       return false;
     }
     if (form.notes.trim().length > 255) {
-      setFormError("notes يجب ألا يتجاوز 255 حرف.");
+      setFormError("الملاحظات يجب ألا تتجاوز 255 حرفًا.");
       return false;
     }
     const semesterWorkTotal = parseOptionalNumber(form.semesterWorkTotal);
     const finalExamScore = parseOptionalNumber(form.finalExamScore);
     if (semesterWorkTotal !== undefined && semesterWorkTotal < 0) {
-      setFormError("semesterWorkTotal يجب أن يكون >= 0.");
+      setFormError("مجموع أعمال الفصل يجب أن يكون أكبر من أو يساوي 0.");
       return false;
     }
     if (finalExamScore !== undefined && finalExamScore < 0) {
-      setFormError("finalExamScore يجب أن يكون >= 0.");
+      setFormError("درجة الاختبار النهائي يجب أن تكون أكبر من أو تساوي 0.");
       return false;
     }
     const selectedEnrollment = (enrollmentsQuery.data ?? []).find(
@@ -234,23 +235,23 @@ export function SemesterGradesWorkspace() {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-2 rounded-md border p-3">
-            <p className="text-sm font-medium">Calculate</p>
+            <p className="text-sm font-medium">احتساب الدرجات الفصلية</p>
             <div className="grid gap-2 md:grid-cols-3">
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={calcForm.academicTermId} onChange={(event) => setCalcForm((prev) => ({ ...prev, academicTermId: event.target.value }))}>
-                <option value="">Term</option>
+                <option value="">الفصل</option>
                 {(termsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={calcForm.sectionId} onChange={(event) => setCalcForm((prev) => ({ ...prev, sectionId: event.target.value }))}>
-                <option value="">Section</option>
+                <option value="">الشعبة</option>
                 {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={calcForm.subjectId} onChange={(event) => setCalcForm((prev) => ({ ...prev, subjectId: event.target.value }))}>
-                <option value="">Subject</option>
+                <option value="">المادة</option>
                 {(subjectsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
               </select>
             </div>
             <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>Overwrite manual</span>
+              <span>استبدال الدرجات اليدوية</span>
               <input type="checkbox" checked={calcForm.overwrite} onChange={(event) => setCalcForm((prev) => ({ ...prev, overwrite: event.target.checked }))} />
             </label>
             <Button type="button" variant="outline" className="w-full gap-2" disabled={!canCalculate || calculateMutation.isPending} onClick={() => {
@@ -259,32 +260,32 @@ export function SemesterGradesWorkspace() {
                 setCalcInfo("اختر الفصل والشعبة والمادة.");
                 return;
               }
-              calculateMutation.mutate({ academicTermId: calcForm.academicTermId, sectionId: calcForm.sectionId, subjectId: calcForm.subjectId, overwriteManual: calcForm.overwrite }, { onSuccess: (result) => setCalcInfo(`${result.message} | total=${result.summary.totalEnrollments}, created=${result.summary.created}, updated=${result.summary.updated}, skipped=${result.summary.skippedLocked}`) });
+              calculateMutation.mutate({ academicTermId: calcForm.academicTermId, sectionId: calcForm.sectionId, subjectId: calcForm.subjectId, overwriteManual: calcForm.overwrite }, { onSuccess: (result) => setCalcInfo(`${result.message} | الإجمالي=${result.summary.totalEnrollments}, مضاف=${result.summary.created}, محدث=${result.summary.updated}, متجاهل_مقفل=${result.summary.skippedLocked}`) });
             }}>
               {calculateMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Calculator className="h-4 w-4" />}
-              Calculate
+              احتساب
             </Button>
             {calcInfo ? <div className="rounded-md border border-primary/30 bg-primary/10 p-2 text-xs text-primary">{calcInfo}</div> : null}
           </div>
 
           <div className="space-y-2 rounded-md border p-3">
-            <p className="text-sm font-medium">Fill Final Exam</p>
+            <p className="text-sm font-medium">تعبئة درجات النهائي</p>
             <div className="grid gap-2 md:grid-cols-3">
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={fillForm.academicTermId} onChange={(event) => setFillForm((prev) => ({ ...prev, academicTermId: event.target.value }))}>
-                <option value="">Term</option>
+                <option value="">الفصل</option>
                 {(termsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={fillForm.sectionId} onChange={(event) => setFillForm((prev) => ({ ...prev, sectionId: event.target.value }))}>
-                <option value="">Section</option>
+                <option value="">الشعبة</option>
                 {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={fillForm.subjectId} onChange={(event) => setFillForm((prev) => ({ ...prev, subjectId: event.target.value }))}>
-                <option value="">Subject</option>
+                <option value="">المادة</option>
                 {(subjectsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
               </select>
             </div>
             <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>Overwrite existing</span>
+              <span>استبدال القيم الحالية</span>
               <input type="checkbox" checked={fillForm.overwrite} onChange={(event) => setFillForm((prev) => ({ ...prev, overwrite: event.target.checked }))} />
             </label>
             <Button type="button" variant="outline" className="w-full gap-2" disabled={!canFillFinalExam || fillFinalMutation.isPending} onClick={() => {
@@ -293,10 +294,10 @@ export function SemesterGradesWorkspace() {
                 setFillInfo("اختر الفصل والشعبة والمادة.");
                 return;
               }
-              fillFinalMutation.mutate({ academicTermId: fillForm.academicTermId, sectionId: fillForm.sectionId, subjectId: fillForm.subjectId, overwriteExisting: fillForm.overwrite }, { onSuccess: (result) => setFillInfo(`${result.message} | total=${result.summary.totalEnrollments}, created=${result.summary.created}, updated=${result.summary.updated}, skippedLocked=${result.summary.skippedLocked}, skippedExisting=${result.summary.skippedExisting}`) });
+              fillFinalMutation.mutate({ academicTermId: fillForm.academicTermId, sectionId: fillForm.sectionId, subjectId: fillForm.subjectId, overwriteExisting: fillForm.overwrite }, { onSuccess: (result) => setFillInfo(`${result.message} | الإجمالي=${result.summary.totalEnrollments}, مضاف=${result.summary.created}, محدث=${result.summary.updated}, متجاهل_مقفل=${result.summary.skippedLocked}, متجاهل_موجود=${result.summary.skippedExisting}`) });
             }}>
               {fillFinalMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Medal className="h-4 w-4" />}
-              Fill Final
+              تعبئة النهائي
             </Button>
             {fillInfo ? <div className="rounded-md border border-primary/30 bg-primary/10 p-2 text-xs text-primary">{fillInfo}</div> : null}
           </div>
@@ -316,7 +317,7 @@ export function SemesterGradesWorkspace() {
           }}>
             <div className="grid gap-2 md:grid-cols-2">
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.academicTermId} disabled={editingId !== null} onChange={(event) => setForm((prev) => ({ ...prev, academicTermId: event.target.value, studentEnrollmentId: "" }))}>
-                <option value="">Term *</option>
+                <option value="">الفصل *</option>
                 {(termsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.sectionId} disabled={editingId !== null} onChange={(event) => setForm((prev) => ({ ...prev, sectionId: event.target.value, studentEnrollmentId: "" }))}>
@@ -336,7 +337,7 @@ export function SemesterGradesWorkspace() {
             </div>
             <div className="grid gap-2 md:grid-cols-2">
               <Input type="number" min={0} step={0.01} value={form.semesterWorkTotal} onChange={(event) => setForm((prev) => ({ ...prev, semesterWorkTotal: event.target.value }))} placeholder="مجموع أعمال الفصل" />
-              <Input type="number" min={0} step={0.01} value={form.finalExamScore} onChange={(event) => setForm((prev) => ({ ...prev, finalExamScore: event.target.value }))} placeholder="Final exam score" />
+              <Input type="number" min={0} step={0.01} value={form.finalExamScore} onChange={(event) => setForm((prev) => ({ ...prev, finalExamScore: event.target.value }))} placeholder="درجة الاختبار النهائي" />
             </div>
             <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.status} onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value as GradingWorkflowStatus }))}>
               <option value="DRAFT">مسودة</option>
@@ -354,7 +355,7 @@ export function SemesterGradesWorkspace() {
             <div className="flex gap-2">
               <Button type="submit" className="flex-1 gap-2" disabled={isSubmitting}>
                 {isSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Medal className="h-4 w-4" />}
-                {editingId ? "حفظ التعديلات" : "إنشاء Semester Grade"}
+                {editingId ? "حفظ التعديلات" : "إنشاء درجة فصلية"}
               </Button>
               {editingId ? <Button type="button" variant="outline" onClick={resetForm}>إلغاء</Button> : null}
             </div>
@@ -365,7 +366,7 @@ export function SemesterGradesWorkspace() {
       <Card className="border-border/70 bg-card/80">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Semester Grades</CardTitle>
+            <CardTitle>الدرجات الفصلية</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <form onSubmit={(event) => { event.preventDefault(); setPage(1); setSearch(searchInput.trim()); }} className="grid gap-2 md:grid-cols-[1fr_160px_140px_140px_110px_auto]">
@@ -374,7 +375,7 @@ export function SemesterGradesWorkspace() {
               <Input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="بحث..." className="pr-8" />
             </div>
             <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={termFilter} onChange={(event) => { setPage(1); setTermFilter(event.target.value); }}>
-              <option value="all">All terms</option>
+              <option value="all">كل الفصول</option>
               {(termsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
             </select>
             <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={sectionFilter} onChange={(event) => { setPage(1); setSectionFilter(event.target.value); }}>
@@ -404,10 +405,10 @@ export function SemesterGradesWorkspace() {
                 <div className="space-y-1">
                   <p className="font-medium">{item.studentEnrollment.student.fullName} - {item.subject.code}</p>
                   <p className="text-xs text-muted-foreground">{item.academicTerm.code} | {item.studentEnrollment.section.code}</p>
-                  <p className="text-xs text-muted-foreground">Work {item.semesterWorkTotal} | Final {item.finalExamScore ?? 0} | Total {item.semesterTotal}</p>
+                  <p className="text-xs text-muted-foreground">أعمال الفصل: {item.semesterWorkTotal} | النهائي: {item.finalExamScore ?? 0} | الإجمالي: {item.semesterTotal}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant={item.status === "APPROVED" ? "default" : "secondary"}>{item.status}</Badge>
+                  <Badge variant={item.status === "APPROVED" ? "default" : "secondary"}>{translateGradingWorkflowStatus(item.status)}</Badge>
                   <Badge variant={item.isLocked ? "default" : "secondary"}>{item.isLocked ? "مقفل" : "غير مقفل"}</Badge>
                   <Badge variant={item.isActive ? "default" : "outline"}>{item.isActive ? "نشط" : "غير نشط"}</Badge>
                 </div>

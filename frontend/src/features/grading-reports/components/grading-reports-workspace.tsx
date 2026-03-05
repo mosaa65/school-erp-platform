@@ -17,6 +17,7 @@ import { useAcademicYearOptionsQuery } from "@/features/grading-reports/hooks/us
 import { useGradeLevelOptionsQuery } from "@/features/grading-reports/hooks/use-grade-level-options-query";
 import { useGradingSummaryReportQuery } from "@/features/grading-reports/hooks/use-grading-summary-report-query";
 import { useSectionOptionsQuery } from "@/features/grading-reports/hooks/use-section-options-query";
+import { translateGradingWorkflowStatus } from "@/lib/i18n/ar";
 
 type FiltersState = {
   academicYearId: string;
@@ -82,7 +83,7 @@ export function GradingReportsWorkspace() {
         <CardHeader className="space-y-3">
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-primary" />
-            Grading Governance Summary
+            ملخص حوكمة الدرجات
           </CardTitle>
           <CardDescription>
             تقرير ملخّص لحوكمة الدرجات الفصلية والسنوية والنتائج.
@@ -127,7 +128,7 @@ export function GradingReportsWorkspace() {
               }
               data-testid="grading-report-filter-grade"
             >
-              <option value="">All grades</option>
+              <option value="">كل المراحل</option>
               {(gradeLevelOptionsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.code}
@@ -159,7 +160,7 @@ export function GradingReportsWorkspace() {
               }
               data-testid="grading-report-filter-term"
             >
-              <option value="">All terms</option>
+              <option value="">كل الفصول</option>
               {(termOptionsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.code}
@@ -191,7 +192,7 @@ export function GradingReportsWorkspace() {
               data-testid="grading-report-filters-submit"
             >
               <Search className="h-4 w-4" />
-              Apply
+              تطبيق
             </Button>
 
             <Button
@@ -204,7 +205,7 @@ export function GradingReportsWorkspace() {
               }}
               data-testid="grading-report-filters-clear"
             >
-              Clear
+              مسح
             </Button>
           </form>
         </CardHeader>
@@ -233,37 +234,37 @@ export function GradingReportsWorkspace() {
           <div className="grid gap-3 md:grid-cols-3">
             <Card className="border-border/70 bg-card/80" data-testid="grading-report-semester-card">
               <CardHeader className="space-y-1 pb-2">
-                <CardTitle className="text-sm">Semester Grades</CardTitle>
+                <CardTitle className="text-sm">الدرجات الفصلية</CardTitle>
                 <CardDescription>الإجمالي: {report.semesterGrades.total}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-1 text-sm">
                 <p>النشط: {report.semesterGrades.active}</p>
                 <p>المقفل: {report.semesterGrades.locked}</p>
-                <p>Lock rate: {toPercentageLabel(report.semesterGrades.lockRate)}</p>
+                <p>نسبة الإقفال: {toPercentageLabel(report.semesterGrades.lockRate)}</p>
               </CardContent>
             </Card>
 
             <Card className="border-border/70 bg-card/80" data-testid="grading-report-annual-grades-card">
               <CardHeader className="space-y-1 pb-2">
-                <CardTitle className="text-sm">Annual Grades</CardTitle>
+                <CardTitle className="text-sm">الدرجات السنوية</CardTitle>
                 <CardDescription>الإجمالي: {report.annualGrades.total}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-1 text-sm">
                 <p>النشط: {report.annualGrades.active}</p>
                 <p>المقفل: {report.annualGrades.locked}</p>
-                <p>Lock rate: {toPercentageLabel(report.annualGrades.lockRate)}</p>
+                <p>نسبة الإقفال: {toPercentageLabel(report.annualGrades.lockRate)}</p>
               </CardContent>
             </Card>
 
             <Card className="border-border/70 bg-card/80" data-testid="grading-report-annual-results-card">
               <CardHeader className="space-y-1 pb-2">
-                <CardTitle className="text-sm">Annual Results</CardTitle>
+                <CardTitle className="text-sm">النتائج السنوية</CardTitle>
                 <CardDescription>الإجمالي: {report.annualResults.total}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-1 text-sm">
                 <p>النشط: {report.annualResults.active}</p>
                 <p>المقفل: {report.annualResults.locked}</p>
-                <p>Lock rate: {toPercentageLabel(report.annualResults.lockRate)}</p>
+                <p>نسبة الإقفال: {toPercentageLabel(report.annualResults.lockRate)}</p>
               </CardContent>
             </Card>
           </div>
@@ -271,35 +272,35 @@ export function GradingReportsWorkspace() {
           <div className="grid gap-3 md:grid-cols-2">
             <Card className="border-border/70 bg-card/80" data-testid="grading-report-workflow-card">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Workflow Status Distribution</CardTitle>
+                <CardTitle className="text-sm">توزيع حالات سير العمل</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground">Semester</p>
+                  <p className="text-xs font-medium text-muted-foreground">الفصلي</p>
                   <div className="flex flex-wrap gap-1.5">
                     {report.semesterGrades.byStatus.map((item) => (
                       <Badge key={`semester-${item.status}`} variant="outline">
-                        {item.status}: {item.count}
+                        {translateGradingWorkflowStatus(item.status)}: {item.count}
                       </Badge>
                     ))}
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground">Annual Grades</p>
+                  <p className="text-xs font-medium text-muted-foreground">الدرجات السنوية</p>
                   <div className="flex flex-wrap gap-1.5">
                     {report.annualGrades.byStatus.map((item) => (
                       <Badge key={`annual-grade-${item.status}`} variant="outline">
-                        {item.status}: {item.count}
+                        {translateGradingWorkflowStatus(item.status)}: {item.count}
                       </Badge>
                     ))}
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground">Annual Results</p>
+                  <p className="text-xs font-medium text-muted-foreground">النتائج السنوية</p>
                   <div className="flex flex-wrap gap-1.5">
                     {report.annualResults.byStatus.map((item) => (
                       <Badge key={`annual-result-${item.status}`} variant="outline">
-                        {item.status}: {item.count}
+                        {translateGradingWorkflowStatus(item.status)}: {item.count}
                       </Badge>
                     ))}
                   </div>
@@ -309,15 +310,15 @@ export function GradingReportsWorkspace() {
 
             <Card className="border-border/70 bg-card/80" data-testid="grading-report-ranking-card">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Ranking Readiness</CardTitle>
+                <CardTitle className="text-sm">جاهزية الترتيب</CardTitle>
               </CardHeader>
               <CardContent className="space-y-1 text-sm">
-                <p>With class rank: {report.rankingReadiness.withClassRank}</p>
-                <p>With grade rank: {report.rankingReadiness.withGradeRank}</p>
-                <p>Fully ranked: {report.rankingReadiness.fullyRanked}</p>
-                <p>Missing class rank: {report.rankingReadiness.missingClassRank}</p>
-                <p>Missing grade rank: {report.rankingReadiness.missingGradeRank}</p>
-                <p>Not fully ranked: {report.rankingReadiness.notFullyRanked}</p>
+                <p>مع ترتيب شعبة: {report.rankingReadiness.withClassRank}</p>
+                <p>مع ترتيب مرحلة: {report.rankingReadiness.withGradeRank}</p>
+                <p>مرتبة بالكامل: {report.rankingReadiness.fullyRanked}</p>
+                <p>بدون ترتيب شعبة: {report.rankingReadiness.missingClassRank}</p>
+                <p>بدون ترتيب مرحلة: {report.rankingReadiness.missingGradeRank}</p>
+                <p>غير مرتبة بالكامل: {report.rankingReadiness.notFullyRanked}</p>
               </CardContent>
             </Card>
           </div>
@@ -325,11 +326,11 @@ export function GradingReportsWorkspace() {
           <div className="grid gap-3 md:grid-cols-2">
             <Card className="border-border/70 bg-card/80" data-testid="grading-report-final-status-card">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Final Status Distribution</CardTitle>
+                <CardTitle className="text-sm">توزيع الحالات النهائية</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 {report.annualGrades.byFinalStatus.length === 0 ? (
-                  <p className="text-muted-foreground">No data.</p>
+                  <p className="text-muted-foreground">لا توجد بيانات.</p>
                 ) : (
                   report.annualGrades.byFinalStatus.map((item) => (
                     <p key={item.finalStatusId}>
@@ -342,11 +343,11 @@ export function GradingReportsWorkspace() {
 
             <Card className="border-border/70 bg-card/80" data-testid="grading-report-promotion-card">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Promotion Decision Distribution</CardTitle>
+                <CardTitle className="text-sm">توزيع قرارات الترفيع</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 {report.annualResults.byPromotionDecision.length === 0 ? (
-                  <p className="text-muted-foreground">No data.</p>
+                  <p className="text-muted-foreground">لا توجد بيانات.</p>
                 ) : (
                   report.annualResults.byPromotionDecision.map((item) => (
                     <p key={item.promotionDecisionId}>

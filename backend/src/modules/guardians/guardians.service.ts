@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AuditStatus, Guardian, Prisma } from '@prisma/client';
+import { AuditStatus, Guardian, Prisma, StudentGender } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { CreateGuardianDto } from './dto/create-guardian.dto';
@@ -29,6 +29,15 @@ const guardianInclude: Prisma.GuardianInclude = {
       id: true,
       code: true,
       nameAr: true,
+      isActive: true,
+    },
+  },
+  genderLookup: {
+    select: {
+      id: true,
+      code: true,
+      nameAr: true,
+      nameEn: true,
       isActive: true,
     },
   },
@@ -68,11 +77,14 @@ export class GuardiansService {
       await this.ensureIdTypeExists(payload.idTypeId);
     }
 
+    const gender = await this.resolveGenderOnCreate(payload);
+
     try {
       const guardian = await this.prisma.guardian.create({
         data: {
           fullName,
-          gender: payload.gender,
+          gender: gender.gender,
+          genderId: gender.genderId,
           idNumber: payload.idNumber,
           idTypeId: payload.idTypeId === null ? null : payload.idTypeId,
           phonePrimary: payload.phonePrimary,
@@ -121,6 +133,7 @@ export class GuardiansService {
     const where: Prisma.GuardianWhereInput = {
       deletedAt: null,
       gender: query.gender,
+      genderId: query.genderId,
       idTypeId: query.idTypeId,
       isActive: query.isActive,
       OR: query.search
@@ -188,11 +201,13 @@ export class GuardiansService {
   }
 
   async update(id: string, payload: UpdateGuardianDto, actorUserId: string) {
-    await this.ensureGuardianExists(id);
+    const existing = await this.ensureGuardianExists(id);
 
     if (payload.idTypeId !== undefined && payload.idTypeId !== null) {
       await this.ensureIdTypeExists(payload.idTypeId);
     }
+
+    const gender = await this.resolveGenderOnUpdate(existing, payload);
 
     try {
       const guardian = await this.prisma.guardian.update({
@@ -201,7 +216,8 @@ export class GuardiansService {
         },
         data: {
           fullName: payload.fullName?.trim(),
-          gender: payload.gender,
+          gender: gender.gender,
+          genderId: gender.genderId,
           idNumber: payload.idNumber,
           idTypeId: payload.idTypeId === null ? null : payload.idTypeId,
           phonePrimary: payload.phonePrimary,
@@ -307,6 +323,117 @@ export class GuardiansService {
     if (!idType) {
       throw new BadRequestException('idTypeId is not valid');
     }
+  }
+
+  private mapLookupGenderCodeToEnum(code: string): StudentGender {
+    const normalized = code.trim().toUpperCase();
+
+    if (
+      normalized !== StudentGender.MALE &&
+      normalized !== StudentGender.FEMALE &&
+      normalized !== StudentGender.OTHER
+    ) {
+      throw new BadRequestException(
+        `Unsupported lookup gender code for guardians: ${code}`,
+      );
+    }
+
+    return normalized as StudentGender;
+  }
+
+  private async findGenderLookupByCode(code: string) {
+    return this.prisma.lookupGender.findFirst({
+      where: {
+        code: code.trim().toUpperCase(),
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        code: true,
+      },
+    });
+  }
+
+  private async ensureGenderLookupExists(genderId: number) {
+    const gender = await this.prisma.lookupGender.findFirst({
+      where: {
+        id: genderId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        code: true,
+      },
+    });
+
+    if (!gender) {
+      throw new BadRequestException('genderId is not valid');
+    }
+
+    return gender;
+  }
+
+  private async resolveGenderOnCreate(payload: CreateGuardianDto) {
+    if (payload.genderId !== undefined) {
+      const lookup = await this.ensureGenderLookupExists(payload.genderId);
+      const mappedGender = this.mapLookupGenderCodeToEnum(lookup.code);
+
+      if (payload.gender && payload.gender !== mappedGender) {
+        throw new BadRequestException(
+          'gender and genderId do not refer to the same lookup value',
+        );
+      }
+
+      return {
+        gender: payload.gender ?? mappedGender,
+        genderId: lookup.id,
+      };
+    }
+
+    if (!payload.gender) {
+      throw new BadRequestException('Either gender or genderId is required');
+    }
+
+    const lookup = await this.findGenderLookupByCode(payload.gender);
+    return {
+      gender: payload.gender,
+      genderId: lookup?.id ?? null,
+    };
+  }
+
+  private async resolveGenderOnUpdate(
+    existing: Guardian,
+    payload: UpdateGuardianDto,
+  ) {
+    if (payload.genderId !== undefined) {
+      const lookup = await this.ensureGenderLookupExists(payload.genderId);
+      const mappedGender = this.mapLookupGenderCodeToEnum(lookup.code);
+
+      if (payload.gender && payload.gender !== mappedGender) {
+        throw new BadRequestException(
+          'gender and genderId do not refer to the same lookup value',
+        );
+      }
+
+      return {
+        gender: payload.gender ?? mappedGender,
+        genderId: lookup.id,
+      };
+    }
+
+    if (payload.gender !== undefined) {
+      const lookup = await this.findGenderLookupByCode(payload.gender);
+
+      return {
+        gender: payload.gender,
+        genderId: lookup?.id ?? existing.genderId ?? null,
+      };
+    }
+
+    return {
+      gender: existing.gender,
+      genderId: existing.genderId ?? null,
+    };
   }
 
   private throwKnownDatabaseErrors(error: unknown): never {

@@ -18,15 +18,21 @@ import {
   useDeleteStudentGuardianMutation,
   useUpdateStudentGuardianMutation,
 } from "@/features/student-guardians/hooks/use-student-guardians-mutations";
+import { useRelationshipTypeOptionsQuery } from "@/features/student-guardians/hooks/use-relationship-type-options-query";
 import { useStudentGuardiansQuery } from "@/features/student-guardians/hooks/use-student-guardians-query";
 import { useStudentOptionsQuery } from "@/features/student-guardians/hooks/use-student-options-query";
 import { useGuardianOptionsQuery } from "@/features/student-guardians/hooks/use-guardian-options-query";
-import type { GuardianRelationship, StudentGuardianListItem } from "@/lib/api/client";
+import type {
+  GuardianRelationship,
+  LookupCatalogListItem,
+  StudentGuardianListItem,
+} from "@/lib/api/client";
+import { translateGuardianRelationship } from "@/lib/i18n/ar";
 
 type RelationFormState = {
   studentId: string;
   guardianId: string;
-  relationship: GuardianRelationship;
+  relationshipTypeId: string;
   isPrimary: boolean;
   canReceiveNotifications: boolean;
   canPickup: boolean;
@@ -38,22 +44,10 @@ type RelationFormState = {
 
 const PAGE_SIZE = 12;
 
-const RELATIONSHIP_OPTIONS: GuardianRelationship[] = [
-  "FATHER",
-  "MOTHER",
-  "BROTHER",
-  "SISTER",
-  "UNCLE",
-  "AUNT",
-  "GRANDFATHER",
-  "GRANDMOTHER",
-  "OTHER",
-];
-
 const DEFAULT_FORM_STATE: RelationFormState = {
   studentId: "",
   guardianId: "",
-  relationship: "FATHER",
+  relationshipTypeId: "",
   isPrimary: false,
   canReceiveNotifications: true,
   canPickup: true,
@@ -80,7 +74,7 @@ function toFormState(item: StudentGuardianListItem): RelationFormState {
   return {
     studentId: item.studentId,
     guardianId: item.guardianId,
-    relationship: item.relationship,
+    relationshipTypeId: item.relationshipTypeId ? String(item.relationshipTypeId) : "",
     isPrimary: item.isPrimary,
     canReceiveNotifications: item.canReceiveNotifications,
     canPickup: item.canPickup,
@@ -89,6 +83,64 @@ function toFormState(item: StudentGuardianListItem): RelationFormState {
     notes: item.notes ?? "",
     isActive: item.isActive,
   };
+}
+
+function mapRelationshipCodeToEnum(code: string): GuardianRelationship | null {
+  const normalized = code.trim().toUpperCase();
+
+  if (
+    normalized === "FATHER" ||
+    normalized === "MOTHER" ||
+    normalized === "BROTHER" ||
+    normalized === "SISTER" ||
+    normalized === "UNCLE" ||
+    normalized === "AUNT" ||
+    normalized === "GRANDFATHER" ||
+    normalized === "GRANDMOTHER" ||
+    normalized === "OTHER"
+  ) {
+    return normalized as GuardianRelationship;
+  }
+
+  if (normalized === "UNCLE_PATERNAL" || normalized === "UNCLE_MATERNAL") {
+    return "UNCLE";
+  }
+
+  if (normalized === "AUNT_PATERNAL" || normalized === "AUNT_MATERNAL") {
+    return "AUNT";
+  }
+
+  if (normalized === "GUARDIAN") {
+    return "OTHER";
+  }
+
+  return null;
+}
+
+function getRelationshipLookupCandidates(
+  relationship: GuardianRelationship,
+): string[] {
+  switch (relationship) {
+    case "UNCLE":
+      return ["UNCLE", "UNCLE_PATERNAL", "UNCLE_MATERNAL"];
+    case "AUNT":
+      return ["AUNT", "AUNT_PATERNAL", "AUNT_MATERNAL"];
+    case "OTHER":
+      return ["OTHER", "GUARDIAN"];
+    default:
+      return [relationship];
+  }
+}
+
+function findRelationshipLookupByEnum(
+  options: LookupCatalogListItem[],
+  relationship: GuardianRelationship,
+): LookupCatalogListItem | undefined {
+  const candidates = getRelationshipLookupCandidates(relationship);
+
+  return candidates
+    .map((candidate) => options.find((option) => option.code === candidate))
+    .find((option): option is LookupCatalogListItem => Boolean(option));
 }
 
 function renderDateRange(item: StudentGuardianListItem): string {
@@ -117,15 +169,14 @@ export function StudentGuardiansWorkspace() {
   const canDelete = hasPermission("student-guardians.delete");
   const canReadStudents = hasPermission("students.read");
   const canReadGuardians = hasPermission("guardians.read");
+  const canReadRelationshipTypes = hasPermission("lookup-relationship-types.read");
 
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
   const [studentFilter, setStudentFilter] = React.useState("all");
   const [guardianFilter, setGuardianFilter] = React.useState("all");
-  const [relationshipFilter, setRelationshipFilter] = React.useState<GuardianRelationship | "all">(
-    "all",
-  );
+  const [relationshipTypeFilter, setRelationshipTypeFilter] = React.useState("all");
   const [primaryFilter, setPrimaryFilter] = React.useState<"all" | "primary" | "secondary">(
     "all",
   );
@@ -143,23 +194,33 @@ export function StudentGuardiansWorkspace() {
     search: search || undefined,
     studentId: studentFilter === "all" ? undefined : studentFilter,
     guardianId: guardianFilter === "all" ? undefined : guardianFilter,
-    relationship: relationshipFilter === "all" ? undefined : relationshipFilter,
+    relationshipTypeId:
+      relationshipTypeFilter === "all" ? undefined : Number(relationshipTypeFilter),
     isPrimary: primaryFilter === "all" ? undefined : primaryFilter === "primary",
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
   });
 
   const studentsQuery = useStudentOptionsQuery();
   const guardiansQuery = useGuardianOptionsQuery();
+  const relationshipTypeOptionsQuery = useRelationshipTypeOptionsQuery();
 
   const createMutation = useCreateStudentGuardianMutation();
   const updateMutation = useUpdateStudentGuardianMutation();
   const deleteMutation = useDeleteStudentGuardianMutation();
 
-  const relations = React.useMemo(() => relationsQuery.data?.data ?? [], [relationsQuery.data?.data]);
+  const relations = React.useMemo(
+    () => relationsQuery.data?.data ?? [],
+    [relationsQuery.data?.data],
+  );
+  const relationshipTypeOptions = React.useMemo(() => {
+    const options = relationshipTypeOptionsQuery.data ?? [];
+    return options.filter((option) => option.code && mapRelationshipCodeToEnum(option.code));
+  }, [relationshipTypeOptionsQuery.data]);
   const pagination = relationsQuery.data?.pagination;
   const isEditing = editingRelationId !== null;
 
-  const hasDependenciesReadPermissions = canReadStudents && canReadGuardians;
+  const hasDependenciesReadPermissions =
+    canReadStudents && canReadGuardians && canReadRelationshipTypes;
 
   const mutationError =
     (createMutation.error as Error | null)?.message ??
@@ -180,6 +241,35 @@ export function StudentGuardiansWorkspace() {
     }
   }, [editingRelationId, isEditing, relations]);
 
+  React.useEffect(() => {
+    if (isEditing || formState.relationshipTypeId || !canReadRelationshipTypes) {
+      return;
+    }
+
+    if (relationshipTypeOptions.length === 0) {
+      return;
+    }
+
+    const preferred = findRelationshipLookupByEnum(
+      relationshipTypeOptions,
+      "FATHER",
+    );
+    const defaultOption = preferred ?? relationshipTypeOptions[0];
+    setFormState((prev) =>
+      prev.relationshipTypeId
+        ? prev
+        : {
+            ...prev,
+            relationshipTypeId: String(defaultOption.id),
+          },
+    );
+  }, [
+    canReadRelationshipTypes,
+    formState.relationshipTypeId,
+    isEditing,
+    relationshipTypeOptions,
+  ]);
+
   const resetForm = () => {
     setEditingRelationId(null);
     setFormState(DEFAULT_FORM_STATE);
@@ -198,8 +288,13 @@ export function StudentGuardiansWorkspace() {
       return false;
     }
 
+    if (!formState.relationshipTypeId) {
+      setFormError("صلة القرابة مطلوبة.");
+      return false;
+    }
+
     if (formState.notes.trim().length > 255) {
-      setFormError("notes يجب ألا يتجاوز 255 حرف.");
+      setFormError("الملاحظات يجب ألا تتجاوز 255 حرفًا.");
       return false;
     }
 
@@ -208,7 +303,7 @@ export function StudentGuardiansWorkspace() {
       formState.endDate &&
       formState.startDate.localeCompare(formState.endDate) > 0
     ) {
-      setFormError("startDate يجب أن يكون قبل endDate.");
+      setFormError("تاريخ البداية يجب أن يسبق تاريخ النهاية.");
       return false;
     }
 
@@ -223,10 +318,23 @@ export function StudentGuardiansWorkspace() {
       return;
     }
 
+    const selectedRelationshipType = relationshipTypeOptions.find(
+      (option) => option.id === Number(formState.relationshipTypeId),
+    );
+    const mappedRelationship =
+      selectedRelationshipType?.code &&
+      mapRelationshipCodeToEnum(selectedRelationshipType.code);
+
+    if (!selectedRelationshipType || !mappedRelationship) {
+      setFormError("تعذر مطابقة نوع صلة القرابة. حدّث الخيارات وحاول مرة أخرى.");
+      return;
+    }
+
     const payload = {
       studentId: formState.studentId,
       guardianId: formState.guardianId,
-      relationship: formState.relationship,
+      relationship: mappedRelationship,
+      relationshipTypeId: selectedRelationshipType.id,
       isPrimary: formState.isPrimary,
       canReceiveNotifications: formState.canReceiveNotifications,
       canPickup: formState.canPickup,
@@ -276,7 +384,17 @@ export function StudentGuardiansWorkspace() {
 
     setFormError(null);
     setEditingRelationId(item.id);
-    setFormState(toFormState(item));
+    const nextState = toFormState(item);
+    if (!nextState.relationshipTypeId) {
+      const mappedLookup = findRelationshipLookupByEnum(
+        relationshipTypeOptions,
+        item.relationship,
+      );
+      if (mappedLookup) {
+        nextState.relationshipTypeId = String(mappedLookup.id);
+      }
+    }
+    setFormState(nextState);
   };
 
   const handleToggleActive = (item: StudentGuardianListItem) => {
@@ -338,7 +456,7 @@ export function StudentGuardiansWorkspace() {
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Student *</label>
+                <label className="text-xs font-medium text-muted-foreground">الطالب *</label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={formState.studentId}
@@ -350,14 +468,14 @@ export function StudentGuardiansWorkspace() {
                   <option value="">اختر الطالب</option>
                   {(studentsQuery.data ?? []).map((student) => (
                     <option key={student.id} value={student.id}>
-                      {student.fullName} ({student.admissionNo ?? "N/A"})
+                      {student.fullName} ({student.admissionNo ?? "غير متوفر"})
                     </option>
                   ))}
                 </select>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Guardian *</label>
+                <label className="text-xs font-medium text-muted-foreground">ولي الأمر *</label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={formState.guardianId}
@@ -369,27 +487,36 @@ export function StudentGuardiansWorkspace() {
                   <option value="">اختر ولي الأمر</option>
                   {(guardiansQuery.data ?? []).map((guardian) => (
                     <option key={guardian.id} value={guardian.id}>
-                      {guardian.fullName} ({guardian.phonePrimary ?? "No phone"})
+                      {guardian.fullName} ({guardian.phonePrimary ?? "لا يوجد رقم"})
                     </option>
                   ))}
                 </select>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Relationship *</label>
+                <label className="text-xs font-medium text-muted-foreground">صلة القرابة *</label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.relationship}
+                  value={formState.relationshipTypeId}
                   onChange={(event) =>
                     setFormState((prev) => ({
                       ...prev,
-                      relationship: event.target.value as GuardianRelationship,
+                      relationshipTypeId: event.target.value,
                     }))
                   }
+                  disabled={
+                    !canReadRelationshipTypes || relationshipTypeOptionsQuery.isLoading
+                  }
                 >
-                  {RELATIONSHIP_OPTIONS.map((value) => (
-                    <option key={value} value={value}>
-                      {value}
+                  <option value="">اختر صلة القرابة</option>
+                  {relationshipTypeOptions.map((value) => (
+                    <option key={value.id} value={value.id}>
+                      {value.nameAr ??
+                        (value.code
+                          ? translateGuardianRelationship(
+                              mapRelationshipCodeToEnum(value.code) ?? "OTHER",
+                            )
+                          : String(value.id))}
                     </option>
                   ))}
                 </select>
@@ -420,19 +547,19 @@ export function StudentGuardiansWorkspace() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Notes</label>
+                <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
                 <Input
                   value={formState.notes}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, notes: event.target.value }))
                   }
-                  placeholder="Primary contact for attendance updates"
+                  placeholder="مثال: جهة الاتصال الأساسية لمتابعة الحضور"
                 />
               </div>
 
               <div className="grid gap-2 md:grid-cols-2">
                 <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>Primary</span>
+                  <span>صلة أساسية</span>
                   <input
                     type="checkbox"
                     checked={formState.isPrimary}
@@ -443,7 +570,7 @@ export function StudentGuardiansWorkspace() {
                 </label>
 
                 <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>Receive Notifications</span>
+                  <span>يستقبل الإشعارات</span>
                   <input
                     type="checkbox"
                     checked={formState.canReceiveNotifications}
@@ -457,7 +584,7 @@ export function StudentGuardiansWorkspace() {
                 </label>
 
                 <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>Can Pickup</span>
+                  <span>مصرح بالاستلام</span>
                   <input
                     type="checkbox"
                     checked={formState.canPickup}
@@ -493,7 +620,8 @@ export function StudentGuardiansWorkspace() {
 
               {!hasDependenciesReadPermissions ? (
                 <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يلزم صلاحيات القراءة: <code>students.read</code> و <code>guardians.read</code>.
+                  يلزم صلاحيات القراءة: <code>students.read</code> و{" "}
+                  <code>guardians.read</code> و <code>lookup-relationship-types.read</code>.
                 </div>
               ) : null}
 
@@ -528,7 +656,7 @@ export function StudentGuardiansWorkspace() {
       <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Student-Guardians List</CardTitle>
+            <CardTitle>قائمة روابط الطلاب وأولياء الأمور</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <CardDescription>
@@ -585,16 +713,22 @@ export function StudentGuardiansWorkspace() {
 
             <select
               className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={relationshipFilter}
+              value={relationshipTypeFilter}
               onChange={(event) => {
                 setPage(1);
-                setRelationshipFilter(event.target.value as GuardianRelationship | "all");
+                setRelationshipTypeFilter(event.target.value);
               }}
+              disabled={!canReadRelationshipTypes || relationshipTypeOptionsQuery.isLoading}
             >
               <option value="all">كل صلات القرابة</option>
-              {RELATIONSHIP_OPTIONS.map((value) => (
-                <option key={value} value={value}>
-                  {value}
+              {relationshipTypeOptions.map((value) => (
+                <option key={value.id} value={value.id}>
+                  {value.nameAr ??
+                    (value.code
+                      ? translateGuardianRelationship(
+                          mapRelationshipCodeToEnum(value.code) ?? "OTHER",
+                        )
+                      : String(value.id))}
                 </option>
               ))}
             </select>
@@ -608,8 +742,8 @@ export function StudentGuardiansWorkspace() {
               }}
             >
               <option value="all">كل الأولويات</option>
-              <option value="primary">Primary only</option>
-              <option value="secondary">Secondary only</option>
+              <option value="primary">الأساسية فقط</option>
+              <option value="secondary">غير الأساسية فقط</option>
             </select>
 
             <select
@@ -661,34 +795,37 @@ export function StudentGuardiansWorkspace() {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="space-y-1">
                   <p className="font-medium">
-                    {item.student.fullName} ({item.student.admissionNo ?? "N/A"}) -{" "}
+                    {item.student.fullName} ({item.student.admissionNo ?? "غير متوفر"}) -{" "}
                     {item.guardian.fullName}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Guardian Phone: {item.guardian.phonePrimary ?? "-"} | WhatsApp:{" "}
+                    هاتف ولي الأمر: {item.guardian.phonePrimary ?? "-"} | واتساب:{" "}
                     {item.guardian.whatsappNumber ?? "-"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Period: {renderDateRange(item)}
+                    فترة الارتباط: {renderDateRange(item)}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Notes: {item.notes ?? "-"}
+                    ملاحظات: {item.notes ?? "-"}
                   </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant="outline">{item.relationship}</Badge>
+                  <Badge variant="outline">
+                    {item.relationshipTypeLookup?.nameAr ??
+                      translateGuardianRelationship(item.relationship)}
+                  </Badge>
                   <Badge variant={item.isPrimary ? "default" : "secondary"}>
-                    {item.isPrimary ? "Primary" : "Secondary"}
+                    {item.isPrimary ? "أساسية" : "غير أساسية"}
                   </Badge>
                   <Badge variant={item.canReceiveNotifications ? "default" : "outline"}>
-                    Notify: {item.canReceiveNotifications ? "Yes" : "No"}
+                    إشعارات: {item.canReceiveNotifications ? "نعم" : "لا"}
                   </Badge>
                   <Badge variant={item.canPickup ? "default" : "outline"}>
-                    Pickup: {item.canPickup ? "Yes" : "No"}
+                    استلام: {item.canPickup ? "نعم" : "لا"}
                   </Badge>
                   <Badge variant={item.isActive ? "default" : "outline"}>
-                    {item.isActive ? "Active" : "Inactive"}
+                    {item.isActive ? "نشط" : "غير نشط"}
                   </Badge>
                 </div>
               </div>

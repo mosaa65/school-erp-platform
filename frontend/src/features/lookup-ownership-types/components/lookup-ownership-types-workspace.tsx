@@ -243,7 +243,7 @@ export function LookupOwnershipTypesWorkspace() {
               لا تملك صلاحية <code>lookup-ownership-types.create</code>.
             </div>
           ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm}>
+            <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="ownership-form">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">الكود *</label>
                 <Input
@@ -253,6 +253,7 @@ export function LookupOwnershipTypesWorkspace() {
                   }
                   placeholder="PRIVATE"
                   required
+                  data-testid="ownership-form-code"
                 />
               </div>
 
@@ -265,6 +266,7 @@ export function LookupOwnershipTypesWorkspace() {
                   }
                   placeholder="خاصة"
                   required
+                  data-testid="ownership-form-name-ar"
                 />
               </div>
 
@@ -276,6 +278,7 @@ export function LookupOwnershipTypesWorkspace() {
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
                   }
+                  data-testid="ownership-form-active"
                 />
               </label>
 
@@ -296,6 +299,7 @@ export function LookupOwnershipTypesWorkspace() {
                   type="submit"
                   className="flex-1 gap-2"
                   disabled={isFormSubmitting || (!canCreate && !isEditing)}
+                  data-testid="ownership-form-submit"
                 >
                   {isFormSubmitting ? (
                     <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -379,6 +383,7 @@ export function LookupOwnershipTypesWorkspace() {
             <div
               key={item.id}
               className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+              data-testid="ownership-card"
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="space-y-1">

@@ -29,6 +29,7 @@ import { useGradingPoliciesQuery } from "@/features/grading-policies/hooks/use-g
 import { useAcademicYearOptionsQuery } from "@/features/grading-policies/hooks/use-academic-year-options-query";
 import { useGradeLevelOptionsQuery } from "@/features/grading-policies/hooks/use-grade-level-options-query";
 import { useSubjectOptionsQuery } from "@/features/grading-policies/hooks/use-subject-options-query";
+import { translateGradingWorkflowStatus } from "@/lib/i18n/ar";
 import type {
   AssessmentType,
   GradingPolicyListItem,
@@ -117,6 +118,27 @@ function statusBadgeVariant(
       return "secondary";
     default:
       return "outline";
+  }
+}
+
+function assessmentTypeLabel(value: AssessmentType): string {
+  switch (value) {
+    case "MONTHLY":
+      return "شهري";
+    case "MIDTERM":
+      return "منتصف الفصل";
+    case "FINAL":
+      return "نهائي";
+    case "QUIZ":
+      return "اختبار قصير";
+    case "ORAL":
+      return "شفهي";
+    case "PRACTICAL":
+      return "عملي";
+    case "PROJECT":
+      return "مشروع";
+    default:
+      return value;
   }
 }
 
@@ -216,7 +238,7 @@ export function GradingPoliciesWorkspace() {
 
   const validateForm = (): boolean => {
     if (!formState.academicYearId || !formState.gradeLevelId || !formState.subjectId) {
-      setFormError("الحقول الأساسية مطلوبة: year, grade, subject.");
+      setFormError("الحقول الأساسية مطلوبة: السنة والصف والمادة.");
       return false;
     }
 
@@ -243,12 +265,12 @@ export function GradingPoliciesWorkspace() {
 
     const passingScore = parseOptionalNumber(formState.passingScore);
     if (passingScore !== undefined && passingScore > 100) {
-      setFormError("passingScore يجب أن يكون بين 0 و 100.");
+      setFormError("درجة النجاح يجب أن تكون بين 0 و100.");
       return false;
     }
 
     if (formState.notes.trim().length > 255) {
-      setFormError("notes يجب ألا يتجاوز 255 حرف.");
+      setFormError("الملاحظات يجب ألا تتجاوز 255 حرفًا.");
       return false;
     }
 
@@ -392,7 +414,7 @@ export function GradingPoliciesWorkspace() {
                   }
                   data-testid="grading-policy-form-grade"
                 >
-                  <option value="">Grade level *</option>
+                  <option value="">الصف *</option>
                   {gradeOptions.map((item) => (
                     <option key={item.id} value={item.id}>
                       {item.code}
@@ -431,7 +453,7 @@ export function GradingPoliciesWorkspace() {
                 >
                   {ASSESSMENT_OPTIONS.map((assessmentType) => (
                     <option key={assessmentType} value={assessmentType}>
-                      {assessmentType}
+                      {assessmentTypeLabel(assessmentType)}
                     </option>
                   ))}
                 </select>
@@ -446,7 +468,7 @@ export function GradingPoliciesWorkspace() {
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, maxExamScore: event.target.value }))
                   }
-                  placeholder="maxExamScore"
+                  placeholder="الدرجة القصوى للاختبار"
                   data-testid="grading-policy-form-max-exam"
                 />
                 <Input
@@ -457,7 +479,7 @@ export function GradingPoliciesWorkspace() {
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, maxHomeworkScore: event.target.value }))
                   }
-                  placeholder="maxHomeworkScore"
+                  placeholder="الدرجة القصوى للواجب"
                   data-testid="grading-policy-form-max-homework"
                 />
                 <Input
@@ -468,7 +490,7 @@ export function GradingPoliciesWorkspace() {
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, maxAttendanceScore: event.target.value }))
                   }
-                  placeholder="maxAttendanceScore"
+                  placeholder="الدرجة القصوى للحضور"
                   data-testid="grading-policy-form-max-attendance"
                 />
                 <Input
@@ -479,7 +501,7 @@ export function GradingPoliciesWorkspace() {
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, maxActivityScore: event.target.value }))
                   }
-                  placeholder="maxActivityScore"
+                  placeholder="الدرجة القصوى للنشاط"
                   data-testid="grading-policy-form-max-activity"
                 />
                 <Input
@@ -493,7 +515,7 @@ export function GradingPoliciesWorkspace() {
                       maxContributionScore: event.target.value,
                     }))
                   }
-                  placeholder="maxContributionScore"
+                  placeholder="الدرجة القصوى للمشاركة"
                   data-testid="grading-policy-form-max-contribution"
                 />
                 <Input
@@ -505,7 +527,7 @@ export function GradingPoliciesWorkspace() {
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, passingScore: event.target.value }))
                   }
-                  placeholder="passingScore (0-100)"
+                  placeholder="درجة النجاح (0-100)"
                   data-testid="grading-policy-form-passing"
                 />
               </div>
@@ -524,7 +546,7 @@ export function GradingPoliciesWorkspace() {
                 >
                   {WORKFLOW_OPTIONS.map((status) => (
                     <option key={status} value={status}>
-                      {status}
+                      {translateGradingWorkflowStatus(status)}
                     </option>
                   ))}
                 </select>
@@ -534,14 +556,14 @@ export function GradingPoliciesWorkspace() {
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, notes: event.target.value }))
                   }
-                  placeholder="notes (optional)"
+                  placeholder="ملاحظات (اختياري)"
                   data-testid="grading-policy-form-notes"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>Default</span>
+                  <span>افتراضي</span>
                   <input
                     type="checkbox"
                     checked={formState.isDefault}
@@ -588,7 +610,7 @@ export function GradingPoliciesWorkspace() {
                   ) : (
                     <Medal className="h-4 w-4" />
                   )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء Policy"}
+                  {isEditing ? "حفظ التعديلات" : "إنشاء سياسة"}
                 </Button>
                 {isEditing ? (
                   <Button type="button" variant="outline" onClick={resetForm}>
@@ -604,7 +626,7 @@ export function GradingPoliciesWorkspace() {
       <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Grading Policies List</CardTitle>
+            <CardTitle>قائمة سياسات الدرجات</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <CardDescription>فلترة متعددة لسياسات التقييم والنشر.</CardDescription>
@@ -634,7 +656,7 @@ export function GradingPoliciesWorkspace() {
               }}
               data-testid="grading-policy-filter-year"
             >
-              <option value="all">Year</option>
+              <option value="all">السنة</option>
               {yearOptions.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.code}
@@ -651,7 +673,7 @@ export function GradingPoliciesWorkspace() {
               }}
               data-testid="grading-policy-filter-grade"
             >
-              <option value="all">Grade</option>
+              <option value="all">الصف</option>
               {gradeOptions.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.code}
@@ -668,7 +690,7 @@ export function GradingPoliciesWorkspace() {
               }}
               data-testid="grading-policy-filter-subject"
             >
-              <option value="all">Subject</option>
+              <option value="all">المادة</option>
               {subjectOptions.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.code}
@@ -685,10 +707,10 @@ export function GradingPoliciesWorkspace() {
               }}
               data-testid="grading-policy-filter-assessment"
             >
-              <option value="all">Assessment</option>
+              <option value="all">نوع التقييم</option>
               {ASSESSMENT_OPTIONS.map((assessmentType) => (
                 <option key={assessmentType} value={assessmentType}>
-                  {assessmentType}
+                  {assessmentTypeLabel(assessmentType)}
                 </option>
               ))}
             </select>
@@ -702,10 +724,10 @@ export function GradingPoliciesWorkspace() {
               }}
               data-testid="grading-policy-filter-status"
             >
-              <option value="all">Status</option>
+              <option value="all">الحالة</option>
               {WORKFLOW_OPTIONS.map((status) => (
                 <option key={status} value={status}>
-                  {status}
+                  {translateGradingWorkflowStatus(status)}
                 </option>
               ))}
             </select>
@@ -719,9 +741,9 @@ export function GradingPoliciesWorkspace() {
               }}
               data-testid="grading-policy-filter-default"
             >
-              <option value="all">All type</option>
-              <option value="default">Default</option>
-              <option value="custom">Custom</option>
+              <option value="all">كل الأنواع</option>
+              <option value="default">افتراضي</option>
+              <option value="custom">مخصص</option>
             </select>
 
             <select
@@ -786,21 +808,23 @@ export function GradingPoliciesWorkspace() {
                     {policy.academicYear.code} / {policy.gradeLevel.code}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    pass: {policy.passingScore} | exam: {policy.maxExamScore} | homework:{" "}
-                    {policy.maxHomeworkScore} | attendance: {policy.maxAttendanceScore}
+                    النجاح: {policy.passingScore} | الاختبار: {policy.maxExamScore} | الواجب:{" "}
+                    {policy.maxHomeworkScore} | الحضور: {policy.maxAttendanceScore}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    components: {policy.components.length}
+                    عدد المكونات: {policy.components.length}
                   </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant={statusBadgeVariant(policy.status)}>{policy.status}</Badge>
+                  <Badge variant={statusBadgeVariant(policy.status)}>
+                    {translateGradingWorkflowStatus(policy.status)}
+                  </Badge>
                   <Badge variant={policy.isDefault ? "secondary" : "outline"}>
-                    {policy.isDefault ? "Default" : "Custom"}
+                    {policy.isDefault ? "افتراضي" : "مخصص"}
                   </Badge>
                   <Badge variant={policy.isActive ? "default" : "outline"}>
-                    {policy.isActive ? "Active" : "Inactive"}
+                    {policy.isActive ? "نشط" : "غير نشط"}
                   </Badge>
                 </div>
               </div>

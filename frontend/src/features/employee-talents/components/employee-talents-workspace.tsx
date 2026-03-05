@@ -242,7 +242,7 @@ export function EmployeeTalentsWorkspace() {
           <CardDescription>
             {isEditing
               ? "تحديث ربط الموظف بالموهبة."
-              : "إضافة موهبة جديدة لموظف ضمن HR."}
+              : "إضافة موهبة جديدة لموظف ضمن الموارد البشرية."}
           </CardDescription>
         </CardHeader>
 
@@ -254,7 +254,7 @@ export function EmployeeTalentsWorkspace() {
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="talent-form">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Employee *</label>
+                <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={formState.employeeId}
@@ -267,14 +267,14 @@ export function EmployeeTalentsWorkspace() {
                   <option value="">اختر الموظف</option>
                   {(employeesQuery.data ?? []).map((employee) => (
                     <option key={employee.id} value={employee.id}>
-                      {employee.fullName} ({employee.jobNumber ?? "N/A"})
+                      {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
                     </option>
                   ))}
                 </select>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Talent *</label>
+                <label className="text-xs font-medium text-muted-foreground">الموهبة *</label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={formState.talentId}
@@ -294,7 +294,7 @@ export function EmployeeTalentsWorkspace() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Notes</label>
+                <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
                 <Input
                   value={formState.notes}
                   onChange={(event) =>
@@ -351,7 +351,7 @@ export function EmployeeTalentsWorkspace() {
                   ) : (
                     <Sparkles className="h-4 w-4" />
                   )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء Mapping"}
+                  {isEditing ? "حفظ التعديلات" : "إنشاء ربط"}
                 </Button>
                 {isEditing ? (
                   <Button type="button" variant="outline" onClick={resetForm}>
@@ -367,7 +367,7 @@ export function EmployeeTalentsWorkspace() {
       <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Employee Talents</CardTitle>
+            <CardTitle>مواهب الموظفين</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <CardDescription>
@@ -416,7 +416,7 @@ export function EmployeeTalentsWorkspace() {
               }}
               data-testid="talent-filter-talent"
             >
-              <option value="all">All talents</option>
+              <option value="all">كل المواهب</option>
               {(talentsQuery.data ?? []).map((talent) => (
                 <option key={talent.id} value={talent.id}>
                   {talent.code}
@@ -481,10 +481,10 @@ export function EmployeeTalentsWorkspace() {
                 <div className="space-y-1">
                   <p className="font-medium">{mapping.employee.fullName}</p>
                   <p className="text-xs text-muted-foreground">
-                    Talent: {mapping.talent.name} ({mapping.talent.code})
+                    الموهبة: {mapping.talent.name} ({mapping.talent.code})
                   </p>
                   {mapping.notes ? (
-                    <p className="text-xs text-muted-foreground">Notes: {mapping.notes}</p>
+                    <p className="text-xs text-muted-foreground">ملاحظات: {mapping.notes}</p>
                   ) : null}
                 </div>
 

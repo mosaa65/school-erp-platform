@@ -35,6 +35,7 @@ import { useAcademicYearOptionsQuery } from "@/features/annual-grades/hooks/use-
 import { useSectionOptionsQuery } from "@/features/annual-grades/hooks/use-section-options-query";
 import { useStudentEnrollmentOptionsQuery } from "@/features/annual-grades/hooks/use-student-enrollment-options-query";
 import { useSubjectOptionsQuery } from "@/features/annual-grades/hooks/use-subject-options-query";
+import { translateGradingWorkflowStatus } from "@/lib/i18n/ar";
 import type { AnnualGradeListItem, GradingWorkflowStatus } from "@/lib/api/client";
 
 type FormState = {
@@ -182,7 +183,7 @@ export function AnnualGradesWorkspace() {
       return false;
     }
     if (form.notes.trim().length > 255) {
-      setFormError("notes يجب ألا يتجاوز 255 حرف.");
+      setFormError("الملاحظات يجب ألا تتجاوز 255 حرفًا.");
       return false;
     }
 
@@ -190,15 +191,15 @@ export function AnnualGradesWorkspace() {
     const semester2Total = parseOptionalNumber(form.semester2Total);
     const annualPercentage = parseOptionalNumber(form.annualPercentage);
     if (semester1Total !== undefined && semester1Total < 0) {
-      setFormError("semester1Total يجب أن يكون >= 0.");
+      setFormError("مجموع الفصل الأول يجب أن يكون أكبر من أو يساوي 0.");
       return false;
     }
     if (semester2Total !== undefined && semester2Total < 0) {
-      setFormError("semester2Total يجب أن يكون >= 0.");
+      setFormError("مجموع الفصل الثاني يجب أن يكون أكبر من أو يساوي 0.");
       return false;
     }
     if (annualPercentage !== undefined && annualPercentage < 0) {
-      setFormError("annualPercentage يجب أن يكون >= 0.");
+      setFormError("النسبة السنوية يجب أن تكون أكبر من أو تساوي 0.");
       return false;
     }
 
@@ -589,7 +590,7 @@ export function AnnualGradesWorkspace() {
             >
               <option value="all">الحالة: الكل</option>
               <option value="DRAFT">مسودة</option>
-              <option value="IN_REVIEW">In review</option>
+              <option value="IN_REVIEW">قيد المراجعة</option>
               <option value="APPROVED">معتمد</option>
               <option value="ARCHIVED">مؤرشف</option>
             </select>
@@ -654,7 +655,7 @@ export function AnnualGradesWorkspace() {
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {item.academicYear.code} | {item.studentEnrollment.section.code} |{" "}
-                    Final status: {item.finalStatus.code}
+                    الحالة النهائية: {item.finalStatus.code}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     ف1: {item.semester1Total} | ف2: {item.semester2Total} | الإجمالي:{" "}
@@ -663,7 +664,7 @@ export function AnnualGradesWorkspace() {
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
                   <Badge variant={item.status === "APPROVED" ? "default" : "secondary"}>
-                    {item.status}
+                    {translateGradingWorkflowStatus(item.status)}
                   </Badge>
                   <Badge variant={item.isLocked ? "default" : "secondary"}>
                     {item.isLocked ? "مقفل" : "غير مقفل"}

@@ -130,22 +130,22 @@ export function TalentsWorkspace() {
     }
 
     if (!/^[A-Z0-9_.-]+$/.test(code)) {
-      setFormError("صيغة code غير صحيحة.");
+      setFormError("صيغة الكود غير صحيحة.");
       return false;
     }
 
     if (code.length > 40) {
-      setFormError("code يجب ألا يتجاوز 40 حرف.");
+      setFormError("الكود يجب ألا يتجاوز 40 حرفًا.");
       return false;
     }
 
     if (name.length > 120) {
-      setFormError("name يجب ألا يتجاوز 120 حرف.");
+      setFormError("الاسم يجب ألا يتجاوز 120 حرفًا.");
       return false;
     }
 
     if (formState.description.trim().length > 255) {
-      setFormError("description يجب ألا يتجاوز 255 حرف.");
+      setFormError("الوصف يجب ألا يتجاوز 255 حرفًا.");
       return false;
     }
 

@@ -170,13 +170,13 @@ export function EmployeeTeachingAssignmentsWorkspace() {
       !formState.subjectId ||
       !formState.academicYearId
     ) {
-      setFormError("الحقول الأساسية مطلوبة: employee, section, subject, academic year.");
+      setFormError("الحقول الأساسية مطلوبة: الموظف، الشعبة، المادة، والسنة الأكاديمية.");
       return false;
     }
 
     const weeklyPeriods = Number(formState.weeklyPeriods);
     if (!Number.isInteger(weeklyPeriods) || weeklyPeriods < 1 || weeklyPeriods > 60) {
-      setFormError("weeklyPeriods يجب أن يكون رقمًا صحيحًا بين 1 و 60.");
+      setFormError("الحصص الأسبوعية يجب أن تكون رقمًا صحيحًا بين 1 و60.");
       return false;
     }
 
@@ -188,7 +188,7 @@ export function EmployeeTeachingAssignmentsWorkspace() {
 
       if ((mappingCheckQuery.data ?? []).length === 0) {
         setFormError(
-          "لا يوجد ربط نشط بين الصف والمادة في هذه السنة الأكاديمية. أنشئ Grade-Level Subject أولاً.",
+          "لا يوجد ربط نشط بين الصف والمادة في هذه السنة الأكاديمية. أنشئ ربط الصف مع المادة أولًا.",
         );
         return false;
       }
@@ -294,7 +294,7 @@ export function EmployeeTeachingAssignmentsWorkspace() {
           <CardDescription>
             {isEditing
               ? "تحديث ربط المعلم بالشعبة والمادة والسنة الأكاديمية."
-              : "إضافة إسناد تدريس جديد ضمن HR."}
+              : "إضافة إسناد تدريس جديد ضمن الموارد البشرية."}
           </CardDescription>
         </CardHeader>
 
@@ -306,7 +306,7 @@ export function EmployeeTeachingAssignmentsWorkspace() {
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Employee *</label>
+                <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={formState.employeeId}
@@ -318,7 +318,7 @@ export function EmployeeTeachingAssignmentsWorkspace() {
                   <option value="">اختر الموظف</option>
                   {(employeesQuery.data ?? []).map((employee) => (
                     <option key={employee.id} value={employee.id}>
-                      {employee.fullName} ({employee.jobNumber ?? "N/A"})
+                      {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
                     </option>
                   ))}
                 </select>
@@ -364,7 +364,7 @@ export function EmployeeTeachingAssignmentsWorkspace() {
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Academic Year *
+                  السنة الأكاديمية *
                 </label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -385,7 +385,7 @@ export function EmployeeTeachingAssignmentsWorkspace() {
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Weekly Periods *
+                  الحصص الأسبوعية *
                 </label>
                 <Input
                   type="number"
@@ -401,7 +401,7 @@ export function EmployeeTeachingAssignmentsWorkspace() {
 
               <div className="grid gap-2 md:grid-cols-2">
                 <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>Primary Teacher</span>
+                  <span>مدرس أساسي</span>
                   <input
                     type="checkbox"
                     checked={formState.isPrimary}
@@ -456,7 +456,7 @@ export function EmployeeTeachingAssignmentsWorkspace() {
                   ) : (
                     <UserRoundPlus className="h-4 w-4" />
                   )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء Assignment"}
+                  {isEditing ? "حفظ التعديلات" : "إنشاء إسناد تدريس"}
                 </Button>
                 {isEditing ? (
                   <Button type="button" variant="outline" onClick={resetForm}>
@@ -472,7 +472,7 @@ export function EmployeeTeachingAssignmentsWorkspace() {
       <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Teaching Assignments List</CardTitle>
+            <CardTitle>قائمة إسناد التدريس</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <CardDescription>
@@ -609,19 +609,19 @@ export function EmployeeTeachingAssignmentsWorkspace() {
                     {assignment.employee.fullName} - {assignment.subject.name}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Section: {assignment.section.name} ({assignment.section.code})
+                    الشعبة: {assignment.section.name} ({assignment.section.code})
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Year: {assignment.academicYear.name} ({assignment.academicYear.code})
+                    السنة: {assignment.academicYear.name} ({assignment.academicYear.code})
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Weekly Periods: {assignment.weeklyPeriods}
+                    الحصص الأسبوعية: {assignment.weeklyPeriods}
                   </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
                   <Badge variant={assignment.isPrimary ? "default" : "secondary"}>
-                    {assignment.isPrimary ? "Primary" : "Secondary"}
+                    {assignment.isPrimary ? "أساسي" : "مساند"}
                   </Badge>
                   <Badge variant={assignment.isActive ? "default" : "outline"}>
                     {assignment.isActive ? "نشط" : "غير نشط"}

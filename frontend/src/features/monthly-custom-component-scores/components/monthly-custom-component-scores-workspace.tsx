@@ -194,13 +194,13 @@ export function MonthlyCustomComponentScoresWorkspace() {
     }
 
     if (form.notes.trim().length > 255) {
-      setFormError("notes يجب ألا يتجاوز 255 حرف.");
+      setFormError("الملاحظات يجب ألا تتجاوز 255 حرفًا.");
       return false;
     }
 
     const score = parseScore(form.score);
     if (score === undefined || score < 0) {
-      setFormError("score يجب أن يكون رقمًا صالحًا >= 0.");
+      setFormError("الدرجة يجب أن تكون رقمًا صالحًا أكبر من أو يساوي 0.");
       return false;
     }
 
@@ -210,7 +210,7 @@ export function MonthlyCustomComponentScoresWorkspace() {
     }
 
     if (score > selectedComponent.maxScore) {
-      setFormError(`score يجب ألا يتجاوز ${selectedComponent.maxScore}.`);
+      setFormError(`الدرجة يجب ألا تتجاوز ${selectedComponent.maxScore}.`);
       return false;
     }
 
@@ -234,7 +234,7 @@ export function MonthlyCustomComponentScoresWorkspace() {
 
     const parsedScore = parseScore(form.score);
     if (parsedScore === undefined) {
-      setFormError("score غير صالح.");
+      setFormError("الدرجة غير صالحة.");
       return;
     }
 
@@ -326,7 +326,7 @@ export function MonthlyCustomComponentScoresWorkspace() {
               <option value="">اختر المكوّن *</option>
               {(componentsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.code} - {item.name} (max {item.maxScore})
+                  {item.code} - {item.name} (الحد الأقصى {item.maxScore})
                 </option>
               ))}
             </select>
@@ -339,7 +339,7 @@ export function MonthlyCustomComponentScoresWorkspace() {
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, score: event.target.value }))
               }
-              placeholder="Score *"
+              placeholder="الدرجة *"
             />
 
             <Input
@@ -376,10 +376,10 @@ export function MonthlyCustomComponentScoresWorkspace() {
               <Button type="submit" className="flex-1 gap-2" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Medal className="h-4 w-4" />
-                )}
-                {editingId ? "حفظ التعديلات" : "إنشاء Monthly Component Score"}
+                  ) : (
+                    <Medal className="h-4 w-4" />
+                  )}
+                {editingId ? "حفظ التعديلات" : "إنشاء مكوّن شهري"}
               </Button>
               {editingId ? (
                 <Button type="button" variant="outline" onClick={resetForm}>
@@ -394,7 +394,7 @@ export function MonthlyCustomComponentScoresWorkspace() {
       <Card className="border-border/70 bg-card/80">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Monthly Custom Component Scores</CardTitle>
+            <CardTitle>مكوّنات الدرجات الشهرية</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <form
@@ -422,7 +422,7 @@ export function MonthlyCustomComponentScoresWorkspace() {
                 setMonthFilter(event.target.value);
               }}
             >
-              <option value="all">All months</option>
+              <option value="all">كل الأشهر</option>
               {(monthsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.code}
@@ -513,7 +513,7 @@ export function MonthlyCustomComponentScoresWorkspace() {
                     {item.monthlyGrade.subject.code}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Score: {item.score}/{item.gradingPolicyComponent.maxScore}
+                    الدرجة: {item.score}/{item.gradingPolicyComponent.maxScore}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">

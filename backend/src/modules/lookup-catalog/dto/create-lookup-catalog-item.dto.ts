@@ -17,6 +17,12 @@ const LOOKUP_RELATIONSHIP_GENDER_VALUES = ['MALE', 'FEMALE', 'ALL'] as const;
 const LOCALITY_TYPE_VALUES = ['RURAL', 'URBAN'] as const;
 
 export class CreateLookupCatalogItemDto {
+  @ApiPropertyOptional({ example: 'A+' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  name?: string;
+
   @ApiPropertyOptional({ example: 'MORNING' })
   @IsOptional()
   @IsString()

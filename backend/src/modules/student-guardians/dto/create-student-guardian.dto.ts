@@ -3,8 +3,10 @@ import {
   IsBoolean,
   IsDateString,
   IsEnum,
+  IsInt,
   IsOptional,
   IsString,
+  Min,
   MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -23,8 +25,16 @@ export class CreateStudentGuardianDto {
     enum: GuardianRelationship,
     example: GuardianRelationship.FATHER,
   })
+  @IsOptional()
   @IsEnum(GuardianRelationship)
-  relationship!: GuardianRelationship;
+  relationship?: GuardianRelationship;
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  relationshipTypeId?: number;
 
   @ApiPropertyOptional({ example: true })
   @IsOptional()

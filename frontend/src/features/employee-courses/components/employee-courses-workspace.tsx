@@ -85,7 +85,7 @@ function formatDate(value: string | null): string {
     return "-";
   }
 
-  return date.toLocaleDateString("en-GB");
+  return date.toLocaleDateString("ar-YE");
 }
 
 function toFormState(course: EmployeeCourseListItem): CourseFormState {
@@ -191,7 +191,7 @@ export function EmployeeCoursesWorkspace() {
     if (formState.durationDays.trim()) {
       const duration = Number(formState.durationDays);
       if (!Number.isInteger(duration) || duration < 1 || duration > 365) {
-        setFormError("durationDays يجب أن يكون رقمًا صحيحًا بين 1 و 365.");
+        setFormError("عدد أيام الدورة يجب أن يكون رقمًا صحيحًا بين 1 و 365.");
         return false;
       }
     }
@@ -305,7 +305,7 @@ export function EmployeeCoursesWorkspace() {
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="course-form">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Employee *</label>
+                <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={formState.employeeId}
@@ -318,14 +318,14 @@ export function EmployeeCoursesWorkspace() {
                   <option value="">اختر الموظف</option>
                   {(employeesQuery.data ?? []).map((employee) => (
                     <option key={employee.id} value={employee.id}>
-                      {employee.fullName} ({employee.jobNumber ?? "N/A"})
+                      {employee.fullName} ({employee.jobNumber ?? "غير متوفر"})
                     </option>
                   ))}
                 </select>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Course الاسم *</label>
+                <label className="text-xs font-medium text-muted-foreground">اسم الدورة *</label>
                 <Input
                   value={formState.courseName}
                   onChange={(event) =>
@@ -339,7 +339,7 @@ export function EmployeeCoursesWorkspace() {
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Course Provider
+                  جهة التدريب
                 </label>
                 <Input
                   value={formState.courseProvider}
@@ -356,7 +356,7 @@ export function EmployeeCoursesWorkspace() {
 
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Course Date</label>
+                  <label className="text-xs font-medium text-muted-foreground">تاريخ الدورة</label>
                   <Input
                     type="date"
                     value={formState.courseDate}
@@ -368,7 +368,7 @@ export function EmployeeCoursesWorkspace() {
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">
-                    Duration (days)
+                    المدة (بالأيام)
                   </label>
                   <Input
                     type="number"
@@ -389,7 +389,7 @@ export function EmployeeCoursesWorkspace() {
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Certificate Number
+                  رقم الشهادة
                 </label>
                 <Input
                   value={formState.certificateNumber}
@@ -405,7 +405,7 @@ export function EmployeeCoursesWorkspace() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Notes</label>
+                <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
                 <Input
                   value={formState.notes}
                   onChange={(event) =>
@@ -458,7 +458,7 @@ export function EmployeeCoursesWorkspace() {
                   ) : (
                     <BookText className="h-4 w-4" />
                   )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء Course"}
+                  {isEditing ? "حفظ التعديلات" : "إنشاء دورة"}
                 </Button>
                 {isEditing ? (
                   <Button type="button" variant="outline" onClick={resetForm}>
@@ -474,7 +474,7 @@ export function EmployeeCoursesWorkspace() {
       <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Employee Courses</CardTitle>
+            <CardTitle>دورات الموظفين</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <CardDescription>
@@ -585,17 +585,17 @@ export function EmployeeCoursesWorkspace() {
                 <div className="space-y-1">
                   <p className="font-medium">{course.courseName}</p>
                   <p className="text-xs text-muted-foreground">
-                    Employee: {course.employee.fullName} ({course.employee.jobNumber ?? "N/A"})
+                    الموظف: {course.employee.fullName} ({course.employee.jobNumber ?? "غير متوفر"})
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Provider: {course.courseProvider ?? "-"} | Date: {formatDate(course.courseDate)}
+                    الجهة: {course.courseProvider ?? "-"} | التاريخ: {formatDate(course.courseDate)}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Duration: {course.durationDays ?? "-"} | Certificate:{" "}
+                    المدة: {course.durationDays ?? "-"} | الشهادة:{" "}
                     {course.certificateNumber ?? "-"}
                   </p>
                   {course.notes ? (
-                    <p className="text-xs text-muted-foreground">Notes: {course.notes}</p>
+                    <p className="text-xs text-muted-foreground">ملاحظات: {course.notes}</p>
                   ) : null}
                 </div>
 

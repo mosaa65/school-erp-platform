@@ -8,6 +8,7 @@ import {
 import { AuditStatus, Homework, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { DataScopeService } from '../data-scope/data-scope.service';
 import { CreateHomeworkDto } from './dto/create-homework.dto';
 import { ListHomeworksDto } from './dto/list-homeworks.dto';
 import { UpdateHomeworkDto } from './dto/update-homework.dto';
@@ -18,6 +19,8 @@ type HomeworkReferenceContext = {
   termStartDate: Date;
   termEndDate: Date;
 };
+
+const DEFAULT_DUE_DATE_OFFSET_DAYS = 5;
 
 const homeworkListInclude: Prisma.HomeworkInclude = {
   _count: {
@@ -138,6 +141,7 @@ export class HomeworksService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLogsService: AuditLogsService,
+    private readonly dataScopeService: DataScopeService,
   ) {}
 
   async create(payload: CreateHomeworkDto, actorUserId: string) {
@@ -148,9 +152,14 @@ export class HomeworksService {
       payload.subjectId,
       payload.homeworkTypeId,
     );
-    this.validateHomeworkDates(
+    const resolvedDueDate = this.resolveDueDate(
       payload.homeworkDate,
       payload.dueDate,
+      references.termEndDate,
+    );
+    this.validateHomeworkDates(
+      payload.homeworkDate,
+      resolvedDueDate,
       references.termStartDate,
       references.termEndDate,
     );
@@ -180,7 +189,7 @@ export class HomeworksService {
           title: this.normalizeRequiredText(payload.title, 'title'),
           content: payload.content?.trim(),
           homeworkDate: payload.homeworkDate,
-          dueDate: payload.dueDate,
+          dueDate: resolvedDueDate,
           maxScore: payload.maxScore ?? 5,
           notes: payload.notes?.trim(),
           isActive: payload.isActive ?? true,
@@ -235,7 +244,7 @@ export class HomeworksService {
     }
   }
 
-  async findAll(query: ListHomeworksDto) {
+  async findAll(query: ListHomeworksDto, actorUserId: string) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
 
@@ -310,6 +319,36 @@ export class HomeworksService {
         : undefined,
     };
 
+    const scope = await this.dataScopeService.getSectionSubjectYearGrants({
+      actorUserId,
+      capability: 'MANAGE_HOMEWORKS',
+      academicYearId: query.academicYearId,
+    });
+
+    if (!scope.isPrivileged) {
+      if (scope.grants.length === 0) {
+        return {
+          data: [],
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            totalPages: 0,
+          },
+        };
+      }
+
+      where.AND = [
+        {
+          OR: scope.grants.map((grant) => ({
+            sectionId: grant.sectionId,
+            academicYearId: grant.academicYearId,
+            subjectId: grant.subjectId,
+          })),
+        },
+      ];
+    }
+
     const [total, items] = await this.prisma.$transaction([
       this.prisma.homework.count({ where }),
       this.prisma.homework.findMany({
@@ -332,7 +371,7 @@ export class HomeworksService {
     };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, actorUserId: string) {
     const homework = await this.prisma.homework.findFirst({
       where: {
         id,
@@ -344,6 +383,13 @@ export class HomeworksService {
     if (!homework) {
       throw new NotFoundException('Homework not found');
     }
+
+    await this.ensureActorAuthorized(
+      actorUserId,
+      homework.sectionId,
+      homework.subjectId,
+      homework.academicYearId,
+    );
 
     return homework;
   }
@@ -621,6 +667,33 @@ export class HomeworksService {
     };
   }
 
+  private resolveDueDate(
+    homeworkDate: DateInput,
+    dueDate: DateInput,
+    termEndDate: Date,
+  ): Date | undefined {
+    const explicitDueDate = this.parseDate(dueDate, 'dueDate');
+    if (explicitDueDate) {
+      return explicitDueDate;
+    }
+
+    const parsedHomeworkDate = this.parseDate(homeworkDate, 'homeworkDate');
+    if (!parsedHomeworkDate) {
+      return undefined;
+    }
+
+    const fallbackDueDate = new Date(parsedHomeworkDate);
+    fallbackDueDate.setUTCDate(
+      fallbackDueDate.getUTCDate() + DEFAULT_DUE_DATE_OFFSET_DAYS,
+    );
+
+    if (fallbackDueDate > termEndDate) {
+      return termEndDate;
+    }
+
+    return fallbackDueDate;
+  }
+
   private async ensureHomeworkExists(id: string): Promise<Homework> {
     const homework = await this.prisma.homework.findFirst({
       where: {
@@ -883,45 +956,13 @@ export class HomeworksService {
     subjectId: string,
     academicYearId: string,
   ) {
-    const user = await this.prisma.user.findFirst({
-      where: {
-        id: actorUserId,
-        deletedAt: null,
-        isActive: true,
-      },
-      select: {
-        id: true,
-        employeeId: true,
-      },
+    await this.dataScopeService.ensureCanManageSectionSubjectYear({
+      actorUserId,
+      sectionId,
+      subjectId,
+      academicYearId,
+      capability: 'MANAGE_HOMEWORKS',
     });
-
-    if (!user) {
-      throw new ForbiddenException('Authenticated user is not active');
-    }
-
-    if (!user.employeeId) {
-      // Allow privileged users without linked employee profile.
-      return;
-    }
-
-    const assignmentsCount = await this.prisma.employeeTeachingAssignment.count(
-      {
-        where: {
-          employeeId: user.employeeId,
-          sectionId,
-          subjectId,
-          academicYearId,
-          deletedAt: null,
-          isActive: true,
-        },
-      },
-    );
-
-    if (assignmentsCount === 0) {
-      throw new ForbiddenException(
-        'You are not assigned to this subject and section for the selected academic year',
-      );
-    }
   }
 
   private throwKnownDatabaseErrors(error: unknown): never {

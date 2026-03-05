@@ -37,6 +37,13 @@ export class ListEmployeesDto {
   @IsEnum(EmployeeGender)
   gender?: EmployeeGender;
 
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  genderId?: number;
+
   @ApiPropertyOptional({ enum: EmploymentType })
   @IsOptional()
   @IsEnum(EmploymentType)
@@ -53,6 +60,20 @@ export class ListEmployeesDto {
   @IsOptional()
   @IsString()
   jobTitle?: string;
+
+  @ApiPropertyOptional({ example: 3 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  qualificationId?: number;
+
+  @ApiPropertyOptional({ example: 2 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  jobRoleId?: number;
 
   @ApiPropertyOptional({ example: true })
   @IsOptional()

@@ -73,7 +73,7 @@ test.describe("Talents Catalog", () => {
       submit: true,
     });
 
-    await expectValidationMessage(page, "صيغة code غير صحيحة.");
+    await expectValidationMessage(page, "صيغة الكود غير صحيحة.");
     expect(talentsApi.getPostCount()).toBe(0);
   });
 });

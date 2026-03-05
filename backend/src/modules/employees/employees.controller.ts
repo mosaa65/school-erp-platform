@@ -47,9 +47,12 @@ export class EmployeesController {
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'search', required: false, type: String })
   @ApiQuery({ name: 'gender', required: false, enum: EmployeeGender })
+  @ApiQuery({ name: 'genderId', required: false, type: Number })
   @ApiQuery({ name: 'employmentType', required: false, enum: EmploymentType })
   @ApiQuery({ name: 'idTypeId', required: false, type: Number })
   @ApiQuery({ name: 'jobTitle', required: false, type: String })
+  @ApiQuery({ name: 'qualificationId', required: false, type: Number })
+  @ApiQuery({ name: 'jobRoleId', required: false, type: Number })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
   findAll(@Query() query: ListEmployeesDto) {
     return this.employeesService.findAll(query);

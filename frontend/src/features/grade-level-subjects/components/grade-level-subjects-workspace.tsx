@@ -162,20 +162,20 @@ export function GradeLevelSubjectsWorkspace() {
 
   const validateForm = (): boolean => {
     if (!formState.academicYearId || !formState.gradeLevelId || !formState.subjectId) {
-      setFormError("الحقول الأساسية مطلوبة: academic year, grade level, subject.");
+      setFormError("الحقول الأساسية مطلوبة: السنة الأكاديمية، المستوى الدراسي، والمادة.");
       return false;
     }
 
     const weeklyPeriods = Number(formState.weeklyPeriods);
     if (!Number.isInteger(weeklyPeriods) || weeklyPeriods < 1 || weeklyPeriods > 60) {
-      setFormError("weeklyPeriods يجب أن يكون رقمًا صحيحًا بين 1 و 60.");
+      setFormError("عدد الحصص الأسبوعية يجب أن يكون رقمًا صحيحًا بين 1 و60.");
       return false;
     }
 
     if (formState.displayOrder.trim()) {
       const displayOrder = Number(formState.displayOrder);
       if (!Number.isInteger(displayOrder) || displayOrder < 1 || displayOrder > 500) {
-        setFormError("displayOrder يجب أن يكون رقمًا صحيحًا بين 1 و 500.");
+        setFormError("ترتيب العرض يجب أن يكون رقمًا صحيحًا بين 1 و500.");
         return false;
       }
     }
@@ -295,7 +295,7 @@ export function GradeLevelSubjectsWorkspace() {
             <form className="space-y-3" onSubmit={handleSubmitForm}>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Academic Year *
+                  السنة الأكاديمية *
                 </label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -319,7 +319,7 @@ export function GradeLevelSubjectsWorkspace() {
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Grade Level *
+                  المستوى الدراسي *
                 </label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -366,7 +366,7 @@ export function GradeLevelSubjectsWorkspace() {
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">
-                    Weekly Periods *
+                    الحصص الأسبوعية *
                   </label>
                   <Input
                     type="number"
@@ -384,7 +384,7 @@ export function GradeLevelSubjectsWorkspace() {
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">
-                    Display Order
+                    ترتيب العرض
                   </label>
                   <Input
                     type="number"
@@ -404,7 +404,7 @@ export function GradeLevelSubjectsWorkspace() {
 
               <div className="grid gap-2 md:grid-cols-2">
                 <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>Mandatory</span>
+                  <span>إلزامية</span>
                   <input
                     type="checkbox"
                     checked={formState.isMandatory}
@@ -465,7 +465,7 @@ export function GradeLevelSubjectsWorkspace() {
                   ) : (
                     <Cable className="h-4 w-4" />
                   )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء Mapping"}
+                  {isEditing ? "حفظ التعديلات" : "إنشاء ربط"}
                 </Button>
                 {isEditing ? (
                   <Button type="button" variant="outline" onClick={resetForm}>
@@ -481,7 +481,7 @@ export function GradeLevelSubjectsWorkspace() {
       <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Grade-Level Subject Mappings</CardTitle>
+            <CardTitle>ربط الصفوف بالمواد</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <CardDescription>
@@ -526,7 +526,7 @@ export function GradeLevelSubjectsWorkspace() {
                 setGradeLevelFilter(event.target.value);
               }}
             >
-              <option value="all">All grade levels</option>
+              <option value="all">كل المستويات</option>
               {gradeLevelOptions.map((gradeLevel) => (
                 <option key={gradeLevel.id} value={gradeLevel.id}>
                   {gradeLevel.code}
@@ -559,8 +559,8 @@ export function GradeLevelSubjectsWorkspace() {
               }}
             >
               <option value="all">كل الأنواع</option>
-              <option value="mandatory">Mandatory</option>
-              <option value="optional">Optional</option>
+              <option value="mandatory">إلزامية</option>
+              <option value="optional">اختيارية</option>
             </select>
 
             <select
@@ -615,21 +615,21 @@ export function GradeLevelSubjectsWorkspace() {
                     {mapping.gradeLevel.name} - {mapping.subject.name}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Year: {mapping.academicYear.name} ({mapping.academicYear.code})
+                    السنة: {mapping.academicYear.name} ({mapping.academicYear.code})
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Subject: <code>{mapping.subject.code}</code> | Grade:{" "}
+                    المادة: <code>{mapping.subject.code}</code> | الصف:{" "}
                     <code>{mapping.gradeLevel.code}</code>
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Weekly Periods: {mapping.weeklyPeriods}
-                    {mapping.displayOrder !== null ? ` | Display Order: ${mapping.displayOrder}` : ""}
+                    الحصص الأسبوعية: {mapping.weeklyPeriods}
+                    {mapping.displayOrder !== null ? ` | ترتيب العرض: ${mapping.displayOrder}` : ""}
                   </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
                   <Badge variant={mapping.isMandatory ? "default" : "secondary"}>
-                    {mapping.isMandatory ? "Mandatory" : "Optional"}
+                    {mapping.isMandatory ? "إلزامية" : "اختيارية"}
                   </Badge>
                   <Badge variant={mapping.isActive ? "default" : "outline"}>
                     {mapping.isActive ? "نشط" : "غير نشط"}

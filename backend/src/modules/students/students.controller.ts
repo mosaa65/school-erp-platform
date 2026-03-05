@@ -15,7 +15,11 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
-import { StudentGender, StudentOrphanStatus } from '@prisma/client';
+import {
+  StudentGender,
+  StudentHealthStatus,
+  StudentOrphanStatus,
+} from '@prisma/client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -47,22 +51,26 @@ export class StudentsController {
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'search', required: false, type: String })
   @ApiQuery({ name: 'gender', required: false, enum: StudentGender })
+  @ApiQuery({ name: 'genderId', required: false, type: Number })
   @ApiQuery({ name: 'bloodTypeId', required: false, type: Number })
+  @ApiQuery({ name: 'healthStatus', required: false, enum: StudentHealthStatus })
+  @ApiQuery({ name: 'healthStatusId', required: false, type: Number })
   @ApiQuery({
     name: 'orphanStatus',
     required: false,
     enum: StudentOrphanStatus,
   })
+  @ApiQuery({ name: 'orphanStatusId', required: false, type: Number })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
-  findAll(@Query() query: ListStudentsDto) {
-    return this.studentsService.findAll(query);
+  findAll(@Query() query: ListStudentsDto, @CurrentUser() user: AuthUser) {
+    return this.studentsService.findAll(query, user.userId);
   }
 
   @Get(':id')
   @RequirePermissions('students.read')
   @ApiOperation({ summary: 'Get student by ID' })
-  findOne(@Param('id') id: string) {
-    return this.studentsService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.studentsService.findOne(id, user.userId);
   }
 
   @Patch(':id')

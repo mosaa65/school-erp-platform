@@ -75,15 +75,15 @@ export class MonthlyGradesController {
   @ApiQuery({ name: 'status', required: false, enum: GradingWorkflowStatus })
   @ApiQuery({ name: 'isLocked', required: false, type: Boolean })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
-  findAll(@Query() query: ListMonthlyGradesDto) {
-    return this.monthlyGradesService.findAll(query);
+  findAll(@Query() query: ListMonthlyGradesDto, @CurrentUser() user: AuthUser) {
+    return this.monthlyGradesService.findAll(query, user.userId);
   }
 
   @Get(':id')
   @RequirePermissions('monthly-grades.read')
   @ApiOperation({ summary: 'Get monthly grade by ID' })
-  findOne(@Param('id') id: string) {
-    return this.monthlyGradesService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.monthlyGradesService.findOne(id, user.userId);
   }
 
   @Patch(':id')

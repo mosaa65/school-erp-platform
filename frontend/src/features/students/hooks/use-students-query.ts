@@ -4,8 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ApiError,
   apiClient,
-  type StudentGender,
-  type StudentOrphanStatus,
 } from "@/lib/api/client";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 
@@ -13,9 +11,9 @@ type UseStudentsQueryOptions = {
   page?: number;
   limit?: number;
   search?: string;
-  gender?: StudentGender;
+  genderId?: number;
   bloodTypeId?: number;
-  orphanStatus?: StudentOrphanStatus;
+  orphanStatusId?: number;
   isActive?: boolean;
 };
 
@@ -29,9 +27,9 @@ export function useStudentsQuery(options: UseStudentsQueryOptions = {}) {
       options.page ?? 1,
       options.limit ?? 12,
       options.search ?? "",
-      options.gender ?? "all",
+      options.genderId ?? "all",
       options.bloodTypeId ?? "all",
-      options.orphanStatus ?? "all",
+      options.orphanStatusId ?? "all",
       options.isActive === undefined ? "all" : options.isActive ? "active" : "inactive",
     ],
     enabled: auth.isHydrated && auth.isAuthenticated,
@@ -41,9 +39,9 @@ export function useStudentsQuery(options: UseStudentsQueryOptions = {}) {
           page: options.page ?? 1,
           limit: options.limit ?? 12,
           search: options.search,
-          gender: options.gender,
+          genderId: options.genderId,
           bloodTypeId: options.bloodTypeId,
-          orphanStatus: options.orphanStatus,
+          orphanStatusId: options.orphanStatusId,
           isActive: options.isActive,
         });
       } catch (error) {

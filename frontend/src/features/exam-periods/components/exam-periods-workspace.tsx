@@ -51,20 +51,20 @@ type ExamPeriodFormState = {
 const PAGE_SIZE = 12;
 
 const ASSESSMENT_TYPE_OPTIONS: Array<{ value: AssessmentType; label: string }> = [
-  { value: "MONTHLY", label: "Monthly" },
-  { value: "MIDTERM", label: "Midterm" },
-  { value: "FINAL", label: "Final" },
-  { value: "QUIZ", label: "Quiz" },
-  { value: "ORAL", label: "Oral" },
-  { value: "PRACTICAL", label: "Practical" },
-  { value: "PROJECT", label: "Project" },
+  { value: "MONTHLY", label: "شهري" },
+  { value: "MIDTERM", label: "نصفي" },
+  { value: "FINAL", label: "نهائي" },
+  { value: "QUIZ", label: "اختبار قصير" },
+  { value: "ORAL", label: "شفهي" },
+  { value: "PRACTICAL", label: "عملي" },
+  { value: "PROJECT", label: "مشروع" },
 ];
 
 const WORKFLOW_STATUS_OPTIONS: Array<{ value: GradingWorkflowStatus; label: string }> = [
-  { value: "DRAFT", label: "Draft" },
-  { value: "IN_REVIEW", label: "In Review" },
-  { value: "APPROVED", label: "Approved" },
-  { value: "ARCHIVED", label: "Archived" },
+  { value: "DRAFT", label: "مسودة" },
+  { value: "IN_REVIEW", label: "قيد المراجعة" },
+  { value: "APPROVED", label: "معتمد" },
+  { value: "ARCHIVED", label: "مؤرشف" },
 ];
 
 const DEFAULT_FORM_STATE: ExamPeriodFormState = {
@@ -106,7 +106,7 @@ function formatDateTime(value: string | null): string {
     return "-";
   }
 
-  return date.toLocaleString("en-GB", {
+  return date.toLocaleString("ar-YE", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -258,7 +258,7 @@ export function ExamPeriodsWorkspace() {
     }
 
     if (formState.name.trim().length > 120) {
-      setFormError("name يجب ألا يتجاوز 120 حرف.");
+      setFormError("اسم الفترة الاختبارية يجب ألا يتجاوز 120 حرفًا.");
       return false;
     }
 
@@ -272,7 +272,7 @@ export function ExamPeriodsWorkspace() {
       }
 
       if (end < start) {
-        setFormError("endDate يجب أن يكون بعد أو مساويًا لـ startDate.");
+        setFormError("تاريخ النهاية يجب أن يكون بعد أو مساويًا لتاريخ البداية.");
         return false;
       }
     }
@@ -452,7 +452,7 @@ export function ExamPeriodsWorkspace() {
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, name: event.target.value }))
                 }
-                placeholder="Monthly Exam - Muharram"
+                placeholder="اختبار شهري - محرم"
                 required
               />
 
@@ -563,7 +563,7 @@ export function ExamPeriodsWorkspace() {
                   ) : (
                     <CalendarClock className="h-4 w-4" />
                   )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء Exam Period"}
+                  {isEditing ? "حفظ التعديلات" : "إنشاء فترة اختبارية"}
                 </Button>
                 {isEditing ? (
                   <Button type="button" variant="outline" onClick={resetForm}>
@@ -579,7 +579,7 @@ export function ExamPeriodsWorkspace() {
       <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Exam Periods</CardTitle>
+            <CardTitle>الفترات الاختبارية</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <CardDescription>فلترة الفترات الاختبارية حسب النوع والحالة والقفل.</CardDescription>
@@ -621,7 +621,7 @@ export function ExamPeriodsWorkspace() {
                 setAcademicTermFilter(event.target.value);
               }}
             >
-              <option value="all">All terms</option>
+              <option value="all">كل الفصول</option>
               {termsForFilter.map((term) => (
                 <option key={term.id} value={term.id}>
                   {term.code}
@@ -723,12 +723,12 @@ export function ExamPeriodsWorkspace() {
                     {getAssessmentTypeLabel(item.assessmentType)} - {getStatusLabel(item.status)}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Start: {formatDateTime(item.startDate)} | End: {formatDateTime(item.endDate)}
+                    البداية: {formatDateTime(item.startDate)} | النهاية: {formatDateTime(item.endDate)}
                   </p>
                   {item.lockedAt ? (
                     <p className="text-xs text-muted-foreground">
-                      تم القفل في: {formatDateTime(item.lockedAt)} by{" "}
-                      {item.lockedByUser?.email ?? "N/A"}
+                      تم القفل في: {formatDateTime(item.lockedAt)} بواسطة{" "}
+                      {item.lockedByUser?.email ?? "غير متوفر"}
                     </p>
                   ) : null}
                 </div>
@@ -739,10 +739,10 @@ export function ExamPeriodsWorkspace() {
                     {getStatusLabel(item.status)}
                   </Badge>
                   <Badge variant={item.isLocked ? "default" : "secondary"}>
-                    {item.isLocked ? "Locked" : "Unlocked"}
+                    {item.isLocked ? "مقفل" : "غير مقفل"}
                   </Badge>
                   <Badge variant={item.isActive ? "default" : "outline"}>
-                    {item.isActive ? "Active" : "Inactive"}
+                    {item.isActive ? "نشط" : "غير نشط"}
                   </Badge>
                 </div>
               </div>
@@ -770,7 +770,7 @@ export function ExamPeriodsWorkspace() {
                   ) : (
                     <Lock className="h-3.5 w-3.5" />
                   )}
-                  {item.isLocked ? "Unlock" : "Lock"}
+                  {item.isLocked ? "فتح القفل" : "قفل"}
                 </Button>
                 <Button
                   variant="outline"

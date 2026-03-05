@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useQuery } from "@tanstack/react-query";
 import { ApiError, apiClient } from "@/lib/api/client";
@@ -14,7 +14,7 @@ export function useIdTypeOptionsQuery() {
       try {
         const response = await apiClient.listLookupIdTypes({
           page: 1,
-          limit: 200,
+          limit: 100,
           isActive: true,
         });
 

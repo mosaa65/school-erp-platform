@@ -58,6 +58,7 @@ export class StudentGuardiansController {
     required: false,
     enum: GuardianRelationship,
   })
+  @ApiQuery({ name: 'relationshipTypeId', required: false, type: Number })
   @ApiQuery({ name: 'isPrimary', required: false, type: Boolean })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
   findAll(@Query() query: ListStudentGuardiansDto) {

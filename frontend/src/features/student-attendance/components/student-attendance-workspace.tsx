@@ -32,6 +32,7 @@ import type {
   StudentAttendanceListItem,
   StudentAttendanceStatus,
 } from "@/lib/api/client";
+import { translateAttendanceStatus } from "@/lib/i18n/ar";
 
 type AttendanceFormState = {
   studentEnrollmentId: string;
@@ -112,7 +113,7 @@ function formatDate(value: string | null): string {
     return "-";
   }
 
-  return date.toLocaleDateString("en-GB");
+  return date.toLocaleDateString("ar-SA");
 }
 
 function formatDateTime(value: string | null): string {
@@ -125,30 +126,13 @@ function formatDateTime(value: string | null): string {
     return "-";
   }
 
-  return date.toLocaleString("en-GB", {
+  return date.toLocaleString("ar-SA", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
   });
-}
-
-function studentAttendanceStatusLabel(status: StudentAttendanceStatus): string {
-  switch (status) {
-    case "PRESENT":
-      return "حاضر";
-    case "ABSENT":
-      return "غائب";
-    case "LATE":
-      return "متأخر";
-    case "EXCUSED_ABSENCE":
-      return "غياب بعذر";
-    case "EARLY_LEAVE":
-      return "انصراف مبكر";
-    default:
-      return status;
-  }
 }
 
 function toFormState(attendance: StudentAttendanceListItem): AttendanceFormState {
@@ -282,7 +266,7 @@ export function StudentAttendanceWorkspace() {
     }
 
     if (formState.notes.trim().length > 255) {
-      setFormError("notes يجب ألا يتجاوز 255 حرف.");
+      setFormError("الملاحظات يجب ألا تتجاوز 255 حرفًا.");
       return false;
     }
 
@@ -290,7 +274,7 @@ export function StudentAttendanceWorkspace() {
       const checkIn = new Date(formState.checkInAt);
       const checkOut = new Date(formState.checkOutAt);
       if (checkOut <= checkIn) {
-        setFormError("checkOutAt يجب أن يكون بعد checkInAt.");
+        setFormError("وقت الخروج يجب أن يكون بعد وقت الدخول.");
         return false;
       }
     }
@@ -474,7 +458,7 @@ export function StudentAttendanceWorkspace() {
                 >
                   {STATUS_OPTIONS.map((status) => (
                     <option key={status} value={status}>
-                      {studentAttendanceStatusLabel(status)}
+                      {translateAttendanceStatus(status)}
                     </option>
                   ))}
                 </select>
@@ -649,7 +633,7 @@ export function StudentAttendanceWorkspace() {
               <option value="all">كل الحالات</option>
               {STATUS_OPTIONS.map((status) => (
                 <option key={status} value={status}>
-                  {studentAttendanceStatusLabel(status)}
+                  {translateAttendanceStatus(status)}
                 </option>
               ))}
             </select>
@@ -735,7 +719,9 @@ export function StudentAttendanceWorkspace() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant="secondary">{studentAttendanceStatusLabel(record.status)}</Badge>
+                  <Badge variant="secondary">
+                    {translateAttendanceStatus(record.status)}
+                  </Badge>
                   <Badge variant={record.isActive ? "default" : "outline"}>
                     {record.isActive ? "نشط" : "غير نشط"}
                   </Badge>

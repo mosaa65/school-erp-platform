@@ -36,6 +36,7 @@ import type {
   TimetableDay,
   TimetableEntryListItem,
 } from "@/lib/api/client";
+import { translateTimetableDay } from "@/lib/i18n/ar";
 
 type TimetableEntryFormState = {
   academicTermId: string;
@@ -59,16 +60,6 @@ const DAY_OPTIONS: TimetableDay[] = [
   "SATURDAY",
   "SUNDAY",
 ];
-
-const DAY_LABELS: Record<TimetableDay, string> = {
-  MONDAY: "Monday",
-  TUESDAY: "Tuesday",
-  WEDNESDAY: "Wednesday",
-  THURSDAY: "Thursday",
-  FRIDAY: "Friday",
-  SATURDAY: "Saturday",
-  SUNDAY: "Sunday",
-};
 
 const DEFAULT_FORM_STATE: TimetableEntryFormState = {
   academicTermId: "",
@@ -235,23 +226,23 @@ export function TimetableEntriesWorkspace() {
 
   const validateForm = (): boolean => {
     if (!formState.academicTermId || !formState.sectionId || !formState.termSubjectOfferingId) {
-      setFormError("الحقول الأساسية مطلوبة: academic term, section, term subject offering.");
+      setFormError("الحقول الأساسية مطلوبة: الفصل الأكاديمي، الشعبة، وعرض المادة.");
       return false;
     }
 
     const periodIndex = Number(formState.periodIndex);
     if (!Number.isInteger(periodIndex) || periodIndex < 1 || periodIndex > 20) {
-      setFormError("periodIndex يجب أن يكون رقمًا صحيحًا بين 1 و 20.");
+      setFormError("رقم الحصة يجب أن يكون رقمًا صحيحًا بين 1 و20.");
       return false;
     }
 
     if (formState.roomLabel.trim().length > 80) {
-      setFormError("roomLabel يجب ألا يتجاوز 80 حرف.");
+      setFormError("اسم القاعة يجب ألا يتجاوز 80 حرفًا.");
       return false;
     }
 
     if (formState.notes.trim().length > 255) {
-      setFormError("notes يجب ألا يتجاوز 255 حرف.");
+      setFormError("الملاحظات يجب ألا تتجاوز 255 حرفًا.");
       return false;
     }
 
@@ -266,13 +257,13 @@ export function TimetableEntriesWorkspace() {
 
     if (offering) {
       if (offering.academicTermId !== formState.academicTermId) {
-        setFormError("الفصل الأكاديمي يجب أن يطابق الفصل المرتبط بالـTerm Subject Offering.");
+        setFormError("الفصل الأكاديمي يجب أن يطابق الفصل المرتبط بعرض المادة.");
         return false;
       }
 
       if (selectedSection) {
         if (selectedSection.gradeLevelId !== offering.gradeLevelSubject.gradeLevelId) {
-          setFormError("شعبة الصف يجب أن تطابق الصف المرتبط بالـTerm Subject Offering.");
+          setFormError("شعبة الصف يجب أن تطابق الصف المرتبط بعرض المادة.");
           return false;
         }
       } else {
@@ -283,7 +274,7 @@ export function TimetableEntriesWorkspace() {
       if (selectedTerm) {
         if (selectedTerm.academicYearId !== offering.gradeLevelSubject.academicYearId) {
           setFormError(
-            "الفصل الأكاديمي وGrade-Level Subject يجب أن يكونا ضمن نفس السنة الأكاديمية.",
+            "الفصل الأكاديمي وربط الصف مع المادة يجب أن يكونا ضمن نفس السنة الأكاديمية.",
           );
           return false;
         }
@@ -404,7 +395,7 @@ export function TimetableEntriesWorkspace() {
             <form className="space-y-3" onSubmit={handleSubmitForm}>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Academic Term *
+                  الفصل الأكاديمي *
                 </label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -430,7 +421,7 @@ export function TimetableEntriesWorkspace() {
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Term Subject Offering *
+                  عرض المادة *
                 </label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -478,7 +469,7 @@ export function TimetableEntriesWorkspace() {
 
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Day *</label>
+                  <label className="text-xs font-medium text-muted-foreground">اليوم *</label>
                   <select
                     className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                     value={formState.dayOfWeek}
@@ -491,7 +482,7 @@ export function TimetableEntriesWorkspace() {
                   >
                     {DAY_OPTIONS.map((day) => (
                       <option key={day} value={day}>
-                        {DAY_LABELS[day]}
+                        {translateTimetableDay(day)}
                       </option>
                     ))}
                   </select>
@@ -499,7 +490,7 @@ export function TimetableEntriesWorkspace() {
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">
-                    Period Index *
+                    رقم الحصة *
                   </label>
                   <Input
                     type="number"
@@ -515,7 +506,7 @@ export function TimetableEntriesWorkspace() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Room Label</label>
+                <label className="text-xs font-medium text-muted-foreground">اسم القاعة</label>
                 <Input
                   value={formState.roomLabel}
                   onChange={(event) =>
@@ -526,7 +517,7 @@ export function TimetableEntriesWorkspace() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Notes</label>
+                <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
                 <Input
                   value={formState.notes}
                   onChange={(event) =>
@@ -581,7 +572,7 @@ export function TimetableEntriesWorkspace() {
                   ) : (
                     <CalendarClock className="h-4 w-4" />
                   )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء Timetable Entry"}
+                  {isEditing ? "حفظ التعديلات" : "إنشاء حصة"}
                 </Button>
                 {isEditing ? (
                   <Button type="button" variant="outline" onClick={resetForm}>
@@ -597,7 +588,7 @@ export function TimetableEntriesWorkspace() {
       <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Timetable Entries</CardTitle>
+            <CardTitle>حصص الجدول الدراسي</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <CardDescription>
@@ -628,7 +619,7 @@ export function TimetableEntriesWorkspace() {
               }}
               disabled={!canReadAcademicTerms}
             >
-              <option value="all">All terms</option>
+              <option value="all">كل الفصول</option>
               {termOptions.map((term) => (
                 <option key={term.id} value={term.id}>
                   {term.code}
@@ -662,7 +653,7 @@ export function TimetableEntriesWorkspace() {
               }}
               disabled={!canReadTermSubjectOfferings}
             >
-              <option value="all">All offerings</option>
+              <option value="all">كل العروض</option>
               {filterOfferingOptions.map((offering) => (
                 <option key={offering.id} value={offering.id}>
                   {offering.gradeLevelSubject.gradeLevel.code} -{" "}
@@ -679,10 +670,10 @@ export function TimetableEntriesWorkspace() {
                 setDayFilter(event.target.value as TimetableDay | "all");
               }}
             >
-              <option value="all">All days</option>
+              <option value="all">كل الأيام</option>
               {DAY_OPTIONS.map((day) => (
                 <option key={day} value={day}>
-                  {DAY_LABELS[day]}
+                  {translateTimetableDay(day)}
                 </option>
               ))}
             </select>
@@ -739,22 +730,22 @@ export function TimetableEntriesWorkspace() {
                     {entry.section.name} - {entry.termSubjectOffering.gradeLevelSubject.subject.name}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Term: {entry.academicTerm.name} ({entry.academicTerm.code})
+                    الفصل: {entry.academicTerm.name} ({entry.academicTerm.code})
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Day: {DAY_LABELS[entry.dayOfWeek]} | Period: {entry.periodIndex}
+                    اليوم: {translateTimetableDay(entry.dayOfWeek)} | الحصة: {entry.periodIndex}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Section: {entry.section.code}
-                    {entry.roomLabel ? ` | Room: ${entry.roomLabel}` : ""}
+                    الشعبة: {entry.section.code}
+                    {entry.roomLabel ? ` | القاعة: ${entry.roomLabel}` : ""}
                   </p>
                   {entry.notes ? (
-                    <p className="text-xs text-muted-foreground">Notes: {entry.notes}</p>
+                    <p className="text-xs text-muted-foreground">ملاحظات: {entry.notes}</p>
                   ) : null}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant="outline">{entry.dayOfWeek}</Badge>
+                  <Badge variant="outline">{translateTimetableDay(entry.dayOfWeek)}</Badge>
                   <Badge variant={entry.isActive ? "default" : "outline"}>
                     {entry.isActive ? "نشط" : "غير نشط"}
                   </Badge>

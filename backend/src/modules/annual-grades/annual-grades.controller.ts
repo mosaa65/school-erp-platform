@@ -57,15 +57,15 @@ export class AnnualGradesController {
   @ApiQuery({ name: 'status', required: false, enum: GradingWorkflowStatus })
   @ApiQuery({ name: 'isLocked', required: false, type: Boolean })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
-  findAll(@Query() query: ListAnnualGradesDto) {
-    return this.annualGradesService.findAll(query);
+  findAll(@Query() query: ListAnnualGradesDto, @CurrentUser() user: AuthUser) {
+    return this.annualGradesService.findAll(query, user.userId);
   }
 
   @Get(':id')
   @RequirePermissions('annual-grades.read')
   @ApiOperation({ summary: 'Get annual grade by ID' })
-  findOne(@Param('id') id: string) {
-    return this.annualGradesService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.annualGradesService.findOne(id, user.userId);
   }
 
   @Patch(':id')

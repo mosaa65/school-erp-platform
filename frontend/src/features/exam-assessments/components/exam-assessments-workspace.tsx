@@ -46,13 +46,13 @@ type ExamAssessmentFormState = {
 const PAGE_SIZE = 12;
 
 const ASSESSMENT_TYPE_OPTIONS: Array<{ value: AssessmentType; label: string }> = [
-  { value: "MONTHLY", label: "Monthly" },
-  { value: "MIDTERM", label: "Midterm" },
-  { value: "FINAL", label: "Final" },
-  { value: "QUIZ", label: "Quiz" },
-  { value: "ORAL", label: "Oral" },
-  { value: "PRACTICAL", label: "Practical" },
-  { value: "PROJECT", label: "Project" },
+  { value: "MONTHLY", label: "شهري" },
+  { value: "MIDTERM", label: "نصفي" },
+  { value: "FINAL", label: "نهائي" },
+  { value: "QUIZ", label: "اختبار قصير" },
+  { value: "ORAL", label: "شفهي" },
+  { value: "PRACTICAL", label: "عملي" },
+  { value: "PROJECT", label: "مشروع" },
 ];
 
 const DEFAULT_FORM_STATE: ExamAssessmentFormState = {
@@ -90,7 +90,7 @@ function formatDateTime(value: string): string {
     return "-";
   }
 
-  return date.toLocaleString("en-GB", {
+  return date.toLocaleString("ar-SA", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -237,24 +237,24 @@ export function ExamAssessmentsWorkspace() {
     }
 
     if (formState.title.trim().length > 120) {
-      setFormError("title يجب ألا يتجاوز 120 حرف.");
+      setFormError("عنوان الاختبار يجب ألا يتجاوز 120 حرفًا.");
       return false;
     }
 
     if (formState.notes.trim().length > 255) {
-      setFormError("notes يجب ألا يتجاوز 255 حرف.");
+      setFormError("الملاحظات يجب ألا تتجاوز 255 حرفًا.");
       return false;
     }
 
     const maxScore = Number(formState.maxScore);
     if (!Number.isFinite(maxScore) || maxScore <= 0) {
-      setFormError("maxScore يجب أن يكون رقمًا أكبر من 0.");
+      setFormError("الدرجة العظمى يجب أن تكون رقمًا أكبر من صفر.");
       return false;
     }
 
     const examDate = new Date(formState.examDate);
     if (Number.isNaN(examDate.getTime())) {
-      setFormError("examDate غير صالح.");
+      setFormError("تاريخ الاختبار غير صالح.");
       return false;
     }
 
@@ -271,7 +271,7 @@ export function ExamAssessmentsWorkspace() {
     if (selectedExamPeriodForForm.startDate) {
       const start = new Date(selectedExamPeriodForForm.startDate);
       if (!Number.isNaN(start.getTime()) && examDate < start) {
-        setFormError("examDate لا يمكن أن يكون قبل بداية الفترة الاختبارية.");
+        setFormError("تاريخ الاختبار لا يمكن أن يكون قبل بداية الفترة الاختبارية.");
         return false;
       }
     }
@@ -279,7 +279,7 @@ export function ExamAssessmentsWorkspace() {
     if (selectedExamPeriodForForm.endDate) {
       const end = new Date(selectedExamPeriodForForm.endDate);
       if (!Number.isNaN(end.getTime()) && examDate > end) {
-        setFormError("examDate لا يمكن أن يكون بعد نهاية الفترة الاختبارية.");
+        setFormError("تاريخ الاختبار لا يمكن أن يكون بعد نهاية الفترة الاختبارية.");
         return false;
       }
     }
@@ -461,7 +461,7 @@ export function ExamAssessmentsWorkspace() {
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, title: event.target.value }))
                 }
-                placeholder="Monthly Math Exam 1"
+                placeholder="اختبار الرياضيات الشهري 1"
                 required
               />
 
@@ -482,7 +482,7 @@ export function ExamAssessmentsWorkspace() {
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, maxScore: event.target.value }))
                   }
-                  placeholder="Max score"
+                  placeholder="الدرجة العظمى"
                 />
               </div>
 
@@ -537,7 +537,7 @@ export function ExamAssessmentsWorkspace() {
                   ) : (
                     <CalendarCheck2 className="h-4 w-4" />
                   )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء Exam Assessment"}
+                  {isEditing ? "حفظ التعديلات" : "إنشاء تقييم اختباري"}
                 </Button>
                 {isEditing ? (
                   <Button type="button" variant="outline" onClick={resetForm}>
@@ -553,7 +553,7 @@ export function ExamAssessmentsWorkspace() {
       <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Exam Assessments</CardTitle>
+            <CardTitle>التقييمات الاختبارية</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <CardDescription>فلترة الاختبارات حسب الفترة والشعبة والمادة وتاريخ الاختبار.</CardDescription>
@@ -684,11 +684,11 @@ export function ExamAssessmentsWorkspace() {
                     {item.examPeriod.name} ({getAssessmentTypeLabel(item.examPeriod.assessmentType)})
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {item.section.code} - {item.subject.code} | Date: {formatDateTime(item.examDate)} |
-                    Max: {item.maxScore}
+                    {item.section.code} - {item.subject.code} | التاريخ: {formatDateTime(item.examDate)} |
+                    العظمى: {item.maxScore}
                   </p>
                   {item.notes ? (
-                    <p className="text-xs text-muted-foreground">Notes: {item.notes}</p>
+                    <p className="text-xs text-muted-foreground">ملاحظات: {item.notes}</p>
                   ) : null}
                 </div>
 
@@ -700,7 +700,7 @@ export function ExamAssessmentsWorkspace() {
                     </Badge>
                   ) : null}
                   <Badge variant={item.isActive ? "default" : "outline"}>
-                    {item.isActive ? "Active" : "Inactive"}
+                    {item.isActive ? "نشط" : "غير نشط"}
                   </Badge>
                 </div>
               </div>

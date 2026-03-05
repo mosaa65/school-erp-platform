@@ -87,15 +87,18 @@ export class SemesterGradesController {
   @ApiQuery({ name: 'status', required: false, enum: GradingWorkflowStatus })
   @ApiQuery({ name: 'isLocked', required: false, type: Boolean })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
-  findAll(@Query() query: ListSemesterGradesDto) {
-    return this.semesterGradesService.findAll(query);
+  findAll(
+    @Query() query: ListSemesterGradesDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.semesterGradesService.findAll(query, user.userId);
   }
 
   @Get(':id')
   @RequirePermissions('semester-grades.read')
   @ApiOperation({ summary: 'Get semester grade by ID' })
-  findOne(@Param('id') id: string) {
-    return this.semesterGradesService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.semesterGradesService.findOne(id, user.userId);
   }
 
   @Patch(':id')

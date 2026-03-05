@@ -36,6 +36,7 @@ import {
 } from "@/features/annual-results/hooks/use-annual-results-mutations";
 import { useAnnualResultsQuery } from "@/features/annual-results/hooks/use-annual-results-query";
 import { usePromotionDecisionOptionsQuery } from "@/features/annual-results/hooks/use-promotion-decision-options-query";
+import { translateGradingWorkflowStatus } from "@/lib/i18n/ar";
 import type { AnnualResultListItem, GradingWorkflowStatus } from "@/lib/api/client";
 
 type FormState = {
@@ -182,7 +183,7 @@ export function AnnualResultsWorkspace() {
       return false;
     }
     if (form.notes.trim().length > 2000) {
-      setFormError("notes يجب ألا يتجاوز 2000 حرف.");
+      setFormError("الملاحظات يجب ألا تتجاوز 2000 حرف.");
       return false;
     }
     const totalAllSubjects = parseOptionalNumber(form.totalAllSubjects);
@@ -192,31 +193,31 @@ export function AnnualResultsWorkspace() {
     const failedSubjectsCount = parseOptionalInt(form.failedSubjectsCount);
 
     if (totalAllSubjects !== undefined && totalAllSubjects < 0) {
-      setFormError("totalAllSubjects يجب أن يكون >= 0.");
+      setFormError("إجمالي درجات المواد يجب أن يكون أكبر من أو يساوي 0.");
       return false;
     }
     if (maxPossibleTotal !== undefined && maxPossibleTotal < 0) {
-      setFormError("maxPossibleTotal يجب أن يكون >= 0.");
+      setFormError("المجموع الأقصى الممكن يجب أن يكون أكبر من أو يساوي 0.");
       return false;
     }
     if (percentage !== undefined && percentage < 0) {
-      setFormError("percentage يجب أن يكون >= 0.");
+      setFormError("النسبة يجب أن تكون أكبر من أو تساوي 0.");
       return false;
     }
     if (passedSubjectsCount === undefined && form.passedSubjectsCount.trim() !== "") {
-      setFormError("passedSubjectsCount يجب أن يكون رقمًا صحيحًا.");
+      setFormError("عدد المواد الناجحة يجب أن يكون رقمًا صحيحًا.");
       return false;
     }
     if (failedSubjectsCount === undefined && form.failedSubjectsCount.trim() !== "") {
-      setFormError("failedSubjectsCount يجب أن يكون رقمًا صحيحًا.");
+      setFormError("عدد المواد الراسبة يجب أن يكون رقمًا صحيحًا.");
       return false;
     }
     if (passedSubjectsCount !== undefined && passedSubjectsCount < 0) {
-      setFormError("passedSubjectsCount يجب أن يكون >= 0.");
+      setFormError("عدد المواد الناجحة يجب أن يكون أكبر من أو يساوي 0.");
       return false;
     }
     if (failedSubjectsCount !== undefined && failedSubjectsCount < 0) {
-      setFormError("failedSubjectsCount يجب أن يكون >= 0.");
+      setFormError("عدد المواد الراسبة يجب أن يكون أكبر من أو يساوي 0.");
       return false;
     }
 
@@ -258,11 +259,11 @@ export function AnnualResultsWorkspace() {
             <p className="text-sm font-medium">الاحتساب</p>
             <div className="grid gap-2 md:grid-cols-2">
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={calcYear} onChange={(event) => setCalcYear(event.target.value)}>
-                <option value="">Academic year</option>
+                <option value="">السنة الدراسية</option>
                 {(academicYearsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={calcSection} onChange={(event) => setCalcSection(event.target.value)}>
-                <option value="">Section</option>
+                <option value="">الشعبة</option>
                 {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
               </select>
             </div>
@@ -272,10 +273,18 @@ export function AnnualResultsWorkspace() {
                 setCalcInfo("اختر السنة والشعبة.");
                 return;
               }
-              calculateMutation.mutate({ academicYearId: calcYear, sectionId: calcSection }, { onSuccess: (result) => setCalcInfo(`${result.message} | annualGrades c=${result.summary.annualGrades.created}, u=${result.summary.annualGrades.updated}, s=${result.summary.annualGrades.skippedLocked} | annualResults c=${result.summary.annualResults.created}, u=${result.summary.annualResults.updated}, s=${result.summary.annualResults.skippedLocked}`) });
+              calculateMutation.mutate({
+                academicYearId: calcYear,
+                sectionId: calcSection,
+              }, {
+                onSuccess: (result) =>
+                  setCalcInfo(
+                    `${result.message} | الدرجات السنوية: جديد ${result.summary.annualGrades.created}، تحديث ${result.summary.annualGrades.updated}، متجاوز (مقفل) ${result.summary.annualGrades.skippedLocked} | النتائج السنوية: جديد ${result.summary.annualResults.created}، تحديث ${result.summary.annualResults.updated}، متجاوز (مقفل) ${result.summary.annualResults.skippedLocked}`,
+                  ),
+              });
             }}>
               {calculateMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Calculator className="h-4 w-4" />}
-              Calculate
+              تنفيذ الاحتساب
             </Button>
             {calcInfo ? <div className="rounded-md border border-primary/30 bg-primary/10 p-2 text-xs text-primary">{calcInfo}</div> : null}
           </div>
@@ -312,20 +321,20 @@ export function AnnualResultsWorkspace() {
                 {(enrollmentsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.student.fullName} ({item.academicYear.code}/{item.section.code})</option>)}
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.promotionDecisionId} onChange={(event) => setForm((prev) => ({ ...prev, promotionDecisionId: event.target.value }))}>
-                <option value="">Promotion decision *</option>
+                <option value="">قرار الترفيع *</option>
                 {(decisionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
               </select>
             </div>
             <div className="grid gap-2 md:grid-cols-2">
-              <Input type="number" min={0} step={0.01} value={form.totalAllSubjects} onChange={(event) => setForm((prev) => ({ ...prev, totalAllSubjects: event.target.value }))} placeholder="Total all subjects" />
+              <Input type="number" min={0} step={0.01} value={form.totalAllSubjects} onChange={(event) => setForm((prev) => ({ ...prev, totalAllSubjects: event.target.value }))} placeholder="إجمالي درجات المواد" />
               <Input type="number" min={0} step={0.01} value={form.maxPossibleTotal} onChange={(event) => setForm((prev) => ({ ...prev, maxPossibleTotal: event.target.value }))} placeholder="الدرجة العظمى الممكنة" />
             </div>
             <div className="grid gap-2 md:grid-cols-2">
-              <Input type="number" min={0} step={0.01} value={form.percentage} onChange={(event) => setForm((prev) => ({ ...prev, percentage: event.target.value }))} placeholder="Percentage" />
-              <Input type="number" min={0} step={1} value={form.passedSubjectsCount} onChange={(event) => setForm((prev) => ({ ...prev, passedSubjectsCount: event.target.value }))} placeholder="Passed subjects" />
+              <Input type="number" min={0} step={0.01} value={form.percentage} onChange={(event) => setForm((prev) => ({ ...prev, percentage: event.target.value }))} placeholder="النسبة المئوية" />
+              <Input type="number" min={0} step={1} value={form.passedSubjectsCount} onChange={(event) => setForm((prev) => ({ ...prev, passedSubjectsCount: event.target.value }))} placeholder="المواد الناجحة" />
             </div>
             <div className="grid gap-2 md:grid-cols-2">
-              <Input type="number" min={0} step={1} value={form.failedSubjectsCount} onChange={(event) => setForm((prev) => ({ ...prev, failedSubjectsCount: event.target.value }))} placeholder="Failed subjects" />
+              <Input type="number" min={0} step={1} value={form.failedSubjectsCount} onChange={(event) => setForm((prev) => ({ ...prev, failedSubjectsCount: event.target.value }))} placeholder="المواد الراسبة" />
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.status} onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value as GradingWorkflowStatus }))}>
                 <option value="DRAFT">مسودة</option>
                 <option value="IN_REVIEW">قيد المراجعة</option>
@@ -343,7 +352,7 @@ export function AnnualResultsWorkspace() {
             <div className="flex gap-2">
               <Button type="submit" className="flex-1 gap-2" disabled={isSubmitting}>
                 {isSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Medal className="h-4 w-4" />}
-                {editingId ? "حفظ التعديلات" : "إنشاء Annual Result"}
+                {editingId ? "حفظ التعديلات" : "إنشاء نتيجة سنوية"}
               </Button>
               {editingId ? <Button type="button" variant="outline" onClick={resetForm}>إلغاء</Button> : null}
             </div>
@@ -354,7 +363,7 @@ export function AnnualResultsWorkspace() {
       <Card className="border-border/70 bg-card/80">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Annual Results</CardTitle>
+            <CardTitle>النتائج السنوية</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <form onSubmit={(event) => { event.preventDefault(); setPage(1); setSearch(searchInput.trim()); }} className="grid gap-2 md:grid-cols-[1fr_160px_140px_110px_auto]">
@@ -389,10 +398,10 @@ export function AnnualResultsWorkspace() {
                 <div className="space-y-1">
                   <p className="font-medium">{item.studentEnrollment.student.fullName}</p>
                   <p className="text-xs text-muted-foreground">{item.academicYear.code} | {item.studentEnrollment.section.code} | {item.promotionDecision.code}</p>
-                  <p className="text-xs text-muted-foreground">Total {item.totalAllSubjects}/{item.maxPossibleTotal} | % {item.percentage} | Rank class {item.rankInClass ?? "-"} | Rank grade {item.rankInGrade ?? "-"}</p>
+                  <p className="text-xs text-muted-foreground">الإجمالي: {item.totalAllSubjects}/{item.maxPossibleTotal} | النسبة: {item.percentage}% | ترتيب الشعبة: {item.rankInClass ?? "-"} | ترتيب الصف: {item.rankInGrade ?? "-"}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant={item.status === "APPROVED" ? "default" : "secondary"}>{item.status}</Badge>
+                  <Badge variant={item.status === "APPROVED" ? "default" : "secondary"}>{translateGradingWorkflowStatus(item.status)}</Badge>
                   <Badge variant={item.isLocked ? "default" : "secondary"}>{item.isLocked ? "مقفل" : "غير مقفل"}</Badge>
                   <Badge variant={item.isActive ? "default" : "outline"}>{item.isActive ? "نشط" : "غير نشط"}</Badge>
                 </div>

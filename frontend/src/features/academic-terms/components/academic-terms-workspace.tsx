@@ -195,13 +195,13 @@ export function AcademicTermsWorkspace() {
 
     const normalizedCode = normalizeCode(formState.code);
     if (!/^[a-z0-9_.:-]+$/.test(normalizedCode)) {
-      setFormError("صيغة code غير صحيحة.");
+      setFormError("صيغة الكود غير صحيحة.");
       return false;
     }
 
     const sequence = Number(formState.sequence);
     if (!Number.isInteger(sequence) || sequence < 1 || sequence > 20) {
-      setFormError("sequence يجب أن يكون رقمًا صحيحًا بين 1 و 20.");
+      setFormError("الترتيب يجب أن يكون رقمًا صحيحًا بين 1 و 20.");
       return false;
     }
 
@@ -214,7 +214,7 @@ export function AcademicTermsWorkspace() {
     const end = new Date(toUtcEndIso(formState.endDate));
 
     if (start >= end) {
-      setFormError("startDate يجب أن يكون قبل endDate.");
+      setFormError("تاريخ البداية يجب أن يكون قبل تاريخ النهاية.");
       return false;
     }
 

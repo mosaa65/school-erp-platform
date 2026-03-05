@@ -18,14 +18,15 @@ import {
   useDeleteGuardianMutation,
   useUpdateGuardianMutation,
 } from "@/features/guardians/hooks/use-guardians-mutations";
+import { useGuardianGenderOptionsQuery } from "@/features/guardians/hooks/use-gender-options-query";
 import { useGuardianIdTypeOptionsQuery } from "@/features/guardians/hooks/use-id-type-options-query";
 import { useGuardiansQuery } from "@/features/guardians/hooks/use-guardians-query";
-import { translateStudentGender } from "@/lib/i18n/ar";
+import { translateGuardianRelationship, translateStudentGender } from "@/lib/i18n/ar";
 import type { GuardianListItem, GuardianRelationship, StudentGender } from "@/lib/api/client";
 
 type GuardianFormState = {
   fullName: string;
-  gender: StudentGender;
+  genderId: string;
   idNumber: string;
   idTypeId: string;
   phonePrimary: string;
@@ -49,9 +50,11 @@ const RELATIONSHIP_ORDER: GuardianRelationship[] = [
   "OTHER",
 ];
 
+const STUDENT_GENDER_CODES: StudentGender[] = ["MALE", "FEMALE", "OTHER"];
+
 const DEFAULT_FORM_STATE: GuardianFormState = {
   fullName: "",
-  gender: "MALE",
+  genderId: "",
   idNumber: "",
   idTypeId: "",
   phonePrimary: "",
@@ -66,10 +69,14 @@ function toOptionalString(value: string): string | undefined {
   return normalized.length > 0 ? normalized : undefined;
 }
 
+function isStudentGenderCode(value: string): value is StudentGender {
+  return STUDENT_GENDER_CODES.includes(value as StudentGender);
+}
+
 function toFormState(guardian: GuardianListItem): GuardianFormState {
   return {
     fullName: guardian.fullName,
-    gender: guardian.gender,
+    genderId: guardian.genderId ? String(guardian.genderId) : "",
     idNumber: guardian.idNumber ?? "",
     idTypeId: guardian.idTypeId ? String(guardian.idTypeId) : "",
     phonePrimary: guardian.phonePrimary ?? "",
@@ -82,12 +89,12 @@ function toFormState(guardian: GuardianListItem): GuardianFormState {
 
 function toRelationshipPreview(guardian: GuardianListItem): string {
   if (guardian.students.length === 0) {
-    return "No linked students";
+    return "لا يوجد طلاب مرتبطون";
   }
 
   const primary = guardian.students.find((item) => item.isPrimary);
   if (primary) {
-    return `${primary.relationship} - ${primary.student.fullName}`;
+    return `${translateGuardianRelationship(primary.relationship)} - ${primary.student.fullName}`;
   }
 
   const sorted = [...guardian.students].sort(
@@ -95,7 +102,7 @@ function toRelationshipPreview(guardian: GuardianListItem): string {
       RELATIONSHIP_ORDER.indexOf(a.relationship) - RELATIONSHIP_ORDER.indexOf(b.relationship),
   );
   const first = sorted[0];
-  return `${first.relationship} - ${first.student.fullName}`;
+  return `${translateGuardianRelationship(first.relationship)} - ${first.student.fullName}`;
 }
 
 export function GuardiansWorkspace() {
@@ -103,12 +110,13 @@ export function GuardiansWorkspace() {
   const canCreate = hasPermission("guardians.create");
   const canUpdate = hasPermission("guardians.update");
   const canDelete = hasPermission("guardians.delete");
+  const canReadGenders = hasPermission("lookup-genders.read");
   const canReadIdTypes = hasPermission("lookup-id-types.read");
 
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
-  const [genderFilter, setGenderFilter] = React.useState<StudentGender | "all">("all");
+  const [genderFilter, setGenderFilter] = React.useState<string>("all");
   const [idTypeFilter, setIdTypeFilter] = React.useState<string>("all");
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
     "all",
@@ -122,10 +130,11 @@ export function GuardiansWorkspace() {
     page,
     limit: PAGE_SIZE,
     search: search || undefined,
-    gender: genderFilter === "all" ? undefined : genderFilter,
+    genderId: genderFilter === "all" ? undefined : Number(genderFilter),
     idTypeId: idTypeFilter === "all" ? undefined : Number(idTypeFilter),
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
   });
+  const genderOptionsQuery = useGuardianGenderOptionsQuery();
   const idTypeOptionsQuery = useGuardianIdTypeOptionsQuery();
 
   const createMutation = useCreateGuardianMutation();
@@ -136,7 +145,14 @@ export function GuardiansWorkspace() {
     () => guardiansQuery.data?.data ?? [],
     [guardiansQuery.data?.data],
   );
-  const idTypeOptions = idTypeOptionsQuery.data ?? [];
+  const genderOptions = React.useMemo(
+    () => genderOptionsQuery.data ?? [],
+    [genderOptionsQuery.data],
+  );
+  const idTypeOptions = React.useMemo(
+    () => idTypeOptionsQuery.data ?? [],
+    [idTypeOptionsQuery.data],
+  );
   const pagination = guardiansQuery.data?.pagination;
   const isEditing = editingGuardianId !== null;
 
@@ -159,6 +175,27 @@ export function GuardiansWorkspace() {
     }
   }, [editingGuardianId, guardians, isEditing]);
 
+  React.useEffect(() => {
+    if (isEditing || formState.genderId || !canReadGenders) {
+      return;
+    }
+
+    if (genderOptions.length === 0) {
+      return;
+    }
+
+    const preferred = genderOptions.find((option) => option.code === "MALE");
+    const defaultGender = preferred ?? genderOptions[0];
+    setFormState((prev) =>
+      prev.genderId
+        ? prev
+        : {
+            ...prev,
+            genderId: String(defaultGender.id),
+          },
+    );
+  }, [canReadGenders, formState.genderId, genderOptions, isEditing]);
+
   const resetForm = () => {
     setEditingGuardianId(null);
     setFormState(DEFAULT_FORM_STATE);
@@ -177,33 +214,38 @@ export function GuardiansWorkspace() {
       return false;
     }
 
+    if (!formState.genderId) {
+      setFormError("الجنس مطلوب.");
+      return false;
+    }
+
     if (formState.fullName.trim().length > 150) {
-      setFormError("fullName يجب ألا يتجاوز 150 حرف.");
+      setFormError("الاسم الكامل يجب ألا يتجاوز 150 حرفًا.");
       return false;
     }
 
     if (formState.idNumber.trim().length > 30) {
-      setFormError("idNumber يجب ألا يتجاوز 30 حرف.");
+      setFormError("رقم الهوية يجب ألا يتجاوز 30 حرفًا.");
       return false;
     }
 
     if (formState.phonePrimary.trim().length > 20) {
-      setFormError("phonePrimary يجب ألا يتجاوز 20 حرف.");
+      setFormError("الهاتف الأساسي يجب ألا يتجاوز 20 حرفًا.");
       return false;
     }
 
     if (formState.phoneSecondary.trim().length > 20) {
-      setFormError("phoneSecondary يجب ألا يتجاوز 20 حرف.");
+      setFormError("الهاتف الاحتياطي يجب ألا يتجاوز 20 حرفًا.");
       return false;
     }
 
     if (formState.whatsappNumber.trim().length > 20) {
-      setFormError("whatsappNumber يجب ألا يتجاوز 20 حرف.");
+      setFormError("رقم واتساب يجب ألا يتجاوز 20 حرفًا.");
       return false;
     }
 
     if (formState.residenceText.trim().length > 255) {
-      setFormError("residenceText يجب ألا يتجاوز 255 حرف.");
+      setFormError("العنوان يجب ألا يتجاوز 255 حرفًا.");
       return false;
     }
 
@@ -218,9 +260,18 @@ export function GuardiansWorkspace() {
       return;
     }
 
+    const selectedGender = genderOptions.find(
+      (option) => option.id === Number(formState.genderId),
+    );
+    const mappedGender =
+      selectedGender?.code && isStudentGenderCode(selectedGender.code)
+        ? selectedGender.code
+        : undefined;
+
     const payload = {
       fullName: formState.fullName.trim(),
-      gender: formState.gender,
+      gender: mappedGender,
+      genderId: formState.genderId ? Number(formState.genderId) : undefined,
       idNumber: toOptionalString(formState.idNumber),
       idTypeId: formState.idTypeId ? Number(formState.idTypeId) : null,
       phonePrimary: toOptionalString(formState.phonePrimary),
@@ -270,7 +321,14 @@ export function GuardiansWorkspace() {
 
     setFormError(null);
     setEditingGuardianId(guardian.id);
-    setFormState(toFormState(guardian));
+    const nextState = toFormState(guardian);
+    if (!nextState.genderId) {
+      const mapped = genderOptions.find((option) => option.code === guardian.gender);
+      if (mapped) {
+        nextState.genderId = String(mapped.id);
+      }
+    }
+    setFormState(nextState);
   };
 
   const handleToggleActive = (guardian: GuardianListItem) => {
@@ -330,48 +388,59 @@ export function GuardiansWorkspace() {
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Full الاسم *</label>
+                <label className="text-xs font-medium text-muted-foreground">الاسم الكامل *</label>
                 <Input
                   value={formState.fullName}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, fullName: event.target.value }))
                   }
-                  placeholder="Ahmed Mohammed Saleh"
+                  placeholder="أحمد محمد صالح"
                   required
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Gender *</label>
+                <label className="text-xs font-medium text-muted-foreground">الجنس *</label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.gender}
+                  value={formState.genderId}
                   onChange={(event) =>
                     setFormState((prev) => ({
                       ...prev,
-                      gender: event.target.value as StudentGender,
+                      genderId: event.target.value,
                     }))
                   }
+                  disabled={!canReadGenders || genderOptionsQuery.isLoading}
                 >
-                  <option value="MALE">MALE</option>
-                  <option value="FEMALE">FEMALE</option>
-                  <option value="OTHER">OTHER</option>
+                  <option value="">اختر الجنس</option>
+                  {genderOptions.map((option) => {
+                    const translated =
+                      option.code && isStudentGenderCode(option.code)
+                        ? translateStudentGender(option.code)
+                        : option.nameAr ?? option.name ?? option.code ?? String(option.id);
+
+                    return (
+                      <option key={option.id} value={option.id}>
+                        {option.nameAr ?? translated}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
               <div className="grid gap-3 md:grid-cols-3">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">ID Number</label>
+                  <label className="text-xs font-medium text-muted-foreground">رقم الهوية</label>
                   <Input
                     value={formState.idNumber}
                     onChange={(event) =>
                       setFormState((prev) => ({ ...prev, idNumber: event.target.value }))
                     }
-                    placeholder="ID-90909012"
+                    placeholder="مثال: 90909012"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">ID Type</label>
+                  <label className="text-xs font-medium text-muted-foreground">نوع الهوية</label>
                   <select
                     className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                     value={formState.idTypeId}
@@ -389,7 +458,7 @@ export function GuardiansWorkspace() {
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Primary Phone</label>
+                  <label className="text-xs font-medium text-muted-foreground">الهاتف الأساسي</label>
                   <Input
                     value={formState.phonePrimary}
                     onChange={(event) =>
@@ -403,7 +472,7 @@ export function GuardiansWorkspace() {
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">
-                    Secondary Phone
+                    الهاتف الاحتياطي
                   </label>
                   <Input
                     value={formState.phoneSecondary}
@@ -415,7 +484,7 @@ export function GuardiansWorkspace() {
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">
-                    WhatsApp Number
+                    رقم واتساب
                   </label>
                   <Input
                     value={formState.whatsappNumber}
@@ -431,7 +500,7 @@ export function GuardiansWorkspace() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Residence</label>
+                <label className="text-xs font-medium text-muted-foreground">العنوان</label>
                 <Input
                   value={formState.residenceText}
                   onChange={(event) =>
@@ -440,7 +509,7 @@ export function GuardiansWorkspace() {
                       residenceText: event.target.value,
                     }))
                   }
-                  placeholder="Sanaa - Al-Safiya district"
+                  placeholder="صنعاء - حي الصافية"
                 />
               </div>
 
@@ -478,7 +547,7 @@ export function GuardiansWorkspace() {
                   ) : (
                     <Users className="h-4 w-4" />
                   )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء Guardian"}
+                  {isEditing ? "حفظ التعديلات" : "إنشاء ولي أمر"}
                 </Button>
                 {isEditing ? (
                   <Button type="button" variant="outline" onClick={resetForm}>
@@ -494,7 +563,7 @@ export function GuardiansWorkspace() {
       <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>Guardians List</CardTitle>
+            <CardTitle>قائمة أولياء الأمور</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <CardDescription>إدارة أولياء الأمور مع فلترة حسب النوع والحالة.</CardDescription>
@@ -518,13 +587,23 @@ export function GuardiansWorkspace() {
               value={genderFilter}
               onChange={(event) => {
                 setPage(1);
-                setGenderFilter(event.target.value as StudentGender | "all");
+                setGenderFilter(event.target.value);
               }}
+              disabled={!canReadGenders || genderOptionsQuery.isLoading}
             >
-              <option value="all">All genders</option>
-              <option value="MALE">MALE</option>
-              <option value="FEMALE">FEMALE</option>
-              <option value="OTHER">OTHER</option>
+              <option value="all">كل الأجناس</option>
+              {genderOptions.map((option) => {
+                const translated =
+                  option.code && isStudentGenderCode(option.code)
+                    ? translateStudentGender(option.code)
+                    : option.nameAr ?? option.name ?? option.code ?? String(option.id);
+
+                return (
+                  <option key={option.id} value={option.id}>
+                    {option.nameAr ?? translated}
+                  </option>
+                );
+              })}
             </select>
 
             <select
@@ -594,19 +673,21 @@ export function GuardiansWorkspace() {
                 <div className="space-y-1">
                   <p className="font-medium">{guardian.fullName}</p>
                   <p className="text-xs text-muted-foreground">
-                    ID: {guardian.idNumber ?? "-"} ({guardian.idType?.nameAr ?? "غير محدد"}) | Phone:{" "}
-                    {guardian.phonePrimary ?? "-"} | WhatsApp:{" "}
+                    الهوية: {guardian.idNumber ?? "-"} ({guardian.idType?.nameAr ?? "غير محدد"}) | الهاتف:{" "}
+                    {guardian.phonePrimary ?? "-"} | واتساب:{" "}
                     {guardian.whatsappNumber ?? "-"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Students: {guardian.students.length} ({toRelationshipPreview(guardian)})
+                    الطلاب: {guardian.students.length} ({toRelationshipPreview(guardian)})
                   </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant="outline">{translateStudentGender(guardian.gender)}</Badge>
+                  <Badge variant="outline">
+                    {guardian.genderLookup?.nameAr ?? translateStudentGender(guardian.gender)}
+                  </Badge>
                   <Badge variant={guardian.isActive ? "default" : "outline"}>
-                    {guardian.isActive ? "Active" : "Inactive"}
+                    {guardian.isActive ? "نشط" : "غير نشط"}
                   </Badge>
                 </div>
               </div>

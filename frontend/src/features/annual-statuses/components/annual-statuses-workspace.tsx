@@ -119,19 +119,19 @@ export function AnnualStatusesWorkspace() {
     const name = form.name.trim();
     const description = form.description.trim();
     if (!code || !name) {
-      setFormError("الحقول المطلوبة: code, name.");
+      setFormError("الحقول المطلوبة: الكود والاسم.");
       return false;
     }
     if (code.length > 40 || !/^[A-Z0-9_]+$/.test(code)) {
-      setFormError("code يجب أن يحتوي أحرف كبيرة/أرقام/underscore فقط وبحد أقصى 40.");
+      setFormError("الكود يجب أن يحتوي أحرفًا كبيرة وأرقامًا وشرطة سفلية (_) فقط، وبحد أقصى 40 حرفًا.");
       return false;
     }
     if (name.length > 120) {
-      setFormError("name يجب ألا يتجاوز 120 حرف.");
+      setFormError("الاسم يجب ألا يتجاوز 120 حرفًا.");
       return false;
     }
     if (description.length > 255) {
-      setFormError("description يجب ألا يتجاوز 255 حرف.");
+      setFormError("الوصف يجب ألا يتجاوز 255 حرفًا.");
       return false;
     }
     setFormError(null);

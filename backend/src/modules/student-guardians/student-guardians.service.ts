@@ -4,7 +4,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AuditStatus, Prisma, StudentGuardian } from '@prisma/client';
+import {
+  AuditStatus,
+  GuardianRelationship,
+  Prisma,
+  StudentGuardian,
+} from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { GuardiansService } from '../guardians/guardians.service';
@@ -30,6 +35,15 @@ const studentGuardianInclude = {
       fullName: true,
       phonePrimary: true,
       whatsappNumber: true,
+      isActive: true,
+    },
+  },
+  relationshipTypeLookup: {
+    select: {
+      id: true,
+      code: true,
+      nameAr: true,
+      gender: true,
       isActive: true,
     },
   },
@@ -62,6 +76,7 @@ export class StudentGuardiansService {
       payload.guardianId,
     );
     this.ensureDateRange(payload.startDate, payload.endDate);
+    const relationship = await this.resolveRelationshipOnCreate(payload);
 
     try {
       const studentGuardian = await this.prisma.$transaction(async (tx) => {
@@ -83,7 +98,8 @@ export class StudentGuardiansService {
           data: {
             studentId: payload.studentId,
             guardianId: payload.guardianId,
-            relationship: payload.relationship,
+            relationship: relationship.relationship,
+            relationshipTypeId: relationship.relationshipTypeId,
             isPrimary: payload.isPrimary ?? false,
             canReceiveNotifications: payload.canReceiveNotifications ?? true,
             canPickup: payload.canPickup ?? true,
@@ -107,6 +123,7 @@ export class StudentGuardiansService {
           studentId: studentGuardian.studentId,
           guardianId: studentGuardian.guardianId,
           relationship: studentGuardian.relationship,
+          relationshipTypeId: studentGuardian.relationshipTypeId,
           isPrimary: studentGuardian.isPrimary,
         },
       });
@@ -122,6 +139,7 @@ export class StudentGuardiansService {
           studentId: payload.studentId,
           guardianId: payload.guardianId,
           relationship: payload.relationship,
+          relationshipTypeId: payload.relationshipTypeId,
           reason: this.extractErrorMessage(error),
         },
       });
@@ -139,6 +157,7 @@ export class StudentGuardiansService {
       studentId: query.studentId,
       guardianId: query.guardianId,
       relationship: query.relationship,
+      relationshipTypeId: query.relationshipTypeId,
       isPrimary: query.isPrimary,
       isActive: query.isActive,
       OR: query.search
@@ -222,6 +241,10 @@ export class StudentGuardiansService {
 
     const resolvedStudentId = payload.studentId ?? existing.studentId;
     const resolvedGuardianId = payload.guardianId ?? existing.guardianId;
+    const relationship = await this.resolveRelationshipOnUpdate(
+      existing,
+      payload,
+    );
     const resolvedStartDate = payload.startDate ?? existing.startDate;
     const resolvedEndDate = payload.endDate ?? existing.endDate;
 
@@ -257,7 +280,8 @@ export class StudentGuardiansService {
           data: {
             studentId: payload.studentId,
             guardianId: payload.guardianId,
-            relationship: payload.relationship,
+            relationship: relationship.relationship,
+            relationshipTypeId: relationship.relationshipTypeId,
             isPrimary: payload.isPrimary,
             canReceiveNotifications: payload.canReceiveNotifications,
             canPickup: payload.canPickup,
@@ -327,6 +351,187 @@ export class StudentGuardiansService {
     }
 
     return studentGuardian;
+  }
+
+  private mapLookupRelationshipCodeToEnum(code: string): GuardianRelationship {
+    const normalized = code.trim().toUpperCase();
+
+    if (
+      normalized === GuardianRelationship.FATHER ||
+      normalized === GuardianRelationship.MOTHER ||
+      normalized === GuardianRelationship.BROTHER ||
+      normalized === GuardianRelationship.SISTER ||
+      normalized === GuardianRelationship.UNCLE ||
+      normalized === GuardianRelationship.AUNT ||
+      normalized === GuardianRelationship.GRANDFATHER ||
+      normalized === GuardianRelationship.GRANDMOTHER ||
+      normalized === GuardianRelationship.OTHER
+    ) {
+      return normalized as GuardianRelationship;
+    }
+
+    if (
+      normalized === 'UNCLE_PATERNAL' ||
+      normalized === 'UNCLE_MATERNAL'
+    ) {
+      return GuardianRelationship.UNCLE;
+    }
+
+    if (normalized === 'AUNT_PATERNAL' || normalized === 'AUNT_MATERNAL') {
+      return GuardianRelationship.AUNT;
+    }
+
+    if (normalized === 'GUARDIAN') {
+      return GuardianRelationship.OTHER;
+    }
+
+    throw new BadRequestException(
+      `Unsupported lookup relationship type code for student guardians: ${code}`,
+    );
+  }
+
+  private getRelationshipLookupCandidates(
+    relationship: GuardianRelationship,
+  ): string[] {
+    switch (relationship) {
+      case GuardianRelationship.UNCLE:
+        return ['UNCLE', 'UNCLE_PATERNAL', 'UNCLE_MATERNAL'];
+      case GuardianRelationship.AUNT:
+        return ['AUNT', 'AUNT_PATERNAL', 'AUNT_MATERNAL'];
+      case GuardianRelationship.OTHER:
+        return ['OTHER', 'GUARDIAN'];
+      default:
+        return [relationship];
+    }
+  }
+
+  private async findRelationshipLookupByEnum(
+    relationship: GuardianRelationship,
+  ) {
+    const candidates = this.getRelationshipLookupCandidates(relationship);
+    const items = await this.prisma.lookupRelationshipType.findMany({
+      where: {
+        code: {
+          in: candidates,
+        },
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        code: true,
+      },
+    });
+
+    if (items.length === 0) {
+      return null;
+    }
+
+    const order = new Map(candidates.map((code, index) => [code, index]));
+    items.sort(
+      (a, b) => (order.get(a.code) ?? 999) - (order.get(b.code) ?? 999),
+    );
+
+    return items[0] ?? null;
+  }
+
+  private async ensureRelationshipLookupExists(relationshipTypeId: number) {
+    const relationshipType = await this.prisma.lookupRelationshipType.findFirst({
+      where: {
+        id: relationshipTypeId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        code: true,
+      },
+    });
+
+    if (!relationshipType) {
+      throw new BadRequestException('relationshipTypeId is not valid');
+    }
+
+    return relationshipType;
+  }
+
+  private async resolveRelationshipOnCreate(payload: CreateStudentGuardianDto) {
+    if (payload.relationshipTypeId !== undefined) {
+      const lookup = await this.ensureRelationshipLookupExists(
+        payload.relationshipTypeId,
+      );
+      const mappedRelationship = this.mapLookupRelationshipCodeToEnum(
+        lookup.code,
+      );
+
+      if (
+        payload.relationship &&
+        payload.relationship !== mappedRelationship
+      ) {
+        throw new BadRequestException(
+          'relationship and relationshipTypeId do not refer to the same lookup value',
+        );
+      }
+
+      return {
+        relationship: payload.relationship ?? mappedRelationship,
+        relationshipTypeId: lookup.id,
+      };
+    }
+
+    if (!payload.relationship) {
+      throw new BadRequestException(
+        'Either relationship or relationshipTypeId is required',
+      );
+    }
+
+    const lookup = await this.findRelationshipLookupByEnum(payload.relationship);
+
+    return {
+      relationship: payload.relationship,
+      relationshipTypeId: lookup?.id ?? null,
+    };
+  }
+
+  private async resolveRelationshipOnUpdate(
+    existing: StudentGuardian,
+    payload: UpdateStudentGuardianDto,
+  ) {
+    if (payload.relationshipTypeId !== undefined) {
+      const lookup = await this.ensureRelationshipLookupExists(
+        payload.relationshipTypeId,
+      );
+      const mappedRelationship = this.mapLookupRelationshipCodeToEnum(
+        lookup.code,
+      );
+
+      if (
+        payload.relationship &&
+        payload.relationship !== mappedRelationship
+      ) {
+        throw new BadRequestException(
+          'relationship and relationshipTypeId do not refer to the same lookup value',
+        );
+      }
+
+      return {
+        relationship: payload.relationship ?? mappedRelationship,
+        relationshipTypeId: lookup.id,
+      };
+    }
+
+    if (payload.relationship !== undefined) {
+      const lookup = await this.findRelationshipLookupByEnum(
+        payload.relationship,
+      );
+      return {
+        relationship: payload.relationship,
+        relationshipTypeId: lookup?.id ?? existing.relationshipTypeId ?? null,
+      };
+    }
+
+    return {
+      relationship: existing.relationship,
+      relationshipTypeId: existing.relationshipTypeId ?? null,
+    };
   }
 
   private ensureDateRange(startDate?: DateInput, endDate?: DateInput) {
