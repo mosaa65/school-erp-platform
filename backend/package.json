@@ -11,7 +11,7 @@
     "start": "node --max-old-space-size=512 dist/main.js",
     "start:dev": "npx nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main.js"
+    "start:prod": "node dist/main.js",
     "prisma:generate": "prisma generate --schema=backend/prisma/schema.prisma",
     "prisma:migrate:dev": "prisma migrate dev --schema=backend/prisma/schema.prisma",
     "prisma:migrate:deploy": "prisma migrate deploy --schema=backend/prisma/schema.prisma",
