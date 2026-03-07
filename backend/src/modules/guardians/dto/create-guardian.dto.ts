@@ -42,6 +42,13 @@ export class CreateGuardianDto {
   @Min(1)
   idTypeId?: number | null;
 
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  localityId?: number | null;
+
   @ApiPropertyOptional({ example: '+967777111222' })
   @IsOptional()
   @IsString()

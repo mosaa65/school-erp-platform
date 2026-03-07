@@ -38,6 +38,7 @@ import { useAnnualResultsQuery } from "@/features/annual-results/hooks/use-annua
 import { usePromotionDecisionOptionsQuery } from "@/features/annual-results/hooks/use-promotion-decision-options-query";
 import { translateGradingWorkflowStatus } from "@/lib/i18n/ar";
 import type { AnnualResultListItem, GradingWorkflowStatus } from "@/lib/api/client";
+import { formatNameCodeLabel } from "@/lib/option-labels";
 
 type FormState = {
   academicYearId: string;
@@ -260,11 +261,11 @@ export function AnnualResultsWorkspace() {
             <div className="grid gap-2 md:grid-cols-2">
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={calcYear} onChange={(event) => setCalcYear(event.target.value)}>
                 <option value="">السنة الدراسية</option>
-                {(academicYearsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
+                {(academicYearsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={calcSection} onChange={(event) => setCalcSection(event.target.value)}>
                 <option value="">الشعبة</option>
-                {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
+                {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
               </select>
             </div>
             <Button type="button" variant="outline" className="w-full gap-2" disabled={!canCalculate || calculateMutation.isPending} onClick={() => {
@@ -308,21 +309,21 @@ export function AnnualResultsWorkspace() {
             <div className="grid gap-2 md:grid-cols-2">
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.academicYearId} disabled={editingId !== null} onChange={(event) => setForm((prev) => ({ ...prev, academicYearId: event.target.value, studentEnrollmentId: "" }))}>
                 <option value="">السنة الدراسية *</option>
-                {(academicYearsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
+                {(academicYearsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.sectionId} disabled={editingId !== null} onChange={(event) => setForm((prev) => ({ ...prev, sectionId: event.target.value, studentEnrollmentId: "" }))}>
                 <option value="">الشعبة *</option>
-                {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
+                {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
               </select>
             </div>
             <div className="grid gap-2 md:grid-cols-2">
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.studentEnrollmentId} disabled={editingId !== null} onChange={(event) => setForm((prev) => ({ ...prev, studentEnrollmentId: event.target.value }))}>
                 <option value="">القيد *</option>
-                {(enrollmentsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.student.fullName} ({item.academicYear.code}/{item.section.code})</option>)}
+                {(enrollmentsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.student.fullName} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatNameCodeLabel(item.section.name, item.section.code)})</option>)}
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.promotionDecisionId} onChange={(event) => setForm((prev) => ({ ...prev, promotionDecisionId: event.target.value }))}>
                 <option value="">قرار الترفيع *</option>
-                {(decisionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
+                {(decisionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
               </select>
             </div>
             <div className="grid gap-2 md:grid-cols-2">
@@ -373,11 +374,11 @@ export function AnnualResultsWorkspace() {
             </div>
             <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={yearFilter} onChange={(event) => { setPage(1); setYearFilter(event.target.value); }}>
               <option value="all">كل السنوات</option>
-              {(academicYearsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
+              {(academicYearsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
             </select>
             <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={sectionFilter} onChange={(event) => { setPage(1); setSectionFilter(event.target.value); }}>
               <option value="all">كل الشعب</option>
-              {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
+              {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
             </select>
             <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={activeFilter} onChange={(event) => { setPage(1); setActiveFilter(event.target.value as "all" | "active" | "inactive"); }}>
               <option value="all">الكل</option>
@@ -397,7 +398,7 @@ export function AnnualResultsWorkspace() {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="space-y-1">
                   <p className="font-medium">{item.studentEnrollment.student.fullName}</p>
-                  <p className="text-xs text-muted-foreground">{item.academicYear.code} | {item.studentEnrollment.section.code} | {item.promotionDecision.code}</p>
+                  <p className="text-xs text-muted-foreground">{formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} | {formatNameCodeLabel(item.studentEnrollment.section.name, item.studentEnrollment.section.code)} | {formatNameCodeLabel(item.promotionDecision.name, item.promotionDecision.code)}</p>
                   <p className="text-xs text-muted-foreground">الإجمالي: {item.totalAllSubjects}/{item.maxPossibleTotal} | النسبة: {item.percentage}% | ترتيب الشعبة: {item.rankInClass ?? "-"} | ترتيب الصف: {item.rankInGrade ?? "-"}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">

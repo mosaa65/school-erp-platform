@@ -700,99 +700,200 @@ export async function seedSystem01Lookups(prisma: PrismaClient) {
       },
     });
 
-    const subDistrict = await prisma.subDistrict.upsert({
-      where: {
-        directorateId_nameAr: {
-          directorateId: directorate.id,
-          nameAr: 'بني عواض',
-        },
+    const geographyTree: Array<{
+      nameAr: string;
+      villages: Array<{
+        nameAr: string;
+        localities: string[];
+      }>;
+    }> = [
+      {
+        nameAr: 'منهات',
+        villages: [
+          {
+            nameAr: 'وادي النخلة',
+            localities: [
+              'الطوائل',
+              'شعب الكبير',
+              'وادي النخلة',
+              'شرى النقيل',
+              'الخراشب',
+              'الجحارة',
+              'الدمن',
+            ],
+          },
+          {
+            nameAr: 'النخلة',
+            localities: [
+              'الصلبة',
+              'مجهم العرم',
+              'المراديح',
+              'رأس القرية',
+              'القرية',
+              'حول أسامة',
+              'عرض فراص',
+              'بيت قضابة',
+              'المرخامة',
+              'البرحة',
+              'المجهم',
+              'دي سويد',
+              'الراحبة',
+              'شرى الكدف',
+              'حول مطيع',
+              'شرى البارقة',
+              'رأس البارقة',
+              'الدرب',
+              'الهياج',
+              'بيت الحسام',
+              'المجاهم',
+              'ابعرات',
+              'الحرة',
+              'الصلاو',
+            ],
+          },
+          {
+            nameAr: 'بردان',
+            localities: [
+              'المقبرة',
+              'شرى بردان',
+              'بردان',
+              'الشعب',
+              'قرية العارضة',
+              'باب الهيجة',
+            ],
+          },
+          {
+            nameAr: 'المفرق',
+            localities: ['القرف', 'دعاشب', 'وادي بردان', 'ضحمه'],
+          },
+          {
+            nameAr: 'المسرب',
+            localities: [],
+          },
+          {
+            nameAr: 'بيت الشبر',
+            localities: [],
+          },
+          {
+            nameAr: 'العوارض',
+            localities: [],
+          },
+        ],
       },
-      update: {
-        isActive: true,
-        deletedAt: null,
-        updatedById: null,
-      },
-      create: {
-        directorateId: directorate.id,
+      {
         nameAr: 'بني عواض',
-        isActive: true,
+        villages: [],
       },
-    });
+    ];
 
-    const village = await prisma.village.upsert({
-      where: {
-        subDistrictId_nameAr: {
-          subDistrictId: subDistrict.id,
-          nameAr: 'النخلة',
+    for (const subDistrictSeed of geographyTree) {
+      const subDistrict = await prisma.subDistrict.upsert({
+        where: {
+          directorateId_nameAr: {
+            directorateId: directorate.id,
+            nameAr: subDistrictSeed.nameAr,
+          },
         },
-      },
-      update: {
-        isActive: true,
-        deletedAt: null,
-        updatedById: null,
-      },
-      create: {
-        subDistrictId: subDistrict.id,
-        nameAr: 'النخلة',
-        isActive: true,
-      },
-    });
-
-    const ruralLocality = await prisma.locality.findFirst({
-      where: {
-        villageId: village.id,
-        directorateId: null,
-        nameAr: 'الحارة الغربية',
-      },
-      select: { id: true },
-    });
-
-    if (!ruralLocality) {
-      await prisma.locality.create({
-        data: {
-          villageId: village.id,
-          nameAr: 'الحارة الغربية',
-          localityType: 'RURAL',
-          isActive: true,
-        },
-      });
-    } else {
-      await prisma.locality.update({
-        where: { id: ruralLocality.id },
-        data: {
-          localityType: 'RURAL',
+        update: {
           isActive: true,
           deletedAt: null,
           updatedById: null,
         },
+        create: {
+          directorateId: directorate.id,
+          nameAr: subDistrictSeed.nameAr,
+          isActive: true,
+        },
       });
+
+      for (const villageSeed of subDistrictSeed.villages) {
+        const village = await prisma.village.upsert({
+          where: {
+            subDistrictId_nameAr: {
+              subDistrictId: subDistrict.id,
+              nameAr: villageSeed.nameAr,
+            },
+          },
+          update: {
+            isActive: true,
+            deletedAt: null,
+            updatedById: null,
+          },
+          create: {
+            subDistrictId: subDistrict.id,
+            nameAr: villageSeed.nameAr,
+            isActive: true,
+          },
+        });
+
+        for (const localityNameAr of villageSeed.localities) {
+          const existingLocality = await prisma.locality.findFirst({
+            where: {
+              villageId: village.id,
+              directorateId: null,
+              nameAr: localityNameAr,
+            },
+            select: { id: true },
+          });
+
+          if (existingLocality) {
+            await prisma.locality.update({
+              where: { id: existingLocality.id },
+              data: {
+                localityType: 'RURAL',
+                isActive: true,
+                deletedAt: null,
+                updatedById: null,
+              },
+            });
+            continue;
+          }
+
+          await prisma.locality.create({
+            data: {
+              villageId: village.id,
+              directorateId: null,
+              nameAr: localityNameAr,
+              localityType: 'RURAL',
+              isActive: true,
+            },
+          });
+        }
+      }
     }
 
-    const urbanLocality = await prisma.locality.findFirst({
+    // Hide legacy placeholder localities from older seed versions to keep the
+    // catalog aligned with the approved DDL data set.
+    await prisma.locality.updateMany({
+      where: {
+        nameAr: {
+          in: ['الحارة الغربية', 'الحي المركزي'],
+        },
+      },
+      data: {
+        isActive: false,
+        updatedById: null,
+      },
+    });
+
+    const baniAwadhSubDistrict = await prisma.subDistrict.findFirst({
       where: {
         directorateId: directorate.id,
-        villageId: null,
-        nameAr: 'الحي المركزي',
+        nameAr: 'بني عواض',
+        deletedAt: null,
       },
       select: { id: true },
     });
 
-    if (!urbanLocality) {
-      await prisma.locality.create({
-        data: {
-          directorateId: directorate.id,
-          nameAr: 'الحي المركزي',
-          localityType: 'URBAN',
-          isActive: true,
-        },
-      });
-    } else {
-      await prisma.locality.update({
-        where: { id: urbanLocality.id },
-        data: {
-          localityType: 'URBAN',
-          isActive: true,
+    if (baniAwadhSubDistrict) {
+      await prisma.village.updateMany({
+        where: {
+          subDistrictId: baniAwadhSubDistrict.id,
+          nameAr: 'النخلة',
           deletedAt: null,
+        },
+        data: {
+          isActive: false,
           updatedById: null,
         },
       });

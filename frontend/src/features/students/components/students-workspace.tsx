@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import { LoaderCircle, PencilLine, RefreshCw, Search, Trash2, Users } from "lucide-react";
@@ -13,6 +13,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
+import { useGeographyOptionsQuery } from "@/features/lookup-catalog/hooks/use-geography-options-query";
+import {
+  buildGeographyMaps,
+  formatLocalityHierarchyLabel,
+  resolveSelectionFromLocality,
+} from "@/features/lookup-catalog/lib/geography";
 import { useLookupOrphanStatusesQuery } from "@/features/lookup-orphan-statuses/hooks/use-lookup-orphan-statuses-query";
 import {
   useCreateStudentMutation,
@@ -42,6 +48,7 @@ type StudentFormState = {
   genderId: string;
   birthDate: string;
   bloodTypeId: string;
+  localityId: string;
   healthStatusId: string;
   healthNotes: string;
   orphanStatusId: string;
@@ -86,6 +93,7 @@ const DEFAULT_FORM_STATE: StudentFormState = {
   genderId: "",
   birthDate: "",
   bloodTypeId: "",
+  localityId: "",
   healthStatusId: "",
   healthNotes: "",
   orphanStatusId: "",
@@ -135,6 +143,15 @@ function formatDate(isoDate: string | null): string {
   return date.toLocaleDateString();
 }
 
+type LocalityLabelInput = {
+  id: number;
+  nameAr?: string;
+  name?: string;
+  localityType?: "RURAL" | "URBAN";
+  directorateId?: number;
+  villageId?: number;
+};
+
 function toFormState(student: StudentListItem): StudentFormState {
   return {
     admissionNo: student.admissionNo ?? "",
@@ -142,6 +159,7 @@ function toFormState(student: StudentListItem): StudentFormState {
     genderId: student.genderId ? String(student.genderId) : "",
     birthDate: toDateInput(student.birthDate),
     bloodTypeId: student.bloodTypeId ? String(student.bloodTypeId) : "",
+    localityId: student.localityId ? String(student.localityId) : "",
     healthStatusId: student.healthStatusId ? String(student.healthStatusId) : "",
     healthNotes: student.healthNotes ?? "",
     orphanStatusId: student.orphanStatusId ? String(student.orphanStatusId) : "",
@@ -184,6 +202,7 @@ export function StudentsWorkspace() {
   const canDelete = hasPermission("students.delete");
   const canReadGenders = hasPermission("lookup-genders.read");
   const canReadBloodTypes = hasPermission("lookup-blood-types.read");
+  const canReadLocalities = hasPermission("localities.read");
   const canReadHealthStatuses = hasPermission("lookup-health-statuses.read");
   const canReadOrphanStatuses = hasPermission("lookup-orphan-statuses.read");
 
@@ -192,6 +211,7 @@ export function StudentsWorkspace() {
   const [search, setSearch] = React.useState("");
   const [genderFilter, setGenderFilter] = React.useState<string>("all");
   const [bloodTypeFilter, setBloodTypeFilter] = React.useState<string>("all");
+  const [localityFilter, setLocalityFilter] = React.useState<string>("all");
   const [orphanFilter, setOrphanFilter] = React.useState<string>("all");
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
     "all",
@@ -200,6 +220,10 @@ export function StudentsWorkspace() {
   const [editingStudentId, setEditingStudentId] = React.useState<string | null>(null);
   const [formState, setFormState] = React.useState<StudentFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [formGovernorateId, setFormGovernorateId] = React.useState<string>("");
+  const [formDirectorateId, setFormDirectorateId] = React.useState<string>("");
+  const [formSubDistrictId, setFormSubDistrictId] = React.useState<string>("");
+  const [formVillageId, setFormVillageId] = React.useState<string>("");
 
   const studentsQuery = useStudentsQuery({
     page,
@@ -207,11 +231,13 @@ export function StudentsWorkspace() {
     search: search || undefined,
     genderId: genderFilter === "all" ? undefined : Number(genderFilter),
     bloodTypeId: bloodTypeFilter === "all" ? undefined : Number(bloodTypeFilter),
+    localityId: localityFilter === "all" ? undefined : Number(localityFilter),
     orphanStatusId: orphanFilter === "all" ? undefined : Number(orphanFilter),
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
   });
   const genderOptionsQuery = useStudentGenderOptionsQuery();
   const bloodTypeOptionsQuery = useBloodTypeOptionsQuery();
+  const geographyOptionsQuery = useGeographyOptionsQuery("students");
   const healthStatusOptionsQuery = useHealthStatusOptionsQuery();
   const orphanStatusesQuery = useLookupOrphanStatusesQuery({
     page: 1,
@@ -232,6 +258,98 @@ export function StudentsWorkspace() {
   const bloodTypeOptions = React.useMemo(
     () => bloodTypeOptionsQuery.data ?? [],
     [bloodTypeOptionsQuery.data],
+  );
+  const governorateOptions = React.useMemo(
+    () => geographyOptionsQuery.data?.governorates ?? [],
+    [geographyOptionsQuery.data?.governorates],
+  );
+  const directorateOptions = React.useMemo(
+    () => geographyOptionsQuery.data?.directorates ?? [],
+    [geographyOptionsQuery.data?.directorates],
+  );
+  const subDistrictOptions = React.useMemo(
+    () => geographyOptionsQuery.data?.subDistricts ?? [],
+    [geographyOptionsQuery.data?.subDistricts],
+  );
+  const villageOptions = React.useMemo(
+    () => geographyOptionsQuery.data?.villages ?? [],
+    [geographyOptionsQuery.data?.villages],
+  );
+  const localityOptions = React.useMemo(
+    () => geographyOptionsQuery.data?.localities ?? [],
+    [geographyOptionsQuery.data?.localities],
+  );
+  const geographyMaps = React.useMemo(
+    () =>
+      buildGeographyMaps({
+        governorates: governorateOptions,
+        directorates: directorateOptions,
+        subDistricts: subDistrictOptions,
+        villages: villageOptions,
+        localities: localityOptions,
+      }),
+    [
+      directorateOptions,
+      governorateOptions,
+      localityOptions,
+      subDistrictOptions,
+      villageOptions,
+    ],
+  );
+  const hasGeographyHierarchy = React.useMemo(
+    () => governorateOptions.length > 0 && directorateOptions.length > 0,
+    [directorateOptions.length, governorateOptions.length],
+  );
+  const filteredDirectorates = React.useMemo(() => {
+    if (!formGovernorateId) {
+      return [];
+    }
+
+    const governorateId = Number(formGovernorateId);
+    return directorateOptions.filter((item) => item.governorateId === governorateId);
+  }, [directorateOptions, formGovernorateId]);
+  const filteredSubDistricts = React.useMemo(() => {
+    if (!formDirectorateId) {
+      return [];
+    }
+
+    const directorateId = Number(formDirectorateId);
+    return subDistrictOptions.filter((item) => item.directorateId === directorateId);
+  }, [formDirectorateId, subDistrictOptions]);
+  const filteredVillages = React.useMemo(() => {
+    if (!formSubDistrictId) {
+      return [];
+    }
+
+    const subDistrictId = Number(formSubDistrictId);
+    return villageOptions.filter((item) => item.subDistrictId === subDistrictId);
+  }, [formSubDistrictId, villageOptions]);
+  const filteredLocalities = React.useMemo(() => {
+    if (!formDirectorateId) {
+      return [];
+    }
+
+    const directorateId = Number(formDirectorateId);
+    const selectedVillageId = formVillageId ? Number(formVillageId) : null;
+
+    return localityOptions.filter((item) => {
+      if (item.localityType === "URBAN") {
+        return item.directorateId === directorateId;
+      }
+
+      if (!selectedVillageId) {
+        return false;
+      }
+
+      return item.villageId === selectedVillageId;
+    });
+  }, [formDirectorateId, formVillageId, localityOptions]);
+  const formSelectedLocality = React.useMemo(
+    () =>
+      formState.localityId
+        ? geographyMaps.localityById.get(Number(formState.localityId))
+        : undefined,
+    [formState.localityId, geographyMaps],
   );
   const healthStatusOptions = React.useMemo(
     () => healthStatusOptionsQuery.data ?? [],
@@ -315,16 +433,82 @@ export function StudentsWorkspace() {
     );
   }, [formState.orphanStatusId, isEditing, orphanStatusOptions]);
 
+  React.useEffect(() => {
+    if (!formState.localityId) {
+      return;
+    }
+
+    const locality = geographyMaps.localityById.get(Number(formState.localityId));
+    const selection = resolveSelectionFromLocality(locality, geographyMaps);
+
+    if (selection.governorateId !== formGovernorateId) {
+      setFormGovernorateId(selection.governorateId);
+    }
+
+    if (selection.directorateId !== formDirectorateId) {
+      setFormDirectorateId(selection.directorateId);
+    }
+
+    if (selection.subDistrictId !== formSubDistrictId) {
+      setFormSubDistrictId(selection.subDistrictId);
+    }
+
+    if (selection.villageId !== formVillageId) {
+      setFormVillageId(selection.villageId);
+    }
+  }, [
+    formDirectorateId,
+    formGovernorateId,
+    formState.localityId,
+    formSubDistrictId,
+    formVillageId,
+    geographyMaps,
+  ]);
+
   const resetForm = () => {
     setEditingStudentId(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
+    setFormGovernorateId("");
+    setFormDirectorateId("");
+    setFormSubDistrictId("");
+    setFormVillageId("");
   };
 
   const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setPage(1);
     setSearch(searchInput.trim());
+  };
+
+  const handleGovernorateChange = (value: string) => {
+    setFormGovernorateId(value);
+    setFormDirectorateId("");
+    setFormSubDistrictId("");
+    setFormVillageId("");
+    setFormState((prev) => ({ ...prev, localityId: "" }));
+  };
+
+  const handleDirectorateChange = (value: string) => {
+    setFormDirectorateId(value);
+    setFormSubDistrictId("");
+    setFormVillageId("");
+    setFormState((prev) => ({ ...prev, localityId: "" }));
+  };
+
+  const handleSubDistrictChange = (value: string) => {
+    setFormSubDistrictId(value);
+    setFormVillageId("");
+    setFormState((prev) => ({ ...prev, localityId: "" }));
+  };
+
+  const handleVillageChange = (value: string) => {
+    setFormVillageId(value);
+    setFormState((prev) => ({ ...prev, localityId: "" }));
+  };
+
+  const handleLocalityChange = (value: string) => {
+    setFormState((prev) => ({ ...prev, localityId: value }));
   };
 
   const validateForm = (): boolean => {
@@ -400,6 +584,7 @@ export function StudentsWorkspace() {
       genderId: formState.genderId ? Number(formState.genderId) : undefined,
       birthDate: formState.birthDate ? toDateIso(formState.birthDate) : undefined,
       bloodTypeId: formState.bloodTypeId ? Number(formState.bloodTypeId) : null,
+      localityId: formState.localityId ? Number(formState.localityId) : null,
       healthStatus: mappedHealthStatus,
       healthStatusId: formState.healthStatusId
         ? Number(formState.healthStatusId)
@@ -494,6 +679,21 @@ export function StudentsWorkspace() {
         nextState.healthStatusId = String(mapped.id);
       }
     }
+
+    if (!nextState.localityId) {
+      setFormGovernorateId("");
+      setFormDirectorateId("");
+      setFormSubDistrictId("");
+      setFormVillageId("");
+    } else {
+      const locality = geographyMaps.localityById.get(Number(nextState.localityId));
+      const selection = resolveSelectionFromLocality(locality, geographyMaps);
+      setFormGovernorateId(selection.governorateId);
+      setFormDirectorateId(selection.directorateId);
+      setFormSubDistrictId(selection.subDistrictId);
+      setFormVillageId(selection.villageId);
+    }
+
     setFormState(nextState);
   };
 
@@ -691,6 +891,126 @@ export function StudentsWorkspace() {
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">
+                  الموقع الجغرافي (هرمي)
+                </label>
+                {hasGeographyHierarchy ? (
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <select
+                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      value={formGovernorateId}
+                      onChange={(event) => handleGovernorateChange(event.target.value)}
+                      disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
+                    >
+                      <option value="">اختر المحافظة</option>
+                      {governorateOptions.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.nameAr ?? item.name ?? `محافظة #${item.id}`}
+                        </option>
+                      ))}
+                    </select>
+
+                    <select
+                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      value={formDirectorateId}
+                      onChange={(event) => handleDirectorateChange(event.target.value)}
+                      disabled={
+                        !canReadLocalities ||
+                        geographyOptionsQuery.isLoading ||
+                        !formGovernorateId
+                      }
+                    >
+                      <option value="">اختر المديرية</option>
+                      {filteredDirectorates.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.nameAr ?? item.name ?? `مديرية #${item.id}`}
+                        </option>
+                      ))}
+                    </select>
+
+                    <select
+                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      value={formSubDistrictId}
+                      onChange={(event) => handleSubDistrictChange(event.target.value)}
+                      disabled={
+                        !canReadLocalities ||
+                        geographyOptionsQuery.isLoading ||
+                        !formDirectorateId
+                      }
+                    >
+                      <option value="">اختر العزلة</option>
+                      {filteredSubDistricts.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.nameAr ?? item.name ?? `عزلة #${item.id}`}
+                        </option>
+                      ))}
+                    </select>
+
+                    <select
+                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      value={formVillageId}
+                      onChange={(event) => handleVillageChange(event.target.value)}
+                      disabled={
+                        !canReadLocalities ||
+                        geographyOptionsQuery.isLoading ||
+                        !formSubDistrictId
+                      }
+                    >
+                      <option value="">اختر القرية (اختياري للحضر)</option>
+                      {filteredVillages.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.nameAr ?? item.name ?? `قرية #${item.id}`}
+                        </option>
+                      ))}
+                    </select>
+
+                    <div className="md:col-span-2">
+                      <select
+                        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                        value={formState.localityId}
+                        onChange={(event) => handleLocalityChange(event.target.value)}
+                        disabled={
+                          !canReadLocalities ||
+                          geographyOptionsQuery.isLoading ||
+                          !formDirectorateId
+                        }
+                      >
+                        <option value="">اختر المحلة</option>
+                        {filteredLocalities.map((locality) => (
+                          <option key={locality.id} value={locality.id}>
+                            {formatLocalityHierarchyLabel(locality, geographyMaps)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <p className="text-xs text-muted-foreground md:col-span-2">
+                      {formSelectedLocality
+                        ? `المحدد: ${formatLocalityHierarchyLabel(
+                            formSelectedLocality,
+                            geographyMaps,
+                          )}`
+                        : "يمكن اختيار محلة حضرية بعد تحديد المديرية، أو محلة ريفية بعد اختيار العزلة والقرية."}
+                    </p>
+                  </div>
+                ) : (
+                  <select
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    value={formState.localityId}
+                    onChange={(event) => handleLocalityChange(event.target.value)}
+                    disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
+                  >
+                    <option value="">غير محدد</option>
+                    {localityOptions.map((locality) => (
+                      <option key={locality.id} value={locality.id}>
+                        {formatLocalityHierarchyLabel(locality, geographyMaps)}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">ملاحظات صحية</label>
                 <textarea
@@ -760,7 +1080,7 @@ export function StudentsWorkspace() {
 
           <form
             onSubmit={handleSearchSubmit}
-            className="grid gap-2 md:grid-cols-[1fr_150px_170px_190px_130px_auto]"
+            className="grid gap-2 md:grid-cols-[1fr_150px_170px_210px_190px_130px_auto]"
           >
             <div className="relative">
               <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -809,6 +1129,23 @@ export function StudentsWorkspace() {
               {bloodTypeOptions.map((bloodType) => (
                 <option key={bloodType.id} value={bloodType.id}>
                   {bloodType.name}
+                </option>
+              ))}
+            </select>
+
+            <select
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              value={localityFilter}
+              onChange={(event) => {
+                setPage(1);
+                setLocalityFilter(event.target.value);
+              }}
+              disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
+            >
+              <option value="all">كل المحلات</option>
+              {localityOptions.map((locality) => (
+                <option key={locality.id} value={locality.id}>
+                  {formatLocalityHierarchyLabel(locality, geographyMaps)}
                 </option>
               ))}
             </select>
@@ -895,6 +1232,16 @@ export function StudentsWorkspace() {
                         {translateStudentEnrollmentStatus(latestEnrollment.status)})
                       </p>
                     ) : null}
+                    <p className="text-xs text-muted-foreground">
+                      الموقع:{" "}
+                      {student.locality
+                        ? formatLocalityHierarchyLabel(
+                            (geographyMaps.localityById.get(student.locality.id) ??
+                              student.locality) as LocalityLabelInput,
+                            geographyMaps,
+                          )
+                        : "غير محدد"}
+                    </p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-1.5">

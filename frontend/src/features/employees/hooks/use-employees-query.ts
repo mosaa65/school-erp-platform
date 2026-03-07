@@ -15,6 +15,7 @@ type UseEmployeesQueryOptions = {
   genderId?: number;
   employmentType?: EmploymentType;
   idTypeId?: number;
+  localityId?: number;
   qualificationId?: number;
   jobRoleId?: number;
   isActive?: boolean;
@@ -33,6 +34,7 @@ export function useEmployeesQuery(options: UseEmployeesQueryOptions = {}) {
       options.genderId ?? "all",
       options.employmentType ?? "all",
       options.idTypeId ?? "all",
+      options.localityId ?? "all",
       options.qualificationId ?? "all",
       options.jobRoleId ?? "all",
       options.isActive === undefined ? "all" : options.isActive ? "active" : "inactive",
@@ -47,6 +49,7 @@ export function useEmployeesQuery(options: UseEmployeesQueryOptions = {}) {
           genderId: options.genderId,
           employmentType: options.employmentType,
           idTypeId: options.idTypeId,
+          localityId: options.localityId,
           qualificationId: options.qualificationId,
           jobRoleId: options.jobRoleId,
           isActive: options.isActive,

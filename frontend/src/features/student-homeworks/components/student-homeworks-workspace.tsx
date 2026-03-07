@@ -30,6 +30,10 @@ import { useHomeworkOptionsQuery } from "@/features/student-homeworks/hooks/use-
 import { useStudentEnrollmentOptionsQuery } from "@/features/student-homeworks/hooks/use-student-enrollment-options-query";
 import { useStudentOptionsQuery } from "@/features/student-homeworks/hooks/use-student-options-query";
 import type { StudentHomeworkListItem } from "@/lib/api/client";
+import {
+  formatNameCodeLabel,
+  formatSectionWithGradeLabel,
+} from "@/lib/option-labels";
 
 type StudentHomeworkFormState = {
   homeworkId: string;
@@ -409,7 +413,7 @@ export function StudentHomeworksWorkspace() {
                 <option value="">اختر الواجب *</option>
                 {(homeworksQuery.data ?? []).map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.title} ({item.section.code}/{item.subject.code})
+                    {item.title} ({formatSectionWithGradeLabel(item.section)} / {formatNameCodeLabel(item.subject.name, item.subject.code)})
                   </option>
                 ))}
               </select>
@@ -426,7 +430,7 @@ export function StudentHomeworksWorkspace() {
                 {formEnrollmentOptions.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.student.fullName} ({item.student.admissionNo ?? "بدون رقم قيد"}) -{" "}
-                    {item.academicYear.code}/{item.section.code}
+                    {formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatSectionWithGradeLabel(item.section)}
                   </option>
                 ))}
               </select>
@@ -560,7 +564,7 @@ export function StudentHomeworksWorkspace() {
               <option value="all">كل الطلاب</option>
               {(studentsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.admissionNo ?? item.fullName}
+                  {item.fullName} {item.admissionNo ? `(${item.admissionNo})` : ""}
                 </option>
               ))}
             </select>
@@ -575,7 +579,7 @@ export function StudentHomeworksWorkspace() {
               <option value="all">كل القيود</option>
               {filteredEnrollmentOptions.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.student.fullName} ({item.academicYear.code}/{item.section.code})
+                  {item.student.fullName} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatSectionWithGradeLabel(item.section)})
                 </option>
               ))}
             </select>
@@ -590,7 +594,7 @@ export function StudentHomeworksWorkspace() {
               <option value="all">كل الواجبات</option>
               {(homeworksQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.title}
+                  {item.title} ({formatSectionWithGradeLabel(item.section)})
                 </option>
               ))}
             </select>

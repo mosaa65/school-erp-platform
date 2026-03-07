@@ -10,7 +10,7 @@ export default function UsersPage() {
         <div className="space-y-2">
           <Badge variant="secondary" className="w-fit gap-1.5">
             <Users className="h-4 w-4" />
-            System 01 - Users
+            النظام 01 - المستخدمون
           </Badge>
           <h2 className="text-2xl font-semibold tracking-tight">إدارة المستخدمين</h2>
           <p className="text-sm text-muted-foreground">
@@ -24,6 +24,7 @@ export default function UsersPage() {
     </PermissionGuard>
   );
 }
+
 
 
 

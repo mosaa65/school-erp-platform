@@ -18,9 +18,22 @@ async function main() {
 
   console.log('Demo seed completed');
   console.log(`Academic year: ${result.academicYearCode}`);
-  console.log(`Section: ${result.sectionCode}`);
-  console.log(`Employee: ${result.employeeReference}`);
-  console.log(`Student: ${result.studentReference}`);
+  console.log(`Target sections: ${result.targetSections.join(', ')}`);
+  console.log(
+    `Employees: ${result.employees.total} | Users: ${result.employees.users} | Teaching assignments: ${result.employees.teachingAssignments} | Section supervisions: ${result.employees.sectionSupervisions}`,
+  );
+  console.log(
+    `Students: ${result.students.total} | Guardians: ${result.students.guardians} | Guardian users: ${result.students.guardianUsers} | Enrollments: ${result.students.enrollments} | Attendance: ${result.students.attendance} | Books: ${result.students.books}`,
+  );
+  console.log('Sample credentials:');
+  for (const credential of result.sampleCredentials) {
+    console.log(
+      `- ${credential.label} | ${credential.roleCode} | ${credential.email} | ${credential.password}`,
+    );
+  }
+  console.log(
+    `Sample admissions: ${result.sampleStudentAdmissions.join(', ')}`,
+  );
 }
 
 main()

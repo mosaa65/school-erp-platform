@@ -370,10 +370,7 @@ export class StudentGuardiansService {
       return normalized as GuardianRelationship;
     }
 
-    if (
-      normalized === 'UNCLE_PATERNAL' ||
-      normalized === 'UNCLE_MATERNAL'
-    ) {
+    if (normalized === 'UNCLE_PATERNAL' || normalized === 'UNCLE_MATERNAL') {
       return GuardianRelationship.UNCLE;
     }
 
@@ -435,16 +432,18 @@ export class StudentGuardiansService {
   }
 
   private async ensureRelationshipLookupExists(relationshipTypeId: number) {
-    const relationshipType = await this.prisma.lookupRelationshipType.findFirst({
-      where: {
-        id: relationshipTypeId,
-        deletedAt: null,
+    const relationshipType = await this.prisma.lookupRelationshipType.findFirst(
+      {
+        where: {
+          id: relationshipTypeId,
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          code: true,
+        },
       },
-      select: {
-        id: true,
-        code: true,
-      },
-    });
+    );
 
     if (!relationshipType) {
       throw new BadRequestException('relationshipTypeId is not valid');
@@ -462,10 +461,7 @@ export class StudentGuardiansService {
         lookup.code,
       );
 
-      if (
-        payload.relationship &&
-        payload.relationship !== mappedRelationship
-      ) {
+      if (payload.relationship && payload.relationship !== mappedRelationship) {
         throw new BadRequestException(
           'relationship and relationshipTypeId do not refer to the same lookup value',
         );
@@ -483,7 +479,9 @@ export class StudentGuardiansService {
       );
     }
 
-    const lookup = await this.findRelationshipLookupByEnum(payload.relationship);
+    const lookup = await this.findRelationshipLookupByEnum(
+      payload.relationship,
+    );
 
     return {
       relationship: payload.relationship,
@@ -503,10 +501,7 @@ export class StudentGuardiansService {
         lookup.code,
       );
 
-      if (
-        payload.relationship &&
-        payload.relationship !== mappedRelationship
-      ) {
+      if (payload.relationship && payload.relationship !== mappedRelationship) {
         throw new BadRequestException(
           'relationship and relationshipTypeId do not refer to the same lookup value',
         );

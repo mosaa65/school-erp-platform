@@ -8,7 +8,7 @@ export default function ExamPeriodsPage() {
       <div className="space-y-4">
         <div className="space-y-2">
           <Badge variant="secondary" className="w-fit">
-            System 05 - Teaching & Grades
+            النظام 05 - التعليم والدرجات
           </Badge>
           <h2 className="text-2xl font-semibold tracking-tight">الفترات الاختبارية</h2>
         </div>
@@ -17,6 +17,7 @@ export default function ExamPeriodsPage() {
     </PermissionGuard>
   );
 }
+
 
 
 

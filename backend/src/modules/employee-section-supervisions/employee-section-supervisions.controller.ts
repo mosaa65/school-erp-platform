@@ -41,10 +41,7 @@ export class EmployeeSectionSupervisionsController {
     @Body() payload: CreateEmployeeSectionSupervisionDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.employeeSectionSupervisionsService.create(
-      payload,
-      user.userId,
-    );
+    return this.employeeSectionSupervisionsService.create(payload, user.userId);
   }
 
   @Get()

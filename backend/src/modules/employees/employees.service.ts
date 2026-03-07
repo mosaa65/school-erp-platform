@@ -32,6 +32,15 @@ const employeeInclude = {
       isActive: true,
     },
   },
+  locality: {
+    select: {
+      id: true,
+      nameAr: true,
+      localityType: true,
+      directorateId: true,
+      villageId: true,
+    },
+  },
   genderLookup: {
     select: {
       id: true,
@@ -72,6 +81,9 @@ export class EmployeesService {
     if (payload.idTypeId !== undefined && payload.idTypeId !== null) {
       await this.ensureIdTypeExists(payload.idTypeId);
     }
+    if (payload.localityId !== undefined && payload.localityId !== null) {
+      await this.ensureLocalityExists(payload.localityId);
+    }
 
     const gender = await this.resolveGenderOnCreate(payload);
     const qualification = await this.resolveQualificationOnCreate(payload);
@@ -95,6 +107,8 @@ export class EmployeesService {
           specialization: payload.specialization,
           idNumber: payload.idNumber,
           idTypeId: payload.idTypeId === null ? null : payload.idTypeId,
+          localityId:
+            payload.localityId === null ? null : payload.localityId,
           idExpiryDate: payload.idExpiryDate,
           experienceYears: payload.experienceYears ?? 0,
           employmentType: payload.employmentType,
@@ -151,6 +165,7 @@ export class EmployeesService {
       genderId: query.genderId,
       employmentType: query.employmentType,
       idTypeId: query.idTypeId,
+      localityId: query.localityId,
       qualificationId: query.qualificationId,
       jobRoleId: query.jobRoleId,
       isActive: query.isActive,
@@ -231,6 +246,9 @@ export class EmployeesService {
     if (payload.idTypeId !== undefined && payload.idTypeId !== null) {
       await this.ensureIdTypeExists(payload.idTypeId);
     }
+    if (payload.localityId !== undefined && payload.localityId !== null) {
+      await this.ensureLocalityExists(payload.localityId);
+    }
 
     const gender = await this.resolveGenderOnUpdate(existing, payload);
     const qualification = await this.resolveQualificationOnUpdate(
@@ -260,6 +278,8 @@ export class EmployeesService {
           specialization: payload.specialization,
           idNumber: payload.idNumber,
           idTypeId: payload.idTypeId === null ? null : payload.idTypeId,
+          localityId:
+            payload.localityId === null ? null : payload.localityId,
           idExpiryDate: payload.idExpiryDate,
           experienceYears: payload.experienceYears,
           employmentType: payload.employmentType,
@@ -370,6 +390,27 @@ export class EmployeesService {
     }
   }
 
+  private async ensureLocalityExists(localityId: number) {
+    const locality = await this.prisma.locality.findFirst({
+      where: {
+        id: localityId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        isActive: true,
+      },
+    });
+
+    if (!locality) {
+      throw new BadRequestException('localityId is not valid');
+    }
+
+    if (!locality.isActive) {
+      throw new BadRequestException('localityId is inactive');
+    }
+  }
+
   private mapLookupGenderCodeToEnum(code: string): EmployeeGender {
     const normalized = code.trim().toUpperCase();
 
@@ -467,10 +508,7 @@ export class EmployeesService {
     return this.prisma.lookupQualification.findFirst({
       where: {
         deletedAt: null,
-        OR: [
-          { code: normalized.toUpperCase() },
-          { nameAr: normalized },
-        ],
+        OR: [{ code: normalized.toUpperCase() }, { nameAr: normalized }],
       },
       select: {
         id: true,
@@ -532,7 +570,10 @@ export class EmployeesService {
     };
   }
 
-  private async resolveGenderOnUpdate(existing: Employee, payload: UpdateEmployeeDto) {
+  private async resolveGenderOnUpdate(
+    existing: Employee,
+    payload: UpdateEmployeeDto,
+  ) {
     if (payload.genderId !== undefined) {
       const lookup = await this.ensureGenderLookupExists(payload.genderId);
       const mappedGender = this.mapLookupGenderCodeToEnum(lookup.code);
@@ -590,7 +631,9 @@ export class EmployeesService {
       };
     }
 
-    const matched = await this.findQualificationLookupByText(payload.qualification);
+    const matched = await this.findQualificationLookupByText(
+      payload.qualification,
+    );
     return {
       qualificationId: matched?.id ?? null,
       qualification: payload.qualification.trim(),

@@ -32,6 +32,14 @@ const guardianInclude: Prisma.GuardianInclude = {
       isActive: true,
     },
   },
+  locality: {
+    select: {
+      id: true,
+      nameAr: true,
+      localityType: true,
+      isActive: true,
+    },
+  },
   genderLookup: {
     select: {
       id: true,
@@ -77,6 +85,10 @@ export class GuardiansService {
       await this.ensureIdTypeExists(payload.idTypeId);
     }
 
+    if (payload.localityId !== undefined && payload.localityId !== null) {
+      await this.ensureLocalityExists(payload.localityId);
+    }
+
     const gender = await this.resolveGenderOnCreate(payload);
 
     try {
@@ -87,6 +99,7 @@ export class GuardiansService {
           genderId: gender.genderId,
           idNumber: payload.idNumber,
           idTypeId: payload.idTypeId === null ? null : payload.idTypeId,
+          localityId: payload.localityId === null ? null : payload.localityId,
           phonePrimary: payload.phonePrimary,
           phoneSecondary: payload.phoneSecondary,
           whatsappNumber: payload.whatsappNumber,
@@ -135,6 +148,7 @@ export class GuardiansService {
       gender: query.gender,
       genderId: query.genderId,
       idTypeId: query.idTypeId,
+      localityId: query.localityId,
       isActive: query.isActive,
       OR: query.search
         ? [
@@ -207,6 +221,10 @@ export class GuardiansService {
       await this.ensureIdTypeExists(payload.idTypeId);
     }
 
+    if (payload.localityId !== undefined && payload.localityId !== null) {
+      await this.ensureLocalityExists(payload.localityId);
+    }
+
     const gender = await this.resolveGenderOnUpdate(existing, payload);
 
     try {
@@ -220,6 +238,7 @@ export class GuardiansService {
           genderId: gender.genderId,
           idNumber: payload.idNumber,
           idTypeId: payload.idTypeId === null ? null : payload.idTypeId,
+          localityId: payload.localityId === null ? null : payload.localityId,
           phonePrimary: payload.phonePrimary,
           phoneSecondary: payload.phoneSecondary,
           whatsappNumber: payload.whatsappNumber,
@@ -322,6 +341,27 @@ export class GuardiansService {
 
     if (!idType) {
       throw new BadRequestException('idTypeId is not valid');
+    }
+  }
+
+  private async ensureLocalityExists(localityId: number) {
+    const locality = await this.prisma.locality.findFirst({
+      where: {
+        id: localityId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        isActive: true,
+      },
+    });
+
+    if (!locality) {
+      throw new BadRequestException('localityId is not valid');
+    }
+
+    if (!locality.isActive) {
+      throw new BadRequestException('localityId is inactive');
     }
   }
 

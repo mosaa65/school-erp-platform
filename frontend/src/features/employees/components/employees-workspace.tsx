@@ -20,6 +20,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
+import { useGeographyOptionsQuery } from "@/features/lookup-catalog/hooks/use-geography-options-query";
+import {
+  buildGeographyMaps,
+  formatLocalityHierarchyLabel,
+  resolveSelectionFromLocality,
+} from "@/features/lookup-catalog/lib/geography";
 import {
   useCreateEmployeeMutation,
   useDeleteEmployeeMutation,
@@ -57,6 +63,7 @@ type EmployeeFormState = {
   specialization: string;
   idNumber: string;
   idTypeId: string;
+  localityId: string;
   idExpiryDate: string;
   experienceYears: string;
   employmentType: EmploymentType | "";
@@ -84,6 +91,7 @@ const DEFAULT_FORM_STATE: EmployeeFormState = {
   specialization: "",
   idNumber: "",
   idTypeId: "",
+  localityId: "",
   idExpiryDate: "",
   experienceYears: "0",
   employmentType: "",
@@ -123,6 +131,15 @@ function toDateIso(dateInput: string): string {
   return `${dateInput}T00:00:00.000Z`;
 }
 
+type LocalityLabelInput = {
+  id: number;
+  nameAr?: string;
+  name?: string;
+  localityType?: "RURAL" | "URBAN";
+  directorateId?: number | null;
+  villageId?: number | null;
+};
+
 function toFormState(employee: EmployeeListItem): EmployeeFormState {
   return {
     jobNumber: employee.jobNumber ?? "",
@@ -138,6 +155,7 @@ function toFormState(employee: EmployeeListItem): EmployeeFormState {
     specialization: employee.specialization ?? "",
     idNumber: employee.idNumber ?? "",
     idTypeId: employee.idTypeId ? String(employee.idTypeId) : "",
+    localityId: employee.localityId ? String(employee.localityId) : "",
     idExpiryDate: toDateInput(employee.idExpiryDate),
     experienceYears: String(employee.experienceYears),
     employmentType: employee.employmentType ?? "",
@@ -184,6 +202,7 @@ export function EmployeesWorkspace() {
   const canReadGenders = hasPermission("lookup-genders.read");
   const canReadQualifications = hasPermission("lookup-qualifications.read");
   const canReadJobRoles = hasPermission("lookup-job-roles.read");
+  const canReadLocalities = hasPermission("localities.read");
 
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
@@ -193,6 +212,7 @@ export function EmployeesWorkspace() {
     EmploymentType | "all"
   >("all");
   const [idTypeFilter, setIdTypeFilter] = React.useState<string>("all");
+  const [localityFilter, setLocalityFilter] = React.useState<string>("all");
   const [qualificationFilter, setQualificationFilter] = React.useState<string>("all");
   const [jobRoleFilter, setJobRoleFilter] = React.useState<string>("all");
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
@@ -202,6 +222,10 @@ export function EmployeesWorkspace() {
   const [editingEmployeeId, setEditingEmployeeId] = React.useState<string | null>(null);
   const [formState, setFormState] = React.useState<EmployeeFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [formGovernorateId, setFormGovernorateId] = React.useState<string>("");
+  const [formDirectorateId, setFormDirectorateId] = React.useState<string>("");
+  const [formSubDistrictId, setFormSubDistrictId] = React.useState<string>("");
+  const [formVillageId, setFormVillageId] = React.useState<string>("");
 
   const employeesQuery = useEmployeesQuery({
     page,
@@ -210,6 +234,7 @@ export function EmployeesWorkspace() {
     genderId: genderFilter === "all" ? undefined : Number(genderFilter),
     employmentType: employmentTypeFilter === "all" ? undefined : employmentTypeFilter,
     idTypeId: idTypeFilter === "all" ? undefined : Number(idTypeFilter),
+    localityId: localityFilter === "all" ? undefined : Number(localityFilter),
     qualificationId:
       qualificationFilter === "all" ? undefined : Number(qualificationFilter),
     jobRoleId: jobRoleFilter === "all" ? undefined : Number(jobRoleFilter),
@@ -217,6 +242,7 @@ export function EmployeesWorkspace() {
   });
   const idTypeOptionsQuery = useIdTypeOptionsQuery();
   const genderOptionsQuery = useGenderOptionsQuery();
+  const geographyOptionsQuery = useGeographyOptionsQuery("employees");
   const qualificationOptionsQuery = useQualificationOptionsQuery();
   const jobRoleOptionsQuery = useJobRoleOptionsQuery();
 
@@ -235,6 +261,98 @@ export function EmployeesWorkspace() {
   const genderOptions = React.useMemo(
     () => genderOptionsQuery.data ?? [],
     [genderOptionsQuery.data],
+  );
+  const governorateOptions = React.useMemo(
+    () => geographyOptionsQuery.data?.governorates ?? [],
+    [geographyOptionsQuery.data?.governorates],
+  );
+  const directorateOptions = React.useMemo(
+    () => geographyOptionsQuery.data?.directorates ?? [],
+    [geographyOptionsQuery.data?.directorates],
+  );
+  const subDistrictOptions = React.useMemo(
+    () => geographyOptionsQuery.data?.subDistricts ?? [],
+    [geographyOptionsQuery.data?.subDistricts],
+  );
+  const villageOptions = React.useMemo(
+    () => geographyOptionsQuery.data?.villages ?? [],
+    [geographyOptionsQuery.data?.villages],
+  );
+  const localityOptions = React.useMemo(
+    () => geographyOptionsQuery.data?.localities ?? [],
+    [geographyOptionsQuery.data?.localities],
+  );
+  const geographyMaps = React.useMemo(
+    () =>
+      buildGeographyMaps({
+        governorates: governorateOptions,
+        directorates: directorateOptions,
+        subDistricts: subDistrictOptions,
+        villages: villageOptions,
+        localities: localityOptions,
+      }),
+    [
+      directorateOptions,
+      governorateOptions,
+      localityOptions,
+      subDistrictOptions,
+      villageOptions,
+    ],
+  );
+  const hasGeographyHierarchy = React.useMemo(
+    () => governorateOptions.length > 0 && directorateOptions.length > 0,
+    [directorateOptions.length, governorateOptions.length],
+  );
+  const filteredDirectorates = React.useMemo(() => {
+    if (!formGovernorateId) {
+      return [];
+    }
+
+    const governorateId = Number(formGovernorateId);
+    return directorateOptions.filter((item) => item.governorateId === governorateId);
+  }, [directorateOptions, formGovernorateId]);
+  const filteredSubDistricts = React.useMemo(() => {
+    if (!formDirectorateId) {
+      return [];
+    }
+
+    const directorateId = Number(formDirectorateId);
+    return subDistrictOptions.filter((item) => item.directorateId === directorateId);
+  }, [formDirectorateId, subDistrictOptions]);
+  const filteredVillages = React.useMemo(() => {
+    if (!formSubDistrictId) {
+      return [];
+    }
+
+    const subDistrictId = Number(formSubDistrictId);
+    return villageOptions.filter((item) => item.subDistrictId === subDistrictId);
+  }, [formSubDistrictId, villageOptions]);
+  const filteredLocalities = React.useMemo(() => {
+    if (!formDirectorateId) {
+      return [];
+    }
+
+    const directorateId = Number(formDirectorateId);
+    const selectedVillageId = formVillageId ? Number(formVillageId) : null;
+
+    return localityOptions.filter((item) => {
+      if (item.localityType === "URBAN") {
+        return item.directorateId === directorateId;
+      }
+
+      if (!selectedVillageId) {
+        return false;
+      }
+
+      return item.villageId === selectedVillageId;
+    });
+  }, [formDirectorateId, formVillageId, localityOptions]);
+  const formSelectedLocality = React.useMemo(
+    () =>
+      formState.localityId
+        ? geographyMaps.localityById.get(Number(formState.localityId))
+        : undefined,
+    [formState.localityId, geographyMaps],
   );
   const qualificationOptions = React.useMemo(
     () => qualificationOptionsQuery.data ?? [],
@@ -263,6 +381,10 @@ export function EmployeesWorkspace() {
       setEditingEmployeeId(null);
       setFormState(DEFAULT_FORM_STATE);
       setFormError(null);
+      setFormGovernorateId("");
+      setFormDirectorateId("");
+      setFormSubDistrictId("");
+      setFormVillageId("");
     }
   }, [editingEmployeeId, employees, isEditing]);
 
@@ -287,16 +409,82 @@ export function EmployeesWorkspace() {
     );
   }, [canReadGenders, formState.genderId, genderOptions, isEditing]);
 
+  React.useEffect(() => {
+    if (!formState.localityId) {
+      return;
+    }
+
+    const locality = geographyMaps.localityById.get(Number(formState.localityId));
+    const selection = resolveSelectionFromLocality(locality, geographyMaps);
+
+    if (selection.governorateId !== formGovernorateId) {
+      setFormGovernorateId(selection.governorateId);
+    }
+
+    if (selection.directorateId !== formDirectorateId) {
+      setFormDirectorateId(selection.directorateId);
+    }
+
+    if (selection.subDistrictId !== formSubDistrictId) {
+      setFormSubDistrictId(selection.subDistrictId);
+    }
+
+    if (selection.villageId !== formVillageId) {
+      setFormVillageId(selection.villageId);
+    }
+  }, [
+    formDirectorateId,
+    formGovernorateId,
+    formState.localityId,
+    formSubDistrictId,
+    formVillageId,
+    geographyMaps,
+  ]);
+
   const resetForm = () => {
     setEditingEmployeeId(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
+    setFormGovernorateId("");
+    setFormDirectorateId("");
+    setFormSubDistrictId("");
+    setFormVillageId("");
   };
 
   const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setPage(1);
     setSearch(searchInput.trim());
+  };
+
+  const handleGovernorateChange = (value: string) => {
+    setFormGovernorateId(value);
+    setFormDirectorateId("");
+    setFormSubDistrictId("");
+    setFormVillageId("");
+    setFormState((prev) => ({ ...prev, localityId: "" }));
+  };
+
+  const handleDirectorateChange = (value: string) => {
+    setFormDirectorateId(value);
+    setFormSubDistrictId("");
+    setFormVillageId("");
+    setFormState((prev) => ({ ...prev, localityId: "" }));
+  };
+
+  const handleSubDistrictChange = (value: string) => {
+    setFormSubDistrictId(value);
+    setFormVillageId("");
+    setFormState((prev) => ({ ...prev, localityId: "" }));
+  };
+
+  const handleVillageChange = (value: string) => {
+    setFormVillageId(value);
+    setFormState((prev) => ({ ...prev, localityId: "" }));
+  };
+
+  const handleLocalityChange = (value: string) => {
+    setFormState((prev) => ({ ...prev, localityId: value }));
   };
 
   const validateForm = (): boolean => {
@@ -361,6 +549,7 @@ export function EmployeesWorkspace() {
       specialization: toOptionalString(formState.specialization),
       idNumber: toOptionalString(formState.idNumber),
       idTypeId: formState.idTypeId ? Number(formState.idTypeId) : null,
+      localityId: formState.localityId ? Number(formState.localityId) : null,
       idExpiryDate: formState.idExpiryDate ? toDateIso(formState.idExpiryDate) : undefined,
       experienceYears: Number(formState.experienceYears),
       employmentType: formState.employmentType || undefined,
@@ -431,6 +620,20 @@ export function EmployeesWorkspace() {
       if (mapped) {
         nextState.jobRoleId = String(mapped.id);
       }
+    }
+
+    if (!nextState.localityId) {
+      setFormGovernorateId("");
+      setFormDirectorateId("");
+      setFormSubDistrictId("");
+      setFormVillageId("");
+    } else {
+      const locality = geographyMaps.localityById.get(Number(nextState.localityId));
+      const selection = resolveSelectionFromLocality(locality, geographyMaps);
+      setFormGovernorateId(selection.governorateId);
+      setFormDirectorateId(selection.directorateId);
+      setFormSubDistrictId(selection.subDistrictId);
+      setFormVillageId(selection.villageId);
     }
 
     setFormState(nextState);
@@ -716,6 +919,126 @@ export function EmployeesWorkspace() {
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">
+                  الموقع الجغرافي (هرمي)
+                </label>
+                {hasGeographyHierarchy ? (
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <select
+                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      value={formGovernorateId}
+                      onChange={(event) => handleGovernorateChange(event.target.value)}
+                      disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
+                    >
+                      <option value="">اختر المحافظة</option>
+                      {governorateOptions.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.nameAr ?? item.name ?? `محافظة #${item.id}`}
+                        </option>
+                      ))}
+                    </select>
+
+                    <select
+                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      value={formDirectorateId}
+                      onChange={(event) => handleDirectorateChange(event.target.value)}
+                      disabled={
+                        !canReadLocalities ||
+                        geographyOptionsQuery.isLoading ||
+                        !formGovernorateId
+                      }
+                    >
+                      <option value="">اختر المديرية</option>
+                      {filteredDirectorates.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.nameAr ?? item.name ?? `مديرية #${item.id}`}
+                        </option>
+                      ))}
+                    </select>
+
+                    <select
+                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      value={formSubDistrictId}
+                      onChange={(event) => handleSubDistrictChange(event.target.value)}
+                      disabled={
+                        !canReadLocalities ||
+                        geographyOptionsQuery.isLoading ||
+                        !formDirectorateId
+                      }
+                    >
+                      <option value="">اختر العزلة</option>
+                      {filteredSubDistricts.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.nameAr ?? item.name ?? `عزلة #${item.id}`}
+                        </option>
+                      ))}
+                    </select>
+
+                    <select
+                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      value={formVillageId}
+                      onChange={(event) => handleVillageChange(event.target.value)}
+                      disabled={
+                        !canReadLocalities ||
+                        geographyOptionsQuery.isLoading ||
+                        !formSubDistrictId
+                      }
+                    >
+                      <option value="">اختر القرية (اختياري للحضر)</option>
+                      {filteredVillages.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.nameAr ?? item.name ?? `قرية #${item.id}`}
+                        </option>
+                      ))}
+                    </select>
+
+                    <div className="md:col-span-2">
+                      <select
+                        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                        value={formState.localityId}
+                        onChange={(event) => handleLocalityChange(event.target.value)}
+                        disabled={
+                          !canReadLocalities ||
+                          geographyOptionsQuery.isLoading ||
+                          !formDirectorateId
+                        }
+                      >
+                        <option value="">اختر المحلة</option>
+                        {filteredLocalities.map((locality) => (
+                          <option key={locality.id} value={locality.id}>
+                            {formatLocalityHierarchyLabel(locality, geographyMaps)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <p className="text-xs text-muted-foreground md:col-span-2">
+                      {formSelectedLocality
+                        ? `المحدد: ${formatLocalityHierarchyLabel(
+                            formSelectedLocality,
+                            geographyMaps,
+                          )}`
+                        : "يمكن اختيار محلة حضرية بعد تحديد المديرية، أو محلة ريفية بعد اختيار العزلة والقرية."}
+                    </p>
+                  </div>
+                ) : (
+                  <select
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    value={formState.localityId}
+                    onChange={(event) => handleLocalityChange(event.target.value)}
+                    disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
+                  >
+                    <option value="">غير محدد</option>
+                    {localityOptions.map((locality) => (
+                      <option key={locality.id} value={locality.id}>
+                        {formatLocalityHierarchyLabel(locality, geographyMaps)}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">
@@ -895,12 +1218,12 @@ export function EmployeesWorkspace() {
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <CardDescription>
-            إدارة الموظفين مع فلترة بالبحث والجنس ونوع التوظيف والمسمى والمؤهل.
+            إدارة الموظفين مع فلترة بالبحث والجنس ونوع التوظيف والمسمى والمؤهل والموقع.
           </CardDescription>
 
           <form
             onSubmit={handleSearchSubmit}
-            className="grid gap-2 md:grid-cols-[1fr_150px_170px_170px_170px_170px_130px_auto]"
+            className="grid gap-2 md:grid-cols-[1fr_150px_170px_170px_220px_170px_170px_130px_auto]"
           >
             <div className="relative">
               <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -963,6 +1286,23 @@ export function EmployeesWorkspace() {
               {idTypeOptions.map((idType) => (
                 <option key={idType.id} value={idType.id}>
                   {idType.nameAr}
+                </option>
+              ))}
+            </select>
+
+            <select
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              value={localityFilter}
+              onChange={(event) => {
+                setPage(1);
+                setLocalityFilter(event.target.value);
+              }}
+              disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
+            >
+              <option value="all">كل المحلات</option>
+              {localityOptions.map((locality) => (
+                <option key={locality.id} value={locality.id}>
+                  {formatLocalityHierarchyLabel(locality, geographyMaps)}
                 </option>
               ))}
             </select>
@@ -1062,6 +1402,16 @@ export function EmployeesWorkspace() {
                   </p>
                   <p className="text-xs text-muted-foreground">
                     الهوية: {employee.idNumber ?? "-"} | النوع: {employee.idType?.nameAr ?? "غير محدد"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    الموقع:{" "}
+                    {employee.locality
+                      ? formatLocalityHierarchyLabel(
+                          (geographyMaps.localityById.get(employee.locality.id) ??
+                            employee.locality) as LocalityLabelInput,
+                          geographyMaps,
+                        )
+                      : "غير محدد"}
                   </p>
                 </div>
 

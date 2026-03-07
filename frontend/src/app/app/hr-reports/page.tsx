@@ -8,7 +8,7 @@ export default function HrReportsPage() {
       <div className="space-y-4">
         <div className="space-y-2">
           <Badge variant="secondary" className="w-fit">
-            System 03 - HR
+            النظام 03 - الموارد البشرية
           </Badge>
           <h2 className="text-2xl font-semibold tracking-tight">تقارير الموارد البشرية</h2>
         </div>
@@ -17,6 +17,7 @@ export default function HrReportsPage() {
     </PermissionGuard>
   );
 }
+
 
 
 

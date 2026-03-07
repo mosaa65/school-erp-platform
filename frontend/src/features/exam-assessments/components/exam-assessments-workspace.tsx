@@ -30,6 +30,8 @@ import { useExamAssessmentsQuery } from "@/features/exam-assessments/hooks/use-e
 import { useExamPeriodOptionsQuery } from "@/features/exam-assessments/hooks/use-exam-period-options-query";
 import { useSectionOptionsQuery } from "@/features/exam-assessments/hooks/use-section-options-query";
 import { useSubjectOptionsQuery } from "@/features/exam-assessments/hooks/use-subject-options-query";
+import { translateAssessmentType } from "@/lib/i18n/ar";
+import { formatNameCodeLabel } from "@/lib/option-labels";
 import type { AssessmentType, ExamAssessmentListItem } from "@/lib/api/client";
 
 type ExamAssessmentFormState = {
@@ -44,16 +46,6 @@ type ExamAssessmentFormState = {
 };
 
 const PAGE_SIZE = 12;
-
-const ASSESSMENT_TYPE_OPTIONS: Array<{ value: AssessmentType; label: string }> = [
-  { value: "MONTHLY", label: "شهري" },
-  { value: "MIDTERM", label: "نصفي" },
-  { value: "FINAL", label: "نهائي" },
-  { value: "QUIZ", label: "اختبار قصير" },
-  { value: "ORAL", label: "شفهي" },
-  { value: "PRACTICAL", label: "عملي" },
-  { value: "PROJECT", label: "مشروع" },
-];
 
 const DEFAULT_FORM_STATE: ExamAssessmentFormState = {
   examPeriodId: "",
@@ -113,9 +105,7 @@ function toFormState(item: ExamAssessmentListItem): ExamAssessmentFormState {
 }
 
 function getAssessmentTypeLabel(value: AssessmentType): string {
-  return (
-    ASSESSMENT_TYPE_OPTIONS.find((option) => option.value === value)?.label ?? value
-  );
+  return translateAssessmentType(value);
 }
 
 export function ExamAssessmentsWorkspace() {
@@ -417,7 +407,7 @@ export function ExamAssessmentsWorkspace() {
                 <option value="">اختر فترة الاختبار *</option>
                 {(examPeriodsQuery.data ?? []).map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.name} ({item.academicYear.code}/{item.academicTerm.code})
+                    {item.name} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatNameCodeLabel(item.academicTerm.name, item.academicTerm.code)})
                   </option>
                 ))}
               </select>
@@ -434,7 +424,7 @@ export function ExamAssessmentsWorkspace() {
                   <option value="">اختر الشعبة *</option>
                   {(sectionsQuery.data ?? []).map((item) => (
                     <option key={item.id} value={item.id}>
-                      {item.code} - {item.name}
+                      {formatNameCodeLabel(item.name, item.code)}
                     </option>
                   ))}
                 </select>
@@ -450,7 +440,7 @@ export function ExamAssessmentsWorkspace() {
                   <option value="">اختر المادة *</option>
                   {(subjectsQuery.data ?? []).map((item) => (
                     <option key={item.id} value={item.id}>
-                      {item.code} - {item.name}
+                      {formatNameCodeLabel(item.name, item.code)}
                     </option>
                   ))}
                 </select>
@@ -583,7 +573,7 @@ export function ExamAssessmentsWorkspace() {
               <option value="all">كل الفترات</option>
               {(examPeriodsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.name}
+                  {item.name} ({formatNameCodeLabel(item.academicTerm.name, item.academicTerm.code)})
                 </option>
               ))}
             </select>
@@ -599,7 +589,7 @@ export function ExamAssessmentsWorkspace() {
               <option value="all">كل الشعب</option>
               {(sectionsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.code}
+                  {formatNameCodeLabel(item.name, item.code)}
                 </option>
               ))}
             </select>
@@ -615,7 +605,7 @@ export function ExamAssessmentsWorkspace() {
               <option value="all">كل المواد</option>
               {(subjectsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.code}
+                  {formatNameCodeLabel(item.name, item.code)}
                 </option>
               ))}
             </select>
@@ -684,7 +674,7 @@ export function ExamAssessmentsWorkspace() {
                     {item.examPeriod.name} ({getAssessmentTypeLabel(item.examPeriod.assessmentType)})
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {item.section.code} - {item.subject.code} | التاريخ: {formatDateTime(item.examDate)} |
+                    {formatNameCodeLabel(item.section.name, item.section.code)} - {formatNameCodeLabel(item.subject.name, item.subject.code)} | التاريخ: {formatDateTime(item.examDate)} |
                     العظمى: {item.maxScore}
                   </p>
                   {item.notes ? (

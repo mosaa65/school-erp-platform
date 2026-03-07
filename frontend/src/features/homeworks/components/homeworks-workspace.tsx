@@ -34,6 +34,10 @@ import { useSectionOptionsQuery } from "@/features/homeworks/hooks/use-section-o
 import { useSubjectOptionsQuery } from "@/features/homeworks/hooks/use-subject-options-query";
 import { useHomeworkTypeOptionsQuery } from "@/features/homeworks/hooks/use-homework-type-options-query";
 import type { HomeworkListItem } from "@/lib/api/client";
+import {
+  formatNameCodeLabel,
+  formatSectionWithGradeLabel,
+} from "@/lib/option-labels";
 
 type HomeworkFormState = {
   academicYearId: string;
@@ -95,6 +99,24 @@ function createDefaultFormState(): HomeworkFormState {
     homeworkDate,
     dueDate: addDaysToDateInput(homeworkDate, DEFAULT_DUE_DATE_OFFSET_DAYS),
   };
+}
+
+function shouldAutoAdjustDueDate(
+  previousHomeworkDate: string,
+  previousDueDate: string,
+): boolean {
+  if (!previousDueDate) {
+    return true;
+  }
+
+  if (!previousHomeworkDate) {
+    return false;
+  }
+
+  return (
+    previousDueDate ===
+    addDaysToDateInput(previousHomeworkDate, DEFAULT_DUE_DATE_OFFSET_DAYS)
+  );
 }
 
 function toOptionalString(value: string): string | undefined {
@@ -444,7 +466,7 @@ export function HomeworksWorkspace() {
                   <option value="">اختر السنة</option>
                   {(academicYearsQuery.data ?? []).map((year) => (
                     <option key={year.id} value={year.id}>
-                      {year.code}
+                      {formatNameCodeLabel(year.name, year.code)}
                     </option>
                   ))}
                 </select>
@@ -460,7 +482,7 @@ export function HomeworksWorkspace() {
                   <option value="">اختر الفصل</option>
                   {(academicTermsQuery.data ?? []).map((term) => (
                     <option key={term.id} value={term.id}>
-                      {term.code}
+                      {formatNameCodeLabel(term.name, term.code)}
                     </option>
                   ))}
                 </select>
@@ -478,7 +500,7 @@ export function HomeworksWorkspace() {
                   <option value="">اختر الشعبة</option>
                   {(sectionsQuery.data ?? []).map((section) => (
                     <option key={section.id} value={section.id}>
-                      {section.code}
+                      {formatSectionWithGradeLabel(section)}
                     </option>
                   ))}
                 </select>
@@ -494,11 +516,15 @@ export function HomeworksWorkspace() {
                   <option value="">اختر المادة</option>
                   {(subjectsQuery.data ?? []).map((subject) => (
                     <option key={subject.id} value={subject.id}>
-                      {subject.code}
+                      {formatNameCodeLabel(subject.name, subject.code)}
                     </option>
                   ))}
                 </select>
               </div>
+              <p className="text-xs text-muted-foreground">
+                ملاحظة: الشعبة مرتبطة بالصف، أما القاعة/مكان الحصة فيتم ضبطه من شاشة{" "}
+                <code>الجدول الدراسي</code> عبر حقل القاعة.
+              </p>
 
               <select
                 className="h-10 rounded-md border border-input bg-background px-3 text-sm"
@@ -511,7 +537,7 @@ export function HomeworksWorkspace() {
                 <option value="">اختر نوع الواجب</option>
                 {(homeworkTypesQuery.data ?? []).map((typeItem) => (
                   <option key={typeItem.id} value={typeItem.id}>
-                    {typeItem.code}
+                    {formatNameCodeLabel(typeItem.name, typeItem.code)}
                   </option>
                 ))}
               </select>
@@ -530,7 +556,32 @@ export function HomeworksWorkspace() {
                   type="date"
                   value={formState.homeworkDate}
                   onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, homeworkDate: event.target.value }))
+                    setFormState((prev) => {
+                      const nextHomeworkDate = event.target.value;
+
+                      if (!nextHomeworkDate) {
+                        return {
+                          ...prev,
+                          homeworkDate: "",
+                        };
+                      }
+
+                      const autoAdjustDueDate = shouldAutoAdjustDueDate(
+                        prev.homeworkDate,
+                        prev.dueDate,
+                      );
+
+                      return {
+                        ...prev,
+                        homeworkDate: nextHomeworkDate,
+                        dueDate: autoAdjustDueDate
+                          ? addDaysToDateInput(
+                              nextHomeworkDate,
+                              DEFAULT_DUE_DATE_OFFSET_DAYS,
+                            )
+                          : prev.dueDate,
+                      };
+                    })
                   }
                   required
                 />
@@ -684,7 +735,7 @@ export function HomeworksWorkspace() {
               <option value="all">كل السنوات</option>
               {(academicYearsQuery.data ?? []).map((year) => (
                 <option key={year.id} value={year.id}>
-                  {year.code}
+                  {formatNameCodeLabel(year.name, year.code)}
                 </option>
               ))}
             </select>
@@ -699,7 +750,7 @@ export function HomeworksWorkspace() {
               <option value="all">كل الفصول</option>
               {(academicTermsQuery.data ?? []).map((term) => (
                 <option key={term.id} value={term.id}>
-                  {term.code}
+                  {formatNameCodeLabel(term.name, term.code)}
                 </option>
               ))}
             </select>
@@ -714,7 +765,7 @@ export function HomeworksWorkspace() {
               <option value="all">كل الشعب</option>
               {(sectionsQuery.data ?? []).map((section) => (
                 <option key={section.id} value={section.id}>
-                  {section.code}
+                  {formatSectionWithGradeLabel(section)}
                 </option>
               ))}
             </select>
@@ -729,7 +780,7 @@ export function HomeworksWorkspace() {
               <option value="all">كل المواد</option>
               {(subjectsQuery.data ?? []).map((subject) => (
                 <option key={subject.id} value={subject.id}>
-                  {subject.code}
+                  {formatNameCodeLabel(subject.name, subject.code)}
                 </option>
               ))}
             </select>
@@ -744,7 +795,7 @@ export function HomeworksWorkspace() {
               <option value="all">كل الأنواع</option>
               {(homeworkTypesQuery.data ?? []).map((typeItem) => (
                 <option key={typeItem.id} value={typeItem.id}>
-                  {typeItem.code}
+                  {formatNameCodeLabel(typeItem.name, typeItem.code)}
                 </option>
               ))}
             </select>
@@ -795,8 +846,8 @@ export function HomeworksWorkspace() {
                 <div className="space-y-1">
                   <p className="font-medium">{item.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    {item.academicYear.code}/{item.academicTerm.code} - {item.section.code} -{" "}
-                    {item.subject.code} - {item.homeworkType.code}
+                    {formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatNameCodeLabel(item.academicTerm.name, item.academicTerm.code)} - {formatSectionWithGradeLabel(item.section)} -{" "}
+                    {formatNameCodeLabel(item.subject.name, item.subject.code)} - {formatNameCodeLabel(item.homeworkType.name, item.homeworkType.code)}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     الواجب: {formatDate(item.homeworkDate)} | الاستحقاق: {formatDate(item.dueDate)} |

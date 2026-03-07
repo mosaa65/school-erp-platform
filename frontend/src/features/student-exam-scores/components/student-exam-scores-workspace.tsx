@@ -30,6 +30,11 @@ import { useStudentExamScoresQuery } from "@/features/student-exam-scores/hooks/
 import { useExamPeriodOptionsQuery } from "@/features/student-exam-scores/hooks/use-exam-period-options-query";
 import { useExamAssessmentOptionsQuery } from "@/features/student-exam-scores/hooks/use-exam-assessment-options-query";
 import { useStudentEnrollmentOptionsQuery } from "@/features/student-exam-scores/hooks/use-student-enrollment-options-query";
+import {
+  translateAssessmentType,
+  translateExamAbsenceType,
+} from "@/lib/i18n/ar";
+import { formatNameCodeLabel } from "@/lib/option-labels";
 import type { ExamAbsenceType, StudentExamScoreListItem } from "@/lib/api/client";
 
 type FormState = {
@@ -45,11 +50,6 @@ type FormState = {
 };
 
 const PAGE_SIZE = 12;
-const ABSENCE_TYPE_LABELS: Record<ExamAbsenceType, string> = {
-  UNEXCUSED: "بدون عذر",
-  EXCUSED: "بعذر",
-};
-
 const DEFAULT_FORM: FormState = {
   examPeriodId: "",
   examAssessmentId: "",
@@ -82,7 +82,7 @@ function toFormState(item: StudentExamScoreListItem): FormState {
 }
 
 function getAbsenceTypeLabel(value: ExamAbsenceType): string {
-  return ABSENCE_TYPE_LABELS[value] ?? value;
+  return translateExamAbsenceType(value);
 }
 
 export function StudentExamScoresWorkspace() {
@@ -265,7 +265,7 @@ export function StudentExamScoresWorkspace() {
               <option value="">اختر الفترة *</option>
               {(examPeriodsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.name}
+                  {item.name} ({translateAssessmentType(item.assessmentType)})
                 </option>
               ))}
             </select>
@@ -280,7 +280,7 @@ export function StudentExamScoresWorkspace() {
               <option value="">اختر التقييم *</option>
               {(assessmentsForFormQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.title} ({item.section.code}/{item.subject.code})
+                  {item.title} ({formatNameCodeLabel(item.section.name, item.section.code)} / {formatNameCodeLabel(item.subject.name, item.subject.code)})
                 </option>
               ))}
             </select>
@@ -293,7 +293,7 @@ export function StudentExamScoresWorkspace() {
               <option value="">اختر القيد *</option>
               {formEnrollments.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.student.fullName} ({item.academicYear.code}/{item.section.code})
+                  {item.student.fullName} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatNameCodeLabel(item.section.name, item.section.code)})
                 </option>
               ))}
             </select>
@@ -327,8 +327,8 @@ export function StudentExamScoresWorkspace() {
                 onChange={(event) => setForm((prev) => ({ ...prev, absenceType: event.target.value as ExamAbsenceType }))}
                 disabled={form.isPresent}
               >
-                <option value="UNEXCUSED">بدون عذر</option>
-                <option value="EXCUSED">بعذر</option>
+                <option value="UNEXCUSED">{translateExamAbsenceType("UNEXCUSED")}</option>
+                <option value="EXCUSED">{translateExamAbsenceType("EXCUSED")}</option>
               </select>
               <Input
                 value={form.excuseDetails}
@@ -375,7 +375,7 @@ export function StudentExamScoresWorkspace() {
             </div>
             <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={examPeriodFilter} onChange={(event) => { setPage(1); setExamPeriodFilter(event.target.value); setAssessmentFilter("all"); }}>
               <option value="all">كل الفترات</option>
-              {(examPeriodsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+              {(examPeriodsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.name} ({translateAssessmentType(item.assessmentType)})</option>)}
             </select>
             <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={assessmentFilter} onChange={(event) => { setPage(1); setAssessmentFilter(event.target.value); }}>
               <option value="all">كل التقييمات</option>

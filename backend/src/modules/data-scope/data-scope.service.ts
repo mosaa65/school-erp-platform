@@ -69,16 +69,18 @@ export class DataScopeService {
         ? { canManageHomeworks: true }
         : { canManageGrades: true };
 
-    const supervisionCount = await this.prisma.employeeSectionSupervision.count({
-      where: {
-        employeeId: actor.employeeId,
-        sectionId: params.sectionId,
-        academicYearId: params.academicYearId,
-        deletedAt: null,
-        isActive: true,
-        ...supervisionWhere,
+    const supervisionCount = await this.prisma.employeeSectionSupervision.count(
+      {
+        where: {
+          employeeId: actor.employeeId,
+          sectionId: params.sectionId,
+          academicYearId: params.academicYearId,
+          deletedAt: null,
+          isActive: true,
+          ...supervisionWhere,
+        },
       },
-    });
+    );
 
     if (supervisionCount === 0) {
       throw new ForbiddenException(

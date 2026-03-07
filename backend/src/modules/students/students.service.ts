@@ -40,6 +40,14 @@ const studentInclude: Prisma.StudentInclude = {
       isActive: true,
     },
   },
+  locality: {
+    select: {
+      id: true,
+      nameAr: true,
+      localityType: true,
+      isActive: true,
+    },
+  },
   genderLookup: {
     select: {
       id: true,
@@ -151,6 +159,10 @@ export class StudentsService {
       await this.ensureBloodTypeExists(payload.bloodTypeId);
     }
 
+    if (payload.localityId !== undefined && payload.localityId !== null) {
+      await this.ensureLocalityExists(payload.localityId);
+    }
+
     const gender = await this.resolveGenderOnCreate(payload);
     const healthStatus = await this.resolveHealthStatusOnCreate(payload);
     const orphanStatus = await this.resolveOrphanStatusOnCreate(payload);
@@ -165,6 +177,8 @@ export class StudentsService {
           birthDate: payload.birthDate,
           bloodTypeId:
             payload.bloodTypeId === null ? null : payload.bloodTypeId,
+          localityId:
+            payload.localityId === null ? null : payload.localityId,
           healthStatus: healthStatus.healthStatus,
           healthStatusId: healthStatus.healthStatusId,
           healthNotes: payload.healthNotes,
@@ -215,6 +229,7 @@ export class StudentsService {
       gender: query.gender,
       genderId: query.genderId,
       bloodTypeId: query.bloodTypeId,
+      localityId: query.localityId,
       healthStatus: query.healthStatus,
       healthStatusId: query.healthStatusId,
       orphanStatus: query.orphanStatus,
@@ -335,8 +350,15 @@ export class StudentsService {
       await this.ensureBloodTypeExists(payload.bloodTypeId);
     }
 
+    if (payload.localityId !== undefined && payload.localityId !== null) {
+      await this.ensureLocalityExists(payload.localityId);
+    }
+
     const gender = await this.resolveGenderOnUpdate(existing, payload);
-    const healthStatus = await this.resolveHealthStatusOnUpdate(existing, payload);
+    const healthStatus = await this.resolveHealthStatusOnUpdate(
+      existing,
+      payload,
+    );
     const orphanStatus = await this.resolveOrphanStatusOnUpdate(
       existing,
       payload,
@@ -355,6 +377,8 @@ export class StudentsService {
           birthDate: payload.birthDate,
           bloodTypeId:
             payload.bloodTypeId === null ? null : payload.bloodTypeId,
+          localityId:
+            payload.localityId === null ? null : payload.localityId,
           healthStatus: healthStatus.healthStatus,
           healthStatusId: healthStatus.healthStatusId,
           healthNotes: payload.healthNotes,
@@ -458,6 +482,27 @@ export class StudentsService {
 
     if (!bloodType) {
       throw new BadRequestException('bloodTypeId is not valid');
+    }
+  }
+
+  private async ensureLocalityExists(localityId: number) {
+    const locality = await this.prisma.locality.findFirst({
+      where: {
+        id: localityId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        isActive: true,
+      },
+    });
+
+    if (!locality) {
+      throw new BadRequestException('localityId is not valid');
+    }
+
+    if (!locality.isActive) {
+      throw new BadRequestException('localityId is inactive');
     }
   }
 
@@ -672,7 +717,9 @@ export class StudentsService {
       };
     }
 
-    const lookup = await this.findHealthStatusLookupByCode(payload.healthStatus);
+    const lookup = await this.findHealthStatusLookupByCode(
+      payload.healthStatus,
+    );
     return {
       healthStatus: payload.healthStatus,
       healthStatusId: lookup?.id ?? null,
@@ -737,7 +784,9 @@ export class StudentsService {
     }
 
     if (payload.healthStatus !== undefined) {
-      const lookup = await this.findHealthStatusLookupByCode(payload.healthStatus);
+      const lookup = await this.findHealthStatusLookupByCode(
+        payload.healthStatus,
+      );
 
       return {
         healthStatus: payload.healthStatus,
@@ -771,7 +820,9 @@ export class StudentsService {
     }
 
     if (payload.orphanStatus) {
-      const lookup = await this.findOrphanStatusLookupByCode(payload.orphanStatus);
+      const lookup = await this.findOrphanStatusLookupByCode(
+        payload.orphanStatus,
+      );
       return {
         orphanStatus: payload.orphanStatus,
         orphanStatusId: lookup?.id ?? null,
@@ -810,7 +861,9 @@ export class StudentsService {
     }
 
     if (payload.orphanStatus !== undefined) {
-      const lookup = await this.findOrphanStatusLookupByCode(payload.orphanStatus);
+      const lookup = await this.findOrphanStatusLookupByCode(
+        payload.orphanStatus,
+      );
       return {
         orphanStatus: payload.orphanStatus,
         orphanStatusId: lookup?.id ?? existing.orphanStatusId ?? null,

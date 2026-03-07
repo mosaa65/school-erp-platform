@@ -53,7 +53,12 @@ export class StudentsController {
   @ApiQuery({ name: 'gender', required: false, enum: StudentGender })
   @ApiQuery({ name: 'genderId', required: false, type: Number })
   @ApiQuery({ name: 'bloodTypeId', required: false, type: Number })
-  @ApiQuery({ name: 'healthStatus', required: false, enum: StudentHealthStatus })
+  @ApiQuery({ name: 'localityId', required: false, type: Number })
+  @ApiQuery({
+    name: 'healthStatus',
+    required: false,
+    enum: StudentHealthStatus,
+  })
   @ApiQuery({ name: 'healthStatusId', required: false, type: Number })
   @ApiQuery({
     name: 'orphanStatus',

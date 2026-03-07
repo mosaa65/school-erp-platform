@@ -107,6 +107,13 @@ export class CreateEmployeeDto {
   @Min(1)
   idTypeId?: number | null;
 
+  @ApiPropertyOptional({ example: 12 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  localityId?: number | null;
+
   @ApiPropertyOptional({ example: '2030-12-31T00:00:00.000Z' })
   @IsOptional()
   @IsDateString()

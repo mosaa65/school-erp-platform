@@ -39,6 +39,7 @@ import { useAcademicTermOptionsQuery } from "@/features/semester-grades/hooks/us
 import { useSemesterGradesQuery } from "@/features/semester-grades/hooks/use-semester-grades-query";
 import type { GradingWorkflowStatus, SemesterGradeListItem } from "@/lib/api/client";
 import { translateGradingWorkflowStatus } from "@/lib/i18n/ar";
+import { formatNameCodeLabel } from "@/lib/option-labels";
 
 type FormState = {
   academicTermId: string;
@@ -239,15 +240,15 @@ export function SemesterGradesWorkspace() {
             <div className="grid gap-2 md:grid-cols-3">
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={calcForm.academicTermId} onChange={(event) => setCalcForm((prev) => ({ ...prev, academicTermId: event.target.value }))}>
                 <option value="">الفصل</option>
-                {(termsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
+                {(termsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={calcForm.sectionId} onChange={(event) => setCalcForm((prev) => ({ ...prev, sectionId: event.target.value }))}>
                 <option value="">الشعبة</option>
-                {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
+                {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={calcForm.subjectId} onChange={(event) => setCalcForm((prev) => ({ ...prev, subjectId: event.target.value }))}>
                 <option value="">المادة</option>
-                {(subjectsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
+                {(subjectsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
               </select>
             </div>
             <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
@@ -273,15 +274,15 @@ export function SemesterGradesWorkspace() {
             <div className="grid gap-2 md:grid-cols-3">
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={fillForm.academicTermId} onChange={(event) => setFillForm((prev) => ({ ...prev, academicTermId: event.target.value }))}>
                 <option value="">الفصل</option>
-                {(termsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
+                {(termsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={fillForm.sectionId} onChange={(event) => setFillForm((prev) => ({ ...prev, sectionId: event.target.value }))}>
                 <option value="">الشعبة</option>
-                {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
+                {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={fillForm.subjectId} onChange={(event) => setFillForm((prev) => ({ ...prev, subjectId: event.target.value }))}>
                 <option value="">المادة</option>
-                {(subjectsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
+                {(subjectsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
               </select>
             </div>
             <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
@@ -318,21 +319,21 @@ export function SemesterGradesWorkspace() {
             <div className="grid gap-2 md:grid-cols-2">
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.academicTermId} disabled={editingId !== null} onChange={(event) => setForm((prev) => ({ ...prev, academicTermId: event.target.value, studentEnrollmentId: "" }))}>
                 <option value="">الفصل *</option>
-                {(termsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
+                {(termsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.sectionId} disabled={editingId !== null} onChange={(event) => setForm((prev) => ({ ...prev, sectionId: event.target.value, studentEnrollmentId: "" }))}>
                 <option value="">الشعبة *</option>
-                {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
+                {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
               </select>
             </div>
             <div className="grid gap-2 md:grid-cols-2">
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.subjectId} disabled={editingId !== null} onChange={(event) => setForm((prev) => ({ ...prev, subjectId: event.target.value }))}>
                 <option value="">المادة *</option>
-                {(subjectsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
+                {(subjectsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.studentEnrollmentId} disabled={editingId !== null} onChange={(event) => setForm((prev) => ({ ...prev, studentEnrollmentId: event.target.value }))}>
                 <option value="">القيد *</option>
-                {(enrollmentsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.student.fullName} ({item.academicYear.code}/{item.section.code})</option>)}
+                {(enrollmentsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.student.fullName} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatNameCodeLabel(item.section.name, item.section.code)})</option>)}
               </select>
             </div>
             <div className="grid gap-2 md:grid-cols-2">
@@ -376,15 +377,15 @@ export function SemesterGradesWorkspace() {
             </div>
             <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={termFilter} onChange={(event) => { setPage(1); setTermFilter(event.target.value); }}>
               <option value="all">كل الفصول</option>
-              {(termsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
+              {(termsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
             </select>
             <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={sectionFilter} onChange={(event) => { setPage(1); setSectionFilter(event.target.value); }}>
               <option value="all">كل الشعب</option>
-              {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
+              {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
             </select>
             <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={subjectFilter} onChange={(event) => { setPage(1); setSubjectFilter(event.target.value); }}>
               <option value="all">كل المواد</option>
-              {(subjectsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.code}</option>)}
+              {(subjectsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
             </select>
             <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={activeFilter} onChange={(event) => { setPage(1); setActiveFilter(event.target.value as "all" | "active" | "inactive"); }}>
               <option value="all">الكل</option>
@@ -403,8 +404,8 @@ export function SemesterGradesWorkspace() {
             <div key={item.id} className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="space-y-1">
-                  <p className="font-medium">{item.studentEnrollment.student.fullName} - {item.subject.code}</p>
-                  <p className="text-xs text-muted-foreground">{item.academicTerm.code} | {item.studentEnrollment.section.code}</p>
+                  <p className="font-medium">{item.studentEnrollment.student.fullName} - {formatNameCodeLabel(item.subject.name, item.subject.code)}</p>
+                  <p className="text-xs text-muted-foreground">{formatNameCodeLabel(item.academicTerm.name, item.academicTerm.code)} | {formatNameCodeLabel(item.studentEnrollment.section.name, item.studentEnrollment.section.code)}</p>
                   <p className="text-xs text-muted-foreground">أعمال الفصل: {item.semesterWorkTotal} | النهائي: {item.finalExamScore ?? 0} | الإجمالي: {item.semesterTotal}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">

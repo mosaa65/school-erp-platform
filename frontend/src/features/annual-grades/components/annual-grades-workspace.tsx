@@ -37,6 +37,7 @@ import { useStudentEnrollmentOptionsQuery } from "@/features/annual-grades/hooks
 import { useSubjectOptionsQuery } from "@/features/annual-grades/hooks/use-subject-options-query";
 import { translateGradingWorkflowStatus } from "@/lib/i18n/ar";
 import type { AnnualGradeListItem, GradingWorkflowStatus } from "@/lib/api/client";
+import { formatNameCodeLabel } from "@/lib/option-labels";
 
 type FormState = {
   academicYearId: string;
@@ -308,7 +309,7 @@ export function AnnualGradesWorkspace() {
                 <option value="">السنة الدراسية *</option>
                 {(academicYearsQuery.data ?? []).map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.code}
+                    {formatNameCodeLabel(item.name, item.code)}
                   </option>
                 ))}
               </select>
@@ -327,7 +328,7 @@ export function AnnualGradesWorkspace() {
                 <option value="">الشعبة *</option>
                 {(sectionsQuery.data ?? []).map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.code}
+                    {formatNameCodeLabel(item.name, item.code)}
                   </option>
                 ))}
               </select>
@@ -348,7 +349,7 @@ export function AnnualGradesWorkspace() {
                 <option value="">المادة *</option>
                 {(subjectsQuery.data ?? []).map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.code}
+                    {formatNameCodeLabel(item.name, item.code)}
                   </option>
                 ))}
               </select>
@@ -366,7 +367,7 @@ export function AnnualGradesWorkspace() {
                 <option value="">القيد *</option>
                 {(enrollmentsQuery.data ?? []).map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.student.fullName} ({item.academicYear.code}/{item.section.code})
+                    {item.student.fullName} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatNameCodeLabel(item.section.name, item.section.code)})
                   </option>
                 ))}
               </select>
@@ -419,7 +420,7 @@ export function AnnualGradesWorkspace() {
                 <option value="">الحالة النهائية *</option>
                 {(annualStatusesQuery.data ?? []).map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.code} - {item.name}
+                    {formatNameCodeLabel(item.name, item.code)}
                   </option>
                 ))}
               </select>
@@ -524,7 +525,7 @@ export function AnnualGradesWorkspace() {
               <option value="all">كل السنوات</option>
               {(academicYearsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.code}
+                  {formatNameCodeLabel(item.name, item.code)}
                 </option>
               ))}
             </select>
@@ -539,7 +540,7 @@ export function AnnualGradesWorkspace() {
               <option value="all">كل الشعب</option>
               {(sectionsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.code}
+                  {formatNameCodeLabel(item.name, item.code)}
                 </option>
               ))}
             </select>
@@ -554,7 +555,7 @@ export function AnnualGradesWorkspace() {
               <option value="all">كل المواد</option>
               {(subjectsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.code}
+                  {formatNameCodeLabel(item.name, item.code)}
                 </option>
               ))}
             </select>
@@ -569,7 +570,7 @@ export function AnnualGradesWorkspace() {
               <option value="all">كل حالات النتيجة</option>
               {(annualStatusesQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.code}
+                  {formatNameCodeLabel(item.name, item.code)}
                 </option>
               ))}
             </select>
@@ -651,11 +652,11 @@ export function AnnualGradesWorkspace() {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="space-y-1">
                   <p className="font-medium">
-                    {item.studentEnrollment.student.fullName} - {item.subject.code}
+                    {item.studentEnrollment.student.fullName} - {formatNameCodeLabel(item.subject.name, item.subject.code)}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {item.academicYear.code} | {item.studentEnrollment.section.code} |{" "}
-                    الحالة النهائية: {item.finalStatus.code}
+                    {formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} | {formatNameCodeLabel(item.studentEnrollment.section.name, item.studentEnrollment.section.code)} |{" "}
+                    الحالة النهائية: {formatNameCodeLabel(item.finalStatus.name, item.finalStatus.code)}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     ف1: {item.semester1Total} | ف2: {item.semester2Total} | الإجمالي:{" "}

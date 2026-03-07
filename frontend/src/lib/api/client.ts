@@ -378,6 +378,27 @@ export type LookupActivityTypeListItem = {
   } | null;
 };
 
+export type LookupGradeDescriptionListItem = {
+  id: number;
+  minPercentage: number | string;
+  maxPercentage: number | string;
+  nameAr: string;
+  nameEn: string | null;
+  colorCode: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: {
+    id: string;
+    email: string;
+  } | null;
+  updatedBy: {
+    id: string;
+    email: string;
+  } | null;
+};
+
 export type LookupCatalogType =
   | "blood-types"
   | "id-types"
@@ -782,6 +803,7 @@ export type StudentListItem = {
   genderId: number | null;
   birthDate: string | null;
   bloodTypeId: number | null;
+  localityId: number | null;
   healthStatus: StudentHealthStatus | null;
   healthStatusId: number | null;
   healthNotes: string | null;
@@ -801,6 +823,12 @@ export type StudentListItem = {
   bloodType: {
     id: number;
     name: string;
+    isActive: boolean;
+  } | null;
+  locality: {
+    id: number;
+    nameAr: string;
+    localityType: "RURAL" | "URBAN";
     isActive: boolean;
   } | null;
   genderLookup: {
@@ -868,6 +896,7 @@ export type GuardianListItem = {
   genderId: number | null;
   idNumber: string | null;
   idTypeId: number | null;
+  localityId: number | null;
   phonePrimary: string | null;
   phoneSecondary: string | null;
   whatsappNumber: string | null;
@@ -887,6 +916,12 @@ export type GuardianListItem = {
     id: number;
     code: string;
     nameAr: string;
+    isActive: boolean;
+  } | null;
+  locality: {
+    id: number;
+    nameAr: string;
+    localityType: "RURAL" | "URBAN";
     isActive: boolean;
   } | null;
   genderLookup: {
@@ -2056,6 +2091,7 @@ export type EmployeeListItem = {
   specialization: string | null;
   idNumber: string | null;
   idTypeId: number | null;
+  localityId: number | null;
   idExpiryDate: string | null;
   experienceYears: number;
   employmentType: EmploymentType | null;
@@ -2081,6 +2117,13 @@ export type EmployeeListItem = {
     code: string;
     nameAr: string;
     isActive: boolean;
+  } | null;
+  locality: {
+    id: number;
+    nameAr: string;
+    localityType: "RURAL" | "URBAN";
+    directorateId: number | null;
+    villageId: number | null;
   } | null;
   genderLookup: {
     id: number;
@@ -2685,6 +2728,26 @@ export type UpdateLookupActivityTypePayload = {
   isActive?: boolean;
 };
 
+export type CreateLookupGradeDescriptionPayload = {
+  minPercentage: number;
+  maxPercentage: number;
+  nameAr: string;
+  nameEn?: string;
+  colorCode?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+};
+
+export type UpdateLookupGradeDescriptionPayload = {
+  minPercentage?: number;
+  maxPercentage?: number;
+  nameAr?: string;
+  nameEn?: string;
+  colorCode?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+};
+
 export type CreateLookupCatalogItemPayload = {
   name?: string;
   code?: string;
@@ -2910,6 +2973,7 @@ export type CreateStudentPayload = {
   genderId?: number;
   birthDate?: string;
   bloodTypeId?: number | null;
+  localityId?: number | null;
   healthStatus?: StudentHealthStatus;
   healthStatusId?: number;
   healthNotes?: string;
@@ -2925,6 +2989,7 @@ export type UpdateStudentPayload = {
   genderId?: number;
   birthDate?: string;
   bloodTypeId?: number | null;
+  localityId?: number | null;
   healthStatus?: StudentHealthStatus;
   healthStatusId?: number;
   healthNotes?: string;
@@ -2939,6 +3004,7 @@ export type CreateGuardianPayload = {
   genderId?: number;
   idNumber?: string;
   idTypeId?: number | null;
+  localityId?: number | null;
   phonePrimary?: string;
   phoneSecondary?: string;
   whatsappNumber?: string;
@@ -2952,6 +3018,7 @@ export type UpdateGuardianPayload = {
   genderId?: number;
   idNumber?: string;
   idTypeId?: number | null;
+  localityId?: number | null;
   phonePrimary?: string;
   phoneSecondary?: string;
   whatsappNumber?: string;
@@ -3476,6 +3543,7 @@ export type CreateEmployeePayload = {
   specialization?: string;
   idNumber?: string;
   idTypeId?: number | null;
+  localityId?: number | null;
   idExpiryDate?: string;
   experienceYears?: number;
   employmentType?: EmploymentType;
@@ -3504,6 +3572,7 @@ export type UpdateEmployeePayload = {
   specialization?: string;
   idNumber?: string;
   idTypeId?: number | null;
+  localityId?: number | null;
   idExpiryDate?: string;
   experienceYears?: number;
   employmentType?: EmploymentType;
@@ -4372,6 +4441,45 @@ export const apiClient = {
     request<DeleteEntityResponse>(`/lookup/activity-types/${lookupActivityTypeId}`, "DELETE", {
       withAuth: true,
     }),
+  listLookupGradeDescriptions: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<LookupGradeDescriptionListItem>>(
+      `/lookup/grade-descriptions${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createLookupGradeDescription: (payload: CreateLookupGradeDescriptionPayload) =>
+    request<LookupGradeDescriptionListItem>("/lookup/grade-descriptions", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateLookupGradeDescription: (
+    lookupGradeDescriptionId: number,
+    payload: UpdateLookupGradeDescriptionPayload,
+  ) =>
+    request<LookupGradeDescriptionListItem>(
+      `/lookup/grade-descriptions/${lookupGradeDescriptionId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  deleteLookupGradeDescription: (lookupGradeDescriptionId: number) =>
+    request<DeleteEntityResponse>(`/lookup/grade-descriptions/${lookupGradeDescriptionId}`, "DELETE", {
+      withAuth: true,
+    }),
   listLookupCatalogItems: (
     lookupType: LookupCatalogType,
     query?: {
@@ -5011,6 +5119,7 @@ export const apiClient = {
     gender?: StudentGender;
     genderId?: number;
     bloodTypeId?: number;
+    localityId?: number;
     healthStatus?: StudentHealthStatus;
     healthStatusId?: number;
     orphanStatus?: StudentOrphanStatus;
@@ -5025,6 +5134,7 @@ export const apiClient = {
         gender: query?.gender,
         genderId: query?.genderId,
         bloodTypeId: query?.bloodTypeId,
+        localityId: query?.localityId,
         healthStatus: query?.healthStatus,
         healthStatusId: query?.healthStatusId,
         orphanStatus: query?.orphanStatus,
@@ -5057,6 +5167,7 @@ export const apiClient = {
     gender?: StudentGender;
     genderId?: number;
     idTypeId?: number;
+    localityId?: number;
     isActive?: boolean;
   }) =>
     request<PaginatedResponse<GuardianListItem>>(
@@ -5067,6 +5178,7 @@ export const apiClient = {
         gender: query?.gender,
         genderId: query?.genderId,
         idTypeId: query?.idTypeId,
+        localityId: query?.localityId,
         isActive: query?.isActive,
       })}`,
       "GET",
@@ -5852,6 +5964,7 @@ export const apiClient = {
     genderId?: number;
     employmentType?: EmploymentType;
     idTypeId?: number;
+    localityId?: number;
     jobTitle?: string;
     qualificationId?: number;
     jobRoleId?: number;
@@ -5866,6 +5979,7 @@ export const apiClient = {
         genderId: query?.genderId,
         employmentType: query?.employmentType,
         idTypeId: query?.idTypeId,
+        localityId: query?.localityId,
         jobTitle: query?.jobTitle,
         qualificationId: query?.qualificationId,
         jobRoleId: query?.jobRoleId,

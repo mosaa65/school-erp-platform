@@ -8,7 +8,7 @@ export default function StudentsPage() {
       <div className="space-y-4">
         <div className="space-y-2">
           <Badge variant="secondary" className="w-fit">
-            System 04 - Students
+            النظام 04 - الطلاب
           </Badge>
           <h2 className="text-2xl font-semibold tracking-tight">الطلاب</h2>
         </div>
@@ -17,6 +17,7 @@ export default function StudentsPage() {
     </PermissionGuard>
   );
 }
+
 
 
 

@@ -8,7 +8,7 @@ export default function PermissionsPage() {
       <div className="space-y-4">
         <div className="space-y-2">
           <Badge variant="secondary" className="w-fit">
-            System 01 - Permissions
+            النظام 01 - الصلاحيات
           </Badge>
           <h2 className="text-2xl font-semibold tracking-tight">إدارة الصلاحيات</h2>
         </div>
@@ -17,6 +17,7 @@ export default function PermissionsPage() {
     </PermissionGuard>
   );
 }
+
 
 
 

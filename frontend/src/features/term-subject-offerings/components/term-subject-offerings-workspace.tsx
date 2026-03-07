@@ -489,7 +489,8 @@ export function TermSubjectOfferingsWorkspace() {
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <CardDescription>
-            إدارة عروض المواد للفصول الأكاديمية مع فلترة متعددة.
+            هذه هي الخطة التشغيلية للمواد لكل فصل أكاديمي، وتعتمد عليها
+            الواجبات والدرجات والجدول الدراسي.
           </CardDescription>
 
           <form

@@ -103,6 +103,118 @@ export async function seedSystem05Lookups(prisma: PrismaClient) {
     });
   }
 
+  const defaultGradeDescriptions = [
+    {
+      minPercentage: 95,
+      maxPercentage: 100,
+      nameAr: 'ممتاز مرتفع',
+      nameEn: 'Outstanding',
+      colorCode: '#1abc9c',
+      sortOrder: 1,
+    },
+    {
+      minPercentage: 90,
+      maxPercentage: 94.99,
+      nameAr: 'ممتاز',
+      nameEn: 'Excellent',
+      colorCode: '#2ecc71',
+      sortOrder: 2,
+    },
+    {
+      minPercentage: 85,
+      maxPercentage: 89.99,
+      nameAr: 'جيد جدا مرتفع',
+      nameEn: 'Very Good+',
+      colorCode: '#27ae60',
+      sortOrder: 3,
+    },
+    {
+      minPercentage: 80,
+      maxPercentage: 84.99,
+      nameAr: 'جيد جدا',
+      nameEn: 'Very Good',
+      colorCode: '#3498db',
+      sortOrder: 4,
+    },
+    {
+      minPercentage: 75,
+      maxPercentage: 79.99,
+      nameAr: 'جيد مرتفع',
+      nameEn: 'Good+',
+      colorCode: '#2980b9',
+      sortOrder: 5,
+    },
+    {
+      minPercentage: 70,
+      maxPercentage: 74.99,
+      nameAr: 'جيد',
+      nameEn: 'Good',
+      colorCode: '#f39c12',
+      sortOrder: 6,
+    },
+    {
+      minPercentage: 65,
+      maxPercentage: 69.99,
+      nameAr: 'مقبول مرتفع',
+      nameEn: 'Acceptable+',
+      colorCode: '#e67e22',
+      sortOrder: 7,
+    },
+    {
+      minPercentage: 60,
+      maxPercentage: 64.99,
+      nameAr: 'مقبول',
+      nameEn: 'Acceptable',
+      colorCode: '#d35400',
+      sortOrder: 8,
+    },
+    {
+      minPercentage: 50,
+      maxPercentage: 59.99,
+      nameAr: 'دون المتوسط',
+      nameEn: 'Below Avg',
+      colorCode: '#c0392b',
+      sortOrder: 9,
+    },
+    {
+      minPercentage: 0,
+      maxPercentage: 49.99,
+      nameAr: 'ضعيف',
+      nameEn: 'Weak',
+      colorCode: '#e74c3c',
+      sortOrder: 10,
+    },
+  ];
+
+  for (const gradeDescription of defaultGradeDescriptions) {
+    await prisma.lookupGradeDescription.upsert({
+      where: {
+        minPercentage_maxPercentage: {
+          minPercentage: gradeDescription.minPercentage,
+          maxPercentage: gradeDescription.maxPercentage,
+        },
+      },
+      update: {
+        nameAr: gradeDescription.nameAr,
+        nameEn: gradeDescription.nameEn,
+        colorCode: gradeDescription.colorCode,
+        sortOrder: gradeDescription.sortOrder,
+        isActive: true,
+        deletedAt: null,
+        updatedById: null,
+      },
+      create: {
+        minPercentage: gradeDescription.minPercentage,
+        maxPercentage: gradeDescription.maxPercentage,
+        nameAr: gradeDescription.nameAr,
+        nameEn: gradeDescription.nameEn,
+        colorCode: gradeDescription.colorCode,
+        sortOrder: gradeDescription.sortOrder,
+        isActive: true,
+      },
+    });
+  }
+
   const defaultPromotionDecisions = [
     {
       code: 'PROMOTED',

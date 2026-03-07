@@ -34,6 +34,7 @@ import { LookupIdTypesModule } from './modules/lookup-id-types/lookup-id-types.m
 import { LookupOrphanStatusesModule } from './modules/lookup-orphan-statuses/lookup-orphan-statuses.module';
 import { LookupAbilityLevelsModule } from './modules/lookup-ability-levels/lookup-ability-levels.module';
 import { LookupActivityTypesModule } from './modules/lookup-activity-types/lookup-activity-types.module';
+import { LookupGradeDescriptionsModule } from './modules/lookup-grade-descriptions/lookup-grade-descriptions.module';
 import { LookupOwnershipTypesModule } from './modules/lookup-ownership-types/lookup-ownership-types.module';
 import { LookupPeriodsModule } from './modules/lookup-periods/lookup-periods.module';
 import { GradingReportsModule } from './modules/grading-reports/grading-reports.module';
@@ -126,6 +127,7 @@ import { PrismaModule } from './prisma/prisma.module';
     LookupOrphanStatusesModule,
     LookupAbilityLevelsModule,
     LookupActivityTypesModule,
+    LookupGradeDescriptionsModule,
     LookupCatalogModule,
     LookupIdTypesModule,
     LookupOwnershipTypesModule,

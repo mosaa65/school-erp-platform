@@ -32,6 +32,7 @@ import { useGradingPolicyComponentOptionsQuery } from "@/features/monthly-custom
 import { useMonthlyCustomComponentScoresQuery } from "@/features/monthly-custom-component-scores/hooks/use-monthly-custom-component-scores-query";
 import { useMonthlyGradeOptionsQuery } from "@/features/monthly-custom-component-scores/hooks/use-monthly-grade-options-query";
 import type { MonthlyCustomComponentScoreListItem } from "@/lib/api/client";
+import { formatNameCodeLabel } from "@/lib/option-labels";
 
 type FormState = {
   monthlyGradeId: string;
@@ -306,8 +307,8 @@ export function MonthlyCustomComponentScoresWorkspace() {
               <option value="">اختر الدرجة الشهرية *</option>
               {(monthlyGradesQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.studentEnrollment.student.fullName} | {item.academicMonth.code} |{" "}
-                  {item.subject.code}/{item.studentEnrollment.section.code}
+                  {item.studentEnrollment.student.fullName} | {formatNameCodeLabel(item.academicMonth.name, item.academicMonth.code)} |{" "}
+                  {formatNameCodeLabel(item.subject.name, item.subject.code)} / {formatNameCodeLabel(item.studentEnrollment.section.name, item.studentEnrollment.section.code)}
                 </option>
               ))}
             </select>
@@ -326,7 +327,7 @@ export function MonthlyCustomComponentScoresWorkspace() {
               <option value="">اختر المكوّن *</option>
               {(componentsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.code} - {item.name} (الحد الأقصى {item.maxScore})
+                  {formatNameCodeLabel(item.name, item.code)} (الحد الأقصى {item.maxScore})
                 </option>
               ))}
             </select>
@@ -425,7 +426,7 @@ export function MonthlyCustomComponentScoresWorkspace() {
               <option value="all">كل الأشهر</option>
               {(monthsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.code}
+                  {formatNameCodeLabel(item.name, item.code)}
                 </option>
               ))}
             </select>
@@ -440,7 +441,7 @@ export function MonthlyCustomComponentScoresWorkspace() {
               <option value="all">كل الشعب</option>
               {(sectionsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.code}
+                  {formatNameCodeLabel(item.name, item.code)}
                 </option>
               ))}
             </select>
@@ -455,7 +456,7 @@ export function MonthlyCustomComponentScoresWorkspace() {
               <option value="all">كل المواد</option>
               {(subjectsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.code}
+                  {formatNameCodeLabel(item.name, item.code)}
                 </option>
               ))}
             </select>
@@ -508,9 +509,9 @@ export function MonthlyCustomComponentScoresWorkspace() {
                     {item.gradingPolicyComponent.name}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {item.monthlyGrade.academicMonth.code} |{" "}
-                    {item.monthlyGrade.studentEnrollment.section.code} |{" "}
-                    {item.monthlyGrade.subject.code}
+                    {formatNameCodeLabel(item.monthlyGrade.academicMonth.name, item.monthlyGrade.academicMonth.code)} |{" "}
+                    {formatNameCodeLabel(item.monthlyGrade.studentEnrollment.section.name, item.monthlyGrade.studentEnrollment.section.code)} |{" "}
+                    {formatNameCodeLabel(item.monthlyGrade.subject.name, item.monthlyGrade.subject.code)}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     الدرجة: {item.score}/{item.gradingPolicyComponent.maxScore}

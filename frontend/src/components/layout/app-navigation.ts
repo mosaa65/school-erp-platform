@@ -390,6 +390,12 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         requiredPermission: "annual-results.read",
       },
       {
+        href: "/app/lookup-grade-descriptions",
+        label: "أوصاف التقديرات",
+        icon: Medal,
+        requiredPermission: "lookup-grade-descriptions.read",
+      },
+      {
         href: "/app/grading-reports",
         label: "تقارير الدرجات",
         icon: ScrollText,

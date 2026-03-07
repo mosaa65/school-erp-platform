@@ -31,6 +31,7 @@ import {
 import { useGradingOutcomeRulesQuery } from "@/features/grading-outcome-rules/hooks/use-grading-outcome-rules-query";
 import { translateTieBreakStrategy } from "@/lib/i18n/ar";
 import type { GradingOutcomeRuleListItem, TieBreakStrategy } from "@/lib/api/client";
+import { formatNameCodeLabel } from "@/lib/option-labels";
 
 type FormState = {
   academicYearId: string;
@@ -228,7 +229,7 @@ export function GradingOutcomeRulesWorkspace() {
                 <option value="">السنة الأكاديمية *</option>
                 {(yearsQuery.data ?? []).map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.code}
+                    {formatNameCodeLabel(item.name, item.code)}
                   </option>
                 ))}
               </select>
@@ -242,7 +243,7 @@ export function GradingOutcomeRulesWorkspace() {
                 <option value="">الصف الدراسي *</option>
                 {(gradeLevelsQuery.data ?? []).map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.code}
+                    {formatNameCodeLabel(item.name, item.code)}
                   </option>
                 ))}
               </select>
@@ -288,7 +289,7 @@ export function GradingOutcomeRulesWorkspace() {
                 <option value="">قرار الشرطي *</option>
                 {(promotionDecisionsQuery.data ?? []).map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.code}
+                    {formatNameCodeLabel(item.name, item.code)}
                   </option>
                 ))}
               </select>
@@ -302,7 +303,7 @@ export function GradingOutcomeRulesWorkspace() {
                 <option value="">قرار الإبقاء *</option>
                 {(promotionDecisionsQuery.data ?? []).map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.code}
+                    {formatNameCodeLabel(item.name, item.code)}
                   </option>
                 ))}
               </select>
@@ -402,7 +403,7 @@ export function GradingOutcomeRulesWorkspace() {
               <option value="all">كل السنوات</option>
               {(yearsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.code}
+                  {formatNameCodeLabel(item.name, item.code)}
                 </option>
               ))}
             </select>
@@ -417,7 +418,7 @@ export function GradingOutcomeRulesWorkspace() {
               <option value="all">كل الصفوف</option>
               {(gradeLevelsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.code}
+                  {formatNameCodeLabel(item.name, item.code)}
                 </option>
               ))}
             </select>
@@ -485,15 +486,15 @@ export function GradingOutcomeRulesWorkspace() {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="space-y-1">
                   <p className="font-medium">
-                    {item.academicYear.code} - {item.gradeLevel.code}
+                    {formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} - {formatNameCodeLabel(item.gradeLevel.name, item.gradeLevel.code)}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     حد الترفيع: {item.promotedMaxFailedSubjects} | حد الشرطي:{" "}
                     {item.conditionalMaxFailedSubjects}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    قرار الشرطي: {item.conditionalDecision.code} | قرار الإبقاء:{" "}
-                    {item.retainedDecision.code} | فك التساوي:{" "}
+                    قرار الشرطي: {formatNameCodeLabel(item.conditionalDecision.name, item.conditionalDecision.code)} | قرار الإبقاء:{" "}
+                    {formatNameCodeLabel(item.retainedDecision.name, item.retainedDecision.code)} | فك التساوي:{" "}
                     {translateTieBreakStrategy(item.tieBreakStrategy)}
                   </p>
                 </div>

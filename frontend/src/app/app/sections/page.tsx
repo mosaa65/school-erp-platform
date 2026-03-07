@@ -8,7 +8,7 @@ export default function SectionsPage() {
       <div className="space-y-4">
         <div className="space-y-2">
           <Badge variant="secondary" className="w-fit">
-            System 02 - Academic Core
+            النظام 02 - النواة الأكاديمية
           </Badge>
           <h2 className="text-2xl font-semibold tracking-tight">الشعب الدراسية</h2>
         </div>
@@ -17,6 +17,7 @@ export default function SectionsPage() {
     </PermissionGuard>
   );
 }
+
 
 
 

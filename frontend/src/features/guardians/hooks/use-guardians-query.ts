@@ -10,6 +10,7 @@ type UseGuardiansQueryOptions = {
   search?: string;
   genderId?: number;
   idTypeId?: number;
+  localityId?: number;
   isActive?: boolean;
 };
 
@@ -25,6 +26,7 @@ export function useGuardiansQuery(options: UseGuardiansQueryOptions = {}) {
       options.search ?? "",
       options.genderId ?? "all",
       options.idTypeId ?? "all",
+      options.localityId ?? "all",
       options.isActive === undefined ? "all" : options.isActive ? "active" : "inactive",
     ],
     enabled: auth.isHydrated && auth.isAuthenticated,
@@ -36,6 +38,7 @@ export function useGuardiansQuery(options: UseGuardiansQueryOptions = {}) {
           search: options.search,
           genderId: options.genderId,
           idTypeId: options.idTypeId,
+          localityId: options.localityId,
           isActive: options.isActive,
         });
       } catch (error) {

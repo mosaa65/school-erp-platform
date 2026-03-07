@@ -30,6 +30,11 @@ import {
 import { useExamPeriodsQuery } from "@/features/exam-periods/hooks/use-exam-periods-query";
 import { useAcademicYearOptionsQuery } from "@/features/exam-periods/hooks/use-academic-year-options-query";
 import { useAcademicTermOptionsQuery } from "@/features/exam-periods/hooks/use-academic-term-options-query";
+import {
+  translateAssessmentType,
+  translateGradingWorkflowStatus,
+} from "@/lib/i18n/ar";
+import { formatNameCodeLabel } from "@/lib/option-labels";
 import type {
   AssessmentType,
   ExamPeriodListItem,
@@ -50,21 +55,21 @@ type ExamPeriodFormState = {
 
 const PAGE_SIZE = 12;
 
-const ASSESSMENT_TYPE_OPTIONS: Array<{ value: AssessmentType; label: string }> = [
-  { value: "MONTHLY", label: "شهري" },
-  { value: "MIDTERM", label: "نصفي" },
-  { value: "FINAL", label: "نهائي" },
-  { value: "QUIZ", label: "اختبار قصير" },
-  { value: "ORAL", label: "شفهي" },
-  { value: "PRACTICAL", label: "عملي" },
-  { value: "PROJECT", label: "مشروع" },
+const ASSESSMENT_TYPE_OPTIONS: AssessmentType[] = [
+  "MONTHLY",
+  "MIDTERM",
+  "FINAL",
+  "QUIZ",
+  "ORAL",
+  "PRACTICAL",
+  "PROJECT",
 ];
 
-const WORKFLOW_STATUS_OPTIONS: Array<{ value: GradingWorkflowStatus; label: string }> = [
-  { value: "DRAFT", label: "مسودة" },
-  { value: "IN_REVIEW", label: "قيد المراجعة" },
-  { value: "APPROVED", label: "معتمد" },
-  { value: "ARCHIVED", label: "مؤرشف" },
+const WORKFLOW_STATUS_OPTIONS: GradingWorkflowStatus[] = [
+  "DRAFT",
+  "IN_REVIEW",
+  "APPROVED",
+  "ARCHIVED",
 ];
 
 const DEFAULT_FORM_STATE: ExamPeriodFormState = {
@@ -130,13 +135,11 @@ function toFormState(item: ExamPeriodListItem): ExamPeriodFormState {
 }
 
 function getAssessmentTypeLabel(value: AssessmentType): string {
-  return (
-    ASSESSMENT_TYPE_OPTIONS.find((option) => option.value === value)?.label ?? value
-  );
+  return translateAssessmentType(value);
 }
 
 function getStatusLabel(value: GradingWorkflowStatus): string {
-  return WORKFLOW_STATUS_OPTIONS.find((option) => option.value === value)?.label ?? value;
+  return translateGradingWorkflowStatus(value);
 }
 
 export function ExamPeriodsWorkspace() {
@@ -425,7 +428,7 @@ export function ExamPeriodsWorkspace() {
                   <option value="">اختر السنة *</option>
                   {(yearsQuery.data ?? []).map((year) => (
                     <option key={year.id} value={year.id}>
-                      {year.code}
+                      {formatNameCodeLabel(year.name, year.code)}
                     </option>
                   ))}
                 </select>
@@ -441,7 +444,7 @@ export function ExamPeriodsWorkspace() {
                   <option value="">اختر الفصل *</option>
                   {termsForForm.map((term) => (
                     <option key={term.id} value={term.id}>
-                      {term.code}
+                      {formatNameCodeLabel(term.name, term.code)}
                     </option>
                   ))}
                 </select>
@@ -468,8 +471,8 @@ export function ExamPeriodsWorkspace() {
                   }
                 >
                   {ASSESSMENT_TYPE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
+                    <option key={option} value={option}>
+                      {translateAssessmentType(option)}
                     </option>
                   ))}
                 </select>
@@ -485,8 +488,8 @@ export function ExamPeriodsWorkspace() {
                   }
                 >
                   {WORKFLOW_STATUS_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
+                    <option key={option} value={option}>
+                      {translateGradingWorkflowStatus(option)}
                     </option>
                   ))}
                 </select>
@@ -609,7 +612,7 @@ export function ExamPeriodsWorkspace() {
               <option value="all">كل السنوات</option>
               {(yearsQuery.data ?? []).map((year) => (
                 <option key={year.id} value={year.id}>
-                  {year.code}
+                  {formatNameCodeLabel(year.name, year.code)}
                 </option>
               ))}
             </select>
@@ -624,7 +627,7 @@ export function ExamPeriodsWorkspace() {
               <option value="all">كل الفصول</option>
               {termsForFilter.map((term) => (
                 <option key={term.id} value={term.id}>
-                  {term.code}
+                  {formatNameCodeLabel(term.name, term.code)}
                 </option>
               ))}
             </select>
@@ -638,8 +641,8 @@ export function ExamPeriodsWorkspace() {
             >
               <option value="all">كل الأنواع</option>
               {ASSESSMENT_TYPE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
+                <option key={option} value={option}>
+                  {translateAssessmentType(option)}
                 </option>
               ))}
             </select>
@@ -653,8 +656,8 @@ export function ExamPeriodsWorkspace() {
             >
               <option value="all">كل الحالات</option>
               {WORKFLOW_STATUS_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
+                <option key={option} value={option}>
+                  {translateGradingWorkflowStatus(option)}
                 </option>
               ))}
             </select>
@@ -719,7 +722,7 @@ export function ExamPeriodsWorkspace() {
                 <div className="space-y-1">
                   <p className="font-medium">{item.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {item.academicYear.code}/{item.academicTerm.code} -{" "}
+                    {formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatNameCodeLabel(item.academicTerm.name, item.academicTerm.code)} -{" "}
                     {getAssessmentTypeLabel(item.assessmentType)} - {getStatusLabel(item.status)}
                   </p>
                   <p className="text-xs text-muted-foreground">

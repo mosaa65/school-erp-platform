@@ -1,4 +1,10 @@
-import { GradeStage, SubjectCategory, type PrismaClient } from '@prisma/client';
+﻿import {
+  AcademicTermType,
+  AcademicYearStatus,
+  GradeStage,
+  SubjectCategory,
+  type PrismaClient,
+} from '@prisma/client';
 
 type GradeLevelSeedItem = {
   code: string;
@@ -13,6 +19,120 @@ type SubjectSeedItem = {
   shortName: string;
   category: SubjectCategory;
 };
+
+type AcademicTermSeedItem = {
+  code: string;
+  name: string;
+  sequence: number;
+  startDate: string;
+  endDate: string;
+};
+
+type AcademicMonthSeedItem = {
+  termCode: string;
+  code: string;
+  name: string;
+  sequence: number;
+  startDate: string;
+  endDate: string;
+};
+
+type SectionSeedItem = {
+  code: string;
+  name: string;
+  capacity: number;
+};
+
+const CORE_ACADEMIC_YEAR = {
+  code: 'AY-2026-2027-1448H',
+  name: 'السنة الدراسية 2026-2027 / 1448هـ',
+  startDate: '2026-08-15',
+  endDate: '2027-04-14',
+};
+
+const CORE_ACADEMIC_TERMS: AcademicTermSeedItem[] = [
+  {
+    code: 'T1',
+    name: 'الفصل الدراسي الأول',
+    sequence: 1,
+    startDate: '2026-08-15',
+    endDate: '2026-12-14',
+  },
+  {
+    code: 'T2',
+    name: 'الفصل الدراسي الثاني',
+    sequence: 2,
+    startDate: '2026-12-15',
+    endDate: '2027-04-14',
+  },
+];
+
+const CORE_ACADEMIC_MONTHS: AcademicMonthSeedItem[] = [
+  {
+    termCode: 'T1',
+    code: 'MUHARRAM',
+    name: 'محرم',
+    sequence: 1,
+    startDate: '2026-08-15',
+    endDate: '2026-09-13',
+  },
+  {
+    termCode: 'T1',
+    code: 'SAFAR',
+    name: 'صفر',
+    sequence: 2,
+    startDate: '2026-09-14',
+    endDate: '2026-10-13',
+  },
+  {
+    termCode: 'T1',
+    code: 'RABI_I',
+    name: 'ربيع الأول',
+    sequence: 3,
+    startDate: '2026-10-14',
+    endDate: '2026-11-12',
+  },
+  {
+    termCode: 'T1',
+    code: 'RABI_II',
+    name: 'ربيع الآخر',
+    sequence: 4,
+    startDate: '2026-11-13',
+    endDate: '2026-12-14',
+  },
+  {
+    termCode: 'T2',
+    code: 'JUMADA_I',
+    name: 'جمادى الأولى',
+    sequence: 1,
+    startDate: '2026-12-15',
+    endDate: '2027-01-13',
+  },
+  {
+    termCode: 'T2',
+    code: 'JUMADA_II',
+    name: 'جمادى الآخرة',
+    sequence: 2,
+    startDate: '2027-01-14',
+    endDate: '2027-02-12',
+  },
+  {
+    termCode: 'T2',
+    code: 'RAJAB',
+    name: 'رجب',
+    sequence: 3,
+    startDate: '2027-02-13',
+    endDate: '2027-03-13',
+  },
+  {
+    termCode: 'T2',
+    code: 'SHAABAN',
+    name: 'شعبان',
+    sequence: 4,
+    startDate: '2027-03-14',
+    endDate: '2027-04-14',
+  },
+];
 
 const DEFAULT_GRADE_LEVELS: GradeLevelSeedItem[] = [
   {
@@ -188,7 +308,156 @@ const DEFAULT_SUBJECTS: SubjectSeedItem[] = [
   },
 ];
 
+const DEFAULT_SECTIONS: SectionSeedItem[] = [
+  { code: 'A', name: 'الشعبة أ', capacity: 40 },
+  { code: 'B', name: 'الشعبة ب', capacity: 40 },
+];
+
+const OPTIONAL_SUBJECT_CODES = new Set(['art', 'pe']);
+
+const WEEKLY_PERIODS_BY_SUBJECT: Record<string, number> = {
+  quran: 2,
+  isl: 2,
+  arb: 5,
+  eng: 4,
+  math: 5,
+  sci: 4,
+  phy: 3,
+  chm: 3,
+  bio: 3,
+  soc: 2,
+  his: 2,
+  geo: 2,
+  nat: 1,
+  cs: 1,
+  art: 1,
+  pe: 1,
+};
+
+function asUtcDate(dateString: string): Date {
+  return new Date(`${dateString}T00:00:00.000Z`);
+}
+
+function getSubjectCodesForGradeSequence(sequence: number): string[] {
+  if (sequence <= 3) {
+    return ['quran', 'isl', 'arb', 'math', 'sci', 'art', 'pe'];
+  }
+
+  if (sequence <= 6) {
+    return ['quran', 'isl', 'arb', 'eng', 'math', 'sci', 'soc', 'art', 'pe'];
+  }
+
+  if (sequence <= 9) {
+    return [
+      'quran',
+      'isl',
+      'arb',
+      'eng',
+      'math',
+      'sci',
+      'soc',
+      'nat',
+      'cs',
+      'art',
+      'pe',
+    ];
+  }
+
+  return [
+    'quran',
+    'isl',
+    'arb',
+    'eng',
+    'math',
+    'phy',
+    'chm',
+    'bio',
+    'his',
+    'geo',
+    'nat',
+    'cs',
+  ];
+}
+
+async function deactivateDemoAcademicArtifacts(prisma: PrismaClient) {
+  const now = new Date();
+
+  await prisma.academicTerm.updateMany({
+    where: {
+      code: {
+        startsWith: 'DEMO-',
+      },
+      deletedAt: null,
+    },
+    data: {
+      isActive: false,
+      deletedAt: now,
+      updatedById: null,
+    },
+  });
+
+  await prisma.academicYear.updateMany({
+    where: {
+      code: {
+        startsWith: 'DEMO-',
+      },
+      deletedAt: null,
+    },
+    data: {
+      isCurrent: false,
+      deletedAt: now,
+      updatedById: null,
+    },
+  });
+
+  await prisma.section.updateMany({
+    where: {
+      gradeLevel: {
+        code: {
+          startsWith: 'DEMO-',
+        },
+      },
+      deletedAt: null,
+    },
+    data: {
+      isActive: false,
+      deletedAt: now,
+      updatedById: null,
+    },
+  });
+
+  await prisma.gradeLevel.updateMany({
+    where: {
+      code: {
+        startsWith: 'DEMO-',
+      },
+      deletedAt: null,
+    },
+    data: {
+      isActive: false,
+      deletedAt: now,
+      updatedById: null,
+    },
+  });
+
+  await prisma.subject.updateMany({
+    where: {
+      code: {
+        startsWith: 'DEMO-',
+      },
+      deletedAt: null,
+    },
+    data: {
+      isActive: false,
+      deletedAt: now,
+      updatedById: null,
+    },
+  });
+}
+
 export async function seedSystem02AcademicCore(prisma: PrismaClient) {
+  await deactivateDemoAcademicArtifacts(prisma);
+
   for (const item of DEFAULT_GRADE_LEVELS) {
     await prisma.gradeLevel.upsert({
       where: { code: item.code },
@@ -229,5 +498,310 @@ export async function seedSystem02AcademicCore(prisma: PrismaClient) {
         isActive: true,
       },
     });
+  }
+
+  const academicYear = await prisma.academicYear.upsert({
+    where: {
+      code: CORE_ACADEMIC_YEAR.code,
+    },
+    update: {
+      name: CORE_ACADEMIC_YEAR.name,
+      startDate: asUtcDate(CORE_ACADEMIC_YEAR.startDate),
+      endDate: asUtcDate(CORE_ACADEMIC_YEAR.endDate),
+      status: AcademicYearStatus.ACTIVE,
+      isCurrent: true,
+      deletedAt: null,
+      updatedById: null,
+    },
+    create: {
+      code: CORE_ACADEMIC_YEAR.code,
+      name: CORE_ACADEMIC_YEAR.name,
+      startDate: asUtcDate(CORE_ACADEMIC_YEAR.startDate),
+      endDate: asUtcDate(CORE_ACADEMIC_YEAR.endDate),
+      status: AcademicYearStatus.ACTIVE,
+      isCurrent: true,
+    },
+  });
+
+  await prisma.academicYear.updateMany({
+    where: {
+      id: {
+        not: academicYear.id,
+      },
+      isCurrent: true,
+      deletedAt: null,
+    },
+    data: {
+      isCurrent: false,
+      updatedById: null,
+    },
+  });
+
+  const termByCode = new Map<string, { id: string; code: string }>();
+
+  for (const term of CORE_ACADEMIC_TERMS) {
+    const record = await prisma.academicTerm.upsert({
+      where: {
+        academicYearId_code: {
+          academicYearId: academicYear.id,
+          code: term.code,
+        },
+      },
+      update: {
+        name: term.name,
+        termType: AcademicTermType.SEMESTER,
+        sequence: term.sequence,
+        startDate: asUtcDate(term.startDate),
+        endDate: asUtcDate(term.endDate),
+        isActive: true,
+        deletedAt: null,
+        updatedById: null,
+      },
+      create: {
+        academicYearId: academicYear.id,
+        code: term.code,
+        name: term.name,
+        termType: AcademicTermType.SEMESTER,
+        sequence: term.sequence,
+        startDate: asUtcDate(term.startDate),
+        endDate: asUtcDate(term.endDate),
+        isActive: true,
+      },
+      select: {
+        id: true,
+        code: true,
+      },
+    });
+
+    termByCode.set(record.code, record);
+  }
+
+  for (const month of CORE_ACADEMIC_MONTHS) {
+    const term = termByCode.get(month.termCode);
+
+    if (!term) {
+      continue;
+    }
+
+    await prisma.academicMonth.upsert({
+      where: {
+        academicTermId_code: {
+          academicTermId: term.id,
+          code: month.code,
+        },
+      },
+      update: {
+        academicYearId: academicYear.id,
+        name: month.name,
+        sequence: month.sequence,
+        startDate: asUtcDate(month.startDate),
+        endDate: asUtcDate(month.endDate),
+        isCurrent: false,
+        isActive: true,
+        deletedAt: null,
+        updatedById: null,
+      },
+      create: {
+        academicYearId: academicYear.id,
+        academicTermId: term.id,
+        code: month.code,
+        name: month.name,
+        sequence: month.sequence,
+        startDate: asUtcDate(month.startDate),
+        endDate: asUtcDate(month.endDate),
+        isCurrent: false,
+        isActive: true,
+      },
+    });
+  }
+
+  const gradeLevels = await prisma.gradeLevel.findMany({
+    where: {
+      code: {
+        in: DEFAULT_GRADE_LEVELS.map((item) => item.code),
+      },
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      code: true,
+      sequence: true,
+    },
+    orderBy: {
+      sequence: 'asc',
+    },
+  });
+
+  for (const gradeLevel of gradeLevels) {
+    for (const section of DEFAULT_SECTIONS) {
+      await prisma.section.upsert({
+        where: {
+          gradeLevelId_code: {
+            gradeLevelId: gradeLevel.id,
+            code: section.code,
+          },
+        },
+        update: {
+          name: section.name,
+          capacity: section.capacity,
+          isActive: true,
+          deletedAt: null,
+          updatedById: null,
+        },
+        create: {
+          gradeLevelId: gradeLevel.id,
+          code: section.code,
+          name: section.name,
+          capacity: section.capacity,
+          isActive: true,
+        },
+      });
+    }
+  }
+
+  const subjects = await prisma.subject.findMany({
+    where: {
+      code: {
+        in: DEFAULT_SUBJECTS.map((item) => item.code),
+      },
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      code: true,
+    },
+  });
+
+  const subjectIdByCode = new Map(subjects.map((item) => [item.code, item.id]));
+  const desiredGradeLevelSubjectKeys = new Set<string>();
+
+  for (const gradeLevel of gradeLevels) {
+    const subjectCodes = getSubjectCodesForGradeSequence(gradeLevel.sequence);
+
+    for (const [index, subjectCode] of subjectCodes.entries()) {
+      const subjectId = subjectIdByCode.get(subjectCode);
+
+      if (!subjectId) {
+        continue;
+      }
+
+      desiredGradeLevelSubjectKeys.add(`${gradeLevel.id}|${subjectId}`);
+
+      await prisma.gradeLevelSubject.upsert({
+        where: {
+          academicYearId_gradeLevelId_subjectId: {
+            academicYearId: academicYear.id,
+            gradeLevelId: gradeLevel.id,
+            subjectId,
+          },
+        },
+        update: {
+          isMandatory: !OPTIONAL_SUBJECT_CODES.has(subjectCode),
+          weeklyPeriods: WEEKLY_PERIODS_BY_SUBJECT[subjectCode] ?? 1,
+          displayOrder: index + 1,
+          isActive: true,
+          deletedAt: null,
+          updatedById: null,
+        },
+        create: {
+          academicYearId: academicYear.id,
+          gradeLevelId: gradeLevel.id,
+          subjectId,
+          isMandatory: !OPTIONAL_SUBJECT_CODES.has(subjectCode),
+          weeklyPeriods: WEEKLY_PERIODS_BY_SUBJECT[subjectCode] ?? 1,
+          displayOrder: index + 1,
+          isActive: true,
+        },
+      });
+    }
+  }
+
+  const existingGradeLevelSubjects = await prisma.gradeLevelSubject.findMany({
+    where: {
+      academicYearId: academicYear.id,
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      gradeLevelId: true,
+      subjectId: true,
+    },
+  });
+
+  for (const item of existingGradeLevelSubjects) {
+    const key = `${item.gradeLevelId}|${item.subjectId}`;
+
+    if (desiredGradeLevelSubjectKeys.has(key)) {
+      continue;
+    }
+
+    await prisma.gradeLevelSubject.update({
+      where: {
+        id: item.id,
+      },
+      data: {
+        isActive: false,
+        deletedAt: new Date(),
+        updatedById: null,
+      },
+    });
+  }
+
+  const activeGradeLevelSubjects = await prisma.gradeLevelSubject.findMany({
+    where: {
+      academicYearId: academicYear.id,
+      isActive: true,
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      weeklyPeriods: true,
+      displayOrder: true,
+      gradeLevel: {
+        select: {
+          sequence: true,
+        },
+      },
+    },
+    orderBy: [
+      {
+        gradeLevel: {
+          sequence: 'asc',
+        },
+      },
+      {
+        displayOrder: 'asc',
+      },
+      {
+        createdAt: 'asc',
+      },
+    ],
+  });
+
+  for (const term of termByCode.values()) {
+    for (const item of activeGradeLevelSubjects) {
+      await prisma.termSubjectOffering.upsert({
+        where: {
+          academicTermId_gradeLevelSubjectId: {
+            academicTermId: term.id,
+            gradeLevelSubjectId: item.id,
+          },
+        },
+        update: {
+          weeklyPeriods: item.weeklyPeriods,
+          displayOrder: item.displayOrder,
+          isActive: true,
+          deletedAt: null,
+          updatedById: null,
+        },
+        create: {
+          academicTermId: term.id,
+          gradeLevelSubjectId: item.id,
+          weeklyPeriods: item.weeklyPeriods,
+          displayOrder: item.displayOrder,
+          isActive: true,
+        },
+      });
+    }
   }
 }

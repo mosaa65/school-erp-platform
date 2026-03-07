@@ -18,6 +18,7 @@ import { useGradeLevelOptionsQuery } from "@/features/grading-reports/hooks/use-
 import { useGradingSummaryReportQuery } from "@/features/grading-reports/hooks/use-grading-summary-report-query";
 import { useSectionOptionsQuery } from "@/features/grading-reports/hooks/use-section-options-query";
 import { translateGradingWorkflowStatus } from "@/lib/i18n/ar";
+import { formatNameCodeLabel } from "@/lib/option-labels";
 
 type FiltersState = {
   academicYearId: string;
@@ -111,7 +112,7 @@ export function GradingReportsWorkspace() {
               <option value="">كل السنوات</option>
               {(yearOptionsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.code}
+                  {formatNameCodeLabel(item.name, item.code)}
                 </option>
               ))}
             </select>
@@ -131,7 +132,7 @@ export function GradingReportsWorkspace() {
               <option value="">كل المراحل</option>
               {(gradeLevelOptionsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.code}
+                  {formatNameCodeLabel(item.name, item.code)}
                 </option>
               ))}
             </select>
@@ -147,7 +148,7 @@ export function GradingReportsWorkspace() {
               <option value="">كل الشعب</option>
               {(sectionOptionsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.code} - {item.name}
+                  {formatNameCodeLabel(item.name, item.code)}
                 </option>
               ))}
             </select>
@@ -163,7 +164,7 @@ export function GradingReportsWorkspace() {
               <option value="">كل الفصول</option>
               {(termOptionsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.code}
+                  {formatNameCodeLabel(item.name, item.code)}
                 </option>
               ))}
             </select>
@@ -334,7 +335,7 @@ export function GradingReportsWorkspace() {
                 ) : (
                   report.annualGrades.byFinalStatus.map((item) => (
                     <p key={item.finalStatusId}>
-                      {item.code} - {item.name}: {item.count}
+                      {formatNameCodeLabel(item.name, item.code)}: {item.count}
                     </p>
                   ))
                 )}
@@ -351,7 +352,7 @@ export function GradingReportsWorkspace() {
                 ) : (
                   report.annualResults.byPromotionDecision.map((item) => (
                     <p key={item.promotionDecisionId}>
-                      {item.code} - {item.name}: {item.count}
+                      {formatNameCodeLabel(item.name, item.code)}: {item.count}
                     </p>
                   ))
                 )}

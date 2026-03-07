@@ -216,11 +216,11 @@ enum LocalityType {
 }
 
 enum CalendarAdjustmentType {
-  MOON_SIGHTING    @map("moon_sighting")
-  HOLIDAY_ADD      @map("holiday_add")
-  HOLIDAY_REMOVE   @map("holiday_remove")
+  MOON_SIGHTING     @map("moon_sighting")
+  HOLIDAY_ADD       @map("holiday_add")
+  HOLIDAY_REMOVE    @map("holiday_remove")
   SCHOOL_DAY_TOGGLE @map("school_day_toggle")
-  OTHER            @map("other")
+  OTHER             @map("other")
 }
 
 enum SystemSettingType {
@@ -429,6 +429,8 @@ model User {
   homeworksUpdated                    Homework[]                      @relation("homework_updated_by")
   studentHomeworksCreated             StudentHomework[]               @relation("student_homework_created_by")
   studentHomeworksUpdated             StudentHomework[]               @relation("student_homework_updated_by")
+  gradeDescriptionsCreated            LookupGradeDescription[]        @relation("lookup_grade_description_created_by")
+  gradeDescriptionsUpdated            LookupGradeDescription[]        @relation("lookup_grade_description_updated_by")
   annualStatusesCreated               AnnualStatusLookup[]            @relation("annual_status_created_by")
   annualStatusesUpdated               AnnualStatusLookup[]            @relation("annual_status_updated_by")
   promotionDecisionsCreated           PromotionDecisionLookup[]       @relation("promotion_decision_created_by")
@@ -810,6 +812,31 @@ model LookupActivityType {
   @@index([isActive, deletedAt], map: "lat_active_del_idx")
   @@index([deletedAt], map: "lat_deleted_at_idx")
   @@map("lookup_activity_types")
+}
+
+model LookupGradeDescription {
+  id            Int       @id @default(autoincrement())
+  minPercentage Decimal   @map("min_percentage") @db.Decimal(5, 2)
+  maxPercentage Decimal   @map("max_percentage") @db.Decimal(5, 2)
+  nameAr        String    @map("name_ar") @db.VarChar(100)
+  nameEn        String?   @map("name_en") @db.VarChar(100)
+  colorCode     String?   @map("color_code") @db.VarChar(20)
+  sortOrder     Int       @default(1) @map("sort_order")
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+  createdById   String?   @map("created_by") @db.VarChar(191)
+  updatedById   String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("lookup_grade_description_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("lookup_grade_description_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([minPercentage, maxPercentage], map: "lgd_percentage_range_uq")
+  @@index([sortOrder, deletedAt], map: "lgd_sort_del_idx")
+  @@index([isActive, deletedAt], map: "lgd_active_del_idx")
+  @@index([deletedAt], map: "lgd_deleted_at_idx")
+  @@map("lookup_grade_descriptions")
 }
 
 model LookupSchoolType {
@@ -1211,6 +1238,9 @@ model Locality {
   directorate Directorate? @relation(fields: [directorateId], references: [id], onDelete: SetNull)
   createdBy   User?        @relation("locality_created_by", fields: [createdById], references: [id], onDelete: SetNull)
   updatedBy   User?        @relation("locality_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+  students    Student[]
+  guardians   Guardian[]
+  employees   Employee[]
 
   @@index([villageId, deletedAt], map: "locality_village_del_idx")
   @@index([directorateId, deletedAt], map: "locality_directorate_del_idx")
@@ -1321,8 +1351,8 @@ model CalendarAdjustmentLog {
   updatedById     String?                @map("updated_by") @db.VarChar(191)
 
   adjustedBy User  @relation("calendar_adjustment_adjusted_by", fields: [adjustedById], references: [id], onDelete: Restrict)
-  createdBy User?  @relation("calendar_adjustment_created_by", fields: [createdById], references: [id], onDelete: SetNull)
-  updatedBy User?  @relation("calendar_adjustment_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+  createdBy  User? @relation("calendar_adjustment_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy  User? @relation("calendar_adjustment_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
 
   @@index([adjustmentDate], map: "cal_adj_date_idx")
   @@index([deletedAt], map: "cal_adj_deleted_at_idx")
@@ -1775,6 +1805,7 @@ model Employee {
   specialization     String?                    @db.VarChar(100)
   idNumber           String?                    @map("id_number") @db.VarChar(30)
   idTypeId           Int?                       @map("id_type_id")
+  localityId         Int?                       @map("locality_id")
   idExpiryDate       DateTime?                  @map("id_expiry_date")
   experienceYears    Int                        @default(0) @map("experience_years")
   employmentType     EmploymentType?            @map("employment_type")
@@ -1791,13 +1822,14 @@ model Employee {
   createdById        String?                    @map("created_by") @db.VarChar(191)
   updatedById        String?                    @map("updated_by") @db.VarChar(191)
 
-  createdBy   User? @relation("employee_created_by", fields: [createdById], references: [id], onDelete: SetNull)
-  updatedBy   User? @relation("employee_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
-  userAccount User?
+  createdBy           User?                @relation("employee_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy           User?                @relation("employee_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+  userAccount         User?
   genderLookup        LookupGender?        @relation("employee_gender_lookup", fields: [genderId], references: [id], onDelete: SetNull)
   qualificationLookup LookupQualification? @relation("employee_qualification_lookup", fields: [qualificationId], references: [id], onDelete: SetNull)
   jobRoleLookup       LookupJobRole?       @relation("employee_job_role_lookup", fields: [jobRoleId], references: [id], onDelete: SetNull)
-  idType      LookupIdType? @relation(fields: [idTypeId], references: [id], onDelete: SetNull)
+  idType              LookupIdType?        @relation(fields: [idTypeId], references: [id], onDelete: SetNull)
+  locality            Locality?            @relation(fields: [localityId], references: [id], onDelete: SetNull)
 
   tasks                  EmployeeTask[]
   teachingAssignments    EmployeeTeachingAssignment[]
@@ -1815,6 +1847,7 @@ model Employee {
   @@index([employmentType, deletedAt], map: "emp_type_del_idx")
   @@index([qualificationId, deletedAt], map: "emp_qualification_id_del_idx")
   @@index([idTypeId, deletedAt], map: "emp_id_type_del_idx")
+  @@index([localityId, deletedAt], map: "emp_locality_del_idx")
   @@index([jobRoleId, deletedAt], map: "emp_job_role_id_del_idx")
   @@index([jobTitle, deletedAt], map: "emp_job_del_idx")
   @@index([isActive, deletedAt], map: "emp_active_del_idx")
@@ -1823,19 +1856,19 @@ model Employee {
 }
 
 model EmployeeSectionSupervision {
-  id                 String   @id @default(cuid()) @db.VarChar(191)
-  employeeId         String   @map("employee_id") @db.VarChar(191)
-  sectionId          String   @map("section_id") @db.VarChar(191)
-  academicYearId     String   @map("academic_year_id") @db.VarChar(191)
-  canViewStudents    Boolean  @default(true) @map("can_view_students")
-  canManageHomeworks Boolean  @default(true) @map("can_manage_homeworks")
-  canManageGrades    Boolean  @default(true) @map("can_manage_grades")
-  isActive           Boolean  @default(true) @map("is_active")
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt @map("updated_at")
+  id                 String    @id @default(cuid()) @db.VarChar(191)
+  employeeId         String    @map("employee_id") @db.VarChar(191)
+  sectionId          String    @map("section_id") @db.VarChar(191)
+  academicYearId     String    @map("academic_year_id") @db.VarChar(191)
+  canViewStudents    Boolean   @default(true) @map("can_view_students")
+  canManageHomeworks Boolean   @default(true) @map("can_manage_homeworks")
+  canManageGrades    Boolean   @default(true) @map("can_manage_grades")
+  isActive           Boolean   @default(true) @map("is_active")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
   deletedAt          DateTime? @map("deleted_at")
-  createdById        String?  @map("created_by") @db.VarChar(191)
-  updatedById        String?  @map("updated_by") @db.VarChar(191)
+  createdById        String?   @map("created_by") @db.VarChar(191)
+  updatedById        String?   @map("updated_by") @db.VarChar(191)
 
   employee     Employee     @relation(fields: [employeeId], references: [id], onDelete: Restrict)
   section      Section      @relation(fields: [sectionId], references: [id], onDelete: Restrict)
@@ -2084,29 +2117,31 @@ model EmployeeViolation {
 }
 
 model Student {
-  id           String               @id @default(cuid()) @db.VarChar(191)
-  admissionNo  String?              @unique @map("admission_no") @db.VarChar(40)
-  fullName     String               @map("full_name") @db.VarChar(150)
-  gender       StudentGender
-  genderId     Int?                 @map("gender_id")
-  birthDate    DateTime?            @map("birth_date")
-  bloodTypeId  Int?                 @map("blood_type_id")
-  healthStatus StudentHealthStatus? @map("health_status")
-  healthStatusId Int?               @map("health_status_id")
-  healthNotes  String?              @map("health_notes") @db.VarChar(1000)
-  orphanStatus StudentOrphanStatus  @default(NONE) @map("orphan_status")
-  orphanStatusId Int?               @map("orphan_status_id")
-  isActive     Boolean              @default(true) @map("is_active")
-  createdAt    DateTime             @default(now()) @map("created_at")
-  updatedAt    DateTime             @updatedAt @map("updated_at")
-  deletedAt    DateTime?            @map("deleted_at")
-  createdById  String?              @map("created_by") @db.VarChar(191)
-  updatedById  String?              @map("updated_by") @db.VarChar(191)
+  id             String               @id @default(cuid()) @db.VarChar(191)
+  admissionNo    String?              @unique @map("admission_no") @db.VarChar(40)
+  fullName       String               @map("full_name") @db.VarChar(150)
+  gender         StudentGender
+  genderId       Int?                 @map("gender_id")
+  birthDate      DateTime?            @map("birth_date")
+  bloodTypeId    Int?                 @map("blood_type_id")
+  localityId     Int?                 @map("locality_id")
+  healthStatus   StudentHealthStatus? @map("health_status")
+  healthStatusId Int?                 @map("health_status_id")
+  healthNotes    String?              @map("health_notes") @db.VarChar(1000)
+  orphanStatus   StudentOrphanStatus  @default(NONE) @map("orphan_status")
+  orphanStatusId Int?                 @map("orphan_status_id")
+  isActive       Boolean              @default(true) @map("is_active")
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+  deletedAt      DateTime?            @map("deleted_at")
+  createdById    String?              @map("created_by") @db.VarChar(191)
+  updatedById    String?              @map("updated_by") @db.VarChar(191)
 
-  createdBy User? @relation("student_created_by", fields: [createdById], references: [id], onDelete: SetNull)
-  updatedBy User? @relation("student_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
-  bloodType LookupBloodType? @relation(fields: [bloodTypeId], references: [id], onDelete: SetNull)
-  genderLookup LookupGender? @relation("student_gender_lookup", fields: [genderId], references: [id], onDelete: SetNull)
+  createdBy          User?               @relation("student_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy          User?               @relation("student_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+  bloodType          LookupBloodType?    @relation(fields: [bloodTypeId], references: [id], onDelete: SetNull)
+  locality           Locality?           @relation(fields: [localityId], references: [id], onDelete: SetNull)
+  genderLookup       LookupGender?       @relation("student_gender_lookup", fields: [genderId], references: [id], onDelete: SetNull)
   orphanStatusLookup LookupOrphanStatus? @relation("student_orphan_status_lookup", fields: [orphanStatusId], references: [id], onDelete: SetNull)
   healthStatusLookup LookupHealthStatus? @relation("student_health_status_lookup", fields: [healthStatusId], references: [id], onDelete: SetNull)
 
@@ -2118,6 +2153,7 @@ model Student {
   @@index([gender, deletedAt], map: "stu_gender_del_idx")
   @@index([genderId, deletedAt], map: "stu_gender_id_del_idx")
   @@index([bloodTypeId, deletedAt], map: "stu_blood_type_del_idx")
+  @@index([localityId, deletedAt], map: "stu_locality_del_idx")
   @@index([healthStatusId, deletedAt], map: "stu_health_status_id_del_idx")
   @@index([orphanStatus, deletedAt], map: "stu_orphan_del_idx")
   @@index([orphanStatusId, deletedAt], map: "stu_orphan_id_del_idx")
@@ -2132,6 +2168,7 @@ model Guardian {
   genderId       Int?          @map("gender_id")
   idNumber       String?       @map("id_number") @db.VarChar(30)
   idTypeId       Int?          @map("id_type_id")
+  localityId     Int?          @map("locality_id")
   phonePrimary   String?       @map("phone_primary") @db.VarChar(20)
   phoneSecondary String?       @map("phone_secondary") @db.VarChar(20)
   whatsappNumber String?       @map("whatsapp_number") @db.VarChar(20)
@@ -2143,9 +2180,10 @@ model Guardian {
   createdById    String?       @map("created_by") @db.VarChar(191)
   updatedById    String?       @map("updated_by") @db.VarChar(191)
 
-  createdBy User? @relation("guardian_created_by", fields: [createdById], references: [id], onDelete: SetNull)
-  updatedBy User? @relation("guardian_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
-  idType    LookupIdType? @relation(fields: [idTypeId], references: [id], onDelete: SetNull)
+  createdBy    User?         @relation("guardian_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy    User?         @relation("guardian_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+  idType       LookupIdType? @relation(fields: [idTypeId], references: [id], onDelete: SetNull)
+  locality     Locality?     @relation(fields: [localityId], references: [id], onDelete: SetNull)
   genderLookup LookupGender? @relation("guardian_gender_lookup", fields: [genderId], references: [id], onDelete: SetNull)
 
   students StudentGuardian[]
@@ -2153,6 +2191,7 @@ model Guardian {
   @@index([fullName, deletedAt], map: "gdn_name_del_idx")
   @@index([genderId, deletedAt], map: "gdn_gender_id_del_idx")
   @@index([idTypeId, deletedAt], map: "gdn_id_type_del_idx")
+  @@index([localityId, deletedAt], map: "gdn_locality_del_idx")
   @@index([phonePrimary, deletedAt], map: "gdn_phone_del_idx")
   @@index([isActive, deletedAt], map: "gdn_active_del_idx")
   @@index([deletedAt], map: "gdn_deleted_at_idx")
@@ -2178,8 +2217,8 @@ model StudentGuardian {
   createdById             String?              @map("created_by") @db.VarChar(191)
   updatedById             String?              @map("updated_by") @db.VarChar(191)
 
-  student  Student  @relation(fields: [studentId], references: [id], onDelete: Restrict)
-  guardian Guardian @relation(fields: [guardianId], references: [id], onDelete: Restrict)
+  student                Student                 @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  guardian               Guardian                @relation(fields: [guardianId], references: [id], onDelete: Restrict)
   relationshipTypeLookup LookupRelationshipType? @relation("student_guardian_relationship_lookup", fields: [relationshipTypeId], references: [id], onDelete: SetNull)
 
   createdBy User? @relation("student_guardian_created_by", fields: [createdById], references: [id], onDelete: SetNull)

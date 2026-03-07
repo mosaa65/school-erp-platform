@@ -29,7 +29,11 @@ import { useGradingPoliciesQuery } from "@/features/grading-policies/hooks/use-g
 import { useAcademicYearOptionsQuery } from "@/features/grading-policies/hooks/use-academic-year-options-query";
 import { useGradeLevelOptionsQuery } from "@/features/grading-policies/hooks/use-grade-level-options-query";
 import { useSubjectOptionsQuery } from "@/features/grading-policies/hooks/use-subject-options-query";
-import { translateGradingWorkflowStatus } from "@/lib/i18n/ar";
+import {
+  translateAssessmentType,
+  translateGradingWorkflowStatus,
+} from "@/lib/i18n/ar";
+import { formatNameCodeLabel } from "@/lib/option-labels";
 import type {
   AssessmentType,
   GradingPolicyListItem,
@@ -122,24 +126,7 @@ function statusBadgeVariant(
 }
 
 function assessmentTypeLabel(value: AssessmentType): string {
-  switch (value) {
-    case "MONTHLY":
-      return "شهري";
-    case "MIDTERM":
-      return "منتصف الفصل";
-    case "FINAL":
-      return "نهائي";
-    case "QUIZ":
-      return "اختبار قصير";
-    case "ORAL":
-      return "شفهي";
-    case "PRACTICAL":
-      return "عملي";
-    case "PROJECT":
-      return "مشروع";
-    default:
-      return value;
-  }
+  return translateAssessmentType(value);
 }
 
 function parseOptionalNumber(value: string): number | undefined {
@@ -350,7 +337,7 @@ export function GradingPoliciesWorkspace() {
       return;
     }
 
-    const confirmed = window.confirm(`تأكيد حذف سياسة ${policy.subject.name} (${policy.assessmentType})؟`);
+    const confirmed = window.confirm(`تأكيد حذف سياسة ${policy.subject.name} (${assessmentTypeLabel(policy.assessmentType)})؟`);
     if (!confirmed) {
       return;
     }
@@ -401,7 +388,7 @@ export function GradingPoliciesWorkspace() {
                   <option value="">السنة الدراسية *</option>
                   {yearOptions.map((item) => (
                     <option key={item.id} value={item.id}>
-                      {item.code}
+                      {formatNameCodeLabel(item.name, item.code)}
                     </option>
                   ))}
                 </select>
@@ -417,7 +404,7 @@ export function GradingPoliciesWorkspace() {
                   <option value="">الصف *</option>
                   {gradeOptions.map((item) => (
                     <option key={item.id} value={item.id}>
-                      {item.code}
+                      {formatNameCodeLabel(item.name, item.code)}
                     </option>
                   ))}
                 </select>
@@ -435,7 +422,7 @@ export function GradingPoliciesWorkspace() {
                   <option value="">المادة *</option>
                   {subjectOptions.map((item) => (
                     <option key={item.id} value={item.id}>
-                      {item.code} - {item.name}
+                      {formatNameCodeLabel(item.name, item.code)}
                     </option>
                   ))}
                 </select>
@@ -659,7 +646,7 @@ export function GradingPoliciesWorkspace() {
               <option value="all">السنة</option>
               {yearOptions.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.code}
+                  {formatNameCodeLabel(item.name, item.code)}
                 </option>
               ))}
             </select>
@@ -676,7 +663,7 @@ export function GradingPoliciesWorkspace() {
               <option value="all">الصف</option>
               {gradeOptions.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.code}
+                  {formatNameCodeLabel(item.name, item.code)}
                 </option>
               ))}
             </select>
@@ -693,7 +680,7 @@ export function GradingPoliciesWorkspace() {
               <option value="all">المادة</option>
               {subjectOptions.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.code}
+                  {formatNameCodeLabel(item.name, item.code)}
                 </option>
               ))}
             </select>
@@ -802,10 +789,10 @@ export function GradingPoliciesWorkspace() {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="space-y-1">
                   <p className="font-medium">
-                    {policy.subject.name} - {policy.assessmentType}
+                    {policy.subject.name} - {assessmentTypeLabel(policy.assessmentType)}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {policy.academicYear.code} / {policy.gradeLevel.code}
+                    {formatNameCodeLabel(policy.academicYear.name, policy.academicYear.code)} / {formatNameCodeLabel(policy.gradeLevel.name, policy.gradeLevel.code)}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     النجاح: {policy.passingScore} | الاختبار: {policy.maxExamScore} | الواجب:{" "}

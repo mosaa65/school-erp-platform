@@ -8,7 +8,7 @@ export default function AuditLogsPage() {
       <div className="space-y-4">
         <div className="space-y-2">
           <Badge variant="secondary" className="w-fit">
-            System 01 - Audit Logs
+            النظام 01 - سجل التدقيق
           </Badge>
           <h2 className="text-2xl font-semibold tracking-tight">سجل التدقيق</h2>
         </div>
@@ -17,6 +17,7 @@ export default function AuditLogsPage() {
     </PermissionGuard>
   );
 }
+
 
 
 

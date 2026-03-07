@@ -13,6 +13,7 @@ type UseStudentsQueryOptions = {
   search?: string;
   genderId?: number;
   bloodTypeId?: number;
+  localityId?: number;
   orphanStatusId?: number;
   isActive?: boolean;
 };
@@ -29,6 +30,7 @@ export function useStudentsQuery(options: UseStudentsQueryOptions = {}) {
       options.search ?? "",
       options.genderId ?? "all",
       options.bloodTypeId ?? "all",
+      options.localityId ?? "all",
       options.orphanStatusId ?? "all",
       options.isActive === undefined ? "all" : options.isActive ? "active" : "inactive",
     ],
@@ -41,6 +43,7 @@ export function useStudentsQuery(options: UseStudentsQueryOptions = {}) {
           search: options.search,
           genderId: options.genderId,
           bloodTypeId: options.bloodTypeId,
+          localityId: options.localityId,
           orphanStatusId: options.orphanStatusId,
           isActive: options.isActive,
         });

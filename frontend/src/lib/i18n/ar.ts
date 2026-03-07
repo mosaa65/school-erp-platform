@@ -1,8 +1,10 @@
 import type {
+  AssessmentType,
   EmployeeAttendanceStatus,
   EmployeeGender,
   EmployeeSystemAccessStatus,
   EmploymentType,
+  ExamAbsenceType,
   GuardianRelationship,
   GradingWorkflowStatus,
   PerformanceRatingLevel,
@@ -81,6 +83,21 @@ const GRADING_WORKFLOW_STATUS_LABELS: Record<GradingWorkflowStatus, string> = {
   IN_REVIEW: "قيد المراجعة",
   APPROVED: "معتمد",
   ARCHIVED: "مؤرشف",
+};
+
+const ASSESSMENT_TYPE_LABELS: Record<AssessmentType, string> = {
+  MONTHLY: "شهري",
+  MIDTERM: "منتصف الفصل",
+  FINAL: "نهائي",
+  QUIZ: "اختبار قصير",
+  ORAL: "شفهي",
+  PRACTICAL: "عملي",
+  PROJECT: "مشروع",
+};
+
+const EXAM_ABSENCE_TYPE_LABELS: Record<ExamAbsenceType, string> = {
+  EXCUSED: "بعذر",
+  UNEXCUSED: "بدون عذر",
 };
 
 const TIE_BREAK_STRATEGY_LABELS: Record<TieBreakStrategy, string> = {
@@ -163,7 +180,7 @@ const PERMISSION_RESOURCE_LABELS: Record<string, string> = {
   sections: "الشعب",
   subjects: "المواد",
   "grade-level-subjects": "ربط الصفوف بالمواد",
-  "term-subject-offerings": "عروض المواد",
+  "term-subject-offerings": "خطة المواد للفصل",
   "timetable-entries": "الجدول الدراسي",
   students: "الطلاب",
   guardians: "أولياء الأمور",
@@ -249,6 +266,14 @@ export function translateStudentEnrollmentStatus(value: StudentEnrollmentStatus)
 
 export function translateGradingWorkflowStatus(value: GradingWorkflowStatus): string {
   return GRADING_WORKFLOW_STATUS_LABELS[value] ?? value;
+}
+
+export function translateAssessmentType(value: AssessmentType): string {
+  return ASSESSMENT_TYPE_LABELS[value] ?? value;
+}
+
+export function translateExamAbsenceType(value: ExamAbsenceType): string {
+  return EXAM_ABSENCE_TYPE_LABELS[value] ?? value;
 }
 
 export function translateTieBreakStrategy(value: TieBreakStrategy): string {

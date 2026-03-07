@@ -8,7 +8,7 @@ export default function GlobalSettingsPage() {
       <div className="space-y-4">
         <div className="space-y-2">
           <Badge variant="secondary" className="w-fit">
-            System 01 - Global Settings
+            النظام 01 - الإعدادات العامة
           </Badge>
           <h2 className="text-2xl font-semibold tracking-tight">الإعدادات العامة</h2>
         </div>
@@ -17,6 +17,7 @@ export default function GlobalSettingsPage() {
     </PermissionGuard>
   );
 }
+
 
 
 

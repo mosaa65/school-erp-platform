@@ -55,6 +55,13 @@ export class ListStudentsDto {
   @Min(1)
   bloodTypeId?: number;
 
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  localityId?: number;
+
   @ApiPropertyOptional({ enum: StudentHealthStatus })
   @IsOptional()
   @IsEnum(StudentHealthStatus)

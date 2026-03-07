@@ -56,6 +56,13 @@ export class ListEmployeesDto {
   @Min(1)
   idTypeId?: number;
 
+  @ApiPropertyOptional({ example: 12 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  localityId?: number;
+
   @ApiPropertyOptional({ example: 'Teacher' })
   @IsOptional()
   @IsString()
