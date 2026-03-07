@@ -143,7 +143,7 @@ export function AppShell({ children }: AppShellProps) {
     <div className="relative min-h-screen md:grid md:grid-cols-[300px_1fr]">
       <aside
         className={cn(
-          "fixed inset-y-0 right-0 z-40 w-80 border-l border-border/70 bg-card/95 p-4 shadow-lg backdrop-blur-sm transition-transform duration-200 md:static md:w-auto md:translate-x-0 md:border-l-0 md:border-r",
+          "fixed inset-y-0 right-0 z-40 flex w-80 flex-col overflow-hidden border-l border-border/70 bg-card/95 p-4 shadow-lg backdrop-blur-sm transition-transform duration-200 md:static md:w-auto md:translate-x-0 md:border-l-0 md:border-r",
           isSidebarOpen ? "translate-x-0" : "translate-x-full",
         )}
       >
@@ -190,64 +190,66 @@ export function AppShell({ children }: AppShellProps) {
           </div>
         </div>
 
-        <nav className="space-y-2">
-          {visibleNavGroups.map((group) => {
-            const isExpanded = expandedGroupIds.includes(group.id);
-            const hasActiveItem = group.items.some((item) =>
-              isNavItemActive(pathname, item.href),
-            );
+        <div className="min-h-0 flex-1 overflow-y-auto pe-1">
+          <nav className="space-y-2">
+            {visibleNavGroups.map((group) => {
+              const isExpanded = expandedGroupIds.includes(group.id);
+              const hasActiveItem = group.items.some((item) =>
+                isNavItemActive(pathname, item.href),
+              );
 
-            return (
-              <section
-                key={group.id}
-                className={cn(
-                  "rounded-lg border border-border/60 bg-background/50 p-2",
-                  hasActiveItem ? "border-primary/40" : "",
-                )}
-              >
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-right text-sm font-medium hover:bg-muted/70"
-                  onClick={() => toggleGroup(group.id)}
+              return (
+                <section
+                  key={group.id}
+                  className={cn(
+                    "rounded-lg border border-border/60 bg-background/50 p-2",
+                    hasActiveItem ? "border-primary/40" : "",
+                  )}
                 >
-                  <span className="flex items-center gap-2">
-                    <group.icon className="h-4 w-4 text-primary" />
-                    {group.label}
-                  </span>
-                  <ChevronDown
-                    className={cn(
-                      "h-4 w-4 transition-transform",
-                      isExpanded ? "rotate-180" : "",
-                    )}
-                  />
-                </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-right text-sm font-medium hover:bg-muted/70"
+                    onClick={() => toggleGroup(group.id)}
+                  >
+                    <span className="flex items-center gap-2">
+                      <group.icon className="h-4 w-4 text-primary" />
+                      {group.label}
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 transition-transform",
+                        isExpanded ? "rotate-180" : "",
+                      )}
+                    />
+                  </button>
 
-                {isExpanded ? (
-                  <div className="mt-1 space-y-1">
-                    {group.items.map((item) => {
-                      const active = isNavItemActive(pathname, item.href);
-                      return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          className={cn(
-                            "flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors",
-                            active
-                              ? "border-primary/40 bg-primary/10 text-primary"
-                              : "border-transparent text-muted-foreground hover:border-border hover:bg-muted/60 hover:text-foreground",
-                          )}
-                        >
-                          <item.icon className="h-4 w-4" />
-                          {item.label}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                ) : null}
-              </section>
-            );
-          })}
-        </nav>
+                  {isExpanded ? (
+                    <div className="mt-1 space-y-1">
+                      {group.items.map((item) => {
+                        const active = isNavItemActive(pathname, item.href);
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            className={cn(
+                              "flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors",
+                              active
+                                ? "border-primary/40 bg-primary/10 text-primary"
+                                : "border-transparent text-muted-foreground hover:border-border hover:bg-muted/60 hover:text-foreground",
+                            )}
+                          >
+                            <item.icon className="h-4 w-4" />
+                            {item.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </section>
+              );
+            })}
+          </nav>
+        </div>
       </aside>
 
       {isSidebarOpen ? (
