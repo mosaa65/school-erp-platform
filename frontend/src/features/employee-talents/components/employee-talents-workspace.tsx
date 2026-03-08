@@ -402,7 +402,7 @@ export function EmployeeTalentsWorkspace() {
               <option value="all">كل الموظفين</option>
               {(employeesQuery.data ?? []).map((employee) => (
                 <option key={employee.id} value={employee.id}>
-                  {employee.jobNumber ?? employee.fullName}
+                  {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
                 </option>
               ))}
             </select>
@@ -419,7 +419,7 @@ export function EmployeeTalentsWorkspace() {
               <option value="all">كل المواهب</option>
               {(talentsQuery.data ?? []).map((talent) => (
                 <option key={talent.id} value={talent.id}>
-                  {talent.code}
+                  {talent.name} ({talent.code})
                 </option>
               ))}
             </select>

@@ -32,6 +32,9 @@ const TEACHER_READ_RESOURCES = new Set([
   'students',
   'student-enrollments',
   'student-attendance',
+  'student-talents',
+  'student-problems',
+  'parent-notifications',
   'homework-types',
   'homeworks',
   'student-homeworks',
@@ -71,6 +74,10 @@ const CLASS_SUPERVISOR_EXTRA_READ_RESOURCES = new Set([
   'guardians',
   'student-guardians',
   'student-books',
+  'student-talents',
+  'student-siblings',
+  'student-problems',
+  'parent-notifications',
 ]);
 
 const CLASS_SUPERVISOR_EXTRA_WRITE_RESOURCES = new Set([
@@ -79,6 +86,10 @@ const CLASS_SUPERVISOR_EXTRA_WRITE_RESOURCES = new Set([
   'student-guardians',
   'student-enrollments',
   'student-books',
+  'student-talents',
+  'student-siblings',
+  'student-problems',
+  'parent-notifications',
 ]);
 
 const SUPERVISOR_EXTRA_WRITE_RESOURCES = new Set([

@@ -230,6 +230,65 @@ export type GradingSummaryReportResponse = {
   };
 };
 
+export type GradingDetailedReportItem = {
+  id: string;
+  studentEnrollmentId: string;
+  academicYearId: string;
+  totalAllSubjects: number;
+  maxPossibleTotal: number;
+  percentage: number;
+  rankInClass: number | null;
+  rankInGrade: number | null;
+  passedSubjectsCount: number;
+  failedSubjectsCount: number;
+  status: string;
+  isLocked: boolean;
+  isActive: boolean;
+  calculatedAt: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  student: {
+    id: string;
+    admissionNo: string | null;
+    fullName: string;
+  };
+  section: {
+    id: string;
+    code: string;
+    name: string;
+    gradeLevel: {
+      id: string;
+      code: string;
+      name: string;
+    };
+  };
+  gradeLevel: {
+    id: string;
+    code: string;
+    name: string;
+  };
+  academicYear: {
+    id: string;
+    code: string;
+    name: string;
+  };
+  promotionDecision: {
+    id: string;
+    code: string;
+    name: string;
+  };
+  gradeDescription: {
+    id: number;
+    minPercentage: number;
+    maxPercentage: number;
+    nameAr: string;
+    nameEn: string | null;
+    colorCode: string | null;
+    sortOrder: number;
+  } | null;
+};
+
 export type HrSummaryReportResponse = {
   generatedAt: string;
   scope: {
@@ -784,6 +843,80 @@ export function buildGradingSummaryReportResponse(
     },
     ...overrides,
   };
+}
+
+export function buildGradingDetailedReportList(
+  overrides: Partial<GradingDetailedReportItem>[] = [],
+): GradingDetailedReportItem[] {
+  const base: GradingDetailedReportItem[] = [
+    {
+      id: "annual-result-1",
+      studentEnrollmentId: "enroll-1",
+      academicYearId: "year-1",
+      totalAllSubjects: 540,
+      maxPossibleTotal: 600,
+      percentage: 90,
+      rankInClass: 1,
+      rankInGrade: 2,
+      passedSubjectsCount: 10,
+      failedSubjectsCount: 0,
+      status: "APPROVED",
+      isLocked: true,
+      isActive: true,
+      calculatedAt: "2026-02-24T00:00:00.000Z",
+      notes: null,
+      createdAt: "2026-02-24T00:00:00.000Z",
+      updatedAt: "2026-02-24T00:00:00.000Z",
+      student: {
+        id: "student-1",
+        admissionNo: "2026-0001",
+        fullName: "طالب تجريبي 1",
+      },
+      section: {
+        id: "sec-1",
+        code: "SEC-1",
+        name: "الشعبة أ",
+        gradeLevel: {
+          id: "grade-1",
+          code: "GRADE-1",
+          name: "الصف الأول",
+        },
+      },
+      gradeLevel: {
+        id: "grade-1",
+        code: "GRADE-1",
+        name: "الصف الأول",
+      },
+      academicYear: {
+        id: "year-1",
+        code: "2026-2027",
+        name: "السنة الدراسية 2026-2027",
+      },
+      promotionDecision: {
+        id: "pd-promoted",
+        code: "PROMOTED",
+        name: "ترفيع",
+      },
+      gradeDescription: {
+        id: 1,
+        minPercentage: 85,
+        maxPercentage: 100,
+        nameAr: "ممتاز",
+        nameEn: "Excellent",
+        colorCode: "#22C55E",
+        sortOrder: 1,
+      },
+    },
+  ];
+
+  if (overrides.length === 0) {
+    return base;
+  }
+
+  return overrides.map((override, index) => ({
+    ...(base[index] ?? base[0]),
+    ...override,
+  }));
 }
 
 export function buildHrSummaryReportResponse(

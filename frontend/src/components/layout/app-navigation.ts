@@ -292,6 +292,30 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         icon: BookText,
         requiredPermission: "student-books.read",
       },
+      {
+        href: "/app/student-talents",
+        label: "مواهب الطلاب",
+        icon: Sparkles,
+        requiredPermission: "student-talents.read",
+      },
+      {
+        href: "/app/student-siblings",
+        label: "الإخوة في المدرسة",
+        icon: Users,
+        requiredPermission: "student-siblings.read",
+      },
+      {
+        href: "/app/student-problems",
+        label: "مشكلات الطلاب",
+        icon: AlertTriangle,
+        requiredPermission: "student-problems.read",
+      },
+      {
+        href: "/app/parent-notifications",
+        label: "إشعارات أولياء الأمور",
+        icon: ScrollText,
+        requiredPermission: "parent-notifications.read",
+      },
     ],
   },
   {

@@ -500,28 +500,130 @@ export async function seedSystem01Lookups(prisma: PrismaClient) {
 
   const lookupTalents = [
     {
-      code: 'SPORTS',
-      nameAr: 'رياضة',
-      category: 'بدنية',
-      appliesTo: LookupAppliesTo.ALL,
-    },
-    {
-      code: 'ARTS',
-      nameAr: 'فنون',
-      category: 'إبداعية',
-      appliesTo: LookupAppliesTo.ALL,
-    },
-    {
-      code: 'SCIENCE',
-      nameAr: 'علوم',
-      category: 'أكاديمية',
+      code: 'ACADEMIC_EXCELLENCE',
+      nameAr: 'التفوق الدراسي/الذكاء',
+      category: 'علمي',
       appliesTo: LookupAppliesTo.STUDENTS,
     },
     {
-      code: 'LEADERSHIP',
-      nameAr: 'قيادة',
-      category: 'مهارية',
+      code: 'READING',
+      nameAr: 'القراءة',
+      category: 'أدبي',
+      appliesTo: LookupAppliesTo.ALL,
+    },
+    {
+      code: 'CALLIGRAPHY',
+      nameAr: 'الخط',
+      category: 'فني',
+      appliesTo: LookupAppliesTo.ALL,
+    },
+    {
+      code: 'DRAWING',
+      nameAr: 'الرسم',
+      category: 'فني',
+      appliesTo: LookupAppliesTo.ALL,
+    },
+    {
+      code: 'ORATORY',
+      nameAr: 'الإلقاء',
+      category: 'أدبي',
+      appliesTo: LookupAppliesTo.ALL,
+    },
+    {
+      code: 'ACTING',
+      nameAr: 'التمثيل',
+      category: 'فني',
+      appliesTo: LookupAppliesTo.ALL,
+    },
+    {
+      code: 'MEMORIZATION',
+      nameAr: 'الحفظ',
+      category: 'ديني',
+      appliesTo: LookupAppliesTo.ALL,
+    },
+    {
+      code: 'NASHEED',
+      nameAr: 'الإنشاد',
+      category: 'ديني',
+      appliesTo: LookupAppliesTo.ALL,
+    },
+    {
+      code: 'VOICE_IMPERSONATION',
+      nameAr: 'محاكات الأصوات',
+      category: 'فني',
+      appliesTo: LookupAppliesTo.ALL,
+    },
+    {
+      code: 'QURAN_RECITATION',
+      nameAr: 'ترتيل القرآن',
+      category: 'ديني',
+      appliesTo: LookupAppliesTo.ALL,
+    },
+    {
+      code: 'POETRY',
+      nameAr: 'شاعر',
+      category: 'أدبي',
+      appliesTo: LookupAppliesTo.ALL,
+    },
+    {
+      code: 'HANDCRAFT',
+      nameAr: 'حرفة يدوية',
+      category: 'مهني',
+      appliesTo: LookupAppliesTo.ALL,
+    },
+    {
+      code: 'DRIVING',
+      nameAr: 'سائق',
+      category: 'مهني',
       appliesTo: LookupAppliesTo.EMPLOYEES,
+    },
+    {
+      code: 'RARE_MOVEMENTS',
+      nameAr: 'حركات نادرة',
+      category: 'ترفيهي',
+      appliesTo: LookupAppliesTo.STUDENTS,
+    },
+    {
+      code: 'SPORTS',
+      nameAr: 'رياضة',
+      category: 'رياضي',
+      appliesTo: LookupAppliesTo.ALL,
+    },
+    {
+      code: 'SWIMMING',
+      nameAr: 'سباحة',
+      category: 'رياضي',
+      appliesTo: LookupAppliesTo.ALL,
+    },
+    {
+      code: 'EMBROIDERY',
+      nameAr: 'تطريز',
+      category: 'مهني',
+      appliesTo: LookupAppliesTo.ALL,
+    },
+    {
+      code: 'ENGRAVING',
+      nameAr: 'نقش',
+      category: 'فني',
+      appliesTo: LookupAppliesTo.ALL,
+    },
+    {
+      code: 'TAILORING',
+      nameAr: 'خياطة',
+      category: 'مهني',
+      appliesTo: LookupAppliesTo.ALL,
+    },
+    {
+      code: 'MANUFACTURING',
+      nameAr: 'صناعة',
+      category: 'مهني',
+      appliesTo: LookupAppliesTo.ALL,
+    },
+    {
+      code: 'OTHER',
+      nameAr: 'أخرى',
+      category: null,
+      appliesTo: LookupAppliesTo.ALL,
     },
   ];
 
@@ -541,6 +643,29 @@ export async function seedSystem01Lookups(prisma: PrismaClient) {
         nameAr: item.nameAr,
         category: item.category,
         appliesTo: item.appliesTo,
+        isActive: true,
+      },
+    });
+  }
+
+  // Keep HR operational catalog (`talents`) aligned with shared lookup talents.
+  // This avoids empty talent options in employee-talents workflow after fresh setup.
+  for (const item of lookupTalents) {
+    await prisma.talent.upsert({
+      where: {
+        code: item.code,
+      },
+      update: {
+        name: item.nameAr,
+        description: item.category ? `تصنيف: ${item.category}` : null,
+        isActive: true,
+        deletedAt: null,
+        updatedById: null,
+      },
+      create: {
+        code: item.code,
+        name: item.nameAr,
+        description: item.category ? `تصنيف: ${item.category}` : null,
         isActive: true,
       },
     });

@@ -47,10 +47,13 @@ import { SectionsModule } from './modules/sections/sections.module';
 import { SemesterGradesModule } from './modules/semester-grades/semester-grades.module';
 import { StudentEnrollmentsModule } from './modules/student-enrollments/student-enrollments.module';
 import { StudentGuardiansModule } from './modules/student-guardians/student-guardians.module';
+import { StudentProblemsModule } from './modules/student-problems/student-problems.module';
+import { StudentSiblingsModule } from './modules/student-siblings/student-siblings.module';
 import { StudentsModule } from './modules/students/students.module';
 import { StudentAttendanceModule } from './modules/student-attendance/student-attendance.module';
 import { StudentBooksModule } from './modules/student-books/student-books.module';
 import { StudentHomeworksModule } from './modules/student-homeworks/student-homeworks.module';
+import { StudentTalentsModule } from './modules/student-talents/student-talents.module';
 import { SubjectsModule } from './modules/subjects/subjects.module';
 import { GradingPoliciesModule } from './modules/grading-policies/grading-policies.module';
 import { ExamPeriodsModule } from './modules/exam-periods/exam-periods.module';
@@ -64,6 +67,7 @@ import { SystemSettingsModule } from './modules/system-settings/system-settings.
 import { UserPermissionsModule } from './modules/user-permissions/user-permissions.module';
 import { UsersModule } from './modules/users/users.module';
 import { GuardiansModule } from './modules/guardians/guardians.module';
+import { ParentNotificationsModule } from './modules/parent-notifications/parent-notifications.module';
 import { SchoolProfilesModule } from './modules/school-profiles/school-profiles.module';
 import { PrismaModule } from './prisma/prisma.module';
 
@@ -92,6 +96,10 @@ import { PrismaModule } from './prisma/prisma.module';
     StudentEnrollmentsModule,
     StudentAttendanceModule,
     StudentBooksModule,
+    StudentTalentsModule,
+    StudentSiblingsModule,
+    StudentProblemsModule,
+    ParentNotificationsModule,
     GradingPoliciesModule,
     ExamPeriodsModule,
     ExamAssessmentsModule,

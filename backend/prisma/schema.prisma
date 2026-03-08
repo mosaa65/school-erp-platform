@@ -163,6 +163,23 @@ enum StudentBookStatus {
   DAMAGED
 }
 
+enum StudentSiblingRelationship {
+  BROTHER
+  SISTER
+}
+
+enum ParentNotificationType {
+  POSITIVE
+  NEGATIVE
+}
+
+enum ParentNotificationSendMethod {
+  PAPER
+  WHATSAPP
+  PHONE
+  OTHER
+}
+
 enum GradingWorkflowStatus {
   DRAFT
   IN_REVIEW
@@ -405,6 +422,14 @@ model User {
   studentAttendanceUpdated            StudentAttendance[]             @relation("student_attendance_updated_by")
   studentBooksCreated                 StudentBook[]                   @relation("student_book_created_by")
   studentBooksUpdated                 StudentBook[]                   @relation("student_book_updated_by")
+  studentTalentsCreated               StudentTalent[]                 @relation("student_talent_created_by")
+  studentTalentsUpdated               StudentTalent[]                 @relation("student_talent_updated_by")
+  studentSiblingsCreated              StudentSibling[]                @relation("student_sibling_created_by")
+  studentSiblingsUpdated              StudentSibling[]                @relation("student_sibling_updated_by")
+  studentProblemsCreated              StudentProblem[]                @relation("student_problem_created_by")
+  studentProblemsUpdated              StudentProblem[]                @relation("student_problem_updated_by")
+  parentNotificationsCreated          ParentNotification[]            @relation("parent_notification_created_by")
+  parentNotificationsUpdated          ParentNotification[]            @relation("parent_notification_updated_by")
   gradingPoliciesCreated              GradingPolicy[]                 @relation("grading_policy_created_by")
   gradingPoliciesUpdated              GradingPolicy[]                 @relation("grading_policy_updated_by")
   gradingPolicyComponentsCreated      GradingPolicyComponent[]        @relation("grading_policy_component_created_by")
@@ -1031,7 +1056,8 @@ model LookupRelationshipType {
   createdBy User? @relation("lookup_relationship_type_created_by", fields: [createdById], references: [id], onDelete: SetNull)
   updatedBy User? @relation("lookup_relationship_type_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
 
-  studentGuardianRelations StudentGuardian[] @relation("student_guardian_relationship_lookup")
+  studentGuardianRelations   StudentGuardian[]   @relation("student_guardian_relationship_lookup")
+  parentNotificationTitles   ParentNotification[] @relation("parent_notification_guardian_title_lookup")
 
   @@index([gender, deletedAt], map: "lrt_gender_del_idx")
   @@index([isActive, deletedAt], map: "lrt_active_del_idx")
@@ -2024,6 +2050,7 @@ model Talent {
   updatedBy User? @relation("talent_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
 
   employeeTalents EmployeeTalent[]
+  studentTalents  StudentTalent[]
 
   @@index([name, deletedAt], map: "tal_name_del_idx")
   @@index([isActive, deletedAt], map: "tal_active_del_idx")
@@ -2147,6 +2174,11 @@ model Student {
 
   guardians   StudentGuardian[]
   enrollments StudentEnrollment[]
+  talents     StudentTalent[]
+  siblings    StudentSibling[]    @relation("student_sibling_student")
+  asSiblingIn StudentSibling[]    @relation("student_sibling_sibling")
+  problems    StudentProblem[]
+  parentNotifications ParentNotification[]
 
   @@index([fullName, deletedAt], map: "stu_name_del_idx")
   @@index([isActive, deletedAt], map: "stu_active_del_idx")
@@ -2331,6 +2363,125 @@ model StudentBook {
   @@index([isActive, deletedAt], map: "sbk_active_del_idx")
   @@index([deletedAt], map: "sbk_deleted_at_idx")
   @@map("student_books")
+}
+
+model StudentTalent {
+  id          String    @id @default(cuid()) @db.VarChar(191)
+  studentId   String    @map("student_id") @db.VarChar(191)
+  talentId    String    @map("talent_id") @db.VarChar(191)
+  notes       String?   @db.VarChar(255)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  talent  Talent  @relation(fields: [talentId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("student_talent_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("student_talent_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([studentId, talentId], map: "stt_student_talent_uq")
+  @@index([studentId, deletedAt], map: "stt_student_del_idx")
+  @@index([talentId, deletedAt], map: "stt_talent_del_idx")
+  @@index([isActive, deletedAt], map: "stt_active_del_idx")
+  @@index([deletedAt], map: "stt_deleted_at_idx")
+  @@map("student_talents")
+}
+
+model StudentSibling {
+  id           String                     @id @default(cuid()) @db.VarChar(191)
+  studentId    String                     @map("student_id") @db.VarChar(191)
+  siblingId    String                     @map("sibling_id") @db.VarChar(191)
+  relationship StudentSiblingRelationship
+  notes        String?                    @db.VarChar(255)
+  isActive     Boolean                    @default(true) @map("is_active")
+  createdAt    DateTime                   @default(now()) @map("created_at")
+  updatedAt    DateTime                   @updatedAt @map("updated_at")
+  deletedAt    DateTime?                  @map("deleted_at")
+  createdById  String?                    @map("created_by") @db.VarChar(191)
+  updatedById  String?                    @map("updated_by") @db.VarChar(191)
+
+  student Student @relation("student_sibling_student", fields: [studentId], references: [id], onDelete: Restrict)
+  sibling Student @relation("student_sibling_sibling", fields: [siblingId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("student_sibling_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("student_sibling_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([studentId, siblingId], map: "ssb_student_sibling_uq")
+  @@index([studentId, deletedAt], map: "ssb_student_del_idx")
+  @@index([siblingId, deletedAt], map: "ssb_sibling_del_idx")
+  @@index([relationship, deletedAt], map: "ssb_relationship_del_idx")
+  @@index([isActive, deletedAt], map: "ssb_active_del_idx")
+  @@index([deletedAt], map: "ssb_deleted_at_idx")
+  @@map("student_siblings")
+}
+
+model StudentProblem {
+  id                 String    @id @default(cuid()) @db.VarChar(191)
+  studentId          String    @map("student_id") @db.VarChar(191)
+  problemDate        DateTime  @map("problem_date")
+  problemType        String?   @map("problem_type") @db.VarChar(50)
+  problemDescription String    @map("problem_description") @db.VarChar(1000)
+  actionsTaken       String?   @map("actions_taken") @db.VarChar(1000)
+  hasMinutes         Boolean   @default(false) @map("has_minutes")
+  isResolved         Boolean   @default(false) @map("is_resolved")
+  isActive           Boolean   @default(true) @map("is_active")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  deletedAt          DateTime? @map("deleted_at")
+  createdById        String?   @map("created_by") @db.VarChar(191)
+  updatedById        String?   @map("updated_by") @db.VarChar(191)
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("student_problem_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("student_problem_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([studentId, deletedAt], map: "spr_student_del_idx")
+  @@index([problemDate, deletedAt], map: "spr_date_del_idx")
+  @@index([isResolved, deletedAt], map: "spr_resolved_del_idx")
+  @@index([isActive, deletedAt], map: "spr_active_del_idx")
+  @@index([deletedAt], map: "spr_deleted_at_idx")
+  @@map("student_problems")
+}
+
+model ParentNotification {
+  id                  String                       @id @default(cuid()) @db.VarChar(191)
+  notificationNumber  Int                          @unique @map("notification_number")
+  studentId           String                       @map("student_id") @db.VarChar(191)
+  notificationType    ParentNotificationType       @map("notification_type")
+  guardianTitleId     Int?                         @map("guardian_title_id")
+  behaviorType        String?                      @map("behavior_type") @db.VarChar(100)
+  behaviorDescription String?                      @map("behavior_description") @db.VarChar(1000)
+  requiredAction      String?                      @map("required_action") @db.VarChar(1000)
+  sendMethod          ParentNotificationSendMethod @default(PAPER) @map("send_method")
+  messengerName       String?                      @map("messenger_name") @db.VarChar(100)
+  isSent              Boolean                      @default(false) @map("is_sent")
+  sentDate            DateTime?                    @map("sent_date")
+  results             String?                      @db.VarChar(1000)
+  isActive            Boolean                      @default(true) @map("is_active")
+  createdAt           DateTime                     @default(now()) @map("created_at")
+  updatedAt           DateTime                     @updatedAt @map("updated_at")
+  deletedAt           DateTime?                    @map("deleted_at")
+  createdById         String?                      @map("created_by") @db.VarChar(191)
+  updatedById         String?                      @map("updated_by") @db.VarChar(191)
+
+  student             Student                 @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  guardianTitleLookup LookupRelationshipType? @relation("parent_notification_guardian_title_lookup", fields: [guardianTitleId], references: [id], onDelete: SetNull)
+
+  createdBy User? @relation("parent_notification_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("parent_notification_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([studentId, deletedAt], map: "pnt_student_del_idx")
+  @@index([notificationType, deletedAt], map: "pnt_type_del_idx")
+  @@index([guardianTitleId, deletedAt], map: "pnt_guardian_title_del_idx")
+  @@index([isSent, sentDate, deletedAt], map: "pnt_sent_del_idx")
+  @@index([isActive, deletedAt], map: "pnt_active_del_idx")
+  @@index([deletedAt], map: "pnt_deleted_at_idx")
+  @@map("parent_notifications")
 }
 
 model GradingPolicy {

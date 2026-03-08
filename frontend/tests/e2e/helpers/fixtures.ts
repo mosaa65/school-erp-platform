@@ -57,6 +57,13 @@ export type SectionFixture = {
   isActive: boolean;
 };
 
+export type StudentFixture = {
+  id: string;
+  fullName: string;
+  admissionNo: string | null;
+  isActive: boolean;
+};
+
 const EMPLOYEE_POOL: EmployeeFixture[] = [
   {
     id: "emp-1",
@@ -181,6 +188,27 @@ const SECTION_POOL: SectionFixture[] = [
   },
 ];
 
+const STUDENT_POOL: StudentFixture[] = [
+  {
+    id: "stu-1",
+    fullName: "طالب تجريبي أول",
+    admissionNo: "STU-001",
+    isActive: true,
+  },
+  {
+    id: "stu-2",
+    fullName: "طالب تجريبي ثاني",
+    admissionNo: "STU-002",
+    isActive: true,
+  },
+  {
+    id: "stu-3",
+    fullName: "طالبة تجريبية ثالثة",
+    admissionNo: "STU-003",
+    isActive: true,
+  },
+];
+
 function clampCount(count: number, max: number): number {
   return Math.max(0, Math.min(count, max));
 }
@@ -218,4 +246,9 @@ export function buildSubjectFixtures(count = 1): SubjectFixture[] {
 export function buildSectionFixtures(count = 1): SectionFixture[] {
   const safeCount = clampCount(count, SECTION_POOL.length);
   return SECTION_POOL.slice(0, safeCount).map((section) => ({ ...section }));
+}
+
+export function buildStudentFixtures(count = 2): StudentFixture[] {
+  const safeCount = clampCount(count, STUDENT_POOL.length);
+  return STUDENT_POOL.slice(0, safeCount).map((student) => ({ ...student }));
 }

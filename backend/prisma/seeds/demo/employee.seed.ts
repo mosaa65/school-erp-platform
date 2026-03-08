@@ -28,6 +28,7 @@ export type DemoEmployeeSeedResult = {
   usersTotal: number;
   teachingAssignmentsTotal: number;
   sectionSupervisionsTotal: number;
+  employeeIdByKey: Record<string, string>;
   teacherBySubjectCode: Record<string, string>;
   classSupervisorBySectionId: Record<string, string>;
   supervisorIds: string[];
@@ -568,6 +569,7 @@ export async function seedDemoEmployees(
     usersTotal: employeeDefinitions.length,
     teachingAssignmentsTotal,
     sectionSupervisionsTotal,
+    employeeIdByKey: Object.fromEntries(employeeIdByKey.entries()),
     teacherBySubjectCode: Object.fromEntries(teacherBySubjectCode.entries()),
     classSupervisorBySectionId: Object.fromEntries(
       classSupervisorBySectionId.entries(),

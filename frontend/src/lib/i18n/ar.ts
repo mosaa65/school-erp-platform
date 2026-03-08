@@ -8,12 +8,15 @@ import type {
   GuardianRelationship,
   GradingWorkflowStatus,
   PerformanceRatingLevel,
+  ParentNotificationSendMethod,
+  ParentNotificationType,
   StudentAttendanceStatus,
   StudentBookStatus,
   StudentEnrollmentStatus,
   StudentGender,
   StudentHealthStatus,
   StudentOrphanStatus,
+  StudentSiblingRelationship,
   TimetableDay,
   TieBreakStrategy,
   ViolationSeverity,
@@ -140,6 +143,23 @@ const STUDENT_BOOK_STATUS_LABELS: Record<StudentBookStatus, string> = {
   DAMAGED: "تالف",
 };
 
+const STUDENT_SIBLING_RELATIONSHIP_LABELS: Record<StudentSiblingRelationship, string> = {
+  BROTHER: "أخ",
+  SISTER: "أخت",
+};
+
+const PARENT_NOTIFICATION_TYPE_LABELS: Record<ParentNotificationType, string> = {
+  POSITIVE: "إيجابي",
+  NEGATIVE: "سلبي",
+};
+
+const PARENT_NOTIFICATION_SEND_METHOD_LABELS: Record<ParentNotificationSendMethod, string> = {
+  PAPER: "ورقي",
+  WHATSAPP: "واتس",
+  PHONE: "هاتف",
+  OTHER: "أخرى",
+};
+
 const TIMETABLE_DAY_LABELS: Record<TimetableDay, string> = {
   MONDAY: "الاثنين",
   TUESDAY: "الثلاثاء",
@@ -188,6 +208,10 @@ const PERMISSION_RESOURCE_LABELS: Record<string, string> = {
   "student-enrollments": "قيود الطلاب",
   "student-attendance": "حضور الطلاب",
   "student-books": "كتب الطلاب",
+  "student-talents": "مواهب الطلاب",
+  "student-siblings": "الإخوة في المدرسة",
+  "student-problems": "مشكلات الطلاب",
+  "parent-notifications": "إشعارات أولياء الأمور",
   employees: "الموظفون",
   talents: "قاموس المواهب",
   "employee-talents": "مواهب الموظفين",
@@ -294,6 +318,18 @@ export function translatePerformanceRatingLevel(value: PerformanceRatingLevel): 
 
 export function translateStudentBookStatus(value: StudentBookStatus): string {
   return STUDENT_BOOK_STATUS_LABELS[value] ?? value;
+}
+
+export function translateStudentSiblingRelationship(value: StudentSiblingRelationship): string {
+  return STUDENT_SIBLING_RELATIONSHIP_LABELS[value] ?? value;
+}
+
+export function translateParentNotificationType(value: ParentNotificationType): string {
+  return PARENT_NOTIFICATION_TYPE_LABELS[value] ?? value;
+}
+
+export function translateParentNotificationSendMethod(value: ParentNotificationSendMethod): string {
+  return PARENT_NOTIFICATION_SEND_METHOD_LABELS[value] ?? value;
 }
 
 export function translateTimetableDay(value: TimetableDay): string {

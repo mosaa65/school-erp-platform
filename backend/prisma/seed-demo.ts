@@ -20,10 +20,10 @@ async function main() {
   console.log(`Academic year: ${result.academicYearCode}`);
   console.log(`Target sections: ${result.targetSections.join(', ')}`);
   console.log(
-    `Employees: ${result.employees.total} | Users: ${result.employees.users} | Teaching assignments: ${result.employees.teachingAssignments} | Section supervisions: ${result.employees.sectionSupervisions}`,
+    `Employees: ${result.employees.total} | Users: ${result.employees.users} | Teaching assignments: ${result.employees.teachingAssignments} | Section supervisions: ${result.employees.sectionSupervisions} | Employee talents mappings: ${result.employees.talentsMappings} | Employees with talents: ${result.employees.employeesWithTalents}`,
   );
   console.log(
-    `Students: ${result.students.total} | Guardians: ${result.students.guardians} | Guardian users: ${result.students.guardianUsers} | Enrollments: ${result.students.enrollments} | Attendance: ${result.students.attendance} | Books: ${result.students.books}`,
+    `Students: ${result.students.total} | Guardians: ${result.students.guardians} | Guardian users: ${result.students.guardianUsers} | Enrollments: ${result.students.enrollments} | Attendance: ${result.students.attendance} | Books: ${result.students.books} | Talents: ${result.students.talents} | Siblings: ${result.students.siblings} | Problems: ${result.students.problems} | Parent notifications: ${result.students.parentNotifications}`,
   );
   console.log('Sample credentials:');
   for (const credential of result.sampleCredentials) {
@@ -34,6 +34,7 @@ async function main() {
   console.log(
     `Sample admissions: ${result.sampleStudentAdmissions.join(', ')}`,
   );
+  console.log(`Talents used: ${result.talentsUsed.join(', ')}`);
 }
 
 main()

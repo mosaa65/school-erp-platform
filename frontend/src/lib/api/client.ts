@@ -1089,6 +1089,9 @@ export type StudentAttendanceListItem = {
 };
 
 export type StudentBookStatus = "ISSUED" | "RETURNED" | "LOST" | "DAMAGED";
+export type StudentSiblingRelationship = "BROTHER" | "SISTER";
+export type ParentNotificationType = "POSITIVE" | "NEGATIVE";
+export type ParentNotificationSendMethod = "PAPER" | "WHATSAPP" | "PHONE" | "OTHER";
 
 export type GradingWorkflowStatus = "DRAFT" | "IN_REVIEW" | "APPROVED" | "ARCHIVED";
 
@@ -1165,6 +1168,135 @@ export type StudentBookListItem = {
     name: string;
     isActive: boolean;
   };
+};
+
+export type StudentTalentListItem = {
+  id: string;
+  studentId: string;
+  talentId: string;
+  notes: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: {
+    id: string;
+    email: string;
+  } | null;
+  updatedBy: {
+    id: string;
+    email: string;
+  } | null;
+  student: {
+    id: string;
+    admissionNo: string | null;
+    fullName: string;
+    isActive: boolean;
+  };
+  talent: {
+    id: string;
+    code: string;
+    name: string;
+    isActive: boolean;
+  };
+};
+
+export type StudentSiblingListItem = {
+  id: string;
+  studentId: string;
+  siblingId: string;
+  relationship: StudentSiblingRelationship;
+  notes: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: {
+    id: string;
+    email: string;
+  } | null;
+  updatedBy: {
+    id: string;
+    email: string;
+  } | null;
+  student: {
+    id: string;
+    admissionNo: string | null;
+    fullName: string;
+    isActive: boolean;
+  };
+  sibling: {
+    id: string;
+    admissionNo: string | null;
+    fullName: string;
+    isActive: boolean;
+  };
+};
+
+export type StudentProblemListItem = {
+  id: string;
+  studentId: string;
+  problemDate: string;
+  problemType: string | null;
+  problemDescription: string;
+  actionsTaken: string | null;
+  hasMinutes: boolean;
+  isResolved: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: {
+    id: string;
+    email: string;
+  } | null;
+  updatedBy: {
+    id: string;
+    email: string;
+  } | null;
+  student: {
+    id: string;
+    admissionNo: string | null;
+    fullName: string;
+    isActive: boolean;
+  };
+};
+
+export type ParentNotificationListItem = {
+  id: string;
+  notificationNumber: number;
+  studentId: string;
+  notificationType: ParentNotificationType;
+  guardianTitleId: number | null;
+  behaviorType: string | null;
+  behaviorDescription: string | null;
+  requiredAction: string | null;
+  sendMethod: ParentNotificationSendMethod;
+  messengerName: string | null;
+  isSent: boolean;
+  sentDate: string | null;
+  results: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: {
+    id: string;
+    email: string;
+  } | null;
+  updatedBy: {
+    id: string;
+    email: string;
+  } | null;
+  student: {
+    id: string;
+    admissionNo: string | null;
+    fullName: string;
+    isActive: boolean;
+  };
+  guardianTitleLookup: {
+    id: number;
+    code: string;
+    nameAr: string;
+    gender: "MALE" | "FEMALE" | "ALL";
+    isActive: boolean;
+  } | null;
 };
 
 export type HomeworkTypeListItem = {
@@ -2440,6 +2572,65 @@ export type GradingSummaryReportResponse = {
   };
 };
 
+export type GradingDetailedReportItem = {
+  id: string;
+  studentEnrollmentId: string;
+  academicYearId: string;
+  totalAllSubjects: number;
+  maxPossibleTotal: number;
+  percentage: number;
+  rankInClass: number | null;
+  rankInGrade: number | null;
+  passedSubjectsCount: number;
+  failedSubjectsCount: number;
+  status: GradingWorkflowStatus;
+  isLocked: boolean;
+  isActive: boolean;
+  calculatedAt: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  student: {
+    id: string;
+    admissionNo: string | null;
+    fullName: string;
+  };
+  section: {
+    id: string;
+    code: string;
+    name: string;
+    gradeLevel: {
+      id: string;
+      code: string;
+      name: string;
+    };
+  };
+  gradeLevel: {
+    id: string;
+    code: string;
+    name: string;
+  };
+  academicYear: {
+    id: string;
+    code: string;
+    name: string;
+  };
+  promotionDecision: {
+    id: string;
+    code: string;
+    name: string;
+  };
+  gradeDescription: {
+    id: number;
+    minPercentage: number;
+    maxPercentage: number;
+    nameAr: string;
+    nameEn: string | null;
+    colorCode: string | null;
+    sortOrder: number;
+  } | null;
+};
+
 export type HrSummaryReportResponse = {
   generatedAt: string;
   scope: {
@@ -3115,6 +3306,88 @@ export type UpdateStudentBookPayload = {
   returnedDate?: string;
   status?: StudentBookStatus;
   notes?: string;
+  isActive?: boolean;
+};
+
+export type CreateStudentTalentPayload = {
+  studentId: string;
+  talentId: string;
+  notes?: string;
+  isActive?: boolean;
+};
+
+export type UpdateStudentTalentPayload = {
+  studentId?: string;
+  talentId?: string;
+  notes?: string;
+  isActive?: boolean;
+};
+
+export type CreateStudentSiblingPayload = {
+  studentId: string;
+  siblingId: string;
+  relationship: StudentSiblingRelationship;
+  notes?: string;
+  isActive?: boolean;
+};
+
+export type UpdateStudentSiblingPayload = {
+  studentId?: string;
+  siblingId?: string;
+  relationship?: StudentSiblingRelationship;
+  notes?: string;
+  isActive?: boolean;
+};
+
+export type CreateStudentProblemPayload = {
+  studentId: string;
+  problemDate: string;
+  problemType?: string;
+  problemDescription: string;
+  actionsTaken?: string;
+  hasMinutes?: boolean;
+  isResolved?: boolean;
+  isActive?: boolean;
+};
+
+export type UpdateStudentProblemPayload = {
+  studentId?: string;
+  problemDate?: string;
+  problemType?: string;
+  problemDescription?: string;
+  actionsTaken?: string;
+  hasMinutes?: boolean;
+  isResolved?: boolean;
+  isActive?: boolean;
+};
+
+export type CreateParentNotificationPayload = {
+  studentId: string;
+  notificationType: ParentNotificationType;
+  guardianTitleId?: number;
+  behaviorType?: string;
+  behaviorDescription?: string;
+  requiredAction?: string;
+  sendMethod?: ParentNotificationSendMethod;
+  messengerName?: string;
+  isSent?: boolean;
+  sentDate?: string;
+  results?: string;
+  isActive?: boolean;
+};
+
+export type UpdateParentNotificationPayload = {
+  studentId?: string;
+  notificationType?: ParentNotificationType;
+  guardianTitleId?: number;
+  behaviorType?: string;
+  behaviorDescription?: string;
+  requiredAction?: string;
+  sendMethod?: ParentNotificationSendMethod;
+  messengerName?: string;
+  isSent?: boolean;
+  sentDate?: string;
+  results?: string;
   isActive?: boolean;
 };
 
@@ -4762,6 +5035,42 @@ export const apiClient = {
         withAuth: true,
       },
     ),
+  getGradingDetailedReport: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    academicYearId?: string;
+    gradeLevelId?: string;
+    sectionId?: string;
+    academicTermId?: string;
+    promotionDecisionId?: string;
+    status?: GradingWorkflowStatus;
+    isLocked?: boolean;
+    isActive?: boolean;
+    fromDate?: string;
+    toDate?: string;
+  }) =>
+    request<PaginatedResponse<GradingDetailedReportItem>>(
+      `/grading-reports/details${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        academicYearId: query?.academicYearId,
+        gradeLevelId: query?.gradeLevelId,
+        sectionId: query?.sectionId,
+        academicTermId: query?.academicTermId,
+        promotionDecisionId: query?.promotionDecisionId,
+        status: query?.status,
+        isLocked: query?.isLocked,
+        isActive: query?.isActive,
+        fromDate: query?.fromDate,
+        toDate: query?.toDate,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
   listAnnualStatuses: (query?: {
     page?: number;
     limit?: number;
@@ -5375,6 +5684,171 @@ export const apiClient = {
     }),
   deleteStudentBook: (studentBookId: string) =>
     request<DeleteEntityResponse>(`/student-books/${studentBookId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listStudentTalents: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    studentId?: string;
+    talentId?: string;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<StudentTalentListItem>>(
+      `/student-talents${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        studentId: query?.studentId,
+        talentId: query?.talentId,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createStudentTalent: (payload: CreateStudentTalentPayload) =>
+    request<StudentTalentListItem>("/student-talents", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateStudentTalent: (mappingId: string, payload: UpdateStudentTalentPayload) =>
+    request<StudentTalentListItem>(`/student-talents/${mappingId}`, "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  deleteStudentTalent: (mappingId: string) =>
+    request<DeleteEntityResponse>(`/student-talents/${mappingId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listStudentSiblings: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    studentId?: string;
+    siblingId?: string;
+    relationship?: StudentSiblingRelationship;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<StudentSiblingListItem>>(
+      `/student-siblings${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        studentId: query?.studentId,
+        siblingId: query?.siblingId,
+        relationship: query?.relationship,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createStudentSibling: (payload: CreateStudentSiblingPayload) =>
+    request<StudentSiblingListItem>("/student-siblings", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateStudentSibling: (siblingId: string, payload: UpdateStudentSiblingPayload) =>
+    request<StudentSiblingListItem>(`/student-siblings/${siblingId}`, "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  deleteStudentSibling: (siblingId: string) =>
+    request<DeleteEntityResponse>(`/student-siblings/${siblingId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listStudentProblems: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    studentId?: string;
+    problemType?: string;
+    isResolved?: boolean;
+    fromProblemDate?: string;
+    toProblemDate?: string;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<StudentProblemListItem>>(
+      `/student-problems${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        studentId: query?.studentId,
+        problemType: query?.problemType,
+        isResolved: query?.isResolved,
+        fromProblemDate: query?.fromProblemDate,
+        toProblemDate: query?.toProblemDate,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createStudentProblem: (payload: CreateStudentProblemPayload) =>
+    request<StudentProblemListItem>("/student-problems", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateStudentProblem: (problemId: string, payload: UpdateStudentProblemPayload) =>
+    request<StudentProblemListItem>(`/student-problems/${problemId}`, "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  deleteStudentProblem: (problemId: string) =>
+    request<DeleteEntityResponse>(`/student-problems/${problemId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listParentNotifications: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    studentId?: string;
+    notificationType?: ParentNotificationType;
+    guardianTitleId?: number;
+    sendMethod?: ParentNotificationSendMethod;
+    isSent?: boolean;
+    fromSentDate?: string;
+    toSentDate?: string;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<ParentNotificationListItem>>(
+      `/parent-notifications${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        studentId: query?.studentId,
+        notificationType: query?.notificationType,
+        guardianTitleId: query?.guardianTitleId,
+        sendMethod: query?.sendMethod,
+        isSent: query?.isSent,
+        fromSentDate: query?.fromSentDate,
+        toSentDate: query?.toSentDate,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createParentNotification: (payload: CreateParentNotificationPayload) =>
+    request<ParentNotificationListItem>("/parent-notifications", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateParentNotification: (
+    notificationId: string,
+    payload: UpdateParentNotificationPayload,
+  ) =>
+    request<ParentNotificationListItem>(`/parent-notifications/${notificationId}`, "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  deleteParentNotification: (notificationId: string) =>
+    request<DeleteEntityResponse>(`/parent-notifications/${notificationId}`, "DELETE", {
       withAuth: true,
     }),
   listExamPeriods: (query?: {

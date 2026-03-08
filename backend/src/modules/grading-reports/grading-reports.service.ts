@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { GradingWorkflowStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { GradingDetailsQueryDto } from './dto/grading-details-query.dto';
 import { GradingSummaryQueryDto } from './dto/grading-summary-query.dto';
 
 type StatusCountRow = {
@@ -8,6 +9,16 @@ type StatusCountRow = {
   _count: {
     _all: number;
   };
+};
+
+type GradeDescriptionLookupRow = {
+  id: number;
+  minPercentage: number;
+  maxPercentage: number;
+  nameAr: string;
+  nameEn: string | null;
+  colorCode: string | null;
+  sortOrder: number;
 };
 
 @Injectable()
@@ -199,6 +210,244 @@ export class GradingReportsService {
         missingClassRank: annualResultTotal - withClassRank,
         missingGradeRank: annualResultTotal - withGradeRank,
         notFullyRanked: annualResultTotal - fullyRanked,
+      },
+    };
+  }
+
+  async getDetails(query: GradingDetailsQueryDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 12;
+    const updatedAtRange = this.buildDateRange(query.fromDate, query.toDate);
+    await this.validateScopeReferences(query);
+
+    const enrollmentFilter = this.buildEnrollmentFilter(
+      query.sectionId,
+      query.gradeLevelId,
+    );
+
+    const annualResultWhere: Prisma.AnnualResultWhereInput = {
+      deletedAt: null,
+      academicYearId: query.academicYearId,
+      promotionDecisionId: query.promotionDecisionId,
+      status: query.status,
+      isLocked: query.isLocked,
+      isActive: query.isActive,
+      updatedAt: updatedAtRange,
+      studentEnrollment: {
+        ...(enrollmentFilter ?? {}),
+        semesterGrades: query.academicTermId
+          ? {
+              some: {
+                academicTermId: query.academicTermId,
+                deletedAt: null,
+              },
+            }
+          : undefined,
+      },
+      OR: query.search
+        ? [
+            {
+              studentEnrollment: {
+                student: {
+                  fullName: {
+                    contains: query.search,
+                  },
+                },
+              },
+            },
+            {
+              studentEnrollment: {
+                student: {
+                  admissionNo: {
+                    contains: query.search,
+                  },
+                },
+              },
+            },
+            {
+              notes: {
+                contains: query.search,
+              },
+            },
+          ]
+        : undefined,
+    };
+
+    const [total, annualResults, rawGradeDescriptions] =
+      await this.prisma.$transaction([
+        this.prisma.annualResult.count({
+          where: annualResultWhere,
+        }),
+        this.prisma.annualResult.findMany({
+          where: annualResultWhere,
+          orderBy: [
+            {
+              percentage: 'desc',
+            },
+            {
+              studentEnrollment: {
+                student: {
+                  fullName: 'asc',
+                },
+              },
+            },
+          ],
+          skip: (page - 1) * limit,
+          take: limit,
+          select: {
+            id: true,
+            studentEnrollmentId: true,
+            academicYearId: true,
+            totalAllSubjects: true,
+            maxPossibleTotal: true,
+            percentage: true,
+            rankInClass: true,
+            rankInGrade: true,
+            passedSubjectsCount: true,
+            failedSubjectsCount: true,
+            promotionDecisionId: true,
+            status: true,
+            isLocked: true,
+            isActive: true,
+            calculatedAt: true,
+            notes: true,
+            createdAt: true,
+            updatedAt: true,
+            studentEnrollment: {
+              select: {
+                id: true,
+                sectionId: true,
+                student: {
+                  select: {
+                    id: true,
+                    admissionNo: true,
+                    fullName: true,
+                  },
+                },
+                section: {
+                  select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                    gradeLevel: {
+                      select: {
+                        id: true,
+                        code: true,
+                        name: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            academicYear: {
+              select: {
+                id: true,
+                code: true,
+                name: true,
+              },
+            },
+            promotionDecision: {
+              select: {
+                id: true,
+                code: true,
+                name: true,
+              },
+            },
+          },
+        }),
+        this.prisma.lookupGradeDescription.findMany({
+          where: {
+            deletedAt: null,
+            isActive: true,
+          },
+          orderBy: [
+            {
+              sortOrder: 'asc',
+            },
+            {
+              minPercentage: 'asc',
+            },
+          ],
+          select: {
+            id: true,
+            minPercentage: true,
+            maxPercentage: true,
+            nameAr: true,
+            nameEn: true,
+            colorCode: true,
+            sortOrder: true,
+          },
+        }),
+      ]);
+
+    const gradeDescriptions: GradeDescriptionLookupRow[] = rawGradeDescriptions
+      .map((item) => ({
+        id: item.id,
+        minPercentage: this.decimalToNumber(item.minPercentage) ?? 0,
+        maxPercentage: this.decimalToNumber(item.maxPercentage) ?? 0,
+        nameAr: item.nameAr,
+        nameEn: item.nameEn,
+        colorCode: item.colorCode,
+        sortOrder: item.sortOrder,
+      }))
+      .sort((a, b) => a.minPercentage - b.minPercentage);
+
+    const data = annualResults.map((row) => {
+      const percentage = this.decimalToNumber(row.percentage) ?? 0;
+      const gradeDescription = this.resolveGradeDescription(
+        percentage,
+        gradeDescriptions,
+      );
+
+      return {
+        id: row.id,
+        studentEnrollmentId: row.studentEnrollmentId,
+        academicYearId: row.academicYearId,
+        totalAllSubjects: this.decimalToNumber(row.totalAllSubjects) ?? 0,
+        maxPossibleTotal: this.decimalToNumber(row.maxPossibleTotal) ?? 0,
+        percentage,
+        rankInClass: row.rankInClass,
+        rankInGrade: row.rankInGrade,
+        passedSubjectsCount: row.passedSubjectsCount,
+        failedSubjectsCount: row.failedSubjectsCount,
+        status: row.status,
+        isLocked: row.isLocked,
+        isActive: row.isActive,
+        calculatedAt: row.calculatedAt,
+        notes: row.notes,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        student: row.studentEnrollment.student,
+        section: row.studentEnrollment.section,
+        gradeLevel: row.studentEnrollment.section.gradeLevel,
+        academicYear: row.academicYear,
+        promotionDecision: row.promotionDecision,
+        gradeDescription,
+      };
+    });
+
+    return {
+      generatedAt: new Date().toISOString(),
+      scope: {
+        academicYearId: query.academicYearId ?? null,
+        gradeLevelId: query.gradeLevelId ?? null,
+        sectionId: query.sectionId ?? null,
+        academicTermId: query.academicTermId ?? null,
+        promotionDecisionId: query.promotionDecisionId ?? null,
+        status: query.status ?? null,
+        isLocked: query.isLocked ?? null,
+        isActive: query.isActive ?? null,
+        search: query.search ?? null,
+        fromDate: query.fromDate ?? null,
+        toDate: query.toDate ?? null,
+      },
+      data,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
       },
     };
   }
@@ -449,5 +698,27 @@ export class GradingReportsService {
     }
 
     return Math.round(((value / total) * 100 + Number.EPSILON) * 100) / 100;
+  }
+
+  private resolveGradeDescription(
+    percentage: number,
+    gradeDescriptions: GradeDescriptionLookupRow[],
+  ) {
+    return (
+      gradeDescriptions.find(
+        (item) =>
+          percentage >= item.minPercentage && percentage <= item.maxPercentage,
+      ) ?? null
+    );
+  }
+
+  private decimalToNumber(
+    value: Prisma.Decimal | number | null | undefined,
+  ): number | undefined {
+    if (value === null || value === undefined) {
+      return undefined;
+    }
+
+    return Number(value);
   }
 }

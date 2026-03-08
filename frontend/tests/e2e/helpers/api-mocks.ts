@@ -110,6 +110,21 @@ export async function mockSectionsOptions<T extends JsonObject>(page: Page, sect
   await mockOptionsList(page, "**/backend/sections**", sections);
 }
 
+export async function mockStudentsOptions<T extends JsonObject>(page: Page, students: T[]) {
+  await mockOptionsList(page, "**/backend/students**", students);
+}
+
+export async function mockRelationshipTypeOptions<T extends JsonObject>(
+  page: Page,
+  relationshipTypes: T[],
+) {
+  await mockOptionsList(
+    page,
+    "**/backend/lookup/catalog/relationship-types**",
+    relationshipTypes,
+  );
+}
+
 export async function mockSummaryEndpoint(
   page: Page,
   urlPattern: string,

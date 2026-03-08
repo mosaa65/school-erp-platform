@@ -170,6 +170,36 @@ export const e2ePermissionSets = {
     "lookup-id-types.read",
     "lookup-id-types.create",
   ]),
+  studentTalentsCrud: uniquePermissionCodes([
+    "student-talents.read",
+    "student-talents.create",
+    "student-talents.update",
+    "student-talents.delete",
+    "students.read",
+    "talents.read",
+  ]),
+  studentSiblingsCrud: uniquePermissionCodes([
+    "student-siblings.read",
+    "student-siblings.create",
+    "student-siblings.update",
+    "student-siblings.delete",
+    "students.read",
+  ]),
+  studentProblemsCrud: uniquePermissionCodes([
+    "student-problems.read",
+    "student-problems.create",
+    "student-problems.update",
+    "student-problems.delete",
+    "students.read",
+  ]),
+  parentNotificationsCrud: uniquePermissionCodes([
+    "parent-notifications.read",
+    "parent-notifications.create",
+    "parent-notifications.update",
+    "parent-notifications.delete",
+    "students.read",
+    "lookup-catalog.read",
+  ]),
 } as const;
 
 export const defaultE2ePermissionCodes = uniquePermissionCodes([
@@ -194,4 +224,8 @@ export const defaultE2ePermissionCodes = uniquePermissionCodes([
   ...e2ePermissionSets.lookupActivityTypesCrud,
   ...e2ePermissionSets.lookupEnrollmentStatusesCrud,
   ...e2ePermissionSets.lookupOrphanStatusesCrud,
+  ...e2ePermissionSets.studentTalentsCrud,
+  ...e2ePermissionSets.studentSiblingsCrud,
+  ...e2ePermissionSets.studentProblemsCrud,
+  ...e2ePermissionSets.parentNotificationsCrud,
 ]);
