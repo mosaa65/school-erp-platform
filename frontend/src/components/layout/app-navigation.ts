@@ -324,6 +324,36 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
     icon: Medal,
     items: [
       {
+        href: "/app/lookup-grade-descriptions",
+        label: "أوصاف التقديرات",
+        icon: Medal,
+        requiredPermission: "lookup-grade-descriptions.read",
+      },
+      {
+        href: "/app/annual-statuses",
+        label: "الحالات السنوية",
+        icon: Medal,
+        requiredPermission: "annual-statuses.read",
+      },
+      {
+        href: "/app/promotion-decisions",
+        label: "قرارات الترفيع",
+        icon: Medal,
+        requiredPermission: "promotion-decisions.read",
+      },
+      {
+        href: "/app/grading-outcome-rules",
+        label: "قواعد النتائج",
+        icon: Medal,
+        requiredPermission: "grading-outcome-rules.read",
+      },
+      {
+        href: "/app/grading-policies",
+        label: "سياسات الدرجات",
+        icon: Medal,
+        requiredPermission: "grading-policies.read",
+      },
+      {
         href: "/app/homework-types",
         label: "أنواع الواجبات",
         icon: BookOpenText,
@@ -360,46 +390,22 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         requiredPermission: "student-exam-scores.read",
       },
       {
-        href: "/app/monthly-grades",
-        label: "الدرجات الشهرية",
-        icon: Medal,
-        requiredPermission: "monthly-grades.read",
-      },
-      {
         href: "/app/monthly-custom-component-scores",
         label: "مكونات الدرجات الشهرية",
         icon: Medal,
         requiredPermission: "monthly-custom-component-scores.read",
       },
       {
-        href: "/app/grading-policies",
-        label: "سياسات الدرجات",
+        href: "/app/monthly-grades",
+        label: "الدرجات الشهرية",
         icon: Medal,
-        requiredPermission: "grading-policies.read",
+        requiredPermission: "monthly-grades.read",
       },
       {
         href: "/app/semester-grades",
         label: "الدرجات الفصلية",
         icon: Medal,
         requiredPermission: "semester-grades.read",
-      },
-      {
-        href: "/app/annual-statuses",
-        label: "الحالات السنوية",
-        icon: Medal,
-        requiredPermission: "annual-statuses.read",
-      },
-      {
-        href: "/app/promotion-decisions",
-        label: "قرارات الترفيع",
-        icon: Medal,
-        requiredPermission: "promotion-decisions.read",
-      },
-      {
-        href: "/app/grading-outcome-rules",
-        label: "قواعد النتائج",
-        icon: Medal,
-        requiredPermission: "grading-outcome-rules.read",
       },
       {
         href: "/app/annual-grades",
@@ -412,12 +418,6 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         label: "النتائج السنوية",
         icon: Medal,
         requiredPermission: "annual-results.read",
-      },
-      {
-        href: "/app/lookup-grade-descriptions",
-        label: "أوصاف التقديرات",
-        icon: Medal,
-        requiredPermission: "lookup-grade-descriptions.read",
       },
       {
         href: "/app/grading-reports",
