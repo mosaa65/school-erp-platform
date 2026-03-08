@@ -16,7 +16,7 @@
     "prisma:migrate:dev": "prisma migrate dev --schema=prisma/schema.prisma",
     "prisma:migrate:deploy": "prisma migrate deploy --schema=prisma/schema.prisma",
     "prisma:studio": "prisma studio --schema=prisma/schema.prisma",
-    "prisma:seed": "npm run prisma:seed:demo",
+    "prisma:seed": "npm run prisma:seed:core",
     "prisma:seed:core": "ts-node prisma/seed.ts",
     "prisma:seed:demo": "ts-node prisma/seed-demo.ts",
     "prisma:seed:all": "npm run prisma:seed:core && npm run prisma:seed:demo",
