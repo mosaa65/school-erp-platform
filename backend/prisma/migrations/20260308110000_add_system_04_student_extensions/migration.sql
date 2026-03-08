@@ -37,8 +37,7 @@ CREATE TABLE `student_siblings` (
   INDEX `ssb_relationship_del_idx`(`relationship`, `deleted_at`),
   INDEX `ssb_active_del_idx`(`is_active`, `deleted_at`),
   INDEX `ssb_deleted_at_idx`(`deleted_at`),
-  PRIMARY KEY (`id`),
-  CONSTRAINT `ssb_distinct_siblings_chk` CHECK (`student_id` <> `sibling_id`)
+  PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE `student_problems` (
