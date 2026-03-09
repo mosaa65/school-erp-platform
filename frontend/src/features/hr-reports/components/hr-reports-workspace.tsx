@@ -145,7 +145,7 @@ export function HrReportsWorkspace() {
       {reportQuery.isPending ? (
         <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
           <CardContent className="py-6 text-sm text-muted-foreground">
-            جارٍ التحميل...
+            جارٍ تحميل البيانات...
           </CardContent>
         </Card>
       ) : null}
@@ -155,7 +155,7 @@ export function HrReportsWorkspace() {
           <CardContent className="py-4 text-sm text-destructive">
             {reportQuery.error instanceof Error
               ? reportQuery.error.message
-              : "فشل التحميل"}
+              : "تعذّر تحميل البيانات."}
           </CardContent>
         </Card>
       ) : null}

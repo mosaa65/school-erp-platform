@@ -205,7 +205,7 @@ export class GradingOutcomeRulesService {
     });
 
     if (!gradingOutcomeRule) {
-      throw new NotFoundException('Grading outcome rule not found');
+      throw new NotFoundException('لم يتم العثور على قاعدة مخرجات التقدير');
     }
 
     return gradingOutcomeRule;
@@ -313,7 +313,7 @@ export class GradingOutcomeRulesService {
     });
 
     if (!gradingOutcomeRule) {
-      throw new NotFoundException('Grading outcome rule not found');
+      throw new NotFoundException('لم يتم العثور على قاعدة مخرجات التقدير');
     }
 
     return gradingOutcomeRule;
@@ -345,11 +345,11 @@ export class GradingOutcomeRulesService {
     ]);
 
     if (!academicYear) {
-      throw new BadRequestException('Academic year is invalid or deleted');
+      throw new BadRequestException('السنة الدراسية غير صالحة أو محذوفة');
     }
 
     if (!gradeLevel) {
-      throw new BadRequestException('Grade level is invalid or deleted');
+      throw new BadRequestException('الصف الدراسي غير صالح أو محذوف');
     }
   }
 
@@ -367,7 +367,7 @@ export class GradingOutcomeRulesService {
 
     if (!decision) {
       throw new BadRequestException(
-        'Promotion decision is invalid, deleted, or inactive',
+        'قرار الترفيع غير صالح أو محذوف أو غير نشط',
       );
     }
   }
@@ -378,7 +378,7 @@ export class GradingOutcomeRulesService {
   ) {
     if (conditionalMaxFailedSubjects < promotedMaxFailedSubjects) {
       throw new BadRequestException(
-        'conditionalMaxFailedSubjects must be greater than or equal to promotedMaxFailedSubjects',
+        'يجب أن تكون conditionalMaxFailedSubjects أكبر من أو مساوية لـ promotedMaxFailedSubjects',
       );
     }
   }
@@ -389,7 +389,7 @@ export class GradingOutcomeRulesService {
       error.code === 'P2002'
     ) {
       throw new ConflictException(
-        'Outcome rule already exists for this academic year and grade level',
+        'قاعدة المخرجات موجودة مسبقًا لهذه السنة الدراسية وهذا الصف',
       );
     }
 
@@ -401,6 +401,7 @@ export class GradingOutcomeRulesService {
       return error.message;
     }
 
-    return 'Unknown error';
+    return 'خطأ غير معروف';
   }
 }
+

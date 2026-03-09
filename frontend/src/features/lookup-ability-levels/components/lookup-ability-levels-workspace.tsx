@@ -159,7 +159,7 @@ export function LookupAbilityLevelsWorkspace() {
 
     if (isEditing && editingLookupAbilityLevelId !== null) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية lookup-ability-levels.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: lookup-ability-levels.update.");
         return;
       }
 
@@ -178,7 +178,7 @@ export function LookupAbilityLevelsWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية lookup-ability-levels.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: lookup-ability-levels.create.");
       return;
     }
 
@@ -236,7 +236,7 @@ export function LookupAbilityLevelsWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>lookup-ability-levels.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>lookup-ability-levels.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="ability-form">

@@ -181,7 +181,7 @@ export function StudentSiblingsWorkspace() {
 
     if (isEditing && editingSiblingId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية student-siblings.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: student-siblings.update.");
         return;
       }
 
@@ -200,7 +200,7 @@ export function StudentSiblingsWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية student-siblings.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: student-siblings.create.");
       return;
     }
 
@@ -263,7 +263,7 @@ export function StudentSiblingsWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>student-siblings.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>student-siblings.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
@@ -487,13 +487,13 @@ export function StudentSiblingsWorkspace() {
         <CardContent className="space-y-3">
           {siblingsQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
           {siblingsQuery.error ? (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {siblingsQuery.error instanceof Error ? siblingsQuery.error.message : "فشل التحميل"}
+              {siblingsQuery.error instanceof Error ? siblingsQuery.error.message : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 

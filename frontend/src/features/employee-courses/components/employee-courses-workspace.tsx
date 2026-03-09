@@ -220,7 +220,7 @@ export function EmployeeCoursesWorkspace() {
 
     if (isEditing && editingCourseId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية employee-courses.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: employee-courses.update.");
         return;
       }
 
@@ -239,7 +239,7 @@ export function EmployeeCoursesWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية employee-courses.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: employee-courses.create.");
       return;
     }
 
@@ -300,7 +300,7 @@ export function EmployeeCoursesWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>employee-courses.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>employee-courses.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="course-form">
@@ -442,7 +442,7 @@ export function EmployeeCoursesWorkspace() {
 
               {!canReadEmployees ? (
                 <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يلزم صلاحية <code>employees.read</code> لاختيار الموظف.
+                  يتطلب هذا الجزء الصلاحية: <code>employees.read</code> لاختيار الموظف.
                 </div>
               ) : null}
 
@@ -557,7 +557,7 @@ export function EmployeeCoursesWorkspace() {
         <CardContent className="space-y-3">
           {coursesQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
@@ -565,7 +565,7 @@ export function EmployeeCoursesWorkspace() {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {coursesQuery.error instanceof Error
                 ? coursesQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 

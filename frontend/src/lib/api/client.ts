@@ -86,7 +86,12 @@ export type GlobalSettingListItem = {
   updatedAt: string;
 };
 
-export type SystemSettingType = "TEXT" | "NUMBER" | "BOOLEAN" | "IMAGE" | "JSON";
+export type SystemSettingType =
+  | "TEXT"
+  | "NUMBER"
+  | "BOOLEAN"
+  | "IMAGE"
+  | "JSON";
 
 export type SystemSettingListItem = {
   id: number;
@@ -570,12 +575,7 @@ export type AcademicMonthListItem = {
   };
 };
 
-export type GradeStage =
-  | "PRE_SCHOOL"
-  | "PRIMARY"
-  | "MIDDLE"
-  | "HIGH"
-  | "OTHER";
+export type GradeStage = "PRE_SCHOOL" | "PRIMARY" | "MIDDLE" | "HIGH" | "OTHER";
 
 export type GradeLevelListItem = {
   id: string;
@@ -1091,9 +1091,17 @@ export type StudentAttendanceListItem = {
 export type StudentBookStatus = "ISSUED" | "RETURNED" | "LOST" | "DAMAGED";
 export type StudentSiblingRelationship = "BROTHER" | "SISTER";
 export type ParentNotificationType = "POSITIVE" | "NEGATIVE";
-export type ParentNotificationSendMethod = "PAPER" | "WHATSAPP" | "PHONE" | "OTHER";
+export type ParentNotificationSendMethod =
+  | "PAPER"
+  | "WHATSAPP"
+  | "PHONE"
+  | "OTHER";
 
-export type GradingWorkflowStatus = "DRAFT" | "IN_REVIEW" | "APPROVED" | "ARCHIVED";
+export type GradingWorkflowStatus =
+  | "DRAFT"
+  | "IN_REVIEW"
+  | "APPROVED"
+  | "ARCHIVED";
 
 export type AssessmentType =
   | "MONTHLY"
@@ -2205,6 +2213,7 @@ export type EmployeeGender = "MALE" | "FEMALE" | "OTHER";
 export type EmploymentType = "PERMANENT" | "CONTRACT" | "VOLUNTEER";
 
 export type EmployeeSystemAccessStatus = "GRANTED" | "SUSPENDED";
+export type OperationalReadinessFilter = "READY" | "PARTIAL" | "NOT_READY";
 
 export type EmployeeListItem = {
   id: string;
@@ -2278,6 +2287,24 @@ export type EmployeeListItem = {
     nameArFemale: string | null;
     isActive: boolean;
   } | null;
+  userAccount: {
+    id: string;
+    email: string;
+    username: string | null;
+    isActive: boolean;
+    userRoles: Array<{
+      role: {
+        id: string;
+        code: string;
+        name: string;
+        isActive: boolean;
+      };
+    }>;
+  } | null;
+  operationalScope: {
+    activeTeachingAssignments: number;
+    activeSectionSupervisions: number;
+  };
 };
 
 export type EmployeeTeachingAssignmentListItem = {
@@ -4073,7 +4100,7 @@ function resolveErrorMessage(body: unknown, status: number): string {
     return body;
   }
 
-  return `Request failed with status ${status}`;
+  return `فشل الطلب (رمز الحالة: ${status})`;
 }
 
 async function request<T>(
@@ -4088,7 +4115,7 @@ async function request<T>(
     const accessToken = getAccessTokenFromStorage();
 
     if (!accessToken) {
-      throw new ApiError("Authentication token is missing", 401);
+      throw new ApiError("جلسة الدخول غير متاحة. يرجى تسجيل الدخول مرة أخرى.", 401);
     }
 
     headers.set("Authorization", `Bearer ${accessToken}`);
@@ -4130,7 +4157,12 @@ export const apiClient = {
     request<AuthSession>("/auth/login", "POST", {
       json: payload,
     }),
-  listUsers: (query?: { page?: number; limit?: number; search?: string; isActive?: boolean }) =>
+  listUsers: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    isActive?: boolean;
+  }) =>
     request<PaginatedResponse<UserListItem>>(
       `/users${buildQueryString({
         page: query?.page,
@@ -4197,7 +4229,11 @@ export const apiClient = {
     request<DeleteEntityResponse>(`/roles/${roleId}`, "DELETE", {
       withAuth: true,
     }),
-  listPermissions: (query?: { page?: number; limit?: number; search?: string }) =>
+  listPermissions: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  }) =>
     request<PaginatedResponse<PermissionListItem>>(
       `/permissions${buildQueryString({
         page: query?.page,
@@ -4246,7 +4282,10 @@ export const apiClient = {
       withAuth: true,
       json: payload,
     }),
-  updateGlobalSetting: (settingId: string, payload: UpdateGlobalSettingPayload) =>
+  updateGlobalSetting: (
+    settingId: string,
+    payload: UpdateGlobalSettingPayload,
+  ) =>
     request<GlobalSettingListItem>(`/global-settings/${settingId}`, "PATCH", {
       withAuth: true,
       json: payload,
@@ -4282,7 +4321,10 @@ export const apiClient = {
       withAuth: true,
       json: payload,
     }),
-  updateSystemSetting: (settingId: number, payload: UpdateSystemSettingPayload) =>
+  updateSystemSetting: (
+    settingId: number,
+    payload: UpdateSystemSettingPayload,
+  ) =>
     request<SystemSettingListItem>(`/system-settings/${settingId}`, "PATCH", {
       withAuth: true,
       json: payload,
@@ -4320,14 +4362,22 @@ export const apiClient = {
     reminderTickerId: number,
     payload: UpdateReminderTickerPayload,
   ) =>
-    request<ReminderTickerListItem>(`/reminders-ticker/${reminderTickerId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+    request<ReminderTickerListItem>(
+      `/reminders-ticker/${reminderTickerId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteReminderTicker: (reminderTickerId: number) =>
-    request<DeleteEntityResponse>(`/reminders-ticker/${reminderTickerId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/reminders-ticker/${reminderTickerId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listUserPermissions: (query?: {
     page?: number;
     limit?: number;
@@ -4361,22 +4411,34 @@ export const apiClient = {
     userPermissionId: number,
     payload: UpdateUserPermissionPayload,
   ) =>
-    request<UserPermissionListItem>(`/user-permissions/${userPermissionId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+    request<UserPermissionListItem>(
+      `/user-permissions/${userPermissionId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   revokeUserPermission: (
     userPermissionId: number,
     payload: RevokeUserPermissionPayload,
   ) =>
-    request<UserPermissionListItem>(`/user-permissions/${userPermissionId}/revoke`, "POST", {
-      withAuth: true,
-      json: payload,
-    }),
+    request<UserPermissionListItem>(
+      `/user-permissions/${userPermissionId}/revoke`,
+      "POST",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteUserPermission: (userPermissionId: number) =>
-    request<DeleteEntityResponse>(`/user-permissions/${userPermissionId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/user-permissions/${userPermissionId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listEmployeeSectionSupervisions: (query?: {
     page?: number;
     limit?: number;
@@ -4407,11 +4469,17 @@ export const apiClient = {
         withAuth: true,
       },
     ),
-  createEmployeeSectionSupervision: (payload: CreateEmployeeSectionSupervisionPayload) =>
-    request<EmployeeSectionSupervisionListItem>("/employee-section-supervisions", "POST", {
-      withAuth: true,
-      json: payload,
-    }),
+  createEmployeeSectionSupervision: (
+    payload: CreateEmployeeSectionSupervisionPayload,
+  ) =>
+    request<EmployeeSectionSupervisionListItem>(
+      "/employee-section-supervisions",
+      "POST",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   updateEmployeeSectionSupervision: (
     supervisionId: string,
     payload: UpdateEmployeeSectionSupervisionPayload,
@@ -4425,9 +4493,13 @@ export const apiClient = {
       },
     ),
   deleteEmployeeSectionSupervision: (supervisionId: string) =>
-    request<DeleteEntityResponse>(`/employee-section-supervisions/${supervisionId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/employee-section-supervisions/${supervisionId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listLookupBloodTypes: (query?: {
     page?: number;
     limit?: number;
@@ -4455,14 +4527,22 @@ export const apiClient = {
     lookupBloodTypeId: number,
     payload: UpdateLookupBloodTypePayload,
   ) =>
-    request<LookupBloodTypeListItem>(`/lookup/blood-types/${lookupBloodTypeId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+    request<LookupBloodTypeListItem>(
+      `/lookup/blood-types/${lookupBloodTypeId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteLookupBloodType: (lookupBloodTypeId: number) =>
-    request<DeleteEntityResponse>(`/lookup/blood-types/${lookupBloodTypeId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/lookup/blood-types/${lookupBloodTypeId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listLookupIdTypes: (query?: {
     page?: number;
     limit?: number;
@@ -4486,15 +4566,26 @@ export const apiClient = {
       withAuth: true,
       json: payload,
     }),
-  updateLookupIdType: (lookupIdTypeId: number, payload: UpdateLookupIdTypePayload) =>
-    request<LookupIdTypeListItem>(`/lookup/id-types/${lookupIdTypeId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+  updateLookupIdType: (
+    lookupIdTypeId: number,
+    payload: UpdateLookupIdTypePayload,
+  ) =>
+    request<LookupIdTypeListItem>(
+      `/lookup/id-types/${lookupIdTypeId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteLookupIdType: (lookupIdTypeId: number) =>
-    request<DeleteEntityResponse>(`/lookup/id-types/${lookupIdTypeId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/lookup/id-types/${lookupIdTypeId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listLookupOwnershipTypes: (query?: {
     page?: number;
     limit?: number;
@@ -4561,15 +4652,26 @@ export const apiClient = {
       withAuth: true,
       json: payload,
     }),
-  updateLookupPeriod: (lookupPeriodId: number, payload: UpdateLookupPeriodPayload) =>
-    request<LookupPeriodListItem>(`/lookup/periods/${lookupPeriodId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+  updateLookupPeriod: (
+    lookupPeriodId: number,
+    payload: UpdateLookupPeriodPayload,
+  ) =>
+    request<LookupPeriodListItem>(
+      `/lookup/periods/${lookupPeriodId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteLookupPeriod: (lookupPeriodId: number) =>
-    request<DeleteEntityResponse>(`/lookup/periods/${lookupPeriodId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/lookup/periods/${lookupPeriodId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listLookupEnrollmentStatuses: (query?: {
     page?: number;
     limit?: number;
@@ -4588,11 +4690,17 @@ export const apiClient = {
         withAuth: true,
       },
     ),
-  createLookupEnrollmentStatus: (payload: CreateLookupEnrollmentStatusPayload) =>
-    request<LookupEnrollmentStatusListItem>("/lookup/enrollment-statuses", "POST", {
-      withAuth: true,
-      json: payload,
-    }),
+  createLookupEnrollmentStatus: (
+    payload: CreateLookupEnrollmentStatusPayload,
+  ) =>
+    request<LookupEnrollmentStatusListItem>(
+      "/lookup/enrollment-statuses",
+      "POST",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   updateLookupEnrollmentStatus: (
     lookupEnrollmentStatusId: number,
     payload: UpdateLookupEnrollmentStatusPayload,
@@ -4606,9 +4714,13 @@ export const apiClient = {
       },
     ),
   deleteLookupEnrollmentStatus: (lookupEnrollmentStatusId: number) =>
-    request<DeleteEntityResponse>(`/lookup/enrollment-statuses/${lookupEnrollmentStatusId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/lookup/enrollment-statuses/${lookupEnrollmentStatusId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listLookupOrphanStatuses: (query?: {
     page?: number;
     limit?: number;
@@ -4636,14 +4748,22 @@ export const apiClient = {
     lookupOrphanStatusId: number,
     payload: UpdateLookupOrphanStatusPayload,
   ) =>
-    request<LookupOrphanStatusListItem>(`/lookup/orphan-statuses/${lookupOrphanStatusId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+    request<LookupOrphanStatusListItem>(
+      `/lookup/orphan-statuses/${lookupOrphanStatusId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteLookupOrphanStatus: (lookupOrphanStatusId: number) =>
-    request<DeleteEntityResponse>(`/lookup/orphan-statuses/${lookupOrphanStatusId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/lookup/orphan-statuses/${lookupOrphanStatusId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listLookupAbilityLevels: (query?: {
     page?: number;
     limit?: number;
@@ -4671,14 +4791,22 @@ export const apiClient = {
     lookupAbilityLevelId: number,
     payload: UpdateLookupAbilityLevelPayload,
   ) =>
-    request<LookupAbilityLevelListItem>(`/lookup/ability-levels/${lookupAbilityLevelId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+    request<LookupAbilityLevelListItem>(
+      `/lookup/ability-levels/${lookupAbilityLevelId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteLookupAbilityLevel: (lookupAbilityLevelId: number) =>
-    request<DeleteEntityResponse>(`/lookup/ability-levels/${lookupAbilityLevelId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/lookup/ability-levels/${lookupAbilityLevelId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listLookupActivityTypes: (query?: {
     page?: number;
     limit?: number;
@@ -4706,14 +4834,22 @@ export const apiClient = {
     lookupActivityTypeId: number,
     payload: UpdateLookupActivityTypePayload,
   ) =>
-    request<LookupActivityTypeListItem>(`/lookup/activity-types/${lookupActivityTypeId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+    request<LookupActivityTypeListItem>(
+      `/lookup/activity-types/${lookupActivityTypeId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteLookupActivityType: (lookupActivityTypeId: number) =>
-    request<DeleteEntityResponse>(`/lookup/activity-types/${lookupActivityTypeId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/lookup/activity-types/${lookupActivityTypeId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listLookupGradeDescriptions: (query?: {
     page?: number;
     limit?: number;
@@ -4732,11 +4868,17 @@ export const apiClient = {
         withAuth: true,
       },
     ),
-  createLookupGradeDescription: (payload: CreateLookupGradeDescriptionPayload) =>
-    request<LookupGradeDescriptionListItem>("/lookup/grade-descriptions", "POST", {
-      withAuth: true,
-      json: payload,
-    }),
+  createLookupGradeDescription: (
+    payload: CreateLookupGradeDescriptionPayload,
+  ) =>
+    request<LookupGradeDescriptionListItem>(
+      "/lookup/grade-descriptions",
+      "POST",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   updateLookupGradeDescription: (
     lookupGradeDescriptionId: number,
     payload: UpdateLookupGradeDescriptionPayload,
@@ -4750,9 +4892,13 @@ export const apiClient = {
       },
     ),
   deleteLookupGradeDescription: (lookupGradeDescriptionId: number) =>
-    request<DeleteEntityResponse>(`/lookup/grade-descriptions/${lookupGradeDescriptionId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/lookup/grade-descriptions/${lookupGradeDescriptionId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listLookupCatalogItems: (
     lookupType: LookupCatalogType,
     query?: {
@@ -4787,14 +4933,22 @@ export const apiClient = {
     itemId: number,
     payload: UpdateLookupCatalogItemPayload,
   ) =>
-    request<LookupCatalogListItem>(`/lookup/catalog/${lookupType}/${itemId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+    request<LookupCatalogListItem>(
+      `/lookup/catalog/${lookupType}/${itemId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteLookupCatalogItem: (lookupType: LookupCatalogType, itemId: number) =>
-    request<DeleteEntityResponse>(`/lookup/catalog/${lookupType}/${itemId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/lookup/catalog/${lookupType}/${itemId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listSchoolProfiles: (query?: {
     page?: number;
     limit?: number;
@@ -4820,15 +4974,26 @@ export const apiClient = {
       withAuth: true,
       json: payload,
     }),
-  updateSchoolProfile: (schoolProfileId: string, payload: UpdateSchoolProfilePayload) =>
-    request<SchoolProfileListItem>(`/school-profiles/${schoolProfileId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+  updateSchoolProfile: (
+    schoolProfileId: string,
+    payload: UpdateSchoolProfilePayload,
+  ) =>
+    request<SchoolProfileListItem>(
+      `/school-profiles/${schoolProfileId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteSchoolProfile: (schoolProfileId: string) =>
-    request<DeleteEntityResponse>(`/school-profiles/${schoolProfileId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/school-profiles/${schoolProfileId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listAuditLogs: (query?: {
     page?: number;
     limit?: number;
@@ -4884,15 +5049,26 @@ export const apiClient = {
       withAuth: true,
       json: payload,
     }),
-  updateAcademicYear: (academicYearId: string, payload: UpdateAcademicYearPayload) =>
-    request<AcademicYearListItem>(`/academic-years/${academicYearId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+  updateAcademicYear: (
+    academicYearId: string,
+    payload: UpdateAcademicYearPayload,
+  ) =>
+    request<AcademicYearListItem>(
+      `/academic-years/${academicYearId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteAcademicYear: (academicYearId: string) =>
-    request<DeleteEntityResponse>(`/academic-years/${academicYearId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/academic-years/${academicYearId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listAcademicTerms: (query?: {
     page?: number;
     limit?: number;
@@ -4920,15 +5096,26 @@ export const apiClient = {
       withAuth: true,
       json: payload,
     }),
-  updateAcademicTerm: (academicTermId: string, payload: UpdateAcademicTermPayload) =>
-    request<AcademicTermListItem>(`/academic-terms/${academicTermId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+  updateAcademicTerm: (
+    academicTermId: string,
+    payload: UpdateAcademicTermPayload,
+  ) =>
+    request<AcademicTermListItem>(
+      `/academic-terms/${academicTermId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteAcademicTerm: (academicTermId: string) =>
-    request<DeleteEntityResponse>(`/academic-terms/${academicTermId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/academic-terms/${academicTermId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listAcademicMonths: (query?: {
     page?: number;
     limit?: number;
@@ -4960,15 +5147,26 @@ export const apiClient = {
       withAuth: true,
       json: payload,
     }),
-  updateAcademicMonth: (academicMonthId: string, payload: UpdateAcademicMonthPayload) =>
-    request<AcademicMonthListItem>(`/academic-months/${academicMonthId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+  updateAcademicMonth: (
+    academicMonthId: string,
+    payload: UpdateAcademicMonthPayload,
+  ) =>
+    request<AcademicMonthListItem>(
+      `/academic-months/${academicMonthId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteAcademicMonth: (academicMonthId: string) =>
-    request<DeleteEntityResponse>(`/academic-months/${academicMonthId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/academic-months/${academicMonthId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listGradingPolicies: (query?: {
     page?: number;
     limit?: number;
@@ -5004,15 +5202,26 @@ export const apiClient = {
       withAuth: true,
       json: payload,
     }),
-  updateGradingPolicy: (gradingPolicyId: string, payload: UpdateGradingPolicyPayload) =>
-    request<GradingPolicyListItem>(`/grading-policies/${gradingPolicyId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+  updateGradingPolicy: (
+    gradingPolicyId: string,
+    payload: UpdateGradingPolicyPayload,
+  ) =>
+    request<GradingPolicyListItem>(
+      `/grading-policies/${gradingPolicyId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteGradingPolicy: (gradingPolicyId: string) =>
-    request<DeleteEntityResponse>(`/grading-policies/${gradingPolicyId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/grading-policies/${gradingPolicyId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   getGradingSummaryReport: (query?: {
     academicYearId?: string;
     gradeLevelId?: string;
@@ -5096,15 +5305,26 @@ export const apiClient = {
       withAuth: true,
       json: payload,
     }),
-  updateAnnualStatus: (annualStatusId: string, payload: UpdateAnnualStatusPayload) =>
-    request<AnnualStatusListItem>(`/annual-statuses/${annualStatusId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+  updateAnnualStatus: (
+    annualStatusId: string,
+    payload: UpdateAnnualStatusPayload,
+  ) =>
+    request<AnnualStatusListItem>(
+      `/annual-statuses/${annualStatusId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteAnnualStatus: (annualStatusId: string) =>
-    request<DeleteEntityResponse>(`/annual-statuses/${annualStatusId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/annual-statuses/${annualStatusId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listPromotionDecisions: (query?: {
     page?: number;
     limit?: number;
@@ -5143,9 +5363,13 @@ export const apiClient = {
       },
     ),
   deletePromotionDecision: (promotionDecisionId: string) =>
-    request<DeleteEntityResponse>(`/promotion-decisions/${promotionDecisionId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/promotion-decisions/${promotionDecisionId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listGradingOutcomeRules: (query?: {
     page?: number;
     limit?: number;
@@ -5332,14 +5556,22 @@ export const apiClient = {
     mappingId: string,
     payload: UpdateGradeLevelSubjectPayload,
   ) =>
-    request<GradeLevelSubjectListItem>(`/grade-level-subjects/${mappingId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+    request<GradeLevelSubjectListItem>(
+      `/grade-level-subjects/${mappingId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteGradeLevelSubject: (mappingId: string) =>
-    request<DeleteEntityResponse>(`/grade-level-subjects/${mappingId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/grade-level-subjects/${mappingId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listTermSubjectOfferings: (query?: {
     page?: number;
     limit?: number;
@@ -5373,14 +5605,22 @@ export const apiClient = {
     offeringId: string,
     payload: UpdateTermSubjectOfferingPayload,
   ) =>
-    request<TermSubjectOfferingListItem>(`/term-subject-offerings/${offeringId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+    request<TermSubjectOfferingListItem>(
+      `/term-subject-offerings/${offeringId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteTermSubjectOffering: (offeringId: string) =>
-    request<DeleteEntityResponse>(`/term-subject-offerings/${offeringId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/term-subject-offerings/${offeringId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listTimetableEntries: (query?: {
     page?: number;
     limit?: number;
@@ -5412,7 +5652,10 @@ export const apiClient = {
       withAuth: true,
       json: payload,
     }),
-  updateTimetableEntry: (entryId: string, payload: UpdateTimetableEntryPayload) =>
+  updateTimetableEntry: (
+    entryId: string,
+    payload: UpdateTimetableEntryPayload,
+  ) =>
     request<TimetableEntryListItem>(`/timetable-entries/${entryId}`, "PATCH", {
       withAuth: true,
       json: payload,
@@ -5546,14 +5789,22 @@ export const apiClient = {
     relationId: string,
     payload: UpdateStudentGuardianPayload,
   ) =>
-    request<StudentGuardianListItem>(`/student-guardians/${relationId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+    request<StudentGuardianListItem>(
+      `/student-guardians/${relationId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteStudentGuardian: (relationId: string) =>
-    request<DeleteEntityResponse>(`/student-guardians/${relationId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/student-guardians/${relationId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listStudentEnrollments: (query?: {
     page?: number;
     limit?: number;
@@ -5589,14 +5840,22 @@ export const apiClient = {
     enrollmentId: string,
     payload: UpdateStudentEnrollmentPayload,
   ) =>
-    request<StudentEnrollmentListItem>(`/student-enrollments/${enrollmentId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+    request<StudentEnrollmentListItem>(
+      `/student-enrollments/${enrollmentId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteStudentEnrollment: (enrollmentId: string) =>
-    request<DeleteEntityResponse>(`/student-enrollments/${enrollmentId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/student-enrollments/${enrollmentId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listStudentAttendance: (query?: {
     page?: number;
     limit?: number;
@@ -5634,14 +5893,22 @@ export const apiClient = {
     attendanceId: string,
     payload: UpdateStudentAttendancePayload,
   ) =>
-    request<StudentAttendanceListItem>(`/student-attendance/${attendanceId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+    request<StudentAttendanceListItem>(
+      `/student-attendance/${attendanceId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteStudentAttendance: (attendanceId: string) =>
-    request<DeleteEntityResponse>(`/student-attendance/${attendanceId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/student-attendance/${attendanceId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listStudentBooks: (query?: {
     page?: number;
     limit?: number;
@@ -5677,7 +5944,10 @@ export const apiClient = {
       withAuth: true,
       json: payload,
     }),
-  updateStudentBook: (studentBookId: string, payload: UpdateStudentBookPayload) =>
+  updateStudentBook: (
+    studentBookId: string,
+    payload: UpdateStudentBookPayload,
+  ) =>
     request<StudentBookListItem>(`/student-books/${studentBookId}`, "PATCH", {
       withAuth: true,
       json: payload,
@@ -5713,7 +5983,10 @@ export const apiClient = {
       withAuth: true,
       json: payload,
     }),
-  updateStudentTalent: (mappingId: string, payload: UpdateStudentTalentPayload) =>
+  updateStudentTalent: (
+    mappingId: string,
+    payload: UpdateStudentTalentPayload,
+  ) =>
     request<StudentTalentListItem>(`/student-talents/${mappingId}`, "PATCH", {
       withAuth: true,
       json: payload,
@@ -5751,7 +6024,10 @@ export const apiClient = {
       withAuth: true,
       json: payload,
     }),
-  updateStudentSibling: (siblingId: string, payload: UpdateStudentSiblingPayload) =>
+  updateStudentSibling: (
+    siblingId: string,
+    payload: UpdateStudentSiblingPayload,
+  ) =>
     request<StudentSiblingListItem>(`/student-siblings/${siblingId}`, "PATCH", {
       withAuth: true,
       json: payload,
@@ -5793,7 +6069,10 @@ export const apiClient = {
       withAuth: true,
       json: payload,
     }),
-  updateStudentProblem: (problemId: string, payload: UpdateStudentProblemPayload) =>
+  updateStudentProblem: (
+    problemId: string,
+    payload: UpdateStudentProblemPayload,
+  ) =>
     request<StudentProblemListItem>(`/student-problems/${problemId}`, "PATCH", {
       withAuth: true,
       json: payload,
@@ -5843,14 +6122,22 @@ export const apiClient = {
     notificationId: string,
     payload: UpdateParentNotificationPayload,
   ) =>
-    request<ParentNotificationListItem>(`/parent-notifications/${notificationId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+    request<ParentNotificationListItem>(
+      `/parent-notifications/${notificationId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteParentNotification: (notificationId: string) =>
-    request<DeleteEntityResponse>(`/parent-notifications/${notificationId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/parent-notifications/${notificationId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listExamPeriods: (query?: {
     page?: number;
     limit?: number;
@@ -5926,15 +6213,26 @@ export const apiClient = {
       withAuth: true,
       json: payload,
     }),
-  updateExamAssessment: (examAssessmentId: string, payload: UpdateExamAssessmentPayload) =>
-    request<ExamAssessmentListItem>(`/exam-assessments/${examAssessmentId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+  updateExamAssessment: (
+    examAssessmentId: string,
+    payload: UpdateExamAssessmentPayload,
+  ) =>
+    request<ExamAssessmentListItem>(
+      `/exam-assessments/${examAssessmentId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteExamAssessment: (examAssessmentId: string) =>
-    request<DeleteEntityResponse>(`/exam-assessments/${examAssessmentId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/exam-assessments/${examAssessmentId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listStudentExamScores: (query?: {
     page?: number;
     limit?: number;
@@ -5974,14 +6272,22 @@ export const apiClient = {
     studentExamScoreId: string,
     payload: UpdateStudentExamScorePayload,
   ) =>
-    request<StudentExamScoreListItem>(`/student-exam-scores/${studentExamScoreId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+    request<StudentExamScoreListItem>(
+      `/student-exam-scores/${studentExamScoreId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteStudentExamScore: (studentExamScoreId: string) =>
-    request<DeleteEntityResponse>(`/student-exam-scores/${studentExamScoreId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/student-exam-scores/${studentExamScoreId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listMonthlyGrades: (query?: {
     page?: number;
     limit?: number;
@@ -6024,27 +6330,50 @@ export const apiClient = {
       json: payload,
     }),
   calculateMonthlyGrades: (payload: CalculateMonthlyGradesPayload) =>
-    request<CalculateMonthlyGradesResponse>("/monthly-grades/calculate", "POST", {
-      withAuth: true,
-      json: payload,
-    }),
-  updateMonthlyGrade: (monthlyGradeId: string, payload: UpdateMonthlyGradePayload) =>
-    request<MonthlyGradeListItem>(`/monthly-grades/${monthlyGradeId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+    request<CalculateMonthlyGradesResponse>(
+      "/monthly-grades/calculate",
+      "POST",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  updateMonthlyGrade: (
+    monthlyGradeId: string,
+    payload: UpdateMonthlyGradePayload,
+  ) =>
+    request<MonthlyGradeListItem>(
+      `/monthly-grades/${monthlyGradeId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   lockMonthlyGrade: (monthlyGradeId: string) =>
-    request<MonthlyGradeListItem>(`/monthly-grades/${monthlyGradeId}/lock`, "POST", {
-      withAuth: true,
-    }),
+    request<MonthlyGradeListItem>(
+      `/monthly-grades/${monthlyGradeId}/lock`,
+      "POST",
+      {
+        withAuth: true,
+      },
+    ),
   unlockMonthlyGrade: (monthlyGradeId: string) =>
-    request<MonthlyGradeListItem>(`/monthly-grades/${monthlyGradeId}/unlock`, "POST", {
-      withAuth: true,
-    }),
+    request<MonthlyGradeListItem>(
+      `/monthly-grades/${monthlyGradeId}/unlock`,
+      "POST",
+      {
+        withAuth: true,
+      },
+    ),
   deleteMonthlyGrade: (monthlyGradeId: string) =>
-    request<DeleteEntityResponse>(`/monthly-grades/${monthlyGradeId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/monthly-grades/${monthlyGradeId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listMonthlyCustomComponentScores: (query?: {
     page?: number;
     limit?: number;
@@ -6077,11 +6406,17 @@ export const apiClient = {
         withAuth: true,
       },
     ),
-  createMonthlyCustomComponentScore: (payload: CreateMonthlyCustomComponentScorePayload) =>
-    request<MonthlyCustomComponentScoreListItem>("/monthly-custom-component-scores", "POST", {
-      withAuth: true,
-      json: payload,
-    }),
+  createMonthlyCustomComponentScore: (
+    payload: CreateMonthlyCustomComponentScorePayload,
+  ) =>
+    request<MonthlyCustomComponentScoreListItem>(
+      "/monthly-custom-component-scores",
+      "POST",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   updateMonthlyCustomComponentScore: (
     monthlyCustomComponentScoreId: string,
     payload: UpdateMonthlyCustomComponentScorePayload,
@@ -6142,10 +6477,14 @@ export const apiClient = {
       json: payload,
     }),
   calculateSemesterGrades: (payload: CalculateSemesterGradesPayload) =>
-    request<CalculateSemesterGradesResponse>("/semester-grades/calculate", "POST", {
-      withAuth: true,
-      json: payload,
-    }),
+    request<CalculateSemesterGradesResponse>(
+      "/semester-grades/calculate",
+      "POST",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   fillSemesterFinalExamScores: (payload: FillSemesterFinalExamScoresPayload) =>
     request<FillSemesterFinalExamScoresResponse>(
       "/semester-grades/fill-final-exam-scores",
@@ -6155,23 +6494,42 @@ export const apiClient = {
         json: payload,
       },
     ),
-  updateSemesterGrade: (semesterGradeId: string, payload: UpdateSemesterGradePayload) =>
-    request<SemesterGradeListItem>(`/semester-grades/${semesterGradeId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+  updateSemesterGrade: (
+    semesterGradeId: string,
+    payload: UpdateSemesterGradePayload,
+  ) =>
+    request<SemesterGradeListItem>(
+      `/semester-grades/${semesterGradeId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   lockSemesterGrade: (semesterGradeId: string) =>
-    request<SemesterGradeListItem>(`/semester-grades/${semesterGradeId}/lock`, "POST", {
-      withAuth: true,
-    }),
+    request<SemesterGradeListItem>(
+      `/semester-grades/${semesterGradeId}/lock`,
+      "POST",
+      {
+        withAuth: true,
+      },
+    ),
   unlockSemesterGrade: (semesterGradeId: string) =>
-    request<SemesterGradeListItem>(`/semester-grades/${semesterGradeId}/unlock`, "POST", {
-      withAuth: true,
-    }),
+    request<SemesterGradeListItem>(
+      `/semester-grades/${semesterGradeId}/unlock`,
+      "POST",
+      {
+        withAuth: true,
+      },
+    ),
   deleteSemesterGrade: (semesterGradeId: string) =>
-    request<DeleteEntityResponse>(`/semester-grades/${semesterGradeId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/semester-grades/${semesterGradeId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listAnnualGrades: (query?: {
     page?: number;
     limit?: number;
@@ -6211,19 +6569,30 @@ export const apiClient = {
       withAuth: true,
       json: payload,
     }),
-  updateAnnualGrade: (annualGradeId: string, payload: UpdateAnnualGradePayload) =>
+  updateAnnualGrade: (
+    annualGradeId: string,
+    payload: UpdateAnnualGradePayload,
+  ) =>
     request<AnnualGradeListItem>(`/annual-grades/${annualGradeId}`, "PATCH", {
       withAuth: true,
       json: payload,
     }),
   lockAnnualGrade: (annualGradeId: string) =>
-    request<AnnualGradeListItem>(`/annual-grades/${annualGradeId}/lock`, "POST", {
-      withAuth: true,
-    }),
+    request<AnnualGradeListItem>(
+      `/annual-grades/${annualGradeId}/lock`,
+      "POST",
+      {
+        withAuth: true,
+      },
+    ),
   unlockAnnualGrade: (annualGradeId: string) =>
-    request<AnnualGradeListItem>(`/annual-grades/${annualGradeId}/unlock`, "POST", {
-      withAuth: true,
-    }),
+    request<AnnualGradeListItem>(
+      `/annual-grades/${annualGradeId}/unlock`,
+      "POST",
+      {
+        withAuth: true,
+      },
+    ),
   deleteAnnualGrade: (annualGradeId: string) =>
     request<DeleteEntityResponse>(`/annual-grades/${annualGradeId}`, "DELETE", {
       withAuth: true,
@@ -6268,27 +6637,50 @@ export const apiClient = {
       json: payload,
     }),
   calculateAnnualResults: (payload: CalculateAnnualResultsPayload) =>
-    request<CalculateAnnualResultsResponse>("/annual-results/calculate", "POST", {
-      withAuth: true,
-      json: payload,
-    }),
-  updateAnnualResult: (annualResultId: string, payload: UpdateAnnualResultPayload) =>
-    request<AnnualResultListItem>(`/annual-results/${annualResultId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+    request<CalculateAnnualResultsResponse>(
+      "/annual-results/calculate",
+      "POST",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  updateAnnualResult: (
+    annualResultId: string,
+    payload: UpdateAnnualResultPayload,
+  ) =>
+    request<AnnualResultListItem>(
+      `/annual-results/${annualResultId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   lockAnnualResult: (annualResultId: string) =>
-    request<AnnualResultListItem>(`/annual-results/${annualResultId}/lock`, "POST", {
-      withAuth: true,
-    }),
+    request<AnnualResultListItem>(
+      `/annual-results/${annualResultId}/lock`,
+      "POST",
+      {
+        withAuth: true,
+      },
+    ),
   unlockAnnualResult: (annualResultId: string) =>
-    request<AnnualResultListItem>(`/annual-results/${annualResultId}/unlock`, "POST", {
-      withAuth: true,
-    }),
+    request<AnnualResultListItem>(
+      `/annual-results/${annualResultId}/unlock`,
+      "POST",
+      {
+        withAuth: true,
+      },
+    ),
   deleteAnnualResult: (annualResultId: string) =>
-    request<DeleteEntityResponse>(`/annual-results/${annualResultId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/annual-results/${annualResultId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listHomeworkTypes: (query?: {
     page?: number;
     limit?: number;
@@ -6314,15 +6706,26 @@ export const apiClient = {
       withAuth: true,
       json: payload,
     }),
-  updateHomeworkType: (homeworkTypeId: string, payload: UpdateHomeworkTypePayload) =>
-    request<HomeworkTypeListItem>(`/homework-types/${homeworkTypeId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+  updateHomeworkType: (
+    homeworkTypeId: string,
+    payload: UpdateHomeworkTypePayload,
+  ) =>
+    request<HomeworkTypeListItem>(
+      `/homework-types/${homeworkTypeId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteHomeworkType: (homeworkTypeId: string) =>
-    request<DeleteEntityResponse>(`/homework-types/${homeworkTypeId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/homework-types/${homeworkTypeId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listHomeworks: (query?: {
     page?: number;
     limit?: number;
@@ -6370,9 +6773,13 @@ export const apiClient = {
       json: payload,
     }),
   populateHomeworkStudents: (homeworkId: string) =>
-    request<PopulateHomeworkStudentsResponse>(`/homeworks/${homeworkId}/populate-students`, "POST", {
-      withAuth: true,
-    }),
+    request<PopulateHomeworkStudentsResponse>(
+      `/homeworks/${homeworkId}/populate-students`,
+      "POST",
+      {
+        withAuth: true,
+      },
+    ),
   deleteHomework: (homeworkId: string) =>
     request<DeleteEntityResponse>(`/homeworks/${homeworkId}`, "DELETE", {
       withAuth: true,
@@ -6422,14 +6829,22 @@ export const apiClient = {
     studentHomeworkId: string,
     payload: UpdateStudentHomeworkPayload,
   ) =>
-    request<StudentHomeworkListItem>(`/student-homeworks/${studentHomeworkId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+    request<StudentHomeworkListItem>(
+      `/student-homeworks/${studentHomeworkId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteStudentHomework: (studentHomeworkId: string) =>
-    request<DeleteEntityResponse>(`/student-homeworks/${studentHomeworkId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/student-homeworks/${studentHomeworkId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listEmployees: (query?: {
     page?: number;
     limit?: number;
@@ -6443,6 +6858,7 @@ export const apiClient = {
     qualificationId?: number;
     jobRoleId?: number;
     isActive?: boolean;
+    operationalReadiness?: OperationalReadinessFilter;
   }) =>
     request<PaginatedResponse<EmployeeListItem>>(
       `/employees${buildQueryString({
@@ -6458,6 +6874,7 @@ export const apiClient = {
         qualificationId: query?.qualificationId,
         jobRoleId: query?.jobRoleId,
         isActive: query?.isActive,
+        operationalReadiness: query?.operationalReadiness,
       })}`,
       "GET",
       {
@@ -6504,11 +6921,17 @@ export const apiClient = {
         withAuth: true,
       },
     ),
-  createEmployeeTeachingAssignment: (payload: CreateEmployeeTeachingAssignmentPayload) =>
-    request<EmployeeTeachingAssignmentListItem>("/employee-teaching-assignments", "POST", {
-      withAuth: true,
-      json: payload,
-    }),
+  createEmployeeTeachingAssignment: (
+    payload: CreateEmployeeTeachingAssignmentPayload,
+  ) =>
+    request<EmployeeTeachingAssignmentListItem>(
+      "/employee-teaching-assignments",
+      "POST",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   updateEmployeeTeachingAssignment: (
     assignmentId: string,
     payload: UpdateEmployeeTeachingAssignmentPayload,
@@ -6522,9 +6945,13 @@ export const apiClient = {
       },
     ),
   deleteEmployeeTeachingAssignment: (assignmentId: string) =>
-    request<DeleteEntityResponse>(`/employee-teaching-assignments/${assignmentId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/employee-teaching-assignments/${assignmentId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listEmployeeAttendance: (query?: {
     page?: number;
     limit?: number;
@@ -6560,14 +6987,22 @@ export const apiClient = {
     attendanceId: string,
     payload: UpdateEmployeeAttendancePayload,
   ) =>
-    request<EmployeeAttendanceListItem>(`/employee-attendance/${attendanceId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+    request<EmployeeAttendanceListItem>(
+      `/employee-attendance/${attendanceId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteEmployeeAttendance: (attendanceId: string) =>
-    request<DeleteEntityResponse>(`/employee-attendance/${attendanceId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/employee-attendance/${attendanceId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listEmployeeTasks: (query?: {
     page?: number;
     limit?: number;
@@ -6700,14 +7135,22 @@ export const apiClient = {
     violationId: string,
     payload: UpdateEmployeeViolationPayload,
   ) =>
-    request<EmployeeViolationListItem>(`/employee-violations/${violationId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
+    request<EmployeeViolationListItem>(
+      `/employee-violations/${violationId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteEmployeeViolation: (violationId: string) =>
-    request<DeleteEntityResponse>(`/employee-violations/${violationId}`, "DELETE", {
-      withAuth: true,
-    }),
+    request<DeleteEntityResponse>(
+      `/employee-violations/${violationId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   getHrSummaryReport: (query?: {
     fromDate?: string;
     toDate?: string;
@@ -6785,7 +7228,10 @@ export const apiClient = {
       withAuth: true,
       json: payload,
     }),
-  updateEmployeeCourse: (courseId: string, payload: UpdateEmployeeCoursePayload) =>
+  updateEmployeeCourse: (
+    courseId: string,
+    payload: UpdateEmployeeCoursePayload,
+  ) =>
     request<EmployeeCourseListItem>(`/employee-courses/${courseId}`, "PATCH", {
       withAuth: true,
       json: payload,
@@ -6821,7 +7267,10 @@ export const apiClient = {
       withAuth: true,
       json: payload,
     }),
-  updateEmployeeTalent: (mappingId: string, payload: UpdateEmployeeTalentPayload) =>
+  updateEmployeeTalent: (
+    mappingId: string,
+    payload: UpdateEmployeeTalentPayload,
+  ) =>
     request<EmployeeTalentListItem>(`/employee-talents/${mappingId}`, "PATCH", {
       withAuth: true,
       json: payload,
@@ -6831,5 +7280,3 @@ export const apiClient = {
       withAuth: true,
     }),
 };
-
-

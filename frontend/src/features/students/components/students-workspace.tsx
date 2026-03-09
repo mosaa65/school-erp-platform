@@ -220,6 +220,7 @@ export function StudentsWorkspace() {
   const [editingStudentId, setEditingStudentId] = React.useState<string | null>(null);
   const [formState, setFormState] = React.useState<StudentFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
   const [formGovernorateId, setFormGovernorateId] = React.useState<string>("");
   const [formDirectorateId, setFormDirectorateId] = React.useState<string>("");
   const [formSubDistrictId, setFormSubDistrictId] = React.useState<string>("");
@@ -548,6 +549,7 @@ export function StudentsWorkspace() {
 
   const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setActionSuccess(null);
 
     if (!validateForm()) {
       return;
@@ -600,7 +602,7 @@ export function StudentsWorkspace() {
 
     if (isEditing && editingStudentId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية students.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: students.update.");
         return;
       }
 
@@ -612,6 +614,7 @@ export function StudentsWorkspace() {
         {
           onSuccess: () => {
             resetForm();
+            setActionSuccess("تم تحديث الطالب بنجاح.");
           },
         },
       );
@@ -619,7 +622,7 @@ export function StudentsWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية students.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: students.create.");
       return;
     }
 
@@ -627,6 +630,7 @@ export function StudentsWorkspace() {
       onSuccess: () => {
         resetForm();
         setPage(1);
+        setActionSuccess("تم إنشاء الطالب بنجاح.");
       },
     });
   };
@@ -637,6 +641,7 @@ export function StudentsWorkspace() {
     }
 
     setFormError(null);
+    setActionSuccess(null);
     setEditingStudentId(student.id);
     const nextState = toFormState(student);
     if (!nextState.genderId) {
@@ -702,12 +707,23 @@ export function StudentsWorkspace() {
       return;
     }
 
-    updateMutation.mutate({
-      studentId: student.id,
-      payload: {
-        isActive: !student.isActive,
+    updateMutation.mutate(
+      {
+        studentId: student.id,
+        payload: {
+          isActive: !student.isActive,
+        },
       },
-    });
+      {
+        onSuccess: () => {
+          setActionSuccess(
+            student.isActive
+              ? "تم تعطيل الطالب بنجاح."
+              : "تم تفعيل الطالب بنجاح.",
+          );
+        },
+      },
+    );
   };
 
   const handleDelete = (student: StudentListItem) => {
@@ -725,6 +741,7 @@ export function StudentsWorkspace() {
         if (editingStudentId === student.id) {
           resetForm();
         }
+        setActionSuccess("تم حذف الطالب بنجاح.");
       },
     });
   };
@@ -751,7 +768,7 @@ export function StudentsWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>students.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>students.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
@@ -1043,6 +1060,11 @@ export function StudentsWorkspace() {
               {mutationError ? (
                 <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
                   {mutationError}
+                </div>
+              ) : null}
+              {actionSuccess ? (
+                <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
+                  {actionSuccess}
                 </div>
               ) : null}
 

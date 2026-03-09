@@ -149,7 +149,7 @@ export class PromotionDecisionsService {
       });
 
     if (!promotionDecision) {
-      throw new NotFoundException('Promotion decision not found');
+      throw new NotFoundException('لم يتم العثور على قرار الترفيع');
     }
 
     return promotionDecision;
@@ -168,7 +168,7 @@ export class PromotionDecisionsService {
       payload.code !== promotionDecision.code
     ) {
       throw new ConflictException(
-        'System promotion decision code cannot be changed',
+        'لا يمكن تعديل رمز قرار الترفيع النظامي',
       );
     }
 
@@ -214,7 +214,7 @@ export class PromotionDecisionsService {
 
     if (promotionDecision.isSystem) {
       throw new ConflictException(
-        'System promotion decision cannot be deleted',
+        'لا يمكن حذف قرار الترفيع النظامي',
       );
     }
 
@@ -273,7 +273,7 @@ export class PromotionDecisionsService {
       });
 
     if (!promotionDecision) {
-      throw new NotFoundException('Promotion decision not found');
+      throw new NotFoundException('لم يتم العثور على قرار الترفيع');
     }
 
     return promotionDecision;
@@ -283,7 +283,7 @@ export class PromotionDecisionsService {
     const normalized = code.trim().toUpperCase();
 
     if (!normalized) {
-      throw new BadRequestException('code cannot be empty');
+      throw new BadRequestException('لا يمكن أن يكون الرمز فارغًا');
     }
 
     return normalized;
@@ -293,7 +293,7 @@ export class PromotionDecisionsService {
     const normalized = value.trim();
 
     if (!normalized) {
-      throw new BadRequestException(`${fieldName} cannot be empty`);
+      throw new BadRequestException(`لا يمكن أن يكون ${fieldName} فارغًا`);
     }
 
     return normalized;
@@ -304,7 +304,7 @@ export class PromotionDecisionsService {
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === 'P2002'
     ) {
-      throw new ConflictException('Promotion decision code already exists');
+      throw new ConflictException('رمز قرار الترفيع موجود مسبقًا');
     }
 
     throw error;
@@ -315,6 +315,7 @@ export class PromotionDecisionsService {
       return error.message;
     }
 
-    return 'Unknown error';
+    return 'خطأ غير معروف';
   }
 }
+

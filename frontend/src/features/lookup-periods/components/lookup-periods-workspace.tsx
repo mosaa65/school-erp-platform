@@ -157,7 +157,7 @@ export function LookupPeriodsWorkspace() {
 
     if (isEditing && editingLookupPeriodId !== null) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية lookup-periods.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: lookup-periods.update.");
         return;
       }
 
@@ -176,7 +176,7 @@ export function LookupPeriodsWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية lookup-periods.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: lookup-periods.create.");
       return;
     }
 
@@ -239,7 +239,7 @@ export function LookupPeriodsWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>lookup-periods.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>lookup-periods.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="period-form">

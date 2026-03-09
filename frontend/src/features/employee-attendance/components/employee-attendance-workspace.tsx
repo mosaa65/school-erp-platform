@@ -269,7 +269,7 @@ export function EmployeeAttendanceWorkspace() {
 
     if (isEditing && editingAttendanceId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية employee-attendance.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: employee-attendance.update.");
         return;
       }
 
@@ -288,7 +288,7 @@ export function EmployeeAttendanceWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية employee-attendance.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: employee-attendance.create.");
       return;
     }
 
@@ -353,7 +353,7 @@ export function EmployeeAttendanceWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>employee-attendance.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>employee-attendance.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
@@ -472,7 +472,7 @@ export function EmployeeAttendanceWorkspace() {
 
               {!canReadEmployees ? (
                 <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يلزم صلاحية <code>employees.read</code> لاختيار الموظف.
+                  يتطلب هذا الجزء الصلاحية: <code>employees.read</code> لاختيار الموظف.
                 </div>
               ) : null}
 
@@ -591,7 +591,7 @@ export function EmployeeAttendanceWorkspace() {
         <CardContent className="space-y-3">
           {attendanceQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
@@ -599,7 +599,7 @@ export function EmployeeAttendanceWorkspace() {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {attendanceQuery.error instanceof Error
                 ? attendanceQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 

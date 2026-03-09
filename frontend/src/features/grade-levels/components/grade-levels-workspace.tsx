@@ -204,7 +204,7 @@ export function GradeLevelsWorkspace() {
 
     if (isEditing && editingGradeLevelId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية grade-levels.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: grade-levels.update.");
         return;
       }
 
@@ -223,7 +223,7 @@ export function GradeLevelsWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية grade-levels.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: grade-levels.create.");
       return;
     }
 
@@ -284,7 +284,7 @@ export function GradeLevelsWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>grade-levels.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>grade-levels.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
@@ -458,7 +458,7 @@ export function GradeLevelsWorkspace() {
         <CardContent className="space-y-3">
           {gradeLevelsQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
@@ -466,7 +466,7 @@ export function GradeLevelsWorkspace() {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {gradeLevelsQuery.error instanceof Error
                 ? gradeLevelsQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 

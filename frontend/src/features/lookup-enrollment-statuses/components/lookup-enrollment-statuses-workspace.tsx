@@ -159,7 +159,7 @@ export function LookupEnrollmentStatusesWorkspace() {
 
     if (isEditing && editingLookupEnrollmentStatusId !== null) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية lookup-enrollment-statuses.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: lookup-enrollment-statuses.update.");
         return;
       }
 
@@ -178,7 +178,7 @@ export function LookupEnrollmentStatusesWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية lookup-enrollment-statuses.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: lookup-enrollment-statuses.create.");
       return;
     }
 
@@ -236,7 +236,7 @@ export function LookupEnrollmentStatusesWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>lookup-enrollment-statuses.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>lookup-enrollment-statuses.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="enrollment-form">

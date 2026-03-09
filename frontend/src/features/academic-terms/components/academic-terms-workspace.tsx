@@ -252,7 +252,7 @@ export function AcademicTermsWorkspace() {
 
     if (isEditing && editingTermId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية academic-terms.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: academic-terms.update.");
         return;
       }
 
@@ -271,7 +271,7 @@ export function AcademicTermsWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية academic-terms.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: academic-terms.create.");
       return;
     }
 
@@ -331,7 +331,7 @@ export function AcademicTermsWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>academic-terms.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>academic-terms.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
@@ -562,7 +562,7 @@ export function AcademicTermsWorkspace() {
         <CardContent className="space-y-3">
           {termsQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
@@ -570,7 +570,7 @@ export function AcademicTermsWorkspace() {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {termsQuery.error instanceof Error
                 ? termsQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import {
@@ -291,7 +291,7 @@ export function GlobalSettingsManagementWorkspace() {
 
     if (isEditing && editingSettingId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية global-settings.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: global-settings.update.");
         return;
       }
 
@@ -310,7 +310,7 @@ export function GlobalSettingsManagementWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية global-settings.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: global-settings.create.");
       return;
     }
 
@@ -366,7 +366,7 @@ export function GlobalSettingsManagementWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>global-settings.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>global-settings.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
@@ -534,7 +534,7 @@ export function GlobalSettingsManagementWorkspace() {
         <CardContent className="space-y-3">
           {settingsQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
@@ -542,7 +542,7 @@ export function GlobalSettingsManagementWorkspace() {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {settingsQuery.error instanceof Error
                 ? settingsQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 

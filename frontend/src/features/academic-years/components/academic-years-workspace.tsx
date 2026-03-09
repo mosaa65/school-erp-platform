@@ -222,7 +222,7 @@ export function AcademicYearsWorkspace() {
 
     if (isEditing && editingYearId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية academic-years.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: academic-years.update.");
         return;
       }
 
@@ -241,7 +241,7 @@ export function AcademicYearsWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية academic-years.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: academic-years.create.");
       return;
     }
 
@@ -301,7 +301,7 @@ export function AcademicYearsWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>academic-years.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>academic-years.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
@@ -481,7 +481,7 @@ export function AcademicYearsWorkspace() {
         <CardContent className="space-y-3">
           {yearsQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
@@ -489,7 +489,7 @@ export function AcademicYearsWorkspace() {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {yearsQuery.error instanceof Error
                 ? yearsQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 

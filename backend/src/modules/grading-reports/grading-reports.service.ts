@@ -468,7 +468,7 @@ export class GradingReportsService {
       });
 
       if (!academicYear) {
-        throw new BadRequestException('Academic year is invalid or deleted');
+        throw new BadRequestException('السنة الدراسية غير صالحة أو محذوفة');
       }
     }
 
@@ -484,7 +484,7 @@ export class GradingReportsService {
       });
 
       if (!gradeLevel) {
-        throw new BadRequestException('Grade level is invalid or deleted');
+        throw new BadRequestException('الصف الدراسي غير صالح أو محذوف');
       }
     }
 
@@ -501,7 +501,7 @@ export class GradingReportsService {
       });
 
       if (!section) {
-        throw new BadRequestException('Section is invalid or deleted');
+        throw new BadRequestException('الشعبة غير صالحة أو محذوفة');
       }
 
       sectionGradeLevelId = section.gradeLevelId;
@@ -520,7 +520,7 @@ export class GradingReportsService {
       });
 
       if (!academicTerm) {
-        throw new BadRequestException('Academic term is invalid or deleted');
+        throw new BadRequestException('الفصل الدراسي غير صالح أو محذوف');
       }
 
       termAcademicYearId = academicTerm.academicYearId;
@@ -675,14 +675,14 @@ export class GradingReportsService {
     const parsedToDate = toDate ? new Date(toDate) : undefined;
 
     if (parsedFromDate && Number.isNaN(parsedFromDate.getTime())) {
-      throw new BadRequestException('fromDate must be a valid date');
+      throw new BadRequestException('يجب أن يكون تاريخ البداية صالحًا');
     }
     if (parsedToDate && Number.isNaN(parsedToDate.getTime())) {
-      throw new BadRequestException('toDate must be a valid date');
+      throw new BadRequestException('يجب أن يكون تاريخ النهاية صالحًا');
     }
     if (parsedFromDate && parsedToDate && parsedFromDate > parsedToDate) {
       throw new BadRequestException(
-        'fromDate must be before or equal to toDate',
+        'يجب أن يكون fromDate قبل أو مساويًا لـ toDate',
       );
     }
 
@@ -722,3 +722,4 @@ export class GradingReportsService {
     return Number(value);
   }
 }
+

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import {
@@ -267,7 +267,7 @@ export function AcademicMonthsWorkspace() {
 
     if (isEditing && editingMonthId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية academic-months.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: academic-months.update.");
         return;
       }
 
@@ -286,7 +286,7 @@ export function AcademicMonthsWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية academic-months.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: academic-months.create.");
       return;
     }
 
@@ -344,7 +344,7 @@ export function AcademicMonthsWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>academic-months.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>academic-months.create</code>.
             </div>
           ) : (
             <form

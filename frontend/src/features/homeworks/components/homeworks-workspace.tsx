@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import {
@@ -149,7 +149,7 @@ function formatDate(value: string | null): string {
   if (Number.isNaN(date.getTime())) {
     return "-";
   }
-  return date.toLocaleDateString("en-GB");
+  return date.toLocaleDateString("ar-SA");
 }
 
 function toFormState(item: HomeworkListItem): HomeworkFormState {
@@ -335,7 +335,7 @@ export function HomeworksWorkspace() {
 
     if (isEditing && editingHomeworkId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية homeworks.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: homeworks.update.");
         return;
       }
 
@@ -347,6 +347,7 @@ export function HomeworksWorkspace() {
         {
           onSuccess: () => {
             resetForm();
+            setActionInfo("تم تحديث الواجب بنجاح.");
           },
         },
       );
@@ -354,7 +355,7 @@ export function HomeworksWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية homeworks.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: homeworks.create.");
       return;
     }
 
@@ -367,6 +368,7 @@ export function HomeworksWorkspace() {
         onSuccess: () => {
           resetForm();
           setPage(1);
+          setActionInfo("تم إنشاء الواجب بنجاح.");
         },
       },
     );
@@ -386,12 +388,19 @@ export function HomeworksWorkspace() {
     if (!canUpdate) {
       return;
     }
-    updateMutation.mutate({
-      homeworkId: item.id,
-      payload: {
-        isActive: !item.isActive,
+    updateMutation.mutate(
+      {
+        homeworkId: item.id,
+        payload: {
+          isActive: !item.isActive,
+        },
       },
-    });
+      {
+        onSuccess: () => {
+          setActionInfo(item.isActive ? "تم تعطيل الواجب بنجاح." : "تم تفعيل الواجب بنجاح.");
+        },
+      },
+    );
   };
 
   const handlePopulateStudents = (item: HomeworkListItem) => {
@@ -420,6 +429,7 @@ export function HomeworksWorkspace() {
         if (editingHomeworkId === item.id) {
           resetForm();
         }
+        setActionInfo("تم حذف الواجب بنجاح.");
       },
     });
   };
@@ -446,7 +456,7 @@ export function HomeworksWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>homeworks.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>homeworks.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
@@ -670,7 +680,7 @@ export function HomeworksWorkspace() {
               ) : null}
               {!hasDependenciesReadPermissions ? (
                 <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يلزم صلاحيات قراءة المراجع (السنة/الفصل/الشعبة/المادة/نوع الواجب).
+                  يتطلب هذا الجزء صلاحيات قراءة المراجع (السنة/الفصل/الشعبة/المادة/نوع الواجب).
                 </div>
               ) : null}
 
@@ -821,14 +831,14 @@ export function HomeworksWorkspace() {
         <CardContent className="space-y-3">
           {homeworksQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
           {homeworksQuery.error ? (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {homeworksQuery.error instanceof Error
                 ? homeworksQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
           {!homeworksQuery.isPending && homeworks.length === 0 ? (

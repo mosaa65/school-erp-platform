@@ -65,7 +65,7 @@ test.describe("Grading Policies", () => {
     });
 
     await expectCardsCount(page, "grading-policy-card", 2);
-    await expect(page.getByTestId("grading-policy-card").first().getByText("FINAL")).toBeVisible();
+    await expect(page.getByTestId("grading-policy-card").first().getByText("نهائي")).toBeVisible();
 
     const lastCreatePayload = policiesApi.getLastCreatePayload();
     expect(lastCreatePayload).not.toBeNull();

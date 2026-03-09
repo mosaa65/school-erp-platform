@@ -159,7 +159,7 @@ export function LookupOrphanStatusesWorkspace() {
 
     if (isEditing && editingLookupOrphanStatusId !== null) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية lookup-orphan-statuses.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: lookup-orphan-statuses.update.");
         return;
       }
 
@@ -178,7 +178,7 @@ export function LookupOrphanStatusesWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية lookup-orphan-statuses.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: lookup-orphan-statuses.create.");
       return;
     }
 
@@ -236,7 +236,7 @@ export function LookupOrphanStatusesWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>lookup-orphan-statuses.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>lookup-orphan-statuses.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="orphan-form">

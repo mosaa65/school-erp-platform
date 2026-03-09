@@ -149,6 +149,7 @@ export function GuardiansWorkspace() {
   const [editingGuardianId, setEditingGuardianId] = React.useState<string | null>(null);
   const [formState, setFormState] = React.useState<GuardianFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
   const [formGovernorateId, setFormGovernorateId] = React.useState<string>("");
   const [formDirectorateId, setFormDirectorateId] = React.useState<string>("");
   const [formSubDistrictId, setFormSubDistrictId] = React.useState<string>("");
@@ -443,6 +444,7 @@ export function GuardiansWorkspace() {
 
   const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setActionSuccess(null);
 
     if (!validateForm()) {
       return;
@@ -472,7 +474,7 @@ export function GuardiansWorkspace() {
 
     if (isEditing && editingGuardianId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية guardians.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: guardians.update.");
         return;
       }
 
@@ -484,6 +486,7 @@ export function GuardiansWorkspace() {
         {
           onSuccess: () => {
             resetForm();
+            setActionSuccess("تم تحديث ولي الأمر بنجاح.");
           },
         },
       );
@@ -491,7 +494,7 @@ export function GuardiansWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية guardians.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: guardians.create.");
       return;
     }
 
@@ -499,6 +502,7 @@ export function GuardiansWorkspace() {
       onSuccess: () => {
         resetForm();
         setPage(1);
+        setActionSuccess("تم إنشاء ولي الأمر بنجاح.");
       },
     });
   };
@@ -508,6 +512,7 @@ export function GuardiansWorkspace() {
       return;
     }
 
+    setActionSuccess(null);
     setFormError(null);
     setEditingGuardianId(guardian.id);
     const nextState = toFormState(guardian);
@@ -540,12 +545,21 @@ export function GuardiansWorkspace() {
       return;
     }
 
-    updateMutation.mutate({
-      guardianId: guardian.id,
-      payload: {
-        isActive: !guardian.isActive,
+    updateMutation.mutate(
+      {
+        guardianId: guardian.id,
+        payload: {
+          isActive: !guardian.isActive,
+        },
       },
-    });
+      {
+        onSuccess: () => {
+          setActionSuccess(
+            guardian.isActive ? "تم تعطيل ولي الأمر بنجاح." : "تم تفعيل ولي الأمر بنجاح.",
+          );
+        },
+      },
+    );
   };
 
   const handleDelete = (guardian: GuardianListItem) => {
@@ -563,6 +577,7 @@ export function GuardiansWorkspace() {
         if (editingGuardianId === guardian.id) {
           resetForm();
         }
+        setActionSuccess("تم حذف ولي الأمر بنجاح.");
       },
     });
   };
@@ -587,7 +602,7 @@ export function GuardiansWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>guardians.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>guardians.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
@@ -859,6 +874,11 @@ export function GuardiansWorkspace() {
                   {mutationError}
                 </div>
               ) : null}
+              {actionSuccess ? (
+                <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
+                  {actionSuccess}
+                </div>
+              ) : null}
 
               <div className="flex gap-2">
                 <Button
@@ -987,7 +1007,7 @@ export function GuardiansWorkspace() {
         <CardContent className="space-y-3">
           {guardiansQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
@@ -995,7 +1015,7 @@ export function GuardiansWorkspace() {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {guardiansQuery.error instanceof Error
                 ? guardiansQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 

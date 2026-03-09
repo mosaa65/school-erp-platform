@@ -153,7 +153,7 @@ export class AnnualResultsService {
 
     if (existing) {
       throw new ConflictException(
-        'Annual result already exists for this enrollment and year',
+        'توجد نتيجة سنوية مسبقًا لهذا القيد وهذه السنة',
       );
     }
 
@@ -330,7 +330,7 @@ export class AnnualResultsService {
     });
 
     if (!annualResult) {
-      throw new NotFoundException('Annual result not found');
+      throw new NotFoundException('النتيجة السنوية غير موجودة');
     }
 
     return annualResult;
@@ -344,7 +344,7 @@ export class AnnualResultsService {
     const existing = await this.ensureAnnualResultExists(id);
 
     if (existing.isLocked) {
-      throw new ConflictException('Cannot update a locked annual result');
+      throw new ConflictException('لا يمكن تعديل نتيجة سنوية مقفلة');
     }
 
     if (
@@ -352,7 +352,7 @@ export class AnnualResultsService {
       payload.academicYearId !== undefined
     ) {
       throw new BadRequestException(
-        'studentEnrollmentId and academicYearId cannot be updated',
+        'لا يمكن تعديل studentEnrollmentId أو academicYearId',
       );
     }
 
@@ -446,7 +446,7 @@ export class AnnualResultsService {
     );
 
     if (existing.isLocked) {
-      throw new ConflictException('Annual result is already locked');
+      throw new ConflictException('النتيجة السنوية مقفلة بالفعل');
     }
 
     const annualResult = await this.prisma.annualResult.update({
@@ -486,7 +486,7 @@ export class AnnualResultsService {
     );
 
     if (!existing.isLocked) {
-      throw new ConflictException('Annual result is not locked');
+      throw new ConflictException('النتيجة السنوية غير مقفلة');
     }
 
     const annualResult = await this.prisma.annualResult.update({
@@ -526,7 +526,7 @@ export class AnnualResultsService {
     );
 
     if (existing.isLocked) {
-      throw new ConflictException('Cannot delete a locked annual result');
+      throw new ConflictException('لا يمكن حذف نتيجة سنوية مقفلة');
     }
 
     await this.prisma.annualResult.update({
@@ -578,7 +578,7 @@ export class AnnualResultsService {
 
     if (enrollments.length === 0) {
       return {
-        message: 'No active enrollments found for selected section and year',
+        message: 'لا توجد قيود طلاب نشطة للشعبة والسنة المحددتين',
         summary: {
           annualGrades: {
             created: 0,
@@ -622,7 +622,7 @@ export class AnnualResultsService {
 
     if (!passStatus || !failStatus) {
       throw new BadRequestException(
-        'Annual statuses PASS and FAIL must be configured before calculation',
+        'يجب إعداد حالتي PASS و FAIL قبل تنفيذ الاحتساب السنوي',
       );
     }
 
@@ -1031,7 +1031,7 @@ export class AnnualResultsService {
     });
 
     return {
-      message: 'Annual results calculation completed',
+      message: 'اكتمل احتساب النتائج السنوية',
       summary: {
         annualGrades: annualGradeSummary,
         annualResults: annualResultSummary,
@@ -1067,13 +1067,13 @@ export class AnnualResultsService {
     ]);
 
     if (!academicYear) {
-      throw new BadRequestException('Academic year is invalid or deleted');
+      throw new BadRequestException('السنة الدراسية غير صالحة أو محذوفة');
     }
     if (!section) {
-      throw new BadRequestException('Section is invalid or deleted');
+      throw new BadRequestException('الشعبة غير صالحة أو محذوفة');
     }
     if (!section.isActive) {
-      throw new BadRequestException('Section is inactive');
+      throw new BadRequestException('الشعبة غير نشطة');
     }
 
     return {
@@ -1107,17 +1107,17 @@ export class AnnualResultsService {
     });
 
     if (!enrollment) {
-      throw new BadRequestException('Student enrollment is invalid or deleted');
+      throw new BadRequestException('قيد الطالب غير صالح أو محذوف');
     }
     if (!enrollment.isActive) {
-      throw new BadRequestException('Student enrollment is inactive');
+      throw new BadRequestException('قيد الطالب غير نشط');
     }
     if (!enrollment.section.isActive) {
-      throw new BadRequestException('Enrollment section is inactive');
+      throw new BadRequestException('شعبة القيد غير نشطة');
     }
     if (enrollment.academicYearId !== academicYearId) {
       throw new BadRequestException(
-        'Student enrollment academic year does not match payload academic year',
+        'السنة الدراسية لقيد الطالب لا تطابق السنة المرسلة',
       );
     }
 
@@ -1150,7 +1150,7 @@ export class AnnualResultsService {
     });
 
     if (!annualResult) {
-      throw new NotFoundException('Annual result not found');
+      throw new NotFoundException('النتيجة السنوية غير موجودة');
     }
 
     return {
@@ -1169,7 +1169,7 @@ export class AnnualResultsService {
     });
 
     if (!annualResult) {
-      throw new NotFoundException('Annual result not found');
+      throw new NotFoundException('النتيجة السنوية غير موجودة');
     }
 
     return annualResult;
@@ -1189,7 +1189,7 @@ export class AnnualResultsService {
 
     if (!decision) {
       throw new BadRequestException(
-        'Promotion decision is invalid, deleted, or inactive',
+        'قرار الترفيع غير صالح أو محذوف أو غير نشط',
       );
     }
   }
@@ -1212,7 +1212,7 @@ export class AnnualResultsService {
     });
 
     if (!user) {
-      throw new ForbiddenException('Authenticated user is not active');
+      throw new ForbiddenException('المستخدم المصادق عليه غير نشط');
     }
 
     if (!user.employeeId) {
@@ -1234,7 +1234,7 @@ export class AnnualResultsService {
 
     if (assignmentsCount === 0) {
       throw new ForbiddenException(
-        'You are not assigned to this section for the selected academic year',
+        'أنت غير مكلّف بهذه الشعبة في السنة الدراسية المحددة',
       );
     }
   }
@@ -1297,7 +1297,7 @@ export class AnnualResultsService {
 
     if (!promotedDecision) {
       throw new BadRequestException(
-        'Promotion decision PROMOTED must exist before calculation',
+        'قرار الترفيع PROMOTED يجب أن يكون موجودًا قبل الاحتساب',
       );
     }
 
@@ -1481,7 +1481,7 @@ export class AnnualResultsService {
   private validateScore(value: number, fieldName: string) {
     if (!Number.isFinite(value) || value < 0) {
       throw new BadRequestException(
-        `${fieldName} must be a non-negative number`,
+        `يجب أن تكون قيمة ${fieldName} رقمًا غير سالب`,
       );
     }
   }
@@ -1489,7 +1489,7 @@ export class AnnualResultsService {
   private validateNonNegativeInteger(value: number, fieldName: string) {
     if (!Number.isInteger(value) || value < 0) {
       throw new BadRequestException(
-        `${fieldName} must be a non-negative integer`,
+        `يجب أن تكون قيمة ${fieldName} عددًا صحيحًا غير سالب`,
       );
     }
   }
@@ -1514,7 +1514,7 @@ export class AnnualResultsService {
       error.code === 'P2002'
     ) {
       throw new ConflictException(
-        'Annual result already exists for this enrollment and year',
+        'توجد نتيجة سنوية مسبقًا لهذا القيد وهذه السنة',
       );
     }
 
@@ -1526,6 +1526,7 @@ export class AnnualResultsService {
       return error.message;
     }
 
-    return 'Unknown error';
+    return 'خطأ غير معروف';
   }
 }
+

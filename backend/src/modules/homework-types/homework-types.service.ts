@@ -145,7 +145,7 @@ export class HomeworkTypesService {
     });
 
     if (!homeworkType) {
-      throw new NotFoundException('Homework type not found');
+      throw new NotFoundException('لم يتم العثور على نوع الواجب');
     }
 
     return homeworkType;
@@ -199,7 +199,7 @@ export class HomeworkTypesService {
     const homeworkType = await this.ensureHomeworkTypeExists(id);
 
     if (homeworkType.isSystem) {
-      throw new ConflictException('System homework type cannot be deleted');
+      throw new ConflictException('لا يمكن حذف نوع واجب من النظام');
     }
 
     const linkedHomeworksCount = await this.prisma.homework.count({
@@ -248,7 +248,7 @@ export class HomeworkTypesService {
     });
 
     if (!homeworkType) {
-      throw new NotFoundException('Homework type not found');
+      throw new NotFoundException('لم يتم العثور على نوع الواجب');
     }
 
     return homeworkType;
@@ -258,7 +258,7 @@ export class HomeworkTypesService {
     const normalized = code.trim().toUpperCase();
 
     if (!normalized) {
-      throw new BadRequestException('code cannot be empty');
+      throw new BadRequestException('لا يمكن أن يكون الرمز فارغًا');
     }
 
     return normalized;
@@ -268,7 +268,7 @@ export class HomeworkTypesService {
     const normalized = value.trim();
 
     if (!normalized) {
-      throw new BadRequestException(`${fieldName} cannot be empty`);
+      throw new BadRequestException(`لا يمكن أن يكون ${fieldName} فارغًا`);
     }
 
     return normalized;
@@ -279,7 +279,7 @@ export class HomeworkTypesService {
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === 'P2002'
     ) {
-      throw new ConflictException('Homework type code already exists');
+      throw new ConflictException('رمز نوع الواجب موجود مسبقًا');
     }
 
     throw error;
@@ -290,6 +290,7 @@ export class HomeworkTypesService {
       return error.message;
     }
 
-    return 'Unknown error';
+    return 'خطأ غير معروف';
   }
 }
+

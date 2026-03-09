@@ -1,7 +1,14 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
-import { LoaderCircle, PencilLine, RefreshCw, Search, Trash2, UserRoundPlus } from "lucide-react";
+import {
+  LoaderCircle,
+  PencilLine,
+  RefreshCw,
+  Search,
+  Trash2,
+  UserRoundPlus,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,7 +81,13 @@ function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
-export function UsersManagementWorkspace() {
+type UsersManagementWorkspaceProps = {
+  initialSearchQuery?: string;
+};
+
+export function UsersManagementWorkspace({
+  initialSearchQuery = "",
+}: UsersManagementWorkspaceProps) {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("users.create");
   const canUpdate = hasPermission("users.update");
@@ -83,14 +96,20 @@ export function UsersManagementWorkspace() {
   const canReadEmployees = hasPermission("employees.read");
 
   const [page, setPage] = React.useState(1);
-  const [searchInput, setSearchInput] = React.useState("");
-  const [search, setSearch] = React.useState("");
-  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">("all");
+  const [searchInput, setSearchInput] = React.useState(initialSearchQuery);
+  const [search, setSearch] = React.useState(initialSearchQuery.trim());
+  const [activeFilter, setActiveFilter] = React.useState<
+    "all" | "active" | "inactive"
+  >("all");
 
   const [editingUserId, setEditingUserId] = React.useState<string | null>(null);
-  const [formState, setFormState] = React.useState<UserFormState>(DEFAULT_FORM_STATE);
+  const [formState, setFormState] =
+    React.useState<UserFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
-  const [employeeSelections, setEmployeeSelections] = React.useState<Record<string, string>>({});
+  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
+  const [employeeSelections, setEmployeeSelections] = React.useState<
+    Record<string, string>
+  >({});
 
   const usersQuery = useUsersQuery({
     page,
@@ -129,12 +148,20 @@ export function UsersManagementWorkspace() {
   }, [usersQuery.data?.data]);
 
   React.useEffect(() => {
+    setSearchInput(initialSearchQuery);
+    setSearch(initialSearchQuery.trim());
+    setPage(1);
+  }, [initialSearchQuery]);
+
+  React.useEffect(() => {
     if (!isEditing) {
       return;
     }
 
     const currentUsers = usersQuery.data?.data ?? [];
-    const userStillExists = currentUsers.some((user) => user.id === editingUserId);
+    const userStillExists = currentUsers.some(
+      (user) => user.id === editingUserId,
+    );
 
     if (!userStillExists) {
       setEditingUserId(null);
@@ -163,7 +190,9 @@ export function UsersManagementWorkspace() {
     setSearch(searchInput.trim());
   };
 
-  const handleStatusFilterChange = (nextFilter: "all" | "active" | "inactive") => {
+  const handleStatusFilterChange = (
+    nextFilter: "all" | "active" | "inactive",
+  ) => {
     setPage(1);
     setActiveFilter(nextFilter);
   };
@@ -175,6 +204,7 @@ export function UsersManagementWorkspace() {
 
     setEditingUserId(user.id);
     setFormError(null);
+    setActionSuccess(null);
     setFormState(toFormState(user));
   };
 
@@ -184,7 +214,9 @@ export function UsersManagementWorkspace() {
     const lastName = formState.lastName.trim();
 
     if (!email || !firstName || !lastName) {
-      setFormError("الرجاء تعبئة الحقول الإلزامية: البريد، الاسم الأول، الاسم الأخير.");
+      setFormError(
+        "الرجاء تعبئة الحقول الإلزامية: البريد، الاسم الأول، الاسم الأخير.",
+      );
       return false;
     }
 
@@ -198,7 +230,11 @@ export function UsersManagementWorkspace() {
       return false;
     }
 
-    if (isEditing && formState.password.trim() && formState.password.trim().length < 8) {
+    if (
+      isEditing &&
+      formState.password.trim() &&
+      formState.password.trim().length < 8
+    ) {
       setFormError("كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل.");
       return false;
     }
@@ -209,6 +245,7 @@ export function UsersManagementWorkspace() {
 
   const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setActionSuccess(null);
 
     if (!validateForm()) {
       return;
@@ -226,7 +263,7 @@ export function UsersManagementWorkspace() {
 
     if (isEditing && editingUserId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية تعديل المستخدمين.");
+        setFormError("لا تملك الصلاحية المطلوبة لتعديل المستخدمين.");
         return;
       }
 
@@ -243,6 +280,7 @@ export function UsersManagementWorkspace() {
         {
           onSuccess: () => {
             resetForm();
+            setActionSuccess("تم تحديث المستخدم بنجاح.");
           },
         },
       );
@@ -250,7 +288,7 @@ export function UsersManagementWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية إنشاء مستخدم جديد.");
+      setFormError("لا تملك الصلاحية المطلوبة لإنشاء مستخدم جديد.");
       return;
     }
 
@@ -263,6 +301,7 @@ export function UsersManagementWorkspace() {
         onSuccess: () => {
           resetForm();
           setPage(1);
+          setActionSuccess("تم إنشاء المستخدم بنجاح.");
         },
       },
     );
@@ -273,12 +312,23 @@ export function UsersManagementWorkspace() {
       return;
     }
 
-    updateUserMutation.mutate({
-      userId: user.id,
-      payload: {
-        isActive: !user.isActive,
+    updateUserMutation.mutate(
+      {
+        userId: user.id,
+        payload: {
+          isActive: !user.isActive,
+        },
       },
-    });
+      {
+        onSuccess: () => {
+          setActionSuccess(
+            user.isActive
+              ? "تم تعطيل المستخدم بنجاح."
+              : "تم تفعيل المستخدم بنجاح.",
+          );
+        },
+      },
+    );
   };
 
   const handleDeleteUser = (user: UserListItem) => {
@@ -286,7 +336,9 @@ export function UsersManagementWorkspace() {
       return;
     }
 
-    const confirmed = window.confirm(`تأكيد حذف المستخدم ${user.firstName} ${user.lastName}؟`);
+    const confirmed = window.confirm(
+      `تأكيد حذف المستخدم ${user.firstName} ${user.lastName}؟`,
+    );
     if (!confirmed) {
       return;
     }
@@ -296,6 +348,7 @@ export function UsersManagementWorkspace() {
         if (editingUserId === user.id) {
           resetForm();
         }
+        setActionSuccess("تم حذف المستخدم بنجاح.");
       },
     });
   };
@@ -318,6 +371,7 @@ export function UsersManagementWorkspace() {
       {
         onSuccess: () => {
           setEmployeeSelections((prev) => ({ ...prev, [userId]: "" }));
+          setActionSuccess("تم ربط المستخدم بالموظف بنجاح.");
         },
       },
     );
@@ -328,13 +382,18 @@ export function UsersManagementWorkspace() {
       return;
     }
 
-    unlinkUserEmployeeMutation.mutate(userId);
+    unlinkUserEmployeeMutation.mutate(userId, {
+      onSuccess: () => {
+        setActionSuccess("تم فك ربط المستخدم عن الموظف بنجاح.");
+      },
+    });
   };
 
   const users = usersQuery.data?.data ?? [];
   const pagination = usersQuery.data?.pagination;
 
-  const isFormSubmitting = createUserMutation.isPending || updateUserMutation.isPending;
+  const isFormSubmitting =
+    createUserMutation.isPending || updateUserMutation.isPending;
 
   return (
     <div className="grid gap-4 xl:grid-cols-[360px_1fr]">
@@ -353,19 +412,25 @@ export function UsersManagementWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>users.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>users.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
               <div className="space-y-1.5">
-                <label htmlFor="user-email" className="text-xs font-medium text-muted-foreground">
+                <label
+                  htmlFor="user-email"
+                  className="text-xs font-medium text-muted-foreground"
+                >
                   البريد الإلكتروني *
                 </label>
                 <Input
                   id="user-email"
                   value={formState.email}
                   onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, email: event.target.value }))
+                    setFormState((prev) => ({
+                      ...prev,
+                      email: event.target.value,
+                    }))
                   }
                   placeholder="user@school.local"
                   required
@@ -373,14 +438,20 @@ export function UsersManagementWorkspace() {
               </div>
 
               <div className="space-y-1.5">
-                <label htmlFor="user-username" className="text-xs font-medium text-muted-foreground">
+                <label
+                  htmlFor="user-username"
+                  className="text-xs font-medium text-muted-foreground"
+                >
                   اسم المستخدم
                 </label>
                 <Input
                   id="user-username"
                   value={formState.username}
                   onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, username: event.target.value }))
+                    setFormState((prev) => ({
+                      ...prev,
+                      username: event.target.value,
+                    }))
                   }
                   placeholder="ahmad_teacher"
                 />
@@ -388,22 +459,32 @@ export function UsersManagementWorkspace() {
 
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">الاسم الأول *</label>
+                  <label className="text-xs font-medium text-muted-foreground">
+                    الاسم الأول *
+                  </label>
                   <Input
                     value={formState.firstName}
                     onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, firstName: event.target.value }))
+                      setFormState((prev) => ({
+                        ...prev,
+                        firstName: event.target.value,
+                      }))
                     }
                     placeholder="أحمد"
                     required
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">الاسم الأخير *</label>
+                  <label className="text-xs font-medium text-muted-foreground">
+                    الاسم الأخير *
+                  </label>
                   <Input
                     value={formState.lastName}
                     onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, lastName: event.target.value }))
+                      setFormState((prev) => ({
+                        ...prev,
+                        lastName: event.target.value,
+                      }))
                     }
                     placeholder="العواضي"
                     required
@@ -419,7 +500,10 @@ export function UsersManagementWorkspace() {
                   type="password"
                   value={formState.password}
                   onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, password: event.target.value }))
+                    setFormState((prev) => ({
+                      ...prev,
+                      password: event.target.value,
+                    }))
                   }
                   placeholder="StrongPassword123!"
                   required={!isEditing}
@@ -435,7 +519,10 @@ export function UsersManagementWorkspace() {
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   value={formState.employeeId}
                   onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
+                    setFormState((prev) => ({
+                      ...prev,
+                      employeeId: event.target.value,
+                    }))
                   }
                   disabled={!canReadEmployees || employeesQuery.isLoading}
                 >
@@ -448,19 +535,22 @@ export function UsersManagementWorkspace() {
                 </select>
                 {!canReadEmployees ? (
                   <p className="text-xs text-muted-foreground">
-                    لا تملك صلاحية <code>employees.read</code> لجلب قائمة الموظفين.
+                    لا تملك الصلاحية المطلوبة: <code>employees.read</code> لجلب قائمة
+                    الموظفين.
                   </p>
                 ) : null}
               </div>
 
               <div className="space-y-1.5">
-                <p className="text-xs font-medium text-muted-foreground">الأدوار</p>
+                <p className="text-xs font-medium text-muted-foreground">
+                  الأدوار
+                </p>
                 <div className="max-h-36 space-y-1 overflow-y-auto rounded-md border p-2">
                   {(rolesQuery.data ?? []).length === 0 ? (
                     <p className="text-xs text-muted-foreground">
                       {canReadRoles
                         ? "لا توجد أدوار متاحة حاليًا."
-                        : "لا تملك صلاحية roles.read لجلب قائمة الأدوار."}
+                        : "لا تملك الصلاحية المطلوبة: roles.read لعرض قائمة الأدوار."}
                     </p>
                   ) : (
                     (rolesQuery.data ?? []).map((role) => (
@@ -474,7 +564,9 @@ export function UsersManagementWorkspace() {
                         <input
                           type="checkbox"
                           checked={formState.roleIds.includes(role.id)}
-                          onChange={(event) => handleRoleToggle(role.id, event.target.checked)}
+                          onChange={(event) =>
+                            handleRoleToggle(role.id, event.target.checked)
+                          }
                         />
                       </label>
                     ))
@@ -488,7 +580,10 @@ export function UsersManagementWorkspace() {
                   type="checkbox"
                   checked={formState.isActive}
                   onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                    setFormState((prev) => ({
+                      ...prev,
+                      isActive: event.target.checked,
+                    }))
                   }
                 />
               </label>
@@ -502,6 +597,11 @@ export function UsersManagementWorkspace() {
               {mutationError ? (
                 <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
                   {mutationError}
+                </div>
+              ) : null}
+              {actionSuccess ? (
+                <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
+                  {actionSuccess}
                 </div>
               ) : null}
 
@@ -540,7 +640,10 @@ export function UsersManagementWorkspace() {
           <CardDescription>
             إدارة كاملة للمستخدمين: بحث، فلترة، تعديل، حذف ناعم، وربط موظف.
           </CardDescription>
-          <form onSubmit={handleSearchSubmit} className="grid gap-2 md:grid-cols-[1fr_160px_auto]">
+          <form
+            onSubmit={handleSearchSubmit}
+            className="grid gap-2 md:grid-cols-[1fr_160px_auto]"
+          >
             <div className="relative">
               <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -554,7 +657,9 @@ export function UsersManagementWorkspace() {
               className="h-10 rounded-md border border-input bg-background px-3 text-sm"
               value={activeFilter}
               onChange={(event) =>
-                handleStatusFilterChange(event.target.value as "all" | "active" | "inactive")
+                handleStatusFilterChange(
+                  event.target.value as "all" | "active" | "inactive",
+                )
               }
             >
               <option value="all">كل الحالات</option>
@@ -591,7 +696,9 @@ export function UsersManagementWorkspace() {
           {users.map((user) => {
             const hasLinkedEmployee = Boolean(user.employee);
             const selectableEmployees = (employeesQuery.data ?? []).filter(
-              (employee) => !linkedEmployeeIds.has(employee.id) || employee.id === user.employee?.id,
+              (employee) =>
+                !linkedEmployeeIds.has(employee.id) ||
+                employee.id === user.employee?.id,
             );
 
             return (
@@ -604,7 +711,9 @@ export function UsersManagementWorkspace() {
                     <p className="font-medium">
                       {user.firstName} {user.lastName}
                     </p>
-                    <p className="text-xs text-muted-foreground">{user.email}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {user.email}
+                    </p>
                     {user.username ? (
                       <p className="text-xs text-muted-foreground">
                         اسم المستخدم: <code>{user.username}</code>
@@ -677,7 +786,9 @@ export function UsersManagementWorkspace() {
                       variant="outline"
                       size="sm"
                       onClick={() => handleUnlinkEmployee(user.id)}
-                      disabled={!canUpdate || unlinkUserEmployeeMutation.isPending}
+                      disabled={
+                        !canUpdate || unlinkUserEmployeeMutation.isPending
+                      }
                     >
                       فك الربط
                     </Button>
@@ -735,7 +846,9 @@ export function UsersManagementWorkspace() {
                 variant="outline"
                 size="sm"
                 onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={!pagination || pagination.page <= 1 || usersQuery.isFetching}
+                disabled={
+                  !pagination || pagination.page <= 1 || usersQuery.isFetching
+                }
               >
                 السابق
               </Button>
@@ -744,7 +857,9 @@ export function UsersManagementWorkspace() {
                 size="sm"
                 onClick={() =>
                   setPage((prev) =>
-                    pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
+                    pagination
+                      ? Math.min(prev + 1, pagination.totalPages)
+                      : prev,
                   )
                 }
                 disabled={
@@ -774,8 +889,3 @@ export function UsersManagementWorkspace() {
     </div>
   );
 }
-
-
-
-
-

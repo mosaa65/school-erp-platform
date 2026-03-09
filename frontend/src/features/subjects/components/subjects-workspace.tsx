@@ -132,6 +132,7 @@ export function SubjectsWorkspace() {
   const [editingSubjectId, setEditingSubjectId] = React.useState<string | null>(null);
   const [formState, setFormState] = React.useState<SubjectFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
 
   const subjectsQuery = useSubjectsQuery({
     page,
@@ -210,6 +211,7 @@ export function SubjectsWorkspace() {
 
   const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setActionSuccess(null);
 
     if (!validateForm()) {
       return;
@@ -225,7 +227,7 @@ export function SubjectsWorkspace() {
 
     if (isEditing && editingSubjectId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية subjects.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: subjects.update.");
         return;
       }
 
@@ -237,6 +239,7 @@ export function SubjectsWorkspace() {
         {
           onSuccess: () => {
             resetForm();
+            setActionSuccess("تم تحديث المادة بنجاح.");
           },
         },
       );
@@ -244,7 +247,7 @@ export function SubjectsWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية subjects.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: subjects.create.");
       return;
     }
 
@@ -252,6 +255,7 @@ export function SubjectsWorkspace() {
       onSuccess: () => {
         resetForm();
         setPage(1);
+        setActionSuccess("تم إنشاء المادة بنجاح.");
       },
     });
   };
@@ -261,6 +265,7 @@ export function SubjectsWorkspace() {
       return;
     }
 
+    setActionSuccess(null);
     setFormError(null);
     setEditingSubjectId(subject.id);
     setFormState(toFormState(subject));
@@ -281,6 +286,7 @@ export function SubjectsWorkspace() {
         if (editingSubjectId === subject.id) {
           resetForm();
         }
+        setActionSuccess("تم حذف المادة بنجاح.");
       },
     });
   };
@@ -305,7 +311,7 @@ export function SubjectsWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>subjects.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>subjects.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
@@ -388,6 +394,11 @@ export function SubjectsWorkspace() {
                   {mutationError}
                 </div>
               ) : null}
+              {actionSuccess ? (
+                <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
+                  {actionSuccess}
+                </div>
+              ) : null}
 
               <div className="flex gap-2">
                 <Button
@@ -400,7 +411,7 @@ export function SubjectsWorkspace() {
                   ) : (
                     <BookOpenText className="h-4 w-4" />
                   )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء Subject"}
+                  {isEditing ? "حفظ التعديلات" : "إنشاء مادة"}
                 </Button>
                 {isEditing ? (
                   <Button type="button" variant="outline" onClick={resetForm}>
@@ -474,7 +485,7 @@ export function SubjectsWorkspace() {
         <CardContent className="space-y-3">
           {subjectsQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
@@ -482,7 +493,7 @@ export function SubjectsWorkspace() {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {subjectsQuery.error instanceof Error
                 ? subjectsQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 

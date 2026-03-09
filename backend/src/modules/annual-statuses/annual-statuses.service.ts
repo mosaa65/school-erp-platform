@@ -145,7 +145,7 @@ export class AnnualStatusesService {
     });
 
     if (!annualStatus) {
-      throw new NotFoundException('Annual status not found');
+      throw new NotFoundException('لم يتم العثور على الحالة السنوية');
     }
 
     return annualStatus;
@@ -164,7 +164,7 @@ export class AnnualStatusesService {
       payload.code !== annualStatus.code
     ) {
       throw new ConflictException(
-        'System annual status code cannot be changed',
+        'لا يمكن تعديل رمز الحالة السنوية النظامية',
       );
     }
 
@@ -209,7 +209,7 @@ export class AnnualStatusesService {
     const annualStatus = await this.ensureAnnualStatusExists(id);
 
     if (annualStatus.isSystem) {
-      throw new ConflictException('System annual status cannot be deleted');
+      throw new ConflictException('لا يمكن حذف حالة سنوية من النظام');
     }
 
     const linkedAnnualGrades = await this.prisma.annualGrade.count({
@@ -260,7 +260,7 @@ export class AnnualStatusesService {
     });
 
     if (!annualStatus) {
-      throw new NotFoundException('Annual status not found');
+      throw new NotFoundException('لم يتم العثور على الحالة السنوية');
     }
 
     return annualStatus;
@@ -270,7 +270,7 @@ export class AnnualStatusesService {
     const normalized = code.trim().toUpperCase();
 
     if (!normalized) {
-      throw new BadRequestException('code cannot be empty');
+      throw new BadRequestException('لا يمكن أن يكون الرمز فارغًا');
     }
 
     return normalized;
@@ -280,7 +280,7 @@ export class AnnualStatusesService {
     const normalized = value.trim();
 
     if (!normalized) {
-      throw new BadRequestException(`${fieldName} cannot be empty`);
+      throw new BadRequestException(`لا يمكن أن يكون ${fieldName} فارغًا`);
     }
 
     return normalized;
@@ -291,7 +291,7 @@ export class AnnualStatusesService {
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === 'P2002'
     ) {
-      throw new ConflictException('Annual status code already exists');
+      throw new ConflictException('رمز الحالة السنوية موجود مسبقًا');
     }
 
     throw error;
@@ -302,6 +302,7 @@ export class AnnualStatusesService {
       return error.message;
     }
 
-    return 'Unknown error';
+    return 'خطأ غير معروف';
   }
 }
+

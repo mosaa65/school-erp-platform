@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import {
@@ -37,7 +37,7 @@ import { useSectionOptionsQuery } from "@/features/monthly-grades/hooks/use-sect
 import { useSubjectOptionsQuery } from "@/features/monthly-grades/hooks/use-subject-options-query";
 import { useStudentEnrollmentOptionsQuery } from "@/features/monthly-grades/hooks/use-student-enrollment-options-query";
 import { translateGradingWorkflowStatus } from "@/lib/i18n/ar";
-import { formatNameCodeLabel } from "@/lib/option-labels";
+import { formatNameCodeLabel, formatSectionWithGradeLabel } from "@/lib/option-labels";
 import type { GradingWorkflowStatus, MonthlyGradeListItem } from "@/lib/api/client";
 
 type FormState = {
@@ -134,6 +134,7 @@ export function MonthlyGradesWorkspace() {
   const [calcForm, setCalcForm] = React.useState<CalculateFormState>(DEFAULT_CALC_FORM);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [calcInfo, setCalcInfo] = React.useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
 
   const monthsQuery = useAcademicMonthOptionsQuery();
   const sectionsQuery = useSectionOptionsQuery();
@@ -249,7 +250,7 @@ export function MonthlyGradesWorkspace() {
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={calcForm.sectionId} onChange={(event) => setCalcForm((prev) => ({ ...prev, sectionId: event.target.value }))}>
                 <option value="">الشعبة</option>
-                {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
+                {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatSectionWithGradeLabel(item)}</option>)}
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={calcForm.subjectId} onChange={(event) => setCalcForm((prev) => ({ ...prev, subjectId: event.target.value }))}>
                 <option value="">المادة</option>
@@ -276,16 +277,17 @@ export function MonthlyGradesWorkspace() {
 
           <form className="space-y-3" onSubmit={(event) => {
             event.preventDefault();
+            setActionSuccess(null);
             if (!validateForm()) return;
             const activityScore = parseOptionalNumber(form.activityScore);
             const contributionScore = parseOptionalNumber(form.contributionScore);
             if (editingId) {
-              if (!canUpdate) { setFormError("لا تملك صلاحية monthly-grades.update."); return; }
-              updateMutation.mutate({ monthlyGradeId: editingId, payload: { activityScore, contributionScore, status: form.status, notes: toOptionalString(form.notes), isActive: form.isActive } }, { onSuccess: () => resetForm() });
+              if (!canUpdate) { setFormError("لا تملك الصلاحية المطلوبة: monthly-grades.update."); return; }
+              updateMutation.mutate({ monthlyGradeId: editingId, payload: { activityScore, contributionScore, status: form.status, notes: toOptionalString(form.notes), isActive: form.isActive } }, { onSuccess: () => { resetForm(); setActionSuccess("تم تحديث الدرجة الشهرية بنجاح."); } });
               return;
             }
-            if (!canCreate) { setFormError("لا تملك صلاحية monthly-grades.create."); return; }
-            createMutation.mutate({ studentEnrollmentId: form.studentEnrollmentId, subjectId: form.subjectId, academicMonthId: form.academicMonthId, activityScore, contributionScore, notes: toOptionalString(form.notes), isActive: form.isActive }, { onSuccess: () => resetForm() });
+            if (!canCreate) { setFormError("لا تملك الصلاحية المطلوبة: monthly-grades.create."); return; }
+            createMutation.mutate({ studentEnrollmentId: form.studentEnrollmentId, subjectId: form.subjectId, academicMonthId: form.academicMonthId, activityScore, contributionScore, notes: toOptionalString(form.notes), isActive: form.isActive }, { onSuccess: () => { resetForm(); setActionSuccess("تم إنشاء الدرجة الشهرية بنجاح."); } });
           }}>
             <div className="grid gap-2 md:grid-cols-2">
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.academicMonthId} disabled={editingId !== null} onChange={(event) => setForm((prev) => ({ ...prev, academicMonthId: event.target.value, studentEnrollmentId: "" }))}>
@@ -294,7 +296,7 @@ export function MonthlyGradesWorkspace() {
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.sectionId} disabled={editingId !== null} onChange={(event) => setForm((prev) => ({ ...prev, sectionId: event.target.value, studentEnrollmentId: "" }))}>
                 <option value="">الشعبة *</option>
-                {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
+                {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatSectionWithGradeLabel(item)}</option>)}
               </select>
             </div>
             <div className="grid gap-2 md:grid-cols-2">
@@ -304,7 +306,7 @@ export function MonthlyGradesWorkspace() {
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.studentEnrollmentId} disabled={editingId !== null} onChange={(event) => setForm((prev) => ({ ...prev, studentEnrollmentId: event.target.value }))}>
                 <option value="">القيد *</option>
-                {(enrollmentsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.student.fullName} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatNameCodeLabel(item.section.name, item.section.code)})</option>)}
+                {(enrollmentsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.student.fullName} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatSectionWithGradeLabel(item.section)})</option>)}
               </select>
             </div>
             <div className="grid gap-2 md:grid-cols-2">
@@ -326,6 +328,7 @@ export function MonthlyGradesWorkspace() {
             </label>
             {formError ? <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">{formError}</div> : null}
             {mutationError ? <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">{mutationError}</div> : null}
+            {actionSuccess ? <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">{actionSuccess}</div> : null}
             <div className="flex gap-2">
               <Button type="submit" className="flex-1 gap-2" disabled={isSubmitting}>
                 {isSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Medal className="h-4 w-4" />}
@@ -354,7 +357,7 @@ export function MonthlyGradesWorkspace() {
             </select>
             <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={sectionFilter} onChange={(event) => { setPage(1); setSectionFilter(event.target.value); }}>
               <option value="all">كل الشعب</option>
-              {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
+              {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatSectionWithGradeLabel(item)}</option>)}
             </select>
             <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={subjectFilter} onChange={(event) => { setPage(1); setSubjectFilter(event.target.value); }}>
               <option value="all">كل المواد</option>
@@ -369,8 +372,8 @@ export function MonthlyGradesWorkspace() {
           </form>
         </CardHeader>
         <CardContent className="space-y-3">
-          {monthlyGradesQuery.isPending ? <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">جارٍ التحميل...</div> : null}
-          {monthlyGradesQuery.error ? <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{monthlyGradesQuery.error instanceof Error ? monthlyGradesQuery.error.message : "فشل التحميل"}</div> : null}
+          {monthlyGradesQuery.isPending ? <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">جارٍ تحميل البيانات...</div> : null}
+          {monthlyGradesQuery.error ? <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{monthlyGradesQuery.error instanceof Error ? monthlyGradesQuery.error.message : "تعذّر تحميل البيانات."}</div> : null}
           {!monthlyGradesQuery.isPending && records.length === 0 ? <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">لا توجد نتائج.</div> : null}
 
           {records.map((item) => (
@@ -378,7 +381,7 @@ export function MonthlyGradesWorkspace() {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="space-y-1">
                   <p className="font-medium">{item.studentEnrollment.student.fullName} - {formatNameCodeLabel(item.subject.name, item.subject.code)}</p>
-                  <p className="text-xs text-muted-foreground">{formatNameCodeLabel(item.academicMonth.name, item.academicMonth.code)} | {formatNameCodeLabel(item.studentEnrollment.section.name, item.studentEnrollment.section.code)}</p>
+                  <p className="text-xs text-muted-foreground">{formatNameCodeLabel(item.academicMonth.name, item.academicMonth.code)} | {formatSectionWithGradeLabel(item.studentEnrollment.section)}</p>
                   <p className="text-xs text-muted-foreground">الحضور {item.attendanceScore} | الواجب {item.homeworkScore} | النشاط {item.activityScore} | المشاركة {item.contributionScore} | الاختبار {item.examScore} | الإجمالي {item.monthlyTotal}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -388,17 +391,17 @@ export function MonthlyGradesWorkspace() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { if (!item.isLocked && canUpdate) { setEditingId(item.id); setEditingItem(item); setForm(toFormState(item)); setFormError(null); } }} disabled={!canUpdate || item.isLocked || updateMutation.isPending}>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { if (!item.isLocked && canUpdate) { setEditingId(item.id); setEditingItem(item); setForm(toFormState(item)); setFormError(null); setActionSuccess(null); } }} disabled={!canUpdate || item.isLocked || updateMutation.isPending}>
                   <PencilLine className="h-3.5 w-3.5" />تعديل
                 </Button>
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { if (item.isLocked) { if (canUnlock) unlockMutation.mutate(item.id); } else if (canLock) { lockMutation.mutate(item.id); } }} disabled={(item.isLocked && !canUnlock) || (!item.isLocked && !canLock) || lockMutation.isPending || unlockMutation.isPending}>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { if (item.isLocked) { if (canUnlock) unlockMutation.mutate(item.id, { onSuccess: () => setActionSuccess("تم إلغاء قفل الدرجة الشهرية بنجاح.") }); } else if (canLock) { lockMutation.mutate(item.id, { onSuccess: () => setActionSuccess("تم قفل الدرجة الشهرية بنجاح.") }); } }} disabled={(item.isLocked && !canUnlock) || (!item.isLocked && !canLock) || lockMutation.isPending || unlockMutation.isPending}>
                   {item.isLocked ? <LockOpen className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
                   {item.isLocked ? "إلغاء القفل" : "قفل"}
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => { if (!item.isLocked && canUpdate) updateMutation.mutate({ monthlyGradeId: item.id, payload: { isActive: !item.isActive } }); }} disabled={!canUpdate || item.isLocked || updateMutation.isPending}>
+                <Button variant="outline" size="sm" onClick={() => { if (!item.isLocked && canUpdate) updateMutation.mutate({ monthlyGradeId: item.id, payload: { isActive: !item.isActive } }, { onSuccess: () => setActionSuccess(item.isActive ? "تم تعطيل الدرجة الشهرية بنجاح." : "تم تفعيل الدرجة الشهرية بنجاح.") }); }} disabled={!canUpdate || item.isLocked || updateMutation.isPending}>
                   {item.isActive ? "تعطيل" : "تفعيل"}
                 </Button>
-                <Button variant="destructive" size="sm" className="gap-1.5" onClick={() => { if (!item.isLocked && canDelete && window.confirm("تأكيد الحذف؟")) deleteMutation.mutate(item.id); }} disabled={!canDelete || item.isLocked || deleteMutation.isPending}>
+                <Button variant="destructive" size="sm" className="gap-1.5" onClick={() => { if (!item.isLocked && canDelete && window.confirm("تأكيد الحذف؟")) deleteMutation.mutate(item.id, { onSuccess: () => setActionSuccess("تم حذف الدرجة الشهرية بنجاح.") }); }} disabled={!canDelete || item.isLocked || deleteMutation.isPending}>
                   <Trash2 className="h-3.5 w-3.5" />حذف
                 </Button>
               </div>
@@ -421,6 +424,7 @@ export function MonthlyGradesWorkspace() {
     </div>
   );
 }
+
 
 
 

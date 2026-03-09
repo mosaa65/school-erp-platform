@@ -232,7 +232,7 @@ export class GradingPoliciesService {
     });
 
     if (!gradingPolicy) {
-      throw new NotFoundException('Grading policy not found');
+      throw new NotFoundException('لم يتم العثور على سياسة التقدير');
     }
 
     return gradingPolicy;
@@ -332,7 +332,7 @@ export class GradingPoliciesService {
     });
 
     if (!gradingPolicy) {
-      throw new NotFoundException('Grading policy not found');
+      throw new NotFoundException('لم يتم العثور على سياسة التقدير');
     }
 
     return gradingPolicy;
@@ -368,19 +368,19 @@ export class GradingPoliciesService {
     ]);
 
     if (!academicYear) {
-      throw new BadRequestException('Academic year is invalid or deleted');
+      throw new BadRequestException('السنة الدراسية غير صالحة أو محذوفة');
     }
 
     if (!gradeLevel) {
-      throw new BadRequestException('Grade level is invalid or deleted');
+      throw new BadRequestException('الصف الدراسي غير صالح أو محذوف');
     }
 
     if (!subject) {
-      throw new BadRequestException('Subject is invalid or deleted');
+      throw new BadRequestException('المادة غير صالحة أو محذوفة');
     }
 
     if (!subject.isActive) {
-      throw new BadRequestException('Subject is inactive');
+      throw new BadRequestException('المادة غير نشطة');
     }
   }
 
@@ -405,13 +405,13 @@ export class GradingPoliciesService {
 
     for (const [fieldName, value] of scorePairs) {
       if (value !== undefined && value < 0) {
-        throw new BadRequestException(`${fieldName} cannot be negative`);
+        throw new BadRequestException(`لا يمكن أن تكون قيمة ${fieldName} سالبة`);
       }
     }
 
     if (payload.passingScore !== undefined) {
       if (payload.passingScore < 0 || payload.passingScore > 100) {
-        throw new BadRequestException('passingScore must be between 0 and 100');
+        throw new BadRequestException('يجب أن تكون درجة النجاح بين 0 و100');
       }
     }
   }
@@ -422,7 +422,7 @@ export class GradingPoliciesService {
       error.code === 'P2002'
     ) {
       throw new ConflictException(
-        'Grading policy already exists for this year, grade, subject, and assessment type',
+        'سياسة التقدير موجودة مسبقًا لهذه السنة والصف والمادة ونوع التقييم',
       );
     }
 
@@ -434,6 +434,7 @@ export class GradingPoliciesService {
       return error.message;
     }
 
-    return 'Unknown error';
+    return 'خطأ غير معروف';
   }
 }
+

@@ -5,6 +5,7 @@ import {
   ApiError,
   apiClient,
   type EmploymentType,
+  type OperationalReadinessFilter,
 } from "@/lib/api/client";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 
@@ -19,6 +20,7 @@ type UseEmployeesQueryOptions = {
   qualificationId?: number;
   jobRoleId?: number;
   isActive?: boolean;
+  operationalReadiness?: OperationalReadinessFilter;
 };
 
 export function useEmployeesQuery(options: UseEmployeesQueryOptions = {}) {
@@ -37,7 +39,12 @@ export function useEmployeesQuery(options: UseEmployeesQueryOptions = {}) {
       options.localityId ?? "all",
       options.qualificationId ?? "all",
       options.jobRoleId ?? "all",
-      options.isActive === undefined ? "all" : options.isActive ? "active" : "inactive",
+      options.isActive === undefined
+        ? "all"
+        : options.isActive
+          ? "active"
+          : "inactive",
+      options.operationalReadiness ?? "all",
     ],
     enabled: auth.isHydrated && auth.isAuthenticated,
     queryFn: async () => {
@@ -53,6 +60,7 @@ export function useEmployeesQuery(options: UseEmployeesQueryOptions = {}) {
           qualificationId: options.qualificationId,
           jobRoleId: options.jobRoleId,
           isActive: options.isActive,
+          operationalReadiness: options.operationalReadiness,
         });
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) {
@@ -64,5 +72,3 @@ export function useEmployeesQuery(options: UseEmployeesQueryOptions = {}) {
     },
   });
 }
-
-

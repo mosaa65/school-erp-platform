@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import {
@@ -39,7 +39,7 @@ import { useAcademicTermOptionsQuery } from "@/features/semester-grades/hooks/us
 import { useSemesterGradesQuery } from "@/features/semester-grades/hooks/use-semester-grades-query";
 import type { GradingWorkflowStatus, SemesterGradeListItem } from "@/lib/api/client";
 import { translateGradingWorkflowStatus } from "@/lib/i18n/ar";
-import { formatNameCodeLabel } from "@/lib/option-labels";
+import { formatNameCodeLabel, formatSectionWithGradeLabel } from "@/lib/option-labels";
 
 type FormState = {
   academicTermId: string;
@@ -133,6 +133,7 @@ export function SemesterGradesWorkspace() {
   const [formError, setFormError] = React.useState<string | null>(null);
   const [calcInfo, setCalcInfo] = React.useState<string | null>(null);
   const [fillInfo, setFillInfo] = React.useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
 
   const termsQuery = useAcademicTermOptionsQuery();
   const sectionsQuery = useSectionOptionsQuery();
@@ -244,7 +245,7 @@ export function SemesterGradesWorkspace() {
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={calcForm.sectionId} onChange={(event) => setCalcForm((prev) => ({ ...prev, sectionId: event.target.value }))}>
                 <option value="">الشعبة</option>
-                {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
+                {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatSectionWithGradeLabel(item)}</option>)}
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={calcForm.subjectId} onChange={(event) => setCalcForm((prev) => ({ ...prev, subjectId: event.target.value }))}>
                 <option value="">المادة</option>
@@ -261,7 +262,7 @@ export function SemesterGradesWorkspace() {
                 setCalcInfo("اختر الفصل والشعبة والمادة.");
                 return;
               }
-              calculateMutation.mutate({ academicTermId: calcForm.academicTermId, sectionId: calcForm.sectionId, subjectId: calcForm.subjectId, overwriteManual: calcForm.overwrite }, { onSuccess: (result) => setCalcInfo(`${result.message} | الإجمالي=${result.summary.totalEnrollments}, مضاف=${result.summary.created}, محدث=${result.summary.updated}, متجاهل_مقفل=${result.summary.skippedLocked}`) });
+              calculateMutation.mutate({ academicTermId: calcForm.academicTermId, sectionId: calcForm.sectionId, subjectId: calcForm.subjectId, overwriteManual: calcForm.overwrite }, { onSuccess: (result) => setCalcInfo(`${result.message} | الإجمالي=${result.summary.totalEnrollments}, مضاف=${result.summary.created}, محدث=${result.summary.updated}, متجاوز (مقفل)=${result.summary.skippedLocked}`) });
             }}>
               {calculateMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Calculator className="h-4 w-4" />}
               احتساب
@@ -278,7 +279,7 @@ export function SemesterGradesWorkspace() {
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={fillForm.sectionId} onChange={(event) => setFillForm((prev) => ({ ...prev, sectionId: event.target.value }))}>
                 <option value="">الشعبة</option>
-                {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
+                {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatSectionWithGradeLabel(item)}</option>)}
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={fillForm.subjectId} onChange={(event) => setFillForm((prev) => ({ ...prev, subjectId: event.target.value }))}>
                 <option value="">المادة</option>
@@ -295,7 +296,7 @@ export function SemesterGradesWorkspace() {
                 setFillInfo("اختر الفصل والشعبة والمادة.");
                 return;
               }
-              fillFinalMutation.mutate({ academicTermId: fillForm.academicTermId, sectionId: fillForm.sectionId, subjectId: fillForm.subjectId, overwriteExisting: fillForm.overwrite }, { onSuccess: (result) => setFillInfo(`${result.message} | الإجمالي=${result.summary.totalEnrollments}, مضاف=${result.summary.created}, محدث=${result.summary.updated}, متجاهل_مقفل=${result.summary.skippedLocked}, متجاهل_موجود=${result.summary.skippedExisting}`) });
+              fillFinalMutation.mutate({ academicTermId: fillForm.academicTermId, sectionId: fillForm.sectionId, subjectId: fillForm.subjectId, overwriteExisting: fillForm.overwrite }, { onSuccess: (result) => setFillInfo(`${result.message} | الإجمالي=${result.summary.totalEnrollments}, مضاف=${result.summary.created}, محدث=${result.summary.updated}, متجاوز (مقفل)=${result.summary.skippedLocked}, متجاوز (موجود)=${result.summary.skippedExisting}`) });
             }}>
               {fillFinalMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Medal className="h-4 w-4" />}
               تعبئة النهائي
@@ -305,16 +306,17 @@ export function SemesterGradesWorkspace() {
 
           <form className="space-y-3" onSubmit={(event) => {
             event.preventDefault();
+            setActionSuccess(null);
             if (!validateForm()) return;
             const semesterWorkTotal = parseOptionalNumber(form.semesterWorkTotal);
             const finalExamScore = parseOptionalNumber(form.finalExamScore);
             if (editingId) {
-              if (!canUpdate) { setFormError("لا تملك صلاحية semester-grades.update."); return; }
-              updateMutation.mutate({ semesterGradeId: editingId, payload: { semesterWorkTotal, finalExamScore, status: form.status, notes: toOptionalString(form.notes), isActive: form.isActive } }, { onSuccess: () => resetForm() });
+              if (!canUpdate) { setFormError("لا تملك الصلاحية المطلوبة: semester-grades.update."); return; }
+              updateMutation.mutate({ semesterGradeId: editingId, payload: { semesterWorkTotal, finalExamScore, status: form.status, notes: toOptionalString(form.notes), isActive: form.isActive } }, { onSuccess: () => { resetForm(); setActionSuccess("تم تحديث الدرجة الفصلية بنجاح."); } });
               return;
             }
-            if (!canCreate) { setFormError("لا تملك صلاحية semester-grades.create."); return; }
-            createMutation.mutate({ academicTermId: form.academicTermId, subjectId: form.subjectId, studentEnrollmentId: form.studentEnrollmentId, semesterWorkTotal, finalExamScore, status: form.status, notes: toOptionalString(form.notes), isActive: form.isActive }, { onSuccess: () => resetForm() });
+            if (!canCreate) { setFormError("لا تملك الصلاحية المطلوبة: semester-grades.create."); return; }
+            createMutation.mutate({ academicTermId: form.academicTermId, subjectId: form.subjectId, studentEnrollmentId: form.studentEnrollmentId, semesterWorkTotal, finalExamScore, status: form.status, notes: toOptionalString(form.notes), isActive: form.isActive }, { onSuccess: () => { resetForm(); setActionSuccess("تم إنشاء الدرجة الفصلية بنجاح."); } });
           }}>
             <div className="grid gap-2 md:grid-cols-2">
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.academicTermId} disabled={editingId !== null} onChange={(event) => setForm((prev) => ({ ...prev, academicTermId: event.target.value, studentEnrollmentId: "" }))}>
@@ -323,7 +325,7 @@ export function SemesterGradesWorkspace() {
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.sectionId} disabled={editingId !== null} onChange={(event) => setForm((prev) => ({ ...prev, sectionId: event.target.value, studentEnrollmentId: "" }))}>
                 <option value="">الشعبة *</option>
-                {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
+                {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatSectionWithGradeLabel(item)}</option>)}
               </select>
             </div>
             <div className="grid gap-2 md:grid-cols-2">
@@ -333,7 +335,7 @@ export function SemesterGradesWorkspace() {
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.studentEnrollmentId} disabled={editingId !== null} onChange={(event) => setForm((prev) => ({ ...prev, studentEnrollmentId: event.target.value }))}>
                 <option value="">القيد *</option>
-                {(enrollmentsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.student.fullName} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatNameCodeLabel(item.section.name, item.section.code)})</option>)}
+                {(enrollmentsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.student.fullName} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatSectionWithGradeLabel(item.section)})</option>)}
               </select>
             </div>
             <div className="grid gap-2 md:grid-cols-2">
@@ -353,6 +355,7 @@ export function SemesterGradesWorkspace() {
             </label>
             {formError ? <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">{formError}</div> : null}
             {mutationError ? <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">{mutationError}</div> : null}
+            {actionSuccess ? <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">{actionSuccess}</div> : null}
             <div className="flex gap-2">
               <Button type="submit" className="flex-1 gap-2" disabled={isSubmitting}>
                 {isSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Medal className="h-4 w-4" />}
@@ -381,7 +384,7 @@ export function SemesterGradesWorkspace() {
             </select>
             <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={sectionFilter} onChange={(event) => { setPage(1); setSectionFilter(event.target.value); }}>
               <option value="all">كل الشعب</option>
-              {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
+              {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatSectionWithGradeLabel(item)}</option>)}
             </select>
             <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={subjectFilter} onChange={(event) => { setPage(1); setSubjectFilter(event.target.value); }}>
               <option value="all">كل المواد</option>
@@ -396,8 +399,8 @@ export function SemesterGradesWorkspace() {
           </form>
         </CardHeader>
         <CardContent className="space-y-3">
-          {semesterGradesQuery.isPending ? <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">جارٍ التحميل...</div> : null}
-          {semesterGradesQuery.error ? <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{semesterGradesQuery.error instanceof Error ? semesterGradesQuery.error.message : "فشل التحميل"}</div> : null}
+          {semesterGradesQuery.isPending ? <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">جارٍ تحميل البيانات...</div> : null}
+          {semesterGradesQuery.error ? <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{semesterGradesQuery.error instanceof Error ? semesterGradesQuery.error.message : "تعذّر تحميل البيانات."}</div> : null}
           {!semesterGradesQuery.isPending && records.length === 0 ? <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">لا توجد نتائج.</div> : null}
 
           {records.map((item) => (
@@ -405,7 +408,7 @@ export function SemesterGradesWorkspace() {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="space-y-1">
                   <p className="font-medium">{item.studentEnrollment.student.fullName} - {formatNameCodeLabel(item.subject.name, item.subject.code)}</p>
-                  <p className="text-xs text-muted-foreground">{formatNameCodeLabel(item.academicTerm.name, item.academicTerm.code)} | {formatNameCodeLabel(item.studentEnrollment.section.name, item.studentEnrollment.section.code)}</p>
+                  <p className="text-xs text-muted-foreground">{formatNameCodeLabel(item.academicTerm.name, item.academicTerm.code)} | {formatSectionWithGradeLabel(item.studentEnrollment.section)}</p>
                   <p className="text-xs text-muted-foreground">أعمال الفصل: {item.semesterWorkTotal} | النهائي: {item.finalExamScore ?? 0} | الإجمالي: {item.semesterTotal}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -415,17 +418,17 @@ export function SemesterGradesWorkspace() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { if (!item.isLocked && canUpdate) { setEditingId(item.id); setEditingItem(item); setForm(toFormState(item)); setFormError(null); } }} disabled={!canUpdate || item.isLocked || updateMutation.isPending}>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { if (!item.isLocked && canUpdate) { setEditingId(item.id); setEditingItem(item); setForm(toFormState(item)); setFormError(null); setActionSuccess(null); } }} disabled={!canUpdate || item.isLocked || updateMutation.isPending}>
                   <PencilLine className="h-3.5 w-3.5" />تعديل
                 </Button>
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { if (item.isLocked) { if (canUnlock) unlockMutation.mutate(item.id); } else if (canLock) { lockMutation.mutate(item.id); } }} disabled={(item.isLocked && !canUnlock) || (!item.isLocked && !canLock) || lockMutation.isPending || unlockMutation.isPending}>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { if (item.isLocked) { if (canUnlock) unlockMutation.mutate(item.id, { onSuccess: () => setActionSuccess("تم إلغاء قفل الدرجة الفصلية بنجاح.") }); } else if (canLock) { lockMutation.mutate(item.id, { onSuccess: () => setActionSuccess("تم قفل الدرجة الفصلية بنجاح.") }); } }} disabled={(item.isLocked && !canUnlock) || (!item.isLocked && !canLock) || lockMutation.isPending || unlockMutation.isPending}>
                   {item.isLocked ? <LockOpen className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
                   {item.isLocked ? "إلغاء القفل" : "قفل"}
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => updateMutation.mutate({ semesterGradeId: item.id, payload: { isActive: !item.isActive } })} disabled={!canUpdate || item.isLocked || updateMutation.isPending}>
+                <Button variant="outline" size="sm" onClick={() => updateMutation.mutate({ semesterGradeId: item.id, payload: { isActive: !item.isActive } }, { onSuccess: () => setActionSuccess(item.isActive ? "تم تعطيل الدرجة الفصلية بنجاح." : "تم تفعيل الدرجة الفصلية بنجاح.") })} disabled={!canUpdate || item.isLocked || updateMutation.isPending}>
                   {item.isActive ? "تعطيل" : "تفعيل"}
                 </Button>
-                <Button variant="destructive" size="sm" className="gap-1.5" onClick={() => { if (window.confirm("تأكيد الحذف؟")) deleteMutation.mutate(item.id); }} disabled={!canDelete || item.isLocked || deleteMutation.isPending}>
+                <Button variant="destructive" size="sm" className="gap-1.5" onClick={() => { if (window.confirm("تأكيد الحذف؟")) deleteMutation.mutate(item.id, { onSuccess: () => setActionSuccess("تم حذف الدرجة الفصلية بنجاح.") }); }} disabled={!canDelete || item.isLocked || deleteMutation.isPending}>
                   <Trash2 className="h-3.5 w-3.5" />حذف
                 </Button>
               </div>
@@ -448,6 +451,7 @@ export function SemesterGradesWorkspace() {
     </div>
   );
 }
+
 
 
 

@@ -191,7 +191,7 @@ export function SystemSettingsWorkspace() {
 
     if (isEditing && editingSettingId !== null) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية system-settings.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: system-settings.update.");
         return;
       }
 
@@ -210,7 +210,7 @@ export function SystemSettingsWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية system-settings.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: system-settings.create.");
       return;
     }
 
@@ -266,7 +266,7 @@ export function SystemSettingsWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>system-settings.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>system-settings.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="setting-form">

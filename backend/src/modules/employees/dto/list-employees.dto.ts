@@ -11,6 +11,12 @@ import {
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { EmployeeGender, EmploymentType } from '@prisma/client';
 
+export enum OperationalReadinessFilter {
+  READY = 'READY',
+  PARTIAL = 'PARTIAL',
+  NOT_READY = 'NOT_READY',
+}
+
 export class ListEmployeesDto {
   @ApiPropertyOptional({ example: 1 })
   @IsOptional()
@@ -87,4 +93,9 @@ export class ListEmployeesDto {
   @Type(() => Boolean)
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({ enum: OperationalReadinessFilter })
+  @IsOptional()
+  @IsEnum(OperationalReadinessFilter)
+  operationalReadiness?: OperationalReadinessFilter;
 }

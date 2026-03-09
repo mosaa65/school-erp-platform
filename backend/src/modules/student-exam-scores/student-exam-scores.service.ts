@@ -328,7 +328,7 @@ export class StudentExamScoresService {
     });
 
     if (!studentExamScore) {
-      throw new NotFoundException('Student exam score not found');
+      throw new NotFoundException('لم يتم العثور على درجة اختبار الطالب');
     }
 
     const assessment = await this.ensureAssessmentExists(
@@ -464,7 +464,7 @@ export class StudentExamScoresService {
     });
 
     if (!studentExamScore) {
-      throw new NotFoundException('Student exam score not found');
+      throw new NotFoundException('لم يتم العثور على درجة اختبار الطالب');
     }
 
     return studentExamScore;
@@ -491,7 +491,7 @@ export class StudentExamScoresService {
     });
 
     if (!assessment) {
-      throw new BadRequestException('Exam assessment is invalid or deleted');
+      throw new BadRequestException('تقييم الاختبار غير صالح أو محذوف');
     }
 
     return {
@@ -545,11 +545,11 @@ export class StudentExamScoresService {
     });
 
     if (!enrollment) {
-      throw new BadRequestException('Student enrollment is invalid or deleted');
+      throw new BadRequestException('قيد الطالب غير صالح أو محذوف');
     }
 
     if (!enrollment.isActive) {
-      throw new BadRequestException('Student enrollment is inactive');
+      throw new BadRequestException('قيد الطالب غير نشط');
     }
 
     return enrollment;
@@ -602,7 +602,7 @@ export class StudentExamScoresService {
     if (isPresent) {
       if (score < 0 || score > maxScore) {
         throw new BadRequestException(
-          `score must be between 0 and ${maxScore} for this assessment`,
+          `يجب أن تكون score بين 0 و${maxScore} for this assessment`,
         );
       }
 
@@ -627,7 +627,7 @@ export class StudentExamScoresService {
       error.code === 'P2002'
     ) {
       throw new ConflictException(
-        'Student score already exists for this assessment and enrollment',
+        'درجة الطالب موجودة مسبقًا لهذا التقييم وهذا القيد',
       );
     }
 
@@ -639,6 +639,7 @@ export class StudentExamScoresService {
       return error.message;
     }
 
-    return 'Unknown error';
+    return 'خطأ غير معروف';
   }
 }
+

@@ -227,7 +227,7 @@ export function StudentProblemsWorkspace() {
 
     if (isEditing && editingProblemId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية student-problems.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: student-problems.update.");
         return;
       }
 
@@ -246,7 +246,7 @@ export function StudentProblemsWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية student-problems.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: student-problems.create.");
       return;
     }
 
@@ -309,7 +309,7 @@ export function StudentProblemsWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>student-problems.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>student-problems.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
@@ -542,13 +542,13 @@ export function StudentProblemsWorkspace() {
         <CardContent className="space-y-3">
           {problemsQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
           {problemsQuery.error ? (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {problemsQuery.error instanceof Error ? problemsQuery.error.message : "فشل التحميل"}
+              {problemsQuery.error instanceof Error ? problemsQuery.error.message : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 

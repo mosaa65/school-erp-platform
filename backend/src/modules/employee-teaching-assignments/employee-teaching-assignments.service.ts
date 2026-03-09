@@ -71,8 +71,13 @@ export class EmployeeTeachingAssignmentsService {
     actorUserId: string,
   ) {
     try {
+      const resolvedIsActive = payload.isActive ?? true;
       await this.employeesService.ensureEmployeeExistsAndActive(
         payload.employeeId,
+      );
+      await this.ensureEmployeeReadyForOperationalScopeIfStrict(
+        payload.employeeId,
+        resolvedIsActive,
       );
       const section = await this.ensureSectionExistsAndActive(
         payload.sectionId,
@@ -244,9 +249,14 @@ export class EmployeeTeachingAssignmentsService {
     const resolvedSubjectId = payload.subjectId ?? existing.subjectId;
     const resolvedAcademicYearId =
       payload.academicYearId ?? existing.academicYearId;
+    const resolvedIsActive = payload.isActive ?? existing.isActive;
 
     await this.employeesService.ensureEmployeeExistsAndActive(
       resolvedEmployeeId,
+    );
+    await this.ensureEmployeeReadyForOperationalScopeIfStrict(
+      resolvedEmployeeId,
+      resolvedIsActive,
     );
     const section = await this.ensureSectionExistsAndActive(resolvedSectionId);
     await this.ensureSubjectExistsAndActive(resolvedSubjectId);
@@ -417,6 +427,28 @@ export class EmployeeTeachingAssignmentsService {
         'No active grade-level subject mapping for section grade level, subject, and academic year',
       );
     }
+  }
+
+  private isStrictEmployeeWorkflowEnabled() {
+    const value = process.env.STRICT_EMPLOYEE_WORKFLOW?.trim().toLowerCase();
+    return value === 'true' || value === '1' || value === 'yes';
+  }
+
+  private async ensureEmployeeReadyForOperationalScopeIfStrict(
+    employeeId: string,
+    isActive: boolean,
+  ) {
+    if (!isActive) {
+      return;
+    }
+
+    if (!this.isStrictEmployeeWorkflowEnabled()) {
+      return;
+    }
+
+    await this.employeesService.ensureEmployeeReadyForAcademicOperations(
+      employeeId,
+    );
   }
 
   private throwKnownDatabaseErrors(error: unknown): never {

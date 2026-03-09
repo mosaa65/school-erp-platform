@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import type { ReactNode } from "react";
 import { ForbiddenCard } from "@/components/layout/forbidden-card";
@@ -22,7 +22,7 @@ export function PermissionGuard({
   if (!auth.isHydrated) {
     return (
       <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-        جارٍ التحميل...
+        جارٍ التحقق من الصلاحيات...
       </div>
     );
   }

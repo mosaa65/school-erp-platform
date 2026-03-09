@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import {
@@ -87,6 +87,7 @@ export function HomeworkTypesWorkspace() {
   );
   const [formState, setFormState] = React.useState<HomeworkTypeFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
 
   const homeworkTypesQuery = useHomeworkTypesQuery({
     page,
@@ -150,6 +151,7 @@ export function HomeworkTypesWorkspace() {
     }
 
     setFormError(null);
+    setActionSuccess(null);
     setEditingHomeworkTypeId(item.id);
     setFormState(toFormState(item));
   };
@@ -184,6 +186,7 @@ export function HomeworkTypesWorkspace() {
 
   const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setActionSuccess(null);
 
     if (!validateForm()) {
       return;
@@ -199,7 +202,7 @@ export function HomeworkTypesWorkspace() {
 
     if (isEditing && editingHomeworkTypeId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية homework-types.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: homework-types.update.");
         return;
       }
 
@@ -211,6 +214,7 @@ export function HomeworkTypesWorkspace() {
         {
           onSuccess: () => {
             resetForm();
+            setActionSuccess("تم تحديث نوع الواجب بنجاح.");
           },
         },
       );
@@ -218,7 +222,7 @@ export function HomeworkTypesWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية homework-types.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: homework-types.create.");
       return;
     }
 
@@ -226,6 +230,7 @@ export function HomeworkTypesWorkspace() {
       onSuccess: () => {
         resetForm();
         setPage(1);
+        setActionSuccess("تم إنشاء نوع الواجب بنجاح.");
       },
     });
   };
@@ -250,6 +255,7 @@ export function HomeworkTypesWorkspace() {
         if (editingHomeworkTypeId === item.id) {
           resetForm();
         }
+        setActionSuccess("تم حذف نوع الواجب بنجاح.");
       },
     });
   };
@@ -272,7 +278,7 @@ export function HomeworkTypesWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>homework-types.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>homework-types.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
@@ -343,6 +349,11 @@ export function HomeworkTypesWorkspace() {
               {mutationError ? (
                 <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
                   {mutationError}
+                </div>
+              ) : null}
+              {actionSuccess ? (
+                <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
+                  {actionSuccess}
                 </div>
               ) : null}
 
@@ -428,7 +439,7 @@ export function HomeworkTypesWorkspace() {
         <CardContent className="space-y-3">
           {homeworkTypesQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
@@ -436,7 +447,7 @@ export function HomeworkTypesWorkspace() {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {homeworkTypesQuery.error instanceof Error
                 ? homeworkTypesQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 

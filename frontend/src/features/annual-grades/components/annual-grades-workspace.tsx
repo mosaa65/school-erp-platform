@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import {
@@ -37,7 +37,7 @@ import { useStudentEnrollmentOptionsQuery } from "@/features/annual-grades/hooks
 import { useSubjectOptionsQuery } from "@/features/annual-grades/hooks/use-subject-options-query";
 import { translateGradingWorkflowStatus } from "@/lib/i18n/ar";
 import type { AnnualGradeListItem, GradingWorkflowStatus } from "@/lib/api/client";
-import { formatNameCodeLabel } from "@/lib/option-labels";
+import { formatNameCodeLabel, formatSectionWithGradeLabel } from "@/lib/option-labels";
 
 type FormState = {
   academicYearId: string;
@@ -124,6 +124,7 @@ export function AnnualGradesWorkspace() {
   const [editingItem, setEditingItem] = React.useState<AnnualGradeListItem | null>(null);
   const [form, setForm] = React.useState<FormState>(DEFAULT_FORM);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
 
   const academicYearsQuery = useAcademicYearOptionsQuery();
   const sectionsQuery = useSectionOptionsQuery();
@@ -242,6 +243,7 @@ export function AnnualGradesWorkspace() {
             className="space-y-3"
             onSubmit={(event) => {
               event.preventDefault();
+              setActionSuccess(null);
               if (!validateForm()) {
                 return;
               }
@@ -251,7 +253,7 @@ export function AnnualGradesWorkspace() {
 
               if (editingId) {
                 if (!canUpdate) {
-                  setFormError("لا تملك صلاحية annual-grades.update.");
+                  setFormError("لا تملك الصلاحية المطلوبة: annual-grades.update.");
                   return;
                 }
                 updateMutation.mutate(
@@ -267,13 +269,18 @@ export function AnnualGradesWorkspace() {
                       isActive: form.isActive,
                     },
                   },
-                  { onSuccess: () => resetForm() },
+                  {
+                    onSuccess: () => {
+                      resetForm();
+                      setActionSuccess("تم تحديث الدرجة السنوية بنجاح.");
+                    },
+                  },
                 );
                 return;
               }
 
               if (!canCreate) {
-                setFormError("لا تملك صلاحية annual-grades.create.");
+                setFormError("لا تملك الصلاحية المطلوبة: annual-grades.create.");
                 return;
               }
               createMutation.mutate(
@@ -289,7 +296,12 @@ export function AnnualGradesWorkspace() {
                   notes: toOptionalString(form.notes),
                   isActive: form.isActive,
                 },
-                { onSuccess: () => resetForm() },
+                {
+                  onSuccess: () => {
+                    resetForm();
+                    setActionSuccess("تم إنشاء الدرجة السنوية بنجاح.");
+                  },
+                },
               );
             }}
           >
@@ -328,7 +340,7 @@ export function AnnualGradesWorkspace() {
                 <option value="">الشعبة *</option>
                 {(sectionsQuery.data ?? []).map((item) => (
                   <option key={item.id} value={item.id}>
-                    {formatNameCodeLabel(item.name, item.code)}
+                    {formatSectionWithGradeLabel(item)}
                   </option>
                 ))}
               </select>
@@ -367,7 +379,7 @@ export function AnnualGradesWorkspace() {
                 <option value="">القيد *</option>
                 {(enrollmentsQuery.data ?? []).map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.student.fullName} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatNameCodeLabel(item.section.name, item.section.code)})
+                    {item.student.fullName} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatSectionWithGradeLabel(item.section)})
                   </option>
                 ))}
               </select>
@@ -471,6 +483,11 @@ export function AnnualGradesWorkspace() {
                 {mutationError}
               </div>
             ) : null}
+            {actionSuccess ? (
+              <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
+                {actionSuccess}
+              </div>
+            ) : null}
 
             <div className="flex gap-2">
               <Button type="submit" className="flex-1 gap-2" disabled={isSubmitting}>
@@ -540,7 +557,7 @@ export function AnnualGradesWorkspace() {
               <option value="all">كل الشعب</option>
               {(sectionsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {formatNameCodeLabel(item.name, item.code)}
+                  {formatSectionWithGradeLabel(item)}
                 </option>
               ))}
             </select>
@@ -628,14 +645,14 @@ export function AnnualGradesWorkspace() {
         <CardContent className="space-y-3">
           {annualGradesQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
           {annualGradesQuery.error ? (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {annualGradesQuery.error instanceof Error
                 ? annualGradesQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
           {!annualGradesQuery.isPending && records.length === 0 ? (
@@ -655,7 +672,7 @@ export function AnnualGradesWorkspace() {
                     {item.studentEnrollment.student.fullName} - {formatNameCodeLabel(item.subject.name, item.subject.code)}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} | {formatNameCodeLabel(item.studentEnrollment.section.name, item.studentEnrollment.section.code)} |{" "}
+                    {formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} | {formatSectionWithGradeLabel(item.studentEnrollment.section)} |{" "}
                     الحالة النهائية: {formatNameCodeLabel(item.finalStatus.name, item.finalStatus.code)}
                   </p>
                   <p className="text-xs text-muted-foreground">
@@ -688,6 +705,7 @@ export function AnnualGradesWorkspace() {
                     setEditingItem(item);
                     setForm(toFormState(item));
                     setFormError(null);
+                    setActionSuccess(null);
                   }}
                   disabled={!canUpdate || item.isLocked || updateMutation.isPending}
                 >
@@ -701,12 +719,16 @@ export function AnnualGradesWorkspace() {
                   onClick={() => {
                     if (item.isLocked) {
                       if (canUnlock) {
-                        unlockMutation.mutate(item.id);
+                        unlockMutation.mutate(item.id, {
+                          onSuccess: () => setActionSuccess("تم إلغاء قفل الدرجة السنوية بنجاح."),
+                        });
                       }
                       return;
                     }
                     if (canLock) {
-                      lockMutation.mutate(item.id);
+                      lockMutation.mutate(item.id, {
+                        onSuccess: () => setActionSuccess("تم قفل الدرجة السنوية بنجاح."),
+                      });
                     }
                   }}
                   disabled={
@@ -730,6 +752,13 @@ export function AnnualGradesWorkspace() {
                     updateMutation.mutate({
                       annualGradeId: item.id,
                       payload: { isActive: !item.isActive },
+                    }, {
+                      onSuccess: () =>
+                        setActionSuccess(
+                          item.isActive
+                            ? "تم تعطيل الدرجة السنوية بنجاح."
+                            : "تم تفعيل الدرجة السنوية بنجاح.",
+                        ),
                     })
                   }
                   disabled={!canUpdate || item.isLocked || updateMutation.isPending}
@@ -744,7 +773,9 @@ export function AnnualGradesWorkspace() {
                     if (!window.confirm("تأكيد الحذف؟")) {
                       return;
                     }
-                    deleteMutation.mutate(item.id);
+                    deleteMutation.mutate(item.id, {
+                      onSuccess: () => setActionSuccess("تم حذف الدرجة السنوية بنجاح."),
+                    });
                   }}
                   disabled={!canDelete || item.isLocked || deleteMutation.isPending}
                 >

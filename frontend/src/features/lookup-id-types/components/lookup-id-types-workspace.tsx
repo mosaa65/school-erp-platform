@@ -159,7 +159,7 @@ export function LookupIdTypesWorkspace() {
 
     if (isEditing && editingLookupIdTypeId !== null) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية lookup-id-types.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: lookup-id-types.update.");
         return;
       }
 
@@ -178,7 +178,7 @@ export function LookupIdTypesWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية lookup-id-types.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: lookup-id-types.create.");
       return;
     }
 
@@ -236,7 +236,7 @@ export function LookupIdTypesWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>lookup-id-types.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>lookup-id-types.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="id-type-form">

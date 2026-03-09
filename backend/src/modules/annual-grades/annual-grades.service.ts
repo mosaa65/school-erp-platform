@@ -147,7 +147,7 @@ export class AnnualGradesService {
 
     if (existing) {
       throw new ConflictException(
-        'Annual grade already exists for this enrollment, subject, and year',
+        'الدرجة السنوية موجودة مسبقًا لهذا القيد والمادة والسنة',
       );
     }
 
@@ -371,7 +371,7 @@ export class AnnualGradesService {
     });
 
     if (!annualGrade) {
-      throw new NotFoundException('Annual grade not found');
+      throw new NotFoundException('لم يتم العثور على الدرجة السنوية');
     }
 
     await this.ensureActorAuthorized(
@@ -388,7 +388,7 @@ export class AnnualGradesService {
     const existing = await this.ensureAnnualGradeExists(id);
 
     if (existing.isLocked) {
-      throw new ConflictException('Cannot update a locked annual grade');
+      throw new ConflictException('لا يمكن تعديل درجة سنوية مقفلة');
     }
 
     if (
@@ -397,7 +397,7 @@ export class AnnualGradesService {
       payload.academicYearId !== undefined
     ) {
       throw new BadRequestException(
-        'studentEnrollmentId, subjectId, and academicYearId cannot be updated',
+        'لا يمكن تعديل studentEnrollmentId وsubjectId وacademicYearId',
       );
     }
 
@@ -493,7 +493,7 @@ export class AnnualGradesService {
     );
 
     if (existing.isLocked) {
-      throw new ConflictException('Annual grade is already locked');
+      throw new ConflictException('الدرجة السنوية مقفلة بالفعل');
     }
 
     const annualGrade = await this.prisma.annualGrade.update({
@@ -534,7 +534,7 @@ export class AnnualGradesService {
     );
 
     if (!existing.isLocked) {
-      throw new ConflictException('Annual grade is not locked');
+      throw new ConflictException('الدرجة السنوية غير مقفلة');
     }
 
     const annualGrade = await this.prisma.annualGrade.update({
@@ -575,7 +575,7 @@ export class AnnualGradesService {
     );
 
     if (existing.isLocked) {
-      throw new ConflictException('Cannot delete a locked annual grade');
+      throw new ConflictException('لا يمكن حذف درجة سنوية مقفلة');
     }
 
     await this.prisma.annualGrade.update({
@@ -627,13 +627,13 @@ export class AnnualGradesService {
     });
 
     if (!enrollment) {
-      throw new BadRequestException('Student enrollment is invalid or deleted');
+      throw new BadRequestException('قيد الطالب غير صالح أو محذوف');
     }
     if (!enrollment.isActive) {
-      throw new BadRequestException('Student enrollment is inactive');
+      throw new BadRequestException('قيد الطالب غير نشط');
     }
     if (!enrollment.section.isActive) {
-      throw new BadRequestException('Enrollment section is inactive');
+      throw new BadRequestException('شعبة القيد غير نشطة');
     }
     if (enrollment.academicYearId !== academicYearId) {
       throw new BadRequestException(
@@ -690,7 +690,7 @@ export class AnnualGradesService {
     });
 
     if (!annualGrade) {
-      throw new NotFoundException('Annual grade not found');
+      throw new NotFoundException('لم يتم العثور على الدرجة السنوية');
     }
 
     return {
@@ -709,7 +709,7 @@ export class AnnualGradesService {
     });
 
     if (!annualGrade) {
-      throw new NotFoundException('Annual grade not found');
+      throw new NotFoundException('لم يتم العثور على الدرجة السنوية');
     }
 
     return annualGrade;
@@ -729,7 +729,7 @@ export class AnnualGradesService {
 
     if (!status) {
       throw new BadRequestException(
-        'Annual status is invalid, deleted, or inactive',
+        'الحالة السنوية غير صالحة أو محذوفة أو غير نشطة',
       );
     }
   }
@@ -747,10 +747,10 @@ export class AnnualGradesService {
     });
 
     if (!subject) {
-      throw new BadRequestException('Subject is invalid or deleted');
+      throw new BadRequestException('المادة غير صالحة أو محذوفة');
     }
     if (!subject.isActive) {
-      throw new BadRequestException('Subject is inactive');
+      throw new BadRequestException('المادة غير نشطة');
     }
   }
 
@@ -844,7 +844,7 @@ export class AnnualGradesService {
   private validateScore(value: number, fieldName: string) {
     if (!Number.isFinite(value) || value < 0) {
       throw new BadRequestException(
-        `${fieldName} must be a non-negative number`,
+        `يجب أن تكون قيمة ${fieldName} رقمًا غير سالب`,
       );
     }
   }
@@ -884,7 +884,7 @@ export class AnnualGradesService {
       error.code === 'P2002'
     ) {
       throw new ConflictException(
-        'Annual grade already exists for this enrollment, subject, and year',
+        'الدرجة السنوية موجودة مسبقًا لهذا القيد والمادة والسنة',
       );
     }
 
@@ -896,6 +896,7 @@ export class AnnualGradesService {
       return error.message;
     }
 
-    return 'Unknown error';
+    return 'خطأ غير معروف';
   }
 }
+

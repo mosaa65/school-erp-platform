@@ -230,7 +230,7 @@ export function LookupGradeDescriptionsWorkspace() {
 
     if (isEditing && editingLookupGradeDescriptionId !== null) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية lookup-grade-descriptions.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: lookup-grade-descriptions.update.");
         return;
       }
 
@@ -249,7 +249,7 @@ export function LookupGradeDescriptionsWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية lookup-grade-descriptions.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: lookup-grade-descriptions.create.");
       return;
     }
 
@@ -307,7 +307,7 @@ export function LookupGradeDescriptionsWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>lookup-grade-descriptions.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>lookup-grade-descriptions.create</code>.
             </div>
           ) : (
             <form

@@ -293,7 +293,7 @@ export function EmployeePerformanceEvaluationsWorkspace() {
 
     if (isEditing && editingEvaluationId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية employee-performance-evaluations.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: employee-performance-evaluations.update.");
         return;
       }
 
@@ -312,7 +312,7 @@ export function EmployeePerformanceEvaluationsWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية employee-performance-evaluations.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: employee-performance-evaluations.create.");
       return;
     }
 
@@ -376,7 +376,7 @@ export function EmployeePerformanceEvaluationsWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>employee-performance-evaluations.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>employee-performance-evaluations.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
@@ -588,7 +588,7 @@ export function EmployeePerformanceEvaluationsWorkspace() {
 
               {!hasDependenciesReadPermissions ? (
                 <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يلزم صلاحيات القراءة: <code>employees.read</code> و{" "}
+                  يتطلب هذا الجزء صلاحيات القراءة: <code>employees.read</code> و{" "}
                   <code>academic-years.read</code>.
                 </div>
               ) : null}
@@ -743,7 +743,7 @@ export function EmployeePerformanceEvaluationsWorkspace() {
         <CardContent className="space-y-3">
           {evaluationsQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
@@ -751,7 +751,7 @@ export function EmployeePerformanceEvaluationsWorkspace() {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {evaluationsQuery.error instanceof Error
                 ? evaluationsQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 

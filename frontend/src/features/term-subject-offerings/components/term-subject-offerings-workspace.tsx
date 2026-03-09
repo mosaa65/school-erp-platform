@@ -243,7 +243,7 @@ export function TermSubjectOfferingsWorkspace() {
 
     if (isEditing && editingOfferingId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية term-subject-offerings.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: term-subject-offerings.update.");
         return;
       }
 
@@ -262,7 +262,7 @@ export function TermSubjectOfferingsWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية term-subject-offerings.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: term-subject-offerings.create.");
       return;
     }
 
@@ -327,7 +327,7 @@ export function TermSubjectOfferingsWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>term-subject-offerings.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>term-subject-offerings.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="offering-form">
@@ -448,7 +448,7 @@ export function TermSubjectOfferingsWorkspace() {
 
               {!hasDependenciesReadPermissions ? (
                 <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يلزم صلاحيات القراءة المرتبطة: <code>academic-terms.read</code>,{" "}
+                  يتطلب هذا الجزء صلاحيات القراءة المرتبطة: <code>academic-terms.read</code>,{" "}
                   <code>grade-level-subjects.read</code>.
                 </div>
               ) : null}
@@ -589,7 +589,7 @@ export function TermSubjectOfferingsWorkspace() {
         <CardContent className="space-y-3">
           {offeringsQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
@@ -597,7 +597,7 @@ export function TermSubjectOfferingsWorkspace() {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {offeringsQuery.error instanceof Error
                 ? offeringsQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 

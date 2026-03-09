@@ -60,11 +60,14 @@ Copy `.env.example` to `.env` and configure:
 ```env
 NODE_ENV=development
 PORT=3000
-DATABASE_URL="mysql://school_user:school_password@localhost:3306/school_erp"
+DATABASE_URL="mysql://school_user:school_password@localhost:3306/school_erp_clean"
 JWT_SECRET="change_me_with_very_strong_secret"
 JWT_EXPIRES_IN="1d"
 SWAGGER_PATH="api/docs"
+STRICT_EMPLOYEE_WORKFLOW=false
 ```
+
+- `STRICT_EMPLOYEE_WORKFLOW=true` يفعّل التحقق الصارم قبل تفعيل إسناد التدريس/الإشراف (يتطلب: موظف نشط + حساب مستخدم نشط + دور فعّال).
 
 ## Local Run
 

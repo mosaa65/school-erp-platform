@@ -3,7 +3,16 @@ import { PermissionGuard } from "@/features/auth/components/permission-guard";
 import { UsersManagementWorkspace } from "@/features/users/components/users-management-workspace";
 import { Badge } from "@/components/ui/badge";
 
-export default function UsersPage() {
+type UsersPageProps = {
+  searchParams?: {
+    q?: string;
+  };
+};
+
+export default function UsersPage({ searchParams }: UsersPageProps) {
+  const initialSearchQuery =
+    typeof searchParams?.q === "string" ? searchParams.q : "";
+
   return (
     <PermissionGuard permission="users.read">
       <div className="space-y-4">
@@ -12,20 +21,17 @@ export default function UsersPage() {
             <Users className="h-4 w-4" />
             النظام 01 - المستخدمون
           </Badge>
-          <h2 className="text-2xl font-semibold tracking-tight">إدارة المستخدمين</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">
+            إدارة المستخدمين
+          </h2>
           <p className="text-sm text-muted-foreground">
             CRUD كامل للمستخدمين: إنشاء، تعديل، حذف ناعم، تفعيل/تعطيل، وربط/فك
             ربط الموظف.
           </p>
         </div>
 
-        <UsersManagementWorkspace />
+        <UsersManagementWorkspace initialSearchQuery={initialSearchQuery} />
       </div>
     </PermissionGuard>
   );
 }
-
-
-
-
-

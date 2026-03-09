@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import {
@@ -220,7 +220,7 @@ export function AuditLogsWorkspace() {
       <CardContent className="space-y-3">
         {logsQuery.isPending ? (
           <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-            جارٍ التحميل...
+            جارٍ تحميل البيانات...
           </div>
         ) : null}
 
@@ -228,7 +228,7 @@ export function AuditLogsWorkspace() {
           <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
             {logsQuery.error instanceof Error
               ? logsQuery.error.message
-              : "فشل التحميل"}
+              : "تعذّر تحميل البيانات."}
           </div>
         ) : null}
 

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   LoaderCircle,
   PencilLine,
@@ -55,7 +56,9 @@ const DEFAULT_FORM_STATE: AssignmentFormState = {
   isActive: true,
 };
 
-function toFormState(assignment: EmployeeTeachingAssignmentListItem): AssignmentFormState {
+function toFormState(
+  assignment: EmployeeTeachingAssignmentListItem,
+): AssignmentFormState {
   return {
     employeeId: assignment.employeeId,
     sectionId: assignment.sectionId,
@@ -85,12 +88,15 @@ export function EmployeeTeachingAssignmentsWorkspace() {
   const [sectionFilter, setSectionFilter] = React.useState("all");
   const [subjectFilter, setSubjectFilter] = React.useState("all");
   const [academicYearFilter, setAcademicYearFilter] = React.useState("all");
-  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
-    "all",
-  );
+  const [activeFilter, setActiveFilter] = React.useState<
+    "all" | "active" | "inactive"
+  >("all");
 
-  const [editingAssignmentId, setEditingAssignmentId] = React.useState<string | null>(null);
-  const [formState, setFormState] = React.useState<AssignmentFormState>(DEFAULT_FORM_STATE);
+  const [editingAssignmentId, setEditingAssignmentId] = React.useState<
+    string | null
+  >(null);
+  const [formState, setFormState] =
+    React.useState<AssignmentFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
 
   const assignmentsQuery = useEmployeeTeachingAssignmentsQuery({
@@ -100,7 +106,8 @@ export function EmployeeTeachingAssignmentsWorkspace() {
     employeeId: employeeFilter === "all" ? undefined : employeeFilter,
     sectionId: sectionFilter === "all" ? undefined : sectionFilter,
     subjectId: subjectFilter === "all" ? undefined : subjectFilter,
-    academicYearId: academicYearFilter === "all" ? undefined : academicYearFilter,
+    academicYearId:
+      academicYearFilter === "all" ? undefined : academicYearFilter,
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
   });
 
@@ -110,8 +117,18 @@ export function EmployeeTeachingAssignmentsWorkspace() {
   const academicYearsQuery = useAcademicYearOptionsQuery();
 
   const selectedSection = React.useMemo(
-    () => (sectionsQuery.data ?? []).find((section) => section.id === formState.sectionId),
+    () =>
+      (sectionsQuery.data ?? []).find(
+        (section) => section.id === formState.sectionId,
+      ),
     [formState.sectionId, sectionsQuery.data],
+  );
+  const selectedEmployee = React.useMemo(
+    () =>
+      (employeesQuery.data ?? []).find(
+        (employee) => employee.id === formState.employeeId,
+      ),
+    [employeesQuery.data, formState.employeeId],
   );
 
   const mappingCheckQuery = useGradeLevelSubjectMappingOptionsQuery({
@@ -143,7 +160,9 @@ export function EmployeeTeachingAssignmentsWorkspace() {
       return;
     }
 
-    const stillExists = assignments.some((item) => item.id === editingAssignmentId);
+    const stillExists = assignments.some(
+      (item) => item.id === editingAssignmentId,
+    );
     if (!stillExists) {
       setEditingAssignmentId(null);
       setFormState(DEFAULT_FORM_STATE);
@@ -170,12 +189,18 @@ export function EmployeeTeachingAssignmentsWorkspace() {
       !formState.subjectId ||
       !formState.academicYearId
     ) {
-      setFormError("الحقول الأساسية مطلوبة: الموظف، الشعبة، المادة، والسنة الأكاديمية.");
+      setFormError(
+        "الحقول الأساسية مطلوبة: الموظف، الشعبة، المادة، والسنة الأكاديمية.",
+      );
       return false;
     }
 
     const weeklyPeriods = Number(formState.weeklyPeriods);
-    if (!Number.isInteger(weeklyPeriods) || weeklyPeriods < 1 || weeklyPeriods > 60) {
+    if (
+      !Number.isInteger(weeklyPeriods) ||
+      weeklyPeriods < 1 ||
+      weeklyPeriods > 60
+    ) {
       setFormError("الحصص الأسبوعية يجب أن تكون رقمًا صحيحًا بين 1 و60.");
       return false;
     }
@@ -217,7 +242,7 @@ export function EmployeeTeachingAssignmentsWorkspace() {
 
     if (isEditing && editingAssignmentId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية employee-teaching-assignments.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: employee-teaching-assignments.update.");
         return;
       }
 
@@ -236,7 +261,7 @@ export function EmployeeTeachingAssignmentsWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية employee-teaching-assignments.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: employee-teaching-assignments.create.");
       return;
     }
 
@@ -281,7 +306,10 @@ export function EmployeeTeachingAssignmentsWorkspace() {
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
   const hasDependenciesReadPermissions =
-    canReadEmployees && canReadSections && canReadSubjects && canReadAcademicYears;
+    canReadEmployees &&
+    canReadSections &&
+    canReadSubjects &&
+    canReadAcademicYears;
 
   return (
     <div className="grid gap-4 xl:grid-cols-[430px_1fr]">
@@ -294,24 +322,31 @@ export function EmployeeTeachingAssignmentsWorkspace() {
           <CardDescription>
             {isEditing
               ? "تحديث ربط المعلم بالشعبة والمادة والسنة الأكاديمية."
-              : "إضافة إسناد تدريس جديد ضمن الموارد البشرية."}
+              : "إضافة إسناد تدريس جديد ضمن الموارد البشرية."}{" "}
+            هذا الربط يحدد نطاق العمل الأكاديمي ولا ينشئ حساب مستخدم أو دور
+            تلقائيًا.
           </CardDescription>
         </CardHeader>
 
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>employee-teaching-assignments.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>employee-teaching-assignments.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
+                <label className="text-xs font-medium text-muted-foreground">
+                  الموظف *
+                </label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={formState.employeeId}
                   onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
+                    setFormState((prev) => ({
+                      ...prev,
+                      employeeId: event.target.value,
+                    }))
                   }
                   disabled={!canReadEmployees}
                 >
@@ -322,15 +357,33 @@ export function EmployeeTeachingAssignmentsWorkspace() {
                     </option>
                   ))}
                 </select>
+                {selectedEmployee && !selectedEmployee.userAccount ? (
+                  <p className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-300">
+                    الموظف المختار لا يملك حساب مستخدم مرتبط. الإسناد سيُحفظ،
+                    لكن لن يتمكن من الدخول والتنفيذ إلا بعد إنشاء/ربط الحساب من{" "}
+                    <Link
+                      href={`/app/users?q=${encodeURIComponent(selectedEmployee.fullName)}`}
+                      className="underline underline-offset-2"
+                    >
+                      إدارة المستخدمين
+                    </Link>
+                    .
+                  </p>
+                ) : null}
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الشعبة *</label>
+                <label className="text-xs font-medium text-muted-foreground">
+                  الشعبة *
+                </label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={formState.sectionId}
                   onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, sectionId: event.target.value }))
+                    setFormState((prev) => ({
+                      ...prev,
+                      sectionId: event.target.value,
+                    }))
                   }
                   disabled={!canReadSections}
                 >
@@ -344,12 +397,17 @@ export function EmployeeTeachingAssignmentsWorkspace() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">المادة *</label>
+                <label className="text-xs font-medium text-muted-foreground">
+                  المادة *
+                </label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={formState.subjectId}
                   onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, subjectId: event.target.value }))
+                    setFormState((prev) => ({
+                      ...prev,
+                      subjectId: event.target.value,
+                    }))
                   }
                   disabled={!canReadSubjects}
                 >
@@ -370,7 +428,10 @@ export function EmployeeTeachingAssignmentsWorkspace() {
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={formState.academicYearId}
                   onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, academicYearId: event.target.value }))
+                    setFormState((prev) => ({
+                      ...prev,
+                      academicYearId: event.target.value,
+                    }))
                   }
                   disabled={!canReadAcademicYears}
                 >
@@ -393,7 +454,10 @@ export function EmployeeTeachingAssignmentsWorkspace() {
                   max={60}
                   value={formState.weeklyPeriods}
                   onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, weeklyPeriods: event.target.value }))
+                    setFormState((prev) => ({
+                      ...prev,
+                      weeklyPeriods: event.target.value,
+                    }))
                   }
                   required
                 />
@@ -406,7 +470,10 @@ export function EmployeeTeachingAssignmentsWorkspace() {
                     type="checkbox"
                     checked={formState.isPrimary}
                     onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, isPrimary: event.target.checked }))
+                      setFormState((prev) => ({
+                        ...prev,
+                        isPrimary: event.target.checked,
+                      }))
                     }
                   />
                 </label>
@@ -416,7 +483,10 @@ export function EmployeeTeachingAssignmentsWorkspace() {
                     type="checkbox"
                     checked={formState.isActive}
                     onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                      setFormState((prev) => ({
+                        ...prev,
+                        isActive: event.target.checked,
+                      }))
                     }
                   />
                 </label>
@@ -436,8 +506,9 @@ export function EmployeeTeachingAssignmentsWorkspace() {
 
               {!hasDependenciesReadPermissions ? (
                 <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يلزم صلاحيات القراءة: <code>employees.read</code>, <code>sections.read</code>,{" "}
-                  <code>subjects.read</code>, <code>academic-years.read</code>.
+                  يتطلب هذا الجزء صلاحيات القراءة: <code>employees.read</code>,{" "}
+                  <code>sections.read</code>, <code>subjects.read</code>,{" "}
+                  <code>academic-years.read</code>.
                 </div>
               ) : null}
 
@@ -473,10 +544,14 @@ export function EmployeeTeachingAssignmentsWorkspace() {
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <CardTitle>قائمة إسناد التدريس</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+            <Badge variant="secondary">
+              الإجمالي: {pagination?.total ?? 0}
+            </Badge>
           </div>
           <CardDescription>
-            إدارة إسناد المواد للمعلمين حسب الشعبة والسنة الأكاديمية.
+            إدارة إسناد المواد للمعلمين حسب الشعبة والسنة الأكاديمية. صلاحية
+            الدخول تبقى عبر المستخدم + الدور، بينما الإسناد يضبط نطاق البيانات
+            داخل الصفحات الأكاديمية.
           </CardDescription>
 
           <form
@@ -562,7 +637,9 @@ export function EmployeeTeachingAssignmentsWorkspace() {
               value={activeFilter}
               onChange={(event) => {
                 setPage(1);
-                setActiveFilter(event.target.value as "all" | "active" | "inactive");
+                setActiveFilter(
+                  event.target.value as "all" | "active" | "inactive",
+                );
               }}
             >
               <option value="all">كل الحالات</option>
@@ -580,7 +657,7 @@ export function EmployeeTeachingAssignmentsWorkspace() {
         <CardContent className="space-y-3">
           {assignmentsQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
@@ -588,7 +665,7 @@ export function EmployeeTeachingAssignmentsWorkspace() {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {assignmentsQuery.error instanceof Error
                 ? assignmentsQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 
@@ -609,10 +686,12 @@ export function EmployeeTeachingAssignmentsWorkspace() {
                     {assignment.employee.fullName} - {assignment.subject.name}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    الشعبة: {assignment.section.name} ({assignment.section.code})
+                    الشعبة: {assignment.section.name} ({assignment.section.code}
+                    )
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    السنة: {assignment.academicYear.name} ({assignment.academicYear.code})
+                    السنة: {assignment.academicYear.name} (
+                    {assignment.academicYear.code})
                   </p>
                   <p className="text-xs text-muted-foreground">
                     الحصص الأسبوعية: {assignment.weeklyPeriods}
@@ -620,7 +699,9 @@ export function EmployeeTeachingAssignmentsWorkspace() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant={assignment.isPrimary ? "default" : "secondary"}>
+                  <Badge
+                    variant={assignment.isPrimary ? "default" : "secondary"}
+                  >
                     {assignment.isPrimary ? "أساسي" : "مساند"}
                   </Badge>
                   <Badge variant={assignment.isActive ? "default" : "outline"}>
@@ -663,7 +744,11 @@ export function EmployeeTeachingAssignmentsWorkspace() {
                 variant="outline"
                 size="sm"
                 onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={!pagination || pagination.page <= 1 || assignmentsQuery.isFetching}
+                disabled={
+                  !pagination ||
+                  pagination.page <= 1 ||
+                  assignmentsQuery.isFetching
+                }
               >
                 السابق
               </Button>
@@ -672,7 +757,9 @@ export function EmployeeTeachingAssignmentsWorkspace() {
                 size="sm"
                 onClick={() =>
                   setPage((prev) =>
-                    pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
+                    pagination
+                      ? Math.min(prev + 1, pagination.totalPages)
+                      : prev,
                   )
                 }
                 disabled={
@@ -702,8 +789,3 @@ export function EmployeeTeachingAssignmentsWorkspace() {
     </div>
   );
 }
-
-
-
-
-

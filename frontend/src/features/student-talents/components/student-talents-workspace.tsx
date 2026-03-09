@@ -171,7 +171,7 @@ export function StudentTalentsWorkspace() {
 
     if (isEditing && editingMappingId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية student-talents.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: student-talents.update.");
         return;
       }
 
@@ -190,7 +190,7 @@ export function StudentTalentsWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية student-talents.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: student-talents.create.");
       return;
     }
 
@@ -254,7 +254,7 @@ export function StudentTalentsWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>student-talents.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>student-talents.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
@@ -336,7 +336,7 @@ export function StudentTalentsWorkspace() {
 
               {!hasDependenciesReadPermissions ? (
                 <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يلزم صلاحيات القراءة: <code>students.read</code> و <code>talents.read</code>.
+                  يتطلب هذا الجزء صلاحيات القراءة: <code>students.read</code> و <code>talents.read</code>.
                 </div>
               ) : null}
 
@@ -446,7 +446,7 @@ export function StudentTalentsWorkspace() {
         <CardContent className="space-y-3">
           {mappingsQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
@@ -454,7 +454,7 @@ export function StudentTalentsWorkspace() {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {mappingsQuery.error instanceof Error
                 ? mappingsQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 

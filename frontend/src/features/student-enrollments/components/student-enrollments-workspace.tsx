@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import {
@@ -159,6 +159,7 @@ export function StudentEnrollmentsWorkspace() {
   const [editingEnrollmentId, setEditingEnrollmentId] = React.useState<string | null>(null);
   const [formState, setFormState] = React.useState<EnrollmentFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
 
   const enrollmentsQuery = useStudentEnrollmentsQuery({
     page,
@@ -254,6 +255,7 @@ export function StudentEnrollmentsWorkspace() {
 
   const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setActionSuccess(null);
 
     if (!validateForm()) {
       return;
@@ -271,7 +273,7 @@ export function StudentEnrollmentsWorkspace() {
 
     if (isEditing && editingEnrollmentId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية student-enrollments.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: student-enrollments.update.");
         return;
       }
 
@@ -283,6 +285,7 @@ export function StudentEnrollmentsWorkspace() {
         {
           onSuccess: () => {
             resetForm();
+            setActionSuccess("تم تحديث قيد الطالب بنجاح.");
           },
         },
       );
@@ -290,7 +293,7 @@ export function StudentEnrollmentsWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية student-enrollments.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: student-enrollments.create.");
       return;
     }
 
@@ -298,6 +301,7 @@ export function StudentEnrollmentsWorkspace() {
       onSuccess: () => {
         resetForm();
         setPage(1);
+        setActionSuccess("تم إنشاء قيد الطالب بنجاح.");
       },
     });
   };
@@ -307,6 +311,7 @@ export function StudentEnrollmentsWorkspace() {
       return;
     }
 
+    setActionSuccess(null);
     setFormError(null);
     setEditingEnrollmentId(enrollment.id);
     setFormState(toFormState(enrollment));
@@ -317,12 +322,21 @@ export function StudentEnrollmentsWorkspace() {
       return;
     }
 
-    updateMutation.mutate({
-      enrollmentId: enrollment.id,
-      payload: {
-        isActive: !enrollment.isActive,
+    updateMutation.mutate(
+      {
+        enrollmentId: enrollment.id,
+        payload: {
+          isActive: !enrollment.isActive,
+        },
       },
-    });
+      {
+        onSuccess: () => {
+          setActionSuccess(
+            enrollment.isActive ? "تم تعطيل القيد بنجاح." : "تم تفعيل القيد بنجاح.",
+          );
+        },
+      },
+    );
   };
 
   const handleDelete = (enrollment: StudentEnrollmentListItem) => {
@@ -342,6 +356,7 @@ export function StudentEnrollmentsWorkspace() {
         if (editingEnrollmentId === enrollment.id) {
           resetForm();
         }
+        setActionSuccess("تم حذف قيد الطالب بنجاح.");
       },
     });
   };
@@ -368,7 +383,7 @@ export function StudentEnrollmentsWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>student-enrollments.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>student-enrollments.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
@@ -495,10 +510,15 @@ export function StudentEnrollmentsWorkspace() {
                   {mutationError}
                 </div>
               ) : null}
+              {actionSuccess ? (
+                <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
+                  {actionSuccess}
+                </div>
+              ) : null}
 
               {!hasDependenciesReadPermissions ? (
                 <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يلزم صلاحيات القراءة: <code>students.read</code>,{" "}
+                  يتطلب هذا الجزء صلاحيات القراءة: <code>students.read</code>,{" "}
                   <code>academic-years.read</code>, <code>sections.read</code>.
                 </div>
               ) : null}
@@ -640,7 +660,7 @@ export function StudentEnrollmentsWorkspace() {
         <CardContent className="space-y-3">
           {enrollmentsQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
@@ -648,7 +668,7 @@ export function StudentEnrollmentsWorkspace() {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {enrollmentsQuery.error instanceof Error
                 ? enrollmentsQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 

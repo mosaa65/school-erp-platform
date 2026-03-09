@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import {
@@ -97,6 +97,7 @@ export function GradingOutcomeRulesWorkspace() {
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [form, setForm] = React.useState<FormState>(DEFAULT_FORM);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
 
   const yearsQuery = useAcademicYearOptionsQuery();
   const gradeLevelsQuery = useGradeLevelOptionsQuery();
@@ -175,13 +176,14 @@ export function GradingOutcomeRulesWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>grading-outcome-rules.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>grading-outcome-rules.create</code>.
             </div>
           ) : (
             <form
               className="space-y-3"
               onSubmit={(event) => {
                 event.preventDefault();
+                setActionSuccess(null);
                 if (!validateForm()) {
                   return;
                 }
@@ -201,12 +203,17 @@ export function GradingOutcomeRulesWorkspace() {
 
                 if (isEditing && editingId) {
                   if (!canUpdate) {
-                    setFormError("لا تملك صلاحية grading-outcome-rules.update.");
+                    setFormError("لا تملك الصلاحية المطلوبة: grading-outcome-rules.update.");
                     return;
                   }
                   updateMutation.mutate(
                     { gradingOutcomeRuleId: editingId, payload },
-                    { onSuccess: () => resetForm() },
+                    {
+                      onSuccess: () => {
+                        resetForm();
+                        setActionSuccess("تم تحديث قاعدة المخرجات بنجاح.");
+                      },
+                    },
                   );
                   return;
                 }
@@ -215,6 +222,7 @@ export function GradingOutcomeRulesWorkspace() {
                   onSuccess: () => {
                     resetForm();
                     setPage(1);
+                    setActionSuccess("تم إنشاء قاعدة المخرجات بنجاح.");
                   },
                 });
               }}
@@ -348,6 +356,11 @@ export function GradingOutcomeRulesWorkspace() {
                   {mutationError}
                 </div>
               ) : null}
+              {actionSuccess ? (
+                <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
+                  {actionSuccess}
+                </div>
+              ) : null}
 
               <div className="flex gap-2">
                 <Button type="submit" className="flex-1 gap-2" disabled={isSubmitting}>
@@ -462,14 +475,14 @@ export function GradingOutcomeRulesWorkspace() {
         <CardContent className="space-y-3">
           {rulesQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
           {rulesQuery.error ? (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {rulesQuery.error instanceof Error
                 ? rulesQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
           {!rulesQuery.isPending && records.length === 0 ? (
@@ -514,6 +527,7 @@ export function GradingOutcomeRulesWorkspace() {
                     setEditingId(item.id);
                     setForm(toFormState(item));
                     setFormError(null);
+                    setActionSuccess(null);
                   }}
                   disabled={!canUpdate || updateMutation.isPending}
                 >
@@ -531,7 +545,11 @@ export function GradingOutcomeRulesWorkspace() {
                     if (!window.confirm("تأكيد الحذف؟")) {
                       return;
                     }
-                    deleteMutation.mutate(item.id);
+                    deleteMutation.mutate(item.id, {
+                      onSuccess: () => {
+                        setActionSuccess("تم حذف قاعدة المخرجات بنجاح.");
+                      },
+                    });
                   }}
                   disabled={!canDelete || deleteMutation.isPending}
                 >

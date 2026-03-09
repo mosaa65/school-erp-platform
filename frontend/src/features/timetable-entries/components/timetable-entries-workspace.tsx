@@ -305,7 +305,7 @@ export function TimetableEntriesWorkspace() {
 
     if (isEditing && editingEntryId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية timetable-entries.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: timetable-entries.update.");
         return;
       }
 
@@ -324,7 +324,7 @@ export function TimetableEntriesWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية timetable-entries.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: timetable-entries.create.");
       return;
     }
 
@@ -389,7 +389,7 @@ export function TimetableEntriesWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>timetable-entries.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>timetable-entries.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
@@ -552,7 +552,7 @@ export function TimetableEntriesWorkspace() {
 
               {!hasDependenciesReadPermissions ? (
                 <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يلزم صلاحيات القراءة المرتبطة: <code>academic-terms.read</code>,{" "}
+                  يتطلب هذا الجزء صلاحيات القراءة المرتبطة: <code>academic-terms.read</code>,{" "}
                   <code>sections.read</code>, <code>term-subject-offerings.read</code>.
                 </div>
               ) : null}
@@ -701,7 +701,7 @@ export function TimetableEntriesWorkspace() {
         <CardContent className="space-y-3">
           {entriesQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
@@ -709,7 +709,7 @@ export function TimetableEntriesWorkspace() {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {entriesQuery.error instanceof Error
                 ? entriesQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 

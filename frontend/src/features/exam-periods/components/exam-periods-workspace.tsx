@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import {
@@ -165,6 +165,7 @@ export function ExamPeriodsWorkspace() {
   const [editingExamPeriodId, setEditingExamPeriodId] = React.useState<string | null>(null);
   const [formState, setFormState] = React.useState<ExamPeriodFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
 
   const selectedYearForTerms =
     formState.academicYearId || (academicYearFilter === "all" ? undefined : academicYearFilter);
@@ -286,6 +287,7 @@ export function ExamPeriodsWorkspace() {
 
   const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setActionSuccess(null);
 
     if (!validateForm()) {
       return;
@@ -305,7 +307,7 @@ export function ExamPeriodsWorkspace() {
 
     if (isEditing && editingExamPeriodId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية exam-periods.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: exam-periods.update.");
         return;
       }
 
@@ -317,6 +319,7 @@ export function ExamPeriodsWorkspace() {
         {
           onSuccess: () => {
             resetForm();
+            setActionSuccess("تم تحديث الفترة الاختبارية بنجاح.");
           },
         },
       );
@@ -324,7 +327,7 @@ export function ExamPeriodsWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية exam-periods.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: exam-periods.create.");
       return;
     }
 
@@ -332,6 +335,7 @@ export function ExamPeriodsWorkspace() {
       onSuccess: () => {
         resetForm();
         setPage(1);
+        setActionSuccess("تم إنشاء الفترة الاختبارية بنجاح.");
       },
     });
   };
@@ -342,6 +346,7 @@ export function ExamPeriodsWorkspace() {
     }
 
     setFormError(null);
+    setActionSuccess(null);
     setEditingExamPeriodId(item.id);
     setFormState(toFormState(item));
   };
@@ -356,6 +361,14 @@ export function ExamPeriodsWorkspace() {
       payload: {
         isLocked: !item.isLocked,
       },
+    }, {
+      onSuccess: () => {
+        setActionSuccess(
+          item.isLocked
+            ? "تم فتح قفل الفترة الاختبارية بنجاح."
+            : "تم قفل الفترة الاختبارية بنجاح.",
+        );
+      },
     });
   };
 
@@ -368,6 +381,14 @@ export function ExamPeriodsWorkspace() {
       examPeriodId: item.id,
       payload: {
         isActive: !item.isActive,
+      },
+    }, {
+      onSuccess: () => {
+        setActionSuccess(
+          item.isActive
+            ? "تم تعطيل الفترة الاختبارية بنجاح."
+            : "تم تفعيل الفترة الاختبارية بنجاح.",
+        );
       },
     });
   };
@@ -387,6 +408,7 @@ export function ExamPeriodsWorkspace() {
         if (editingExamPeriodId === item.id) {
           resetForm();
         }
+        setActionSuccess("تم حذف الفترة الاختبارية بنجاح.");
       },
     });
   };
@@ -408,7 +430,7 @@ export function ExamPeriodsWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>exam-periods.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>exam-periods.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
@@ -545,9 +567,14 @@ export function ExamPeriodsWorkspace() {
                   {mutationError}
                 </div>
               ) : null}
+              {actionSuccess ? (
+                <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
+                  {actionSuccess}
+                </div>
+              ) : null}
               {!hasDependenciesReadPermissions ? (
                 <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يلزم صلاحيات <code>academic-years.read</code> و <code>academic-terms.read</code>.
+                  يتطلب هذا الجزء صلاحيات القراءة: <code>academic-years.read</code> و <code>academic-terms.read</code>.
                 </div>
               ) : null}
 
@@ -695,7 +722,7 @@ export function ExamPeriodsWorkspace() {
         <CardContent className="space-y-3">
           {examPeriodsQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
@@ -703,7 +730,7 @@ export function ExamPeriodsWorkspace() {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {examPeriodsQuery.error instanceof Error
                 ? examPeriodsQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 

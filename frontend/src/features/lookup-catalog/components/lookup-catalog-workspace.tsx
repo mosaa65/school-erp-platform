@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import {
@@ -298,7 +298,7 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
 
     if (isEditing && editingItemId !== null) {
       if (!canUpdate) {
-        setFormError(`لا تملك صلاحية ${definition.updatePermission}.`);
+        setFormError(`لا تملك الصلاحية المطلوبة: ${definition.updatePermission}.`);
         return;
       }
 
@@ -318,7 +318,7 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
     }
 
     if (!canCreate) {
-      setFormError(`لا تملك صلاحية ${definition.createPermission}.`);
+      setFormError(`لا تملك الصلاحية المطلوبة: ${definition.createPermission}.`);
       return;
     }
 
@@ -376,7 +376,7 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>{definition.createPermission}</code>.
+              لا تملك الصلاحية المطلوبة: <code>{definition.createPermission}</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="lookup-catalog-form">

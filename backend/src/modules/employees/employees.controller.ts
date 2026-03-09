@@ -22,7 +22,10 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import type { AuthUser } from '../../common/interfaces/auth-user.interface';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
-import { ListEmployeesDto } from './dto/list-employees.dto';
+import {
+  ListEmployeesDto,
+  OperationalReadinessFilter,
+} from './dto/list-employees.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import { EmployeesService } from './employees.service';
 
@@ -55,6 +58,11 @@ export class EmployeesController {
   @ApiQuery({ name: 'qualificationId', required: false, type: Number })
   @ApiQuery({ name: 'jobRoleId', required: false, type: Number })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
+  @ApiQuery({
+    name: 'operationalReadiness',
+    required: false,
+    enum: OperationalReadinessFilter,
+  })
   findAll(@Query() query: ListEmployeesDto) {
     return this.employeesService.findAll(query);
   }

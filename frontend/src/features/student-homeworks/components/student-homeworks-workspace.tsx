@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import {
@@ -154,6 +154,7 @@ export function StudentHomeworksWorkspace() {
   );
   const [formState, setFormState] = React.useState<StudentHomeworkFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
 
   const studentHomeworksQuery = useStudentHomeworksQuery({
     page,
@@ -281,6 +282,7 @@ export function StudentHomeworksWorkspace() {
 
   const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setActionSuccess(null);
     if (!validateForm()) {
       return;
     }
@@ -302,7 +304,7 @@ export function StudentHomeworksWorkspace() {
 
     if (isEditing && editingStudentHomeworkId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية student-homeworks.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: student-homeworks.update.");
         return;
       }
 
@@ -314,6 +316,7 @@ export function StudentHomeworksWorkspace() {
         {
           onSuccess: () => {
             resetForm();
+            setActionSuccess("تم تحديث واجب الطالب بنجاح.");
           },
         },
       );
@@ -321,7 +324,7 @@ export function StudentHomeworksWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية student-homeworks.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: student-homeworks.create.");
       return;
     }
 
@@ -329,6 +332,7 @@ export function StudentHomeworksWorkspace() {
       onSuccess: () => {
         resetForm();
         setPage(1);
+        setActionSuccess("تم إنشاء واجب الطالب بنجاح.");
       },
     });
   };
@@ -339,6 +343,7 @@ export function StudentHomeworksWorkspace() {
     }
 
     setFormError(null);
+    setActionSuccess(null);
     setEditingStudentHomeworkId(item.id);
     setFormState(toFormState(item));
   };
@@ -348,12 +353,23 @@ export function StudentHomeworksWorkspace() {
       return;
     }
 
-    updateMutation.mutate({
-      studentHomeworkId: item.id,
-      payload: {
-        isActive: !item.isActive,
+    updateMutation.mutate(
+      {
+        studentHomeworkId: item.id,
+        payload: {
+          isActive: !item.isActive,
+        },
       },
-    });
+      {
+        onSuccess: () => {
+          setActionSuccess(
+            item.isActive
+              ? "تم تعطيل واجب الطالب بنجاح."
+              : "تم تفعيل واجب الطالب بنجاح.",
+          );
+        },
+      },
+    );
   };
 
   const handleDelete = (item: StudentHomeworkListItem) => {
@@ -373,6 +389,7 @@ export function StudentHomeworksWorkspace() {
         if (editingStudentHomeworkId === item.id) {
           resetForm();
         }
+        setActionSuccess("تم حذف واجب الطالب بنجاح.");
       },
     });
   };
@@ -394,7 +411,7 @@ export function StudentHomeworksWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>student-homeworks.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>student-homeworks.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
@@ -497,9 +514,14 @@ export function StudentHomeworksWorkspace() {
                   {mutationError}
                 </div>
               ) : null}
+              {actionSuccess ? (
+                <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
+                  {actionSuccess}
+                </div>
+              ) : null}
               {!hasDependenciesReadPermissions ? (
                 <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يلزم صلاحيات القراءة: <code>homeworks.read</code>,{" "}
+                  يتطلب هذا الجزء صلاحيات القراءة: <code>homeworks.read</code>,{" "}
                   <code>student-enrollments.read</code>, <code>students.read</code>.
                 </div>
               ) : null}
@@ -642,14 +664,14 @@ export function StudentHomeworksWorkspace() {
         <CardContent className="space-y-3">
           {studentHomeworksQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
           {studentHomeworksQuery.error ? (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {studentHomeworksQuery.error instanceof Error
                 ? studentHomeworksQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
           {!studentHomeworksQuery.isPending && records.length === 0 ? (

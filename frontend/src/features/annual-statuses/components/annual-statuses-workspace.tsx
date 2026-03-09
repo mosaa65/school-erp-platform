@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import {
@@ -151,7 +151,7 @@ export function AnnualStatusesWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>annual-statuses.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>annual-statuses.create</code>.
             </div>
           ) : (
             <form
@@ -171,7 +171,7 @@ export function AnnualStatusesWorkspace() {
 
                 if (isEditing && editingId) {
                   if (!canUpdate) {
-                    setFormError("لا تملك صلاحية annual-statuses.update.");
+                    setFormError("لا تملك الصلاحية المطلوبة: annual-statuses.update.");
                     return;
                   }
                   updateMutation.mutate(
@@ -323,14 +323,14 @@ export function AnnualStatusesWorkspace() {
         <CardContent className="space-y-3">
           {annualStatusesQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
           {annualStatusesQuery.error ? (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {annualStatusesQuery.error instanceof Error
                 ? annualStatusesQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
           {!annualStatusesQuery.isPending && records.length === 0 ? (

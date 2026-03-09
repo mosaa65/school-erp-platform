@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import {
@@ -97,6 +97,7 @@ export function MonthlyCustomComponentScoresWorkspace() {
   );
   const [form, setForm] = React.useState<FormState>(DEFAULT_FORM);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
 
   const monthsQuery = useAcademicMonthOptionsQuery();
   const sectionsQuery = useSectionOptionsQuery();
@@ -229,6 +230,7 @@ export function MonthlyCustomComponentScoresWorkspace() {
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setActionSuccess(null);
     if (!validateForm()) {
       return;
     }
@@ -241,7 +243,7 @@ export function MonthlyCustomComponentScoresWorkspace() {
 
     if (editingId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية monthly-custom-component-scores.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: monthly-custom-component-scores.update.");
         return;
       }
 
@@ -255,14 +257,17 @@ export function MonthlyCustomComponentScoresWorkspace() {
           },
         },
         {
-          onSuccess: () => resetForm(),
+          onSuccess: () => {
+            resetForm();
+            setActionSuccess("تم تحديث مكوّن الدرجة الشهرية بنجاح.");
+          },
         },
       );
       return;
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية monthly-custom-component-scores.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: monthly-custom-component-scores.create.");
       return;
     }
 
@@ -275,7 +280,10 @@ export function MonthlyCustomComponentScoresWorkspace() {
         isActive: form.isActive,
       },
       {
-        onSuccess: () => resetForm(),
+        onSuccess: () => {
+          resetForm();
+          setActionSuccess("تم إنشاء مكوّن الدرجة الشهرية بنجاح.");
+        },
       },
     );
   };
@@ -370,6 +378,11 @@ export function MonthlyCustomComponentScoresWorkspace() {
             {mutationError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
                 {mutationError}
+              </div>
+            ) : null}
+            {actionSuccess ? (
+              <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
+                {actionSuccess}
               </div>
             ) : null}
 
@@ -481,14 +494,14 @@ export function MonthlyCustomComponentScoresWorkspace() {
         <CardContent className="space-y-3">
           {scoresQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
           {scoresQuery.error ? (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {scoresQuery.error instanceof Error
                 ? scoresQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
           {!scoresQuery.isPending && records.length === 0 ? (
@@ -539,6 +552,7 @@ export function MonthlyCustomComponentScoresWorkspace() {
                     setEditingItem(item);
                     setForm(toFormState(item));
                     setFormError(null);
+                    setActionSuccess(null);
                   }}
                   disabled={!canUpdate || item.monthlyGrade.isLocked || updateMutation.isPending}
                 >
@@ -552,6 +566,14 @@ export function MonthlyCustomComponentScoresWorkspace() {
                     updateMutation.mutate({
                       monthlyCustomComponentScoreId: item.id,
                       payload: { isActive: !item.isActive },
+                    }, {
+                      onSuccess: () => {
+                        setActionSuccess(
+                          item.isActive
+                            ? "تم تعطيل مكوّن الدرجة الشهرية بنجاح."
+                            : "تم تفعيل مكوّن الدرجة الشهرية بنجاح.",
+                        );
+                      },
                     })
                   }
                   disabled={!canUpdate || item.monthlyGrade.isLocked || updateMutation.isPending}
@@ -566,7 +588,11 @@ export function MonthlyCustomComponentScoresWorkspace() {
                     if (!window.confirm("تأكيد الحذف؟")) {
                       return;
                     }
-                    deleteMutation.mutate(item.id);
+                    deleteMutation.mutate(item.id, {
+                      onSuccess: () => {
+                        setActionSuccess("تم حذف مكوّن الدرجة الشهرية بنجاح.");
+                      },
+                    });
                   }}
                   disabled={!canDelete || item.monthlyGrade.isLocked || deleteMutation.isPending}
                 >

@@ -278,7 +278,7 @@ export function ParentNotificationsWorkspace() {
 
     if (isEditing && editingNotificationId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية parent-notifications.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: parent-notifications.update.");
         return;
       }
 
@@ -297,7 +297,7 @@ export function ParentNotificationsWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية parent-notifications.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: parent-notifications.create.");
       return;
     }
 
@@ -360,7 +360,7 @@ export function ParentNotificationsWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>parent-notifications.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>parent-notifications.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
@@ -685,7 +685,7 @@ export function ParentNotificationsWorkspace() {
         <CardContent className="space-y-3">
           {notificationsQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
@@ -693,7 +693,7 @@ export function ParentNotificationsWorkspace() {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {notificationsQuery.error instanceof Error
                 ? notificationsQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 

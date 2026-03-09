@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import {
@@ -31,7 +31,7 @@ import { useExamPeriodOptionsQuery } from "@/features/exam-assessments/hooks/use
 import { useSectionOptionsQuery } from "@/features/exam-assessments/hooks/use-section-options-query";
 import { useSubjectOptionsQuery } from "@/features/exam-assessments/hooks/use-subject-options-query";
 import { translateAssessmentType } from "@/lib/i18n/ar";
-import { formatNameCodeLabel } from "@/lib/option-labels";
+import { formatNameCodeLabel, formatSectionWithGradeLabel } from "@/lib/option-labels";
 import type { AssessmentType, ExamAssessmentListItem } from "@/lib/api/client";
 
 type ExamAssessmentFormState = {
@@ -136,6 +136,7 @@ export function ExamAssessmentsWorkspace() {
   );
   const [formState, setFormState] = React.useState<ExamAssessmentFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
 
   const examPeriodsQuery = useExamPeriodOptionsQuery();
   const sectionsQuery = useSectionOptionsQuery();
@@ -280,6 +281,7 @@ export function ExamAssessmentsWorkspace() {
 
   const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setActionSuccess(null);
     if (!validateForm()) {
       return;
     }
@@ -297,7 +299,7 @@ export function ExamAssessmentsWorkspace() {
 
     if (isEditing && editingExamAssessmentId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية exam-assessments.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: exam-assessments.update.");
         return;
       }
 
@@ -309,6 +311,7 @@ export function ExamAssessmentsWorkspace() {
         {
           onSuccess: () => {
             resetForm();
+            setActionSuccess("تم تحديث الاختبار بنجاح.");
           },
         },
       );
@@ -316,7 +319,7 @@ export function ExamAssessmentsWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية exam-assessments.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: exam-assessments.create.");
       return;
     }
 
@@ -324,6 +327,7 @@ export function ExamAssessmentsWorkspace() {
       onSuccess: () => {
         resetForm();
         setPage(1);
+        setActionSuccess("تم إنشاء الاختبار بنجاح.");
       },
     });
   };
@@ -339,6 +343,7 @@ export function ExamAssessmentsWorkspace() {
     }
 
     setFormError(null);
+    setActionSuccess(null);
     setEditingExamAssessmentId(item.id);
     setFormState(toFormState(item));
   };
@@ -352,6 +357,10 @@ export function ExamAssessmentsWorkspace() {
       examAssessmentId: item.id,
       payload: {
         isActive: !item.isActive,
+      },
+    }, {
+      onSuccess: () => {
+        setActionSuccess(item.isActive ? "تم تعطيل الاختبار بنجاح." : "تم تفعيل الاختبار بنجاح.");
       },
     });
   };
@@ -371,6 +380,7 @@ export function ExamAssessmentsWorkspace() {
         if (editingExamAssessmentId === item.id) {
           resetForm();
         }
+        setActionSuccess("تم حذف الاختبار بنجاح.");
       },
     });
   };
@@ -392,7 +402,7 @@ export function ExamAssessmentsWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>exam-assessments.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>exam-assessments.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
@@ -424,7 +434,7 @@ export function ExamAssessmentsWorkspace() {
                   <option value="">اختر الشعبة *</option>
                   {(sectionsQuery.data ?? []).map((item) => (
                     <option key={item.id} value={item.id}>
-                      {formatNameCodeLabel(item.name, item.code)}
+                      {formatSectionWithGradeLabel(item)}
                     </option>
                   ))}
                 </select>
@@ -505,9 +515,14 @@ export function ExamAssessmentsWorkspace() {
                   {mutationError}
                 </div>
               ) : null}
+              {actionSuccess ? (
+                <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
+                  {actionSuccess}
+                </div>
+              ) : null}
               {!hasDependenciesReadPermissions ? (
                 <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يلزم صلاحيات القراءة: <code>exam-periods.read</code>, <code>sections.read</code>,{" "}
+                  يتطلب هذا الجزء صلاحيات القراءة: <code>exam-periods.read</code>, <code>sections.read</code>,{" "}
                   <code>subjects.read</code>.
                 </div>
               ) : null}
@@ -589,7 +604,7 @@ export function ExamAssessmentsWorkspace() {
               <option value="all">كل الشعب</option>
               {(sectionsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {formatNameCodeLabel(item.name, item.code)}
+                  {formatSectionWithGradeLabel(item)}
                 </option>
               ))}
             </select>
@@ -644,7 +659,7 @@ export function ExamAssessmentsWorkspace() {
         <CardContent className="space-y-3">
           {examAssessmentsQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
@@ -652,7 +667,7 @@ export function ExamAssessmentsWorkspace() {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {examAssessmentsQuery.error instanceof Error
                 ? examAssessmentsQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 
@@ -674,7 +689,7 @@ export function ExamAssessmentsWorkspace() {
                     {item.examPeriod.name} ({getAssessmentTypeLabel(item.examPeriod.assessmentType)})
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {formatNameCodeLabel(item.section.name, item.section.code)} - {formatNameCodeLabel(item.subject.name, item.subject.code)} | التاريخ: {formatDateTime(item.examDate)} |
+                    {formatSectionWithGradeLabel(item.section)} - {formatNameCodeLabel(item.subject.name, item.subject.code)} | التاريخ: {formatDateTime(item.examDate)} |
                     العظمى: {item.maxScore}
                   </p>
                   {item.notes ? (

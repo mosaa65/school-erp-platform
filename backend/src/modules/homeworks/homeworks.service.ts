@@ -380,7 +380,7 @@ export class HomeworksService {
     });
 
     if (!homework) {
-      throw new NotFoundException('Homework not found');
+      throw new NotFoundException('لم يتم العثور على الواجب');
     }
 
     await this.ensureActorAuthorized(
@@ -421,7 +421,7 @@ export class HomeworksService {
         resolvedSectionId !== existing.sectionId)
     ) {
       throw new ConflictException(
-        'Cannot change academicYearId or sectionId after student homework records exist',
+        'لا يمكن تغيير academicYearId أو sectionId بعد وجود سجلات واجبات للطلاب',
       );
     }
 
@@ -702,7 +702,7 @@ export class HomeworksService {
     });
 
     if (!homework) {
-      throw new NotFoundException('Homework not found');
+      throw new NotFoundException('لم يتم العثور على الواجب');
     }
 
     return homework;
@@ -773,15 +773,15 @@ export class HomeworksService {
       ]);
 
     if (!academicYear) {
-      throw new BadRequestException('Academic year is invalid or deleted');
+      throw new BadRequestException('السنة الدراسية غير صالحة أو محذوفة');
     }
 
     if (!academicTerm) {
-      throw new BadRequestException('Academic term is invalid or deleted');
+      throw new BadRequestException('الفصل الدراسي غير صالح أو محذوف');
     }
 
     if (!academicTerm.isActive) {
-      throw new BadRequestException('Academic term is inactive');
+      throw new BadRequestException('الفصل الدراسي غير نشط');
     }
 
     if (academicTerm.academicYearId !== academicYearId) {
@@ -791,27 +791,27 @@ export class HomeworksService {
     }
 
     if (!section) {
-      throw new BadRequestException('Section is invalid or deleted');
+      throw new BadRequestException('الشعبة غير صالحة أو محذوفة');
     }
 
     if (!section.isActive) {
-      throw new BadRequestException('Section is inactive');
+      throw new BadRequestException('الشعبة غير نشطة');
     }
 
     if (!subject) {
-      throw new BadRequestException('Subject is invalid or deleted');
+      throw new BadRequestException('المادة غير صالحة أو محذوفة');
     }
 
     if (!subject.isActive) {
-      throw new BadRequestException('Subject is inactive');
+      throw new BadRequestException('المادة غير نشطة');
     }
 
     if (!homeworkType) {
-      throw new BadRequestException('Homework type is invalid or deleted');
+      throw new BadRequestException('نوع الواجب غير صالح أو محذوف');
     }
 
     if (!homeworkType.isActive) {
-      throw new BadRequestException('Homework type is inactive');
+      throw new BadRequestException('نوع الواجب غير نشط');
     }
 
     const subjectOfferingCount = await this.prisma.termSubjectOffering.count({
@@ -851,7 +851,7 @@ export class HomeworksService {
     const parsedDueDate = this.parseDate(dueDate, 'dueDate');
 
     if (!parsedHomeworkDate) {
-      throw new BadRequestException('homeworkDate is required');
+      throw new BadRequestException('تاريخ الواجب مطلوب');
     }
 
     if (
@@ -859,13 +859,13 @@ export class HomeworksService {
       parsedHomeworkDate > termEndDate
     ) {
       throw new BadRequestException(
-        'homeworkDate must be within the selected academic term date range',
+        'يجب أن يكون homeworkDate ضمن نطاق تواريخ الفصل الدراسي المحدد',
       );
     }
 
     if (parsedDueDate && parsedDueDate < parsedHomeworkDate) {
       throw new BadRequestException(
-        'dueDate must be on or after the homeworkDate',
+        'يجب أن يكون dueDate مساويًا أو بعد homeworkDate',
       );
     }
 
@@ -874,7 +874,7 @@ export class HomeworksService {
       (parsedDueDate < termStartDate || parsedDueDate > termEndDate)
     ) {
       throw new BadRequestException(
-        'dueDate must be within the selected academic term date range',
+        'يجب أن يكون dueDate ضمن نطاق تواريخ الفصل الدراسي المحدد',
       );
     }
   }
@@ -887,7 +887,7 @@ export class HomeworksService {
     const parsedDate = value instanceof Date ? value : new Date(value);
 
     if (Number.isNaN(parsedDate.getTime())) {
-      throw new BadRequestException(`Invalid date format for ${fieldName}`);
+      throw new BadRequestException(`تنسيق التاريخ غير صالح للحقل ${fieldName}`);
     }
 
     return parsedDate;
@@ -897,7 +897,7 @@ export class HomeworksService {
     const normalized = value.trim();
 
     if (!normalized) {
-      throw new BadRequestException(`${fieldName} cannot be empty`);
+      throw new BadRequestException(`لا يمكن أن يكون ${fieldName} فارغًا`);
     }
 
     return normalized;
@@ -970,7 +970,7 @@ export class HomeworksService {
       error.code === 'P2002'
     ) {
       throw new ConflictException(
-        'Homework already exists for this term, section, subject, title, and date',
+        'الواجب موجود مسبقًا لهذا الفصل والشعبة والمادة والعنوان والتاريخ',
       );
     }
 
@@ -982,6 +982,7 @@ export class HomeworksService {
       return error.message;
     }
 
-    return 'Unknown error';
+    return 'خطأ غير معروف';
   }
 }
+

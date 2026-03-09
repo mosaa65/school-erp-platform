@@ -203,7 +203,7 @@ export function RemindersTickerWorkspace() {
 
     if (isEditing && editingItemId !== null) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية reminders-ticker.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: reminders-ticker.update.");
         return;
       }
 
@@ -222,7 +222,7 @@ export function RemindersTickerWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية reminders-ticker.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: reminders-ticker.create.");
       return;
     }
 
@@ -270,7 +270,7 @@ export function RemindersTickerWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>reminders-ticker.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>reminders-ticker.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="reminder-form">

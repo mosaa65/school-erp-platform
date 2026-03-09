@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import {
@@ -274,7 +274,7 @@ export function StudentBooksWorkspace() {
 
     if (isEditing && editingStudentBookId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية student-books.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: student-books.update.");
         return;
       }
 
@@ -293,7 +293,7 @@ export function StudentBooksWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية student-books.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: student-books.create.");
       return;
     }
 
@@ -368,7 +368,7 @@ export function StudentBooksWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>student-books.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>student-books.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
@@ -525,7 +525,7 @@ export function StudentBooksWorkspace() {
 
               {!hasDependenciesReadPermissions ? (
                 <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يلزم صلاحيات القراءة: <code>student-enrollments.read</code> و{" "}
+                  يتطلب هذا الجزء صلاحيات القراءة: <code>student-enrollments.read</code> و{" "}
                   <code>subjects.read</code>.
                 </div>
               ) : null}
@@ -688,7 +688,7 @@ export function StudentBooksWorkspace() {
         <CardContent className="space-y-3">
           {studentBooksQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
@@ -696,7 +696,7 @@ export function StudentBooksWorkspace() {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {studentBooksQuery.error instanceof Error
                 ? studentBooksQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 

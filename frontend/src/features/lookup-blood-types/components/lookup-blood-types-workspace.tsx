@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import {
@@ -151,7 +151,7 @@ export function LookupBloodTypesWorkspace() {
 
     if (isEditing && editingLookupBloodTypeId !== null) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية lookup-blood-types.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: lookup-blood-types.update.");
         return;
       }
 
@@ -170,7 +170,7 @@ export function LookupBloodTypesWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية lookup-blood-types.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: lookup-blood-types.create.");
       return;
     }
 
@@ -228,7 +228,7 @@ export function LookupBloodTypesWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>lookup-blood-types.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>lookup-blood-types.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="blood-form">

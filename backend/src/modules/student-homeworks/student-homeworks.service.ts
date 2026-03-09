@@ -360,7 +360,7 @@ export class StudentHomeworksService {
     });
 
     if (!studentHomework) {
-      throw new NotFoundException('Student homework record not found');
+      throw new NotFoundException('لم يتم العثور على سجل واجب الطالب');
     }
 
     await this.ensureActorAuthorized(
@@ -485,7 +485,7 @@ export class StudentHomeworksService {
     });
 
     if (!studentHomework) {
-      throw new NotFoundException('Student homework record not found');
+      throw new NotFoundException('لم يتم العثور على سجل واجب الطالب');
     }
 
     return studentHomework;
@@ -510,11 +510,11 @@ export class StudentHomeworksService {
     });
 
     if (!homework) {
-      throw new BadRequestException('Homework is invalid or deleted');
+      throw new BadRequestException('الواجب غير صالح أو محذوف');
     }
 
     if (!homework.isActive) {
-      throw new ConflictException('Homework is inactive');
+      throw new ConflictException('الواجب غير نشط');
     }
 
     return {
@@ -543,11 +543,11 @@ export class StudentHomeworksService {
     });
 
     if (!enrollment) {
-      throw new BadRequestException('Student enrollment is invalid or deleted');
+      throw new BadRequestException('قيد الطالب غير صالح أو محذوف');
     }
 
     if (!enrollment.isActive) {
-      throw new BadRequestException('Student enrollment is inactive');
+      throw new BadRequestException('قيد الطالب غير نشط');
     }
 
     return {
@@ -589,7 +589,7 @@ export class StudentHomeworksService {
 
     if (manualScore !== null && (manualScore < 0 || manualScore > maxScore)) {
       throw new BadRequestException(
-        `manualScore must be between 0 and ${maxScore} for this homework`,
+        `يجب أن تكون manualScore بين 0 و${maxScore} لهذا الواجب`,
       );
     }
 
@@ -623,7 +623,7 @@ export class StudentHomeworksService {
     const parsedDate = value instanceof Date ? value : new Date(value);
 
     if (Number.isNaN(parsedDate.getTime())) {
-      throw new BadRequestException(`Invalid date format for ${fieldName}`);
+      throw new BadRequestException(`تنسيق التاريخ غير صالح للحقل ${fieldName}`);
     }
 
     return parsedDate;
@@ -650,7 +650,7 @@ export class StudentHomeworksService {
       error.code === 'P2002'
     ) {
       throw new ConflictException(
-        'Student homework record already exists for this homework and enrollment',
+        'سجل واجب الطالب موجود مسبقًا لهذا الواجب وهذا القيد',
       );
     }
 
@@ -662,6 +662,7 @@ export class StudentHomeworksService {
       return error.message;
     }
 
-    return 'Unknown error';
+    return 'خطأ غير معروف';
   }
 }
+

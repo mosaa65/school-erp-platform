@@ -62,8 +62,13 @@ export class EmployeeSectionSupervisionsService {
     actorUserId: string,
   ) {
     try {
+      const resolvedIsActive = payload.isActive ?? true;
       await this.employeesService.ensureEmployeeExistsAndActive(
         payload.employeeId,
+      );
+      await this.ensureEmployeeReadyForOperationalScopeIfStrict(
+        payload.employeeId,
+        resolvedIsActive,
       );
       await this.ensureSectionExistsAndActive(payload.sectionId);
       await this.ensureAcademicYearExists(payload.academicYearId);
@@ -226,9 +231,14 @@ export class EmployeeSectionSupervisionsService {
     const resolvedSectionId = payload.sectionId ?? existing.sectionId;
     const resolvedAcademicYearId =
       payload.academicYearId ?? existing.academicYearId;
+    const resolvedIsActive = payload.isActive ?? existing.isActive;
 
     await this.employeesService.ensureEmployeeExistsAndActive(
       resolvedEmployeeId,
+    );
+    await this.ensureEmployeeReadyForOperationalScopeIfStrict(
+      resolvedEmployeeId,
+      resolvedIsActive,
     );
     await this.ensureSectionExistsAndActive(resolvedSectionId);
     await this.ensureAcademicYearExists(resolvedAcademicYearId);
@@ -365,5 +375,27 @@ export class EmployeeSectionSupervisionsService {
     }
 
     return 'Unknown error';
+  }
+
+  private isStrictEmployeeWorkflowEnabled() {
+    const value = process.env.STRICT_EMPLOYEE_WORKFLOW?.trim().toLowerCase();
+    return value === 'true' || value === '1' || value === 'yes';
+  }
+
+  private async ensureEmployeeReadyForOperationalScopeIfStrict(
+    employeeId: string,
+    isActive: boolean,
+  ) {
+    if (!isActive) {
+      return;
+    }
+
+    if (!this.isStrictEmployeeWorkflowEnabled()) {
+      return;
+    }
+
+    await this.employeesService.ensureEmployeeReadyForAcademicOperations(
+      employeeId,
+    );
   }
 }

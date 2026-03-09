@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import { Link2, LoaderCircle, PencilLine, RefreshCw, Search, Trash2 } from "lucide-react";
@@ -187,6 +187,7 @@ export function StudentGuardiansWorkspace() {
   const [editingRelationId, setEditingRelationId] = React.useState<string | null>(null);
   const [formState, setFormState] = React.useState<RelationFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
 
   const relationsQuery = useStudentGuardiansQuery({
     page,
@@ -313,6 +314,7 @@ export function StudentGuardiansWorkspace() {
 
   const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setActionSuccess(null);
 
     if (!validateForm()) {
       return;
@@ -346,7 +348,7 @@ export function StudentGuardiansWorkspace() {
 
     if (isEditing && editingRelationId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية student-guardians.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: student-guardians.update.");
         return;
       }
 
@@ -358,6 +360,7 @@ export function StudentGuardiansWorkspace() {
         {
           onSuccess: () => {
             resetForm();
+            setActionSuccess("تم تحديث العلاقة بنجاح.");
           },
         },
       );
@@ -365,7 +368,7 @@ export function StudentGuardiansWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية student-guardians.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: student-guardians.create.");
       return;
     }
 
@@ -373,6 +376,7 @@ export function StudentGuardiansWorkspace() {
       onSuccess: () => {
         resetForm();
         setPage(1);
+        setActionSuccess("تم إنشاء العلاقة بنجاح.");
       },
     });
   };
@@ -382,6 +386,7 @@ export function StudentGuardiansWorkspace() {
       return;
     }
 
+    setActionSuccess(null);
     setFormError(null);
     setEditingRelationId(item.id);
     const nextState = toFormState(item);
@@ -402,12 +407,21 @@ export function StudentGuardiansWorkspace() {
       return;
     }
 
-    updateMutation.mutate({
-      relationId: item.id,
-      payload: {
-        isActive: !item.isActive,
+    updateMutation.mutate(
+      {
+        relationId: item.id,
+        payload: {
+          isActive: !item.isActive,
+        },
       },
-    });
+      {
+        onSuccess: () => {
+          setActionSuccess(
+            item.isActive ? "تم تعطيل العلاقة بنجاح." : "تم تفعيل العلاقة بنجاح.",
+          );
+        },
+      },
+    );
   };
 
   const handleDelete = (item: StudentGuardianListItem) => {
@@ -427,6 +441,7 @@ export function StudentGuardiansWorkspace() {
         if (editingRelationId === item.id) {
           resetForm();
         }
+        setActionSuccess("تم حذف العلاقة بنجاح.");
       },
     });
   };
@@ -451,7 +466,7 @@ export function StudentGuardiansWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>student-guardians.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>student-guardians.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
@@ -617,10 +632,15 @@ export function StudentGuardiansWorkspace() {
                   {mutationError}
                 </div>
               ) : null}
+              {actionSuccess ? (
+                <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
+                  {actionSuccess}
+                </div>
+              ) : null}
 
               {!hasDependenciesReadPermissions ? (
                 <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يلزم صلاحيات القراءة: <code>students.read</code> و{" "}
+                  يتطلب هذا الجزء صلاحيات القراءة: <code>students.read</code> و{" "}
                   <code>guardians.read</code> و <code>lookup-relationship-types.read</code>.
                 </div>
               ) : null}
@@ -769,7 +789,7 @@ export function StudentGuardiansWorkspace() {
         <CardContent className="space-y-3">
           {relationsQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
@@ -777,7 +797,7 @@ export function StudentGuardiansWorkspace() {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {relationsQuery.error instanceof Error
                 ? relationsQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 

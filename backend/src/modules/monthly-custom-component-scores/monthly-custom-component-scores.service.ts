@@ -334,7 +334,7 @@ export class MonthlyCustomComponentScoresService {
       });
 
     if (!monthlyCustomComponentScore) {
-      throw new NotFoundException('Monthly custom component score not found');
+      throw new NotFoundException('لم يتم العثور على درجة المكوّن الشهري المخصص');
     }
 
     return monthlyCustomComponentScore;
@@ -352,7 +352,7 @@ export class MonthlyCustomComponentScoresService {
       payload.monthlyGradeId !== existing.monthlyGradeId
     ) {
       throw new BadRequestException(
-        'monthlyGradeId cannot be changed. Delete and recreate the record instead.',
+        'لا يمكن تعديل monthlyGradeId. احذف السجل وأعد إنشاءه بدلًا من ذلك.',
       );
     }
 
@@ -361,7 +361,7 @@ export class MonthlyCustomComponentScoresService {
       payload.gradingPolicyComponentId !== existing.gradingPolicyComponentId
     ) {
       throw new BadRequestException(
-        'gradingPolicyComponentId cannot be changed. Delete and recreate the record instead.',
+        'لا يمكن تعديل gradingPolicyComponentId. احذف السجل وأعد إنشاءه بدلًا من ذلك.',
       );
     }
 
@@ -477,7 +477,7 @@ export class MonthlyCustomComponentScoresService {
       });
 
     if (!monthlyCustomComponentScore) {
-      throw new NotFoundException('Monthly custom component score not found');
+      throw new NotFoundException('لم يتم العثور على درجة المكوّن الشهري المخصص');
     }
 
     return monthlyCustomComponentScore;
@@ -522,17 +522,17 @@ export class MonthlyCustomComponentScoresService {
     ]);
 
     if (!monthlyGrade) {
-      throw new BadRequestException('Monthly grade is invalid or deleted');
+      throw new BadRequestException('الدرجة الشهرية غير صالحة أو محذوفة');
     }
 
     if (!component) {
       throw new BadRequestException(
-        'Grading policy component is invalid or deleted',
+        'مكوّن سياسة التقدير غير صالح أو محذوف',
       );
     }
 
     if (!component.isActive) {
-      throw new BadRequestException('Grading policy component is inactive');
+      throw new BadRequestException('مكوّن سياسة التقدير غير نشط');
     }
 
     if (!component.includeInMonthly) {
@@ -591,7 +591,7 @@ export class MonthlyCustomComponentScoresService {
     ]);
 
     if (!monthlyGrade) {
-      throw new NotFoundException('Monthly grade not found');
+      throw new NotFoundException('لم يتم العثور على الدرجة الشهرية');
     }
 
     const customComponentsScore =
@@ -619,7 +619,7 @@ export class MonthlyCustomComponentScoresService {
 
   private validateScore(score: number, maxScore: number) {
     if (score < 0 || score > maxScore) {
-      throw new BadRequestException(`score must be between 0 and ${maxScore}`);
+      throw new BadRequestException(`يجب أن تكون score بين 0 و${maxScore}`);
     }
   }
 
@@ -656,7 +656,7 @@ export class MonthlyCustomComponentScoresService {
     });
 
     if (!user) {
-      throw new ForbiddenException('Authenticated user is not active');
+      throw new ForbiddenException('المستخدم الموثّق غير نشط');
     }
 
     if (!user.employeeId) {
@@ -690,7 +690,7 @@ export class MonthlyCustomComponentScoresService {
       error.code === 'P2002'
     ) {
       throw new ConflictException(
-        'Monthly custom component score already exists for this monthly grade and policy component',
+        'درجة المكوّن الشهري المخصص موجودة مسبقًا لهذه الدرجة الشهرية وهذا المكوّن',
       );
     }
 
@@ -702,6 +702,7 @@ export class MonthlyCustomComponentScoresService {
       return error.message;
     }
 
-    return 'Unknown error';
+    return 'خطأ غير معروف';
   }
 }
+

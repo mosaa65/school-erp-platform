@@ -1,6 +1,7 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   LoaderCircle,
   PencilLine,
@@ -40,6 +41,7 @@ import {
   translateEmployeeGender,
   translateEmployeeSystemAccessStatus,
   translateEmploymentType,
+  translateRoleCode,
 } from "@/lib/i18n/ar";
 import type {
   EmployeeGender,
@@ -47,6 +49,7 @@ import type {
   EmployeeSystemAccessStatus,
   EmploymentType,
   LookupCatalogListItem,
+  OperationalReadinessFilter,
 } from "@/lib/api/client";
 
 type EmployeeFormState = {
@@ -131,6 +134,44 @@ function toDateIso(dateInput: string): string {
   return `${dateInput}T00:00:00.000Z`;
 }
 
+function resolveOperationalReadiness(employee: EmployeeListItem): {
+  label: string;
+  variant: "default" | "secondary" | "outline";
+} {
+  if (!employee.userAccount) {
+    return {
+      label: "غير جاهز: بدون حساب",
+      variant: "outline",
+    };
+  }
+
+  const activeRolesCount = employee.userAccount.userRoles.filter(
+    (item) => item.role.isActive,
+  ).length;
+  if (activeRolesCount === 0) {
+    return {
+      label: "غير جاهز: بدون أدوار",
+      variant: "outline",
+    };
+  }
+
+  const hasOperationalScope =
+    employee.operationalScope.activeTeachingAssignments > 0 ||
+    employee.operationalScope.activeSectionSupervisions > 0;
+
+  if (!hasOperationalScope) {
+    return {
+      label: "جاهزية جزئية: بدون نطاق",
+      variant: "secondary",
+    };
+  }
+
+  return {
+    label: "جاهز تشغيليًا",
+    variant: "default",
+  };
+}
+
 type LocalityLabelInput = {
   id: number;
   nameAr?: string;
@@ -150,7 +191,9 @@ function toFormState(employee: EmployeeListItem): EmployeeFormState {
     phonePrimary: employee.phonePrimary ?? "",
     phoneSecondary: employee.phoneSecondary ?? "",
     hasWhatsapp: employee.hasWhatsapp,
-    qualificationId: employee.qualificationId ? String(employee.qualificationId) : "",
+    qualificationId: employee.qualificationId
+      ? String(employee.qualificationId)
+      : "",
     qualificationDate: toDateInput(employee.qualificationDate),
     specialization: employee.specialization ?? "",
     idNumber: employee.idNumber ?? "",
@@ -213,15 +256,22 @@ export function EmployeesWorkspace() {
   >("all");
   const [idTypeFilter, setIdTypeFilter] = React.useState<string>("all");
   const [localityFilter, setLocalityFilter] = React.useState<string>("all");
-  const [qualificationFilter, setQualificationFilter] = React.useState<string>("all");
+  const [qualificationFilter, setQualificationFilter] =
+    React.useState<string>("all");
   const [jobRoleFilter, setJobRoleFilter] = React.useState<string>("all");
-  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
-    "all",
-  );
+  const [activeFilter, setActiveFilter] = React.useState<
+    "all" | "active" | "inactive"
+  >("all");
+  const [operationalReadinessFilter, setOperationalReadinessFilter] =
+    React.useState<OperationalReadinessFilter | "all">("all");
 
-  const [editingEmployeeId, setEditingEmployeeId] = React.useState<string | null>(null);
-  const [formState, setFormState] = React.useState<EmployeeFormState>(DEFAULT_FORM_STATE);
+  const [editingEmployeeId, setEditingEmployeeId] = React.useState<
+    string | null
+  >(null);
+  const [formState, setFormState] =
+    React.useState<EmployeeFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
   const [formGovernorateId, setFormGovernorateId] = React.useState<string>("");
   const [formDirectorateId, setFormDirectorateId] = React.useState<string>("");
   const [formSubDistrictId, setFormSubDistrictId] = React.useState<string>("");
@@ -232,13 +282,18 @@ export function EmployeesWorkspace() {
     limit: PAGE_SIZE,
     search: search || undefined,
     genderId: genderFilter === "all" ? undefined : Number(genderFilter),
-    employmentType: employmentTypeFilter === "all" ? undefined : employmentTypeFilter,
+    employmentType:
+      employmentTypeFilter === "all" ? undefined : employmentTypeFilter,
     idTypeId: idTypeFilter === "all" ? undefined : Number(idTypeFilter),
     localityId: localityFilter === "all" ? undefined : Number(localityFilter),
     qualificationId:
       qualificationFilter === "all" ? undefined : Number(qualificationFilter),
     jobRoleId: jobRoleFilter === "all" ? undefined : Number(jobRoleFilter),
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
+    operationalReadiness:
+      operationalReadinessFilter === "all"
+        ? undefined
+        : operationalReadinessFilter,
   });
   const idTypeOptionsQuery = useIdTypeOptionsQuery();
   const genderOptionsQuery = useGenderOptionsQuery();
@@ -309,7 +364,9 @@ export function EmployeesWorkspace() {
     }
 
     const governorateId = Number(formGovernorateId);
-    return directorateOptions.filter((item) => item.governorateId === governorateId);
+    return directorateOptions.filter(
+      (item) => item.governorateId === governorateId,
+    );
   }, [directorateOptions, formGovernorateId]);
   const filteredSubDistricts = React.useMemo(() => {
     if (!formDirectorateId) {
@@ -317,7 +374,9 @@ export function EmployeesWorkspace() {
     }
 
     const directorateId = Number(formDirectorateId);
-    return subDistrictOptions.filter((item) => item.directorateId === directorateId);
+    return subDistrictOptions.filter(
+      (item) => item.directorateId === directorateId,
+    );
   }, [formDirectorateId, subDistrictOptions]);
   const filteredVillages = React.useMemo(() => {
     if (!formSubDistrictId) {
@@ -325,7 +384,9 @@ export function EmployeesWorkspace() {
     }
 
     const subDistrictId = Number(formSubDistrictId);
-    return villageOptions.filter((item) => item.subDistrictId === subDistrictId);
+    return villageOptions.filter(
+      (item) => item.subDistrictId === subDistrictId,
+    );
   }, [formSubDistrictId, villageOptions]);
   const filteredLocalities = React.useMemo(() => {
     if (!formDirectorateId) {
@@ -376,7 +437,9 @@ export function EmployeesWorkspace() {
       return;
     }
 
-    const stillExists = employees.some((employee) => employee.id === editingEmployeeId);
+    const stillExists = employees.some(
+      (employee) => employee.id === editingEmployeeId,
+    );
     if (!stillExists) {
       setEditingEmployeeId(null);
       setFormState(DEFAULT_FORM_STATE);
@@ -414,7 +477,9 @@ export function EmployeesWorkspace() {
       return;
     }
 
-    const locality = geographyMaps.localityById.get(Number(formState.localityId));
+    const locality = geographyMaps.localityById.get(
+      Number(formState.localityId),
+    );
     const selection = resolveSelectionFromLocality(locality, geographyMaps);
 
     if (selection.governorateId !== formGovernorateId) {
@@ -499,7 +564,11 @@ export function EmployeesWorkspace() {
     }
 
     const experienceYears = Number(formState.experienceYears);
-    if (!Number.isInteger(experienceYears) || experienceYears < 0 || experienceYears > 80) {
+    if (
+      !Number.isInteger(experienceYears) ||
+      experienceYears < 0 ||
+      experienceYears > 80
+    ) {
       setFormError("سنوات الخبرة يجب أن تكون رقمًا صحيحًا بين 0 و80.");
       return false;
     }
@@ -510,6 +579,7 @@ export function EmployeesWorkspace() {
 
   const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setActionSuccess(null);
 
     if (!validateForm()) {
       return;
@@ -535,7 +605,9 @@ export function EmployeesWorkspace() {
       fullName: formState.fullName.trim(),
       gender: mappedGender,
       genderId: formState.genderId ? Number(formState.genderId) : undefined,
-      birthDate: formState.birthDate ? toDateIso(formState.birthDate) : undefined,
+      birthDate: formState.birthDate
+        ? toDateIso(formState.birthDate)
+        : undefined,
       phonePrimary: toOptionalString(formState.phonePrimary),
       phoneSecondary: toOptionalString(formState.phoneSecondary),
       hasWhatsapp: formState.hasWhatsapp,
@@ -550,10 +622,14 @@ export function EmployeesWorkspace() {
       idNumber: toOptionalString(formState.idNumber),
       idTypeId: formState.idTypeId ? Number(formState.idTypeId) : null,
       localityId: formState.localityId ? Number(formState.localityId) : null,
-      idExpiryDate: formState.idExpiryDate ? toDateIso(formState.idExpiryDate) : undefined,
+      idExpiryDate: formState.idExpiryDate
+        ? toDateIso(formState.idExpiryDate)
+        : undefined,
       experienceYears: Number(formState.experienceYears),
       employmentType: formState.employmentType || undefined,
-      jobTitle: toOptionalString(selectedJobRole?.nameAr ?? selectedJobRole?.name ?? ""),
+      jobTitle: toOptionalString(
+        selectedJobRole?.nameAr ?? selectedJobRole?.name ?? "",
+      ),
       jobRoleId: formState.jobRoleId ? Number(formState.jobRoleId) : null,
       hireDate: formState.hireDate ? toDateIso(formState.hireDate) : undefined,
       previousSchool: toOptionalString(formState.previousSchool),
@@ -564,7 +640,7 @@ export function EmployeesWorkspace() {
 
     if (isEditing && editingEmployeeId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية employees.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: employees.update.");
         return;
       }
 
@@ -576,6 +652,7 @@ export function EmployeesWorkspace() {
         {
           onSuccess: () => {
             resetForm();
+            setActionSuccess("تم تحديث الموظف بنجاح.");
           },
         },
       );
@@ -583,7 +660,7 @@ export function EmployeesWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية employees.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: employees.create.");
       return;
     }
 
@@ -591,6 +668,7 @@ export function EmployeesWorkspace() {
       onSuccess: () => {
         resetForm();
         setPage(1);
+        setActionSuccess("تم إنشاء الموظف بنجاح.");
       },
     });
   };
@@ -601,16 +679,22 @@ export function EmployeesWorkspace() {
     }
 
     setFormError(null);
+    setActionSuccess(null);
     setEditingEmployeeId(employee.id);
     const nextState = toFormState(employee);
     if (!nextState.genderId) {
-      const mapped = genderOptions.find((option) => option.code === employee.gender);
+      const mapped = genderOptions.find(
+        (option) => option.code === employee.gender,
+      );
       if (mapped) {
         nextState.genderId = String(mapped.id);
       }
     }
     if (!nextState.qualificationId && employee.qualification) {
-      const mapped = findLookupByText(qualificationOptions, employee.qualification);
+      const mapped = findLookupByText(
+        qualificationOptions,
+        employee.qualification,
+      );
       if (mapped) {
         nextState.qualificationId = String(mapped.id);
       }
@@ -628,7 +712,9 @@ export function EmployeesWorkspace() {
       setFormSubDistrictId("");
       setFormVillageId("");
     } else {
-      const locality = geographyMaps.localityById.get(Number(nextState.localityId));
+      const locality = geographyMaps.localityById.get(
+        Number(nextState.localityId),
+      );
       const selection = resolveSelectionFromLocality(locality, geographyMaps);
       setFormGovernorateId(selection.governorateId);
       setFormDirectorateId(selection.directorateId);
@@ -644,12 +730,23 @@ export function EmployeesWorkspace() {
       return;
     }
 
-    updateMutation.mutate({
-      employeeId: employee.id,
-      payload: {
-        isActive: !employee.isActive,
+    updateMutation.mutate(
+      {
+        employeeId: employee.id,
+        payload: {
+          isActive: !employee.isActive,
+        },
       },
-    });
+      {
+        onSuccess: () => {
+          setActionSuccess(
+            employee.isActive
+              ? "تم تعطيل الموظف بنجاح."
+              : "تم تفعيل الموظف بنجاح.",
+          );
+        },
+      },
+    );
   };
 
   const handleDelete = (employee: EmployeeListItem) => {
@@ -667,6 +764,7 @@ export function EmployeesWorkspace() {
         if (editingEmployeeId === employee.id) {
           resetForm();
         }
+        setActionSuccess("تم حذف الموظف بنجاح.");
       },
     });
   };
@@ -691,7 +789,7 @@ export function EmployeesWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>employees.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>employees.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
@@ -703,7 +801,10 @@ export function EmployeesWorkspace() {
                   <Input
                     value={formState.jobNumber}
                     onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, jobNumber: event.target.value }))
+                      setFormState((prev) => ({
+                        ...prev,
+                        jobNumber: event.target.value,
+                      }))
                     }
                     placeholder="وظ-0012"
                   />
@@ -726,11 +827,16 @@ export function EmployeesWorkspace() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الاسم الكامل *</label>
+                <label className="text-xs font-medium text-muted-foreground">
+                  الاسم الكامل *
+                </label>
                 <Input
                   value={formState.fullName}
                   onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, fullName: event.target.value }))
+                    setFormState((prev) => ({
+                      ...prev,
+                      fullName: event.target.value,
+                    }))
                   }
                   placeholder="أحمد علي حسن"
                   required
@@ -739,7 +845,9 @@ export function EmployeesWorkspace() {
 
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">الجنس *</label>
+                  <label className="text-xs font-medium text-muted-foreground">
+                    الجنس *
+                  </label>
                   <select
                     className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                     value={formState.genderId}
@@ -756,7 +864,10 @@ export function EmployeesWorkspace() {
                       const translated =
                         option.code && isEmployeeGenderCode(option.code)
                           ? translateEmployeeGender(option.code)
-                          : option.nameAr ?? option.name ?? option.code ?? String(option.id);
+                          : (option.nameAr ??
+                            option.name ??
+                            option.code ??
+                            String(option.id));
 
                       return (
                         <option key={option.id} value={option.id}>
@@ -767,12 +878,17 @@ export function EmployeesWorkspace() {
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">تاريخ الميلاد</label>
+                  <label className="text-xs font-medium text-muted-foreground">
+                    تاريخ الميلاد
+                  </label>
                   <Input
                     type="date"
                     value={formState.birthDate}
                     onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, birthDate: event.target.value }))
+                      setFormState((prev) => ({
+                        ...prev,
+                        birthDate: event.target.value,
+                      }))
                     }
                   />
                 </div>
@@ -786,7 +902,10 @@ export function EmployeesWorkspace() {
                   <Input
                     value={formState.phonePrimary}
                     onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, phonePrimary: event.target.value }))
+                      setFormState((prev) => ({
+                        ...prev,
+                        phonePrimary: event.target.value,
+                      }))
                     }
                     placeholder="+967777111222"
                   />
@@ -798,7 +917,10 @@ export function EmployeesWorkspace() {
                   <Input
                     value={formState.phoneSecondary}
                     onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, phoneSecondary: event.target.value }))
+                      setFormState((prev) => ({
+                        ...prev,
+                        phoneSecondary: event.target.value,
+                      }))
                     }
                     placeholder="+967733444555"
                   />
@@ -819,12 +941,18 @@ export function EmployeesWorkspace() {
                         qualificationId: event.target.value,
                       }))
                     }
-                    disabled={!canReadQualifications || qualificationOptionsQuery.isLoading}
+                    disabled={
+                      !canReadQualifications ||
+                      qualificationOptionsQuery.isLoading
+                    }
                   >
                     <option value="">غير محدد</option>
                     {qualificationOptions.map((option) => (
                       <option key={option.id} value={option.id}>
-                        {option.nameAr ?? option.name ?? option.code ?? String(option.id)}
+                        {option.nameAr ??
+                          option.name ??
+                          option.code ??
+                          String(option.id)}
                       </option>
                     ))}
                   </select>
@@ -848,11 +976,16 @@ export function EmployeesWorkspace() {
 
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">التخصص</label>
+                  <label className="text-xs font-medium text-muted-foreground">
+                    التخصص
+                  </label>
                   <Input
                     value={formState.specialization}
                     onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, specialization: event.target.value }))
+                      setFormState((prev) => ({
+                        ...prev,
+                        specialization: event.target.value,
+                      }))
                     }
                     placeholder="رياضيات"
                   />
@@ -867,7 +1000,10 @@ export function EmployeesWorkspace() {
                     max={80}
                     value={formState.experienceYears}
                     onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, experienceYears: event.target.value }))
+                      setFormState((prev) => ({
+                        ...prev,
+                        experienceYears: event.target.value,
+                      }))
                     }
                   />
                 </div>
@@ -875,17 +1011,24 @@ export function EmployeesWorkspace() {
 
               <div className="grid gap-3 md:grid-cols-3">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">رقم الهوية</label>
+                  <label className="text-xs font-medium text-muted-foreground">
+                    رقم الهوية
+                  </label>
                   <Input
                     value={formState.idNumber}
                     onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, idNumber: event.target.value }))
+                      setFormState((prev) => ({
+                        ...prev,
+                        idNumber: event.target.value,
+                      }))
                     }
                     placeholder="A123456789"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">نوع الهوية</label>
+                  <label className="text-xs font-medium text-muted-foreground">
+                    نوع الهوية
+                  </label>
                   <select
                     className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                     value={formState.idTypeId}
@@ -913,7 +1056,10 @@ export function EmployeesWorkspace() {
                     type="date"
                     value={formState.idExpiryDate}
                     onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, idExpiryDate: event.target.value }))
+                      setFormState((prev) => ({
+                        ...prev,
+                        idExpiryDate: event.target.value,
+                      }))
                     }
                   />
                 </div>
@@ -928,8 +1074,12 @@ export function EmployeesWorkspace() {
                     <select
                       className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                       value={formGovernorateId}
-                      onChange={(event) => handleGovernorateChange(event.target.value)}
-                      disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
+                      onChange={(event) =>
+                        handleGovernorateChange(event.target.value)
+                      }
+                      disabled={
+                        !canReadLocalities || geographyOptionsQuery.isLoading
+                      }
                     >
                       <option value="">اختر المحافظة</option>
                       {governorateOptions.map((item) => (
@@ -942,7 +1092,9 @@ export function EmployeesWorkspace() {
                     <select
                       className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                       value={formDirectorateId}
-                      onChange={(event) => handleDirectorateChange(event.target.value)}
+                      onChange={(event) =>
+                        handleDirectorateChange(event.target.value)
+                      }
                       disabled={
                         !canReadLocalities ||
                         geographyOptionsQuery.isLoading ||
@@ -960,7 +1112,9 @@ export function EmployeesWorkspace() {
                     <select
                       className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                       value={formSubDistrictId}
-                      onChange={(event) => handleSubDistrictChange(event.target.value)}
+                      onChange={(event) =>
+                        handleSubDistrictChange(event.target.value)
+                      }
                       disabled={
                         !canReadLocalities ||
                         geographyOptionsQuery.isLoading ||
@@ -978,7 +1132,9 @@ export function EmployeesWorkspace() {
                     <select
                       className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                       value={formVillageId}
-                      onChange={(event) => handleVillageChange(event.target.value)}
+                      onChange={(event) =>
+                        handleVillageChange(event.target.value)
+                      }
                       disabled={
                         !canReadLocalities ||
                         geographyOptionsQuery.isLoading ||
@@ -997,7 +1153,9 @@ export function EmployeesWorkspace() {
                       <select
                         className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                         value={formState.localityId}
-                        onChange={(event) => handleLocalityChange(event.target.value)}
+                        onChange={(event) =>
+                          handleLocalityChange(event.target.value)
+                        }
                         disabled={
                           !canReadLocalities ||
                           geographyOptionsQuery.isLoading ||
@@ -1007,7 +1165,10 @@ export function EmployeesWorkspace() {
                         <option value="">اختر المحلة</option>
                         {filteredLocalities.map((locality) => (
                           <option key={locality.id} value={locality.id}>
-                            {formatLocalityHierarchyLabel(locality, geographyMaps)}
+                            {formatLocalityHierarchyLabel(
+                              locality,
+                              geographyMaps,
+                            )}
                           </option>
                         ))}
                       </select>
@@ -1026,8 +1187,12 @@ export function EmployeesWorkspace() {
                   <select
                     className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                     value={formState.localityId}
-                    onChange={(event) => handleLocalityChange(event.target.value)}
-                    disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
+                    onChange={(event) =>
+                      handleLocalityChange(event.target.value)
+                    }
+                    disabled={
+                      !canReadLocalities || geographyOptionsQuery.isLoading
+                    }
                   >
                     <option value="">غير محدد</option>
                     {localityOptions.map((locality) => (
@@ -1050,14 +1215,22 @@ export function EmployeesWorkspace() {
                     onChange={(event) =>
                       setFormState((prev) => ({
                         ...prev,
-                        employmentType: event.target.value as EmploymentType | "",
+                        employmentType: event.target.value as
+                          | EmploymentType
+                          | "",
                       }))
                     }
                   >
                     <option value="">غير محدد</option>
-                    <option value="PERMANENT">{translateEmploymentType("PERMANENT")}</option>
-                    <option value="CONTRACT">{translateEmploymentType("CONTRACT")}</option>
-                    <option value="VOLUNTEER">{translateEmploymentType("VOLUNTEER")}</option>
+                    <option value="PERMANENT">
+                      {translateEmploymentType("PERMANENT")}
+                    </option>
+                    <option value="CONTRACT">
+                      {translateEmploymentType("CONTRACT")}
+                    </option>
+                    <option value="VOLUNTEER">
+                      {translateEmploymentType("VOLUNTEER")}
+                    </option>
                   </select>
                 </div>
                 <div className="space-y-1.5">
@@ -1078,7 +1251,10 @@ export function EmployeesWorkspace() {
                     <option value="">غير محدد</option>
                     {jobRoleOptions.map((option) => (
                       <option key={option.id} value={option.id}>
-                        {option.nameAr ?? option.name ?? option.code ?? String(option.id)}
+                        {option.nameAr ??
+                          option.name ??
+                          option.code ??
+                          String(option.id)}
                       </option>
                     ))}
                   </select>
@@ -1087,12 +1263,17 @@ export function EmployeesWorkspace() {
 
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">تاريخ التعيين</label>
+                  <label className="text-xs font-medium text-muted-foreground">
+                    تاريخ التعيين
+                  </label>
                   <Input
                     type="date"
                     value={formState.hireDate}
                     onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, hireDate: event.target.value }))
+                      setFormState((prev) => ({
+                        ...prev,
+                        hireDate: event.target.value,
+                      }))
                     }
                   />
                 </div>
@@ -1123,10 +1304,11 @@ export function EmployeesWorkspace() {
                   onChange={(event) =>
                     setFormState((prev) => ({
                       ...prev,
-                      systemAccessStatus: event.target.value as EmployeeSystemAccessStatus,
-                      }))
-                    }
-                  >
+                      systemAccessStatus: event.target
+                        .value as EmployeeSystemAccessStatus,
+                    }))
+                  }
+                >
                   <option value="GRANTED">
                     {translateEmployeeSystemAccessStatus("GRANTED")}
                   </option>
@@ -1134,6 +1316,10 @@ export function EmployeesWorkspace() {
                     {translateEmployeeSystemAccessStatus("SUSPENDED")}
                   </option>
                 </select>
+                <p className="text-[11px] text-muted-foreground">
+                  هذه الحالة تخص ملف الموظف فقط. إنشاء حساب الدخول وربط الأدوار
+                  يتم من شاشة المستخدمين.
+                </p>
               </div>
 
               <div className="grid gap-2 md:grid-cols-3">
@@ -1169,7 +1355,10 @@ export function EmployeesWorkspace() {
                     type="checkbox"
                     checked={formState.isActive}
                     onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                      setFormState((prev) => ({
+                        ...prev,
+                        isActive: event.target.checked,
+                      }))
                     }
                   />
                 </label>
@@ -1184,6 +1373,11 @@ export function EmployeesWorkspace() {
               {mutationError ? (
                 <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
                   {mutationError}
+                </div>
+              ) : null}
+              {actionSuccess ? (
+                <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
+                  {actionSuccess}
                 </div>
               ) : null}
 
@@ -1215,15 +1409,18 @@ export function EmployeesWorkspace() {
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <CardTitle>قائمة الموظفين</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+            <Badge variant="secondary">
+              الإجمالي: {pagination?.total ?? 0}
+            </Badge>
           </div>
           <CardDescription>
-            إدارة الموظفين مع فلترة بالبحث والجنس ونوع التوظيف والمسمى والمؤهل والموقع.
+            إدارة الموظفين مع فلترة بالبحث والجنس ونوع التوظيف والمسمى والمؤهل
+            والموقع.
           </CardDescription>
 
           <form
             onSubmit={handleSearchSubmit}
-            className="grid gap-2 md:grid-cols-[1fr_150px_170px_170px_220px_170px_170px_130px_auto]"
+            className="grid gap-2 md:grid-cols-[1fr_150px_170px_170px_220px_170px_170px_130px_190px_auto]"
           >
             <div className="relative">
               <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -1249,7 +1446,10 @@ export function EmployeesWorkspace() {
                 const translated =
                   option.code && isEmployeeGenderCode(option.code)
                     ? translateEmployeeGender(option.code)
-                    : option.nameAr ?? option.name ?? option.code ?? String(option.id);
+                    : (option.nameAr ??
+                      option.name ??
+                      option.code ??
+                      String(option.id));
 
                 return (
                   <option key={option.id} value={option.id}>
@@ -1264,13 +1464,21 @@ export function EmployeesWorkspace() {
               value={employmentTypeFilter}
               onChange={(event) => {
                 setPage(1);
-                setEmploymentTypeFilter(event.target.value as EmploymentType | "all");
+                setEmploymentTypeFilter(
+                  event.target.value as EmploymentType | "all",
+                );
               }}
             >
               <option value="all">كل الأنواع</option>
-              <option value="PERMANENT">{translateEmploymentType("PERMANENT")}</option>
-              <option value="CONTRACT">{translateEmploymentType("CONTRACT")}</option>
-              <option value="VOLUNTEER">{translateEmploymentType("VOLUNTEER")}</option>
+              <option value="PERMANENT">
+                {translateEmploymentType("PERMANENT")}
+              </option>
+              <option value="CONTRACT">
+                {translateEmploymentType("CONTRACT")}
+              </option>
+              <option value="VOLUNTEER">
+                {translateEmploymentType("VOLUNTEER")}
+              </option>
             </select>
 
             <select
@@ -1314,12 +1522,17 @@ export function EmployeesWorkspace() {
                 setPage(1);
                 setQualificationFilter(event.target.value);
               }}
-              disabled={!canReadQualifications || qualificationOptionsQuery.isLoading}
+              disabled={
+                !canReadQualifications || qualificationOptionsQuery.isLoading
+              }
             >
               <option value="all">كل المؤهلات</option>
               {qualificationOptions.map((option) => (
                 <option key={option.id} value={option.id}>
-                  {option.nameAr ?? option.name ?? option.code ?? String(option.id)}
+                  {option.nameAr ??
+                    option.name ??
+                    option.code ??
+                    String(option.id)}
                 </option>
               ))}
             </select>
@@ -1336,7 +1549,10 @@ export function EmployeesWorkspace() {
               <option value="all">كل المسميات</option>
               {jobRoleOptions.map((option) => (
                 <option key={option.id} value={option.id}>
-                  {option.nameAr ?? option.name ?? option.code ?? String(option.id)}
+                  {option.nameAr ??
+                    option.name ??
+                    option.code ??
+                    String(option.id)}
                 </option>
               ))}
             </select>
@@ -1346,12 +1562,30 @@ export function EmployeesWorkspace() {
               value={activeFilter}
               onChange={(event) => {
                 setPage(1);
-                setActiveFilter(event.target.value as "all" | "active" | "inactive");
+                setActiveFilter(
+                  event.target.value as "all" | "active" | "inactive",
+                );
               }}
             >
               <option value="all">كل الحالات</option>
               <option value="active">نشط فقط</option>
               <option value="inactive">غير نشط فقط</option>
+            </select>
+
+            <select
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              value={operationalReadinessFilter}
+              onChange={(event) => {
+                setPage(1);
+                setOperationalReadinessFilter(
+                  event.target.value as OperationalReadinessFilter | "all",
+                );
+              }}
+            >
+              <option value="all">كل الجاهزية التشغيلية</option>
+              <option value="READY">جاهز تشغيليًا</option>
+              <option value="PARTIAL">جاهزية جزئية</option>
+              <option value="NOT_READY">غير جاهز</option>
             </select>
 
             <Button type="submit" variant="outline" className="gap-2">
@@ -1382,89 +1616,157 @@ export function EmployeesWorkspace() {
             </div>
           ) : null}
 
-          {employees.map((employee) => (
-            <div
-              key={employee.id}
-              className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <p className="font-medium">{employee.fullName}</p>
-                  <p className="text-xs text-muted-foreground">
-                    المسمى: {employee.jobRoleLookup?.nameAr ?? employee.jobTitle ?? "-"} | الرقم
-                    الوظيفي: {employee.jobNumber ?? "-"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    الرقم المالي: {employee.financialNumber ?? "-"} | الخبرة: {employee.experienceYears}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    المؤهل: {employee.qualificationLookup?.nameAr ?? employee.qualification ?? "-"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    الهوية: {employee.idNumber ?? "-"} | النوع: {employee.idType?.nameAr ?? "غير محدد"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    الموقع:{" "}
-                    {employee.locality
-                      ? formatLocalityHierarchyLabel(
-                          (geographyMaps.localityById.get(employee.locality.id) ??
-                            employee.locality) as LocalityLabelInput,
-                          geographyMaps,
-                        )
-                      : "غير محدد"}
-                  </p>
+          {employees.map((employee) => {
+            const readiness = resolveOperationalReadiness(employee);
+
+            return (
+              <div
+                key={employee.id}
+                className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <Badge
+                    variant={readiness.variant}
+                    className="order-2 md:order-none"
+                  >
+                    {readiness.label}
+                  </Badge>
+                  <div className="space-y-1">
+                    <p className="font-medium">{employee.fullName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      المسمى:{" "}
+                      {employee.jobRoleLookup?.nameAr ??
+                        employee.jobTitle ??
+                        "-"}{" "}
+                      | الرقم الوظيفي: {employee.jobNumber ?? "-"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      الرقم المالي: {employee.financialNumber ?? "-"} | الخبرة:{" "}
+                      {employee.experienceYears}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      المؤهل:{" "}
+                      {employee.qualificationLookup?.nameAr ??
+                        employee.qualification ??
+                        "-"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      الهوية: {employee.idNumber ?? "-"} | النوع:{" "}
+                      {employee.idType?.nameAr ?? "غير محدد"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      الموقع:{" "}
+                      {employee.locality
+                        ? formatLocalityHierarchyLabel(
+                            (geographyMaps.localityById.get(
+                              employee.locality.id,
+                            ) ?? employee.locality) as LocalityLabelInput,
+                            geographyMaps,
+                          )
+                        : "غير محدد"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      حساب المستخدم:{" "}
+                      {employee.userAccount
+                        ? `${employee.userAccount.email}${employee.userAccount.username ? ` (${employee.userAccount.username})` : ""}`
+                        : "غير مرتبط"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      الأدوار:{" "}
+                      {employee.userAccount &&
+                      employee.userAccount.userRoles.length > 0
+                        ? employee.userAccount.userRoles
+                            .filter((item) => item.role.isActive)
+                            .map((item) => translateRoleCode(item.role.code))
+                            .join("، ")
+                        : "لا يوجد"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      النطاق التشغيلي: إسناد تدريس{" "}
+                      {employee.operationalScope.activeTeachingAssignments} |
+                      إشراف{" "}
+                      {employee.operationalScope.activeSectionSupervisions}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge variant="outline">
+                      {employee.genderLookup?.nameAr ??
+                        translateEmployeeGender(employee.gender)}
+                    </Badge>
+                    <Badge variant="secondary">
+                      {employee.employmentType
+                        ? translateEmploymentType(employee.employmentType)
+                        : "غير محدد"}
+                    </Badge>
+                    <Badge
+                      variant={
+                        employee.systemAccessStatus === "GRANTED"
+                          ? "default"
+                          : "outline"
+                      }
+                    >
+                      {translateEmployeeSystemAccessStatus(
+                        employee.systemAccessStatus,
+                      )}
+                    </Badge>
+                    <Badge
+                      variant={employee.userAccount ? "default" : "outline"}
+                    >
+                      {employee.userAccount ? "لديه حساب" : "بدون حساب"}
+                    </Badge>
+                    <Badge variant={employee.isActive ? "default" : "outline"}>
+                      {employee.isActive ? "نشط" : "غير نشط"}
+                    </Badge>
+                  </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant="outline">
-                    {employee.genderLookup?.nameAr ?? translateEmployeeGender(employee.gender)}
-                  </Badge>
-                  <Badge variant="secondary">
-                    {employee.employmentType
-                      ? translateEmploymentType(employee.employmentType)
-                      : "غير محدد"}
-                  </Badge>
-                  <Badge variant={employee.systemAccessStatus === "GRANTED" ? "default" : "outline"}>
-                    {translateEmployeeSystemAccessStatus(employee.systemAccessStatus)}
-                  </Badge>
-                  <Badge variant={employee.isActive ? "default" : "outline"}>
-                    {employee.isActive ? "نشط" : "غير نشط"}
-                  </Badge>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    asChild
+                    variant={employee.userAccount ? "secondary" : "default"}
+                    size="sm"
+                  >
+                    <Link
+                      href={`/app/users?q=${encodeURIComponent(
+                        employee.userAccount?.email ?? employee.fullName,
+                      )}`}
+                    >
+                      {employee.userAccount ? "إدارة الحساب" : "إنشاء/ربط حساب"}
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleStartEdit(employee)}
+                    disabled={!canUpdate || updateMutation.isPending}
+                  >
+                    <PencilLine className="h-3.5 w-3.5" />
+                    تعديل
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleToggleActive(employee)}
+                    disabled={!canUpdate || updateMutation.isPending}
+                  >
+                    {employee.isActive ? "تعطيل" : "تفعيل"}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleDelete(employee)}
+                    disabled={!canDelete || deleteMutation.isPending}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    حذف
+                  </Button>
                 </div>
               </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleStartEdit(employee)}
-                  disabled={!canUpdate || updateMutation.isPending}
-                >
-                  <PencilLine className="h-3.5 w-3.5" />
-                  تعديل
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleToggleActive(employee)}
-                  disabled={!canUpdate || updateMutation.isPending}
-                >
-                  {employee.isActive ? "تعطيل" : "تفعيل"}
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleDelete(employee)}
-                  disabled={!canDelete || deleteMutation.isPending}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  حذف
-                </Button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
 
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
             <p className="text-xs text-muted-foreground">
@@ -1475,7 +1777,11 @@ export function EmployeesWorkspace() {
                 variant="outline"
                 size="sm"
                 onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={!pagination || pagination.page <= 1 || employeesQuery.isFetching}
+                disabled={
+                  !pagination ||
+                  pagination.page <= 1 ||
+                  employeesQuery.isFetching
+                }
               >
                 السابق
               </Button>
@@ -1484,7 +1790,9 @@ export function EmployeesWorkspace() {
                 size="sm"
                 onClick={() =>
                   setPage((prev) =>
-                    pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
+                    pagination
+                      ? Math.min(prev + 1, pagination.totalPages)
+                      : prev,
                   )
                 }
                 disabled={
@@ -1514,8 +1822,3 @@ export function EmployeesWorkspace() {
     </div>
   );
 }
-
-
-
-
-

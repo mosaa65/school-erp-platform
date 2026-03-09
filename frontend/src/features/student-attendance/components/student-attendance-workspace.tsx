@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import {
@@ -302,7 +302,7 @@ export function StudentAttendanceWorkspace() {
 
     if (isEditing && editingAttendanceId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية student-attendance.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: student-attendance.update.");
         return;
       }
 
@@ -321,7 +321,7 @@ export function StudentAttendanceWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية student-attendance.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: student-attendance.create.");
       return;
     }
 
@@ -398,7 +398,7 @@ export function StudentAttendanceWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>student-attendance.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>student-attendance.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
@@ -523,7 +523,7 @@ export function StudentAttendanceWorkspace() {
 
               {!hasDependenciesReadPermissions ? (
                 <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يلزم صلاحية <code>student-enrollments.read</code> لاختيار القيد.
+                  يتطلب هذا الجزء الصلاحية: <code>student-enrollments.read</code> لاختيار القيد.
                 </div>
               ) : null}
 
@@ -673,7 +673,7 @@ export function StudentAttendanceWorkspace() {
         <CardContent className="space-y-3">
           {attendanceQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
@@ -681,7 +681,7 @@ export function StudentAttendanceWorkspace() {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {attendanceQuery.error instanceof Error
                 ? attendanceQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 

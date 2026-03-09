@@ -163,7 +163,7 @@ export function LookupOwnershipTypesWorkspace() {
 
     if (isEditing && editingLookupOwnershipTypeId !== null) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية lookup-ownership-types.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: lookup-ownership-types.update.");
         return;
       }
 
@@ -182,7 +182,7 @@ export function LookupOwnershipTypesWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية lookup-ownership-types.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: lookup-ownership-types.create.");
       return;
     }
 
@@ -240,7 +240,7 @@ export function LookupOwnershipTypesWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>lookup-ownership-types.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>lookup-ownership-types.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="ownership-form">

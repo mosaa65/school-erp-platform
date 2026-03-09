@@ -169,7 +169,7 @@ export function TalentsWorkspace() {
 
     if (isEditing && editingTalentId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية talents.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: talents.update.");
         return;
       }
 
@@ -188,7 +188,7 @@ export function TalentsWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية talents.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: talents.create.");
       return;
     }
 
@@ -246,7 +246,7 @@ export function TalentsWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>talents.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>talents.create</code>.
             </div>
           ) : (
             <form
@@ -394,7 +394,7 @@ export function TalentsWorkspace() {
         <CardContent className="space-y-3">
           {talentsQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
@@ -402,7 +402,7 @@ export function TalentsWorkspace() {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {talentsQuery.error instanceof Error
                 ? talentsQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 

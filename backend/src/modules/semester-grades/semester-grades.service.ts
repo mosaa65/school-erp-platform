@@ -150,7 +150,7 @@ export class SemesterGradesService {
 
     if (existing) {
       throw new ConflictException(
-        'Semester grade already exists for this enrollment, subject, and term',
+        'توجد درجة فصلية مسبقًا لهذا القيد والمادة والفصل',
       );
     }
 
@@ -253,7 +253,7 @@ export class SemesterGradesService {
 
     if (enrollments.length === 0) {
       return {
-        message: 'No active enrollments found for the selected section',
+        message: 'لا توجد قيود طلاب نشطة للشعبة المحددة',
         summary: {
           totalEnrollments: 0,
           created: 0,
@@ -368,7 +368,7 @@ export class SemesterGradesService {
     });
 
     return {
-      message: 'Semester grade calculation completed',
+      message: 'اكتمل احتساب الدرجات الفصلية',
       summary,
     };
   }
@@ -410,7 +410,7 @@ export class SemesterGradesService {
 
     if (assessments.length === 0) {
       return {
-        message: 'No active final exam assessments found for this term',
+        message: 'لا توجد تقييمات نهائية نشطة لهذا الفصل',
         summary: {
           totalEnrollments: 0,
           created: 0,
@@ -606,7 +606,7 @@ export class SemesterGradesService {
     });
 
     return {
-      message: 'Final exam scores were applied to semester grades',
+      message: 'تم تطبيق درجات الاختبار النهائي على الدرجات الفصلية',
       summary,
     };
   }
@@ -757,7 +757,7 @@ export class SemesterGradesService {
     });
 
     if (!semesterGrade) {
-      throw new NotFoundException('Semester grade not found');
+      throw new NotFoundException('الدرجة الفصلية غير موجودة');
     }
 
     await this.ensureActorAuthorized(
@@ -778,7 +778,7 @@ export class SemesterGradesService {
     const existing = await this.ensureSemesterGradeExists(id);
 
     if (existing.isLocked) {
-      throw new ConflictException('Cannot update a locked semester grade');
+      throw new ConflictException('لا يمكن تعديل درجة فصلية مقفلة');
     }
 
     if (
@@ -787,7 +787,7 @@ export class SemesterGradesService {
       payload.academicTermId !== undefined
     ) {
       throw new BadRequestException(
-        'studentEnrollmentId, subjectId, and academicTermId cannot be updated',
+        'لا يمكن تعديل studentEnrollmentId أو subjectId أو academicTermId',
       );
     }
 
@@ -869,7 +869,7 @@ export class SemesterGradesService {
     );
 
     if (existing.isLocked) {
-      throw new ConflictException('Semester grade is already locked');
+      throw new ConflictException('الدرجة الفصلية مقفلة بالفعل');
     }
 
     const semesterGrade = await this.prisma.semesterGrade.update({
@@ -910,7 +910,7 @@ export class SemesterGradesService {
     );
 
     if (!existing.isLocked) {
-      throw new ConflictException('Semester grade is not locked');
+      throw new ConflictException('الدرجة الفصلية غير مقفلة');
     }
 
     const semesterGrade = await this.prisma.semesterGrade.update({
@@ -951,7 +951,7 @@ export class SemesterGradesService {
     );
 
     if (existing.isLocked) {
-      throw new ConflictException('Cannot delete a locked semester grade');
+      throw new ConflictException('لا يمكن حذف درجة فصلية مقفلة');
     }
 
     await this.prisma.semesterGrade.update({
@@ -1017,23 +1017,23 @@ export class SemesterGradesService {
     ]);
 
     if (!enrollment) {
-      throw new BadRequestException('Student enrollment is invalid or deleted');
+      throw new BadRequestException('قيد الطالب غير صالح أو محذوف');
     }
     if (!enrollment.isActive) {
-      throw new BadRequestException('Student enrollment is inactive');
+      throw new BadRequestException('قيد الطالب غير نشط');
     }
     if (!enrollment.section.isActive) {
-      throw new BadRequestException('Enrollment section is inactive');
+      throw new BadRequestException('شعبة القيد غير نشطة');
     }
     if (!term) {
-      throw new BadRequestException('Academic term is invalid or deleted');
+      throw new BadRequestException('الفصل الأكاديمي غير صالح أو محذوف');
     }
     if (!term.isActive) {
-      throw new BadRequestException('Academic term is inactive');
+      throw new BadRequestException('الفصل الأكاديمي غير نشط');
     }
     if (enrollment.academicYearId !== term.academicYearId) {
       throw new BadRequestException(
-        'Student enrollment academic year does not match academic term year',
+        'السنة الدراسية لقيد الطالب لا تطابق سنة الفصل الأكاديمي',
       );
     }
 
@@ -1083,16 +1083,16 @@ export class SemesterGradesService {
     ]);
 
     if (!term) {
-      throw new BadRequestException('Academic term is invalid or deleted');
+      throw new BadRequestException('الفصل الأكاديمي غير صالح أو محذوف');
     }
     if (!term.isActive) {
-      throw new BadRequestException('Academic term is inactive');
+      throw new BadRequestException('الفصل الأكاديمي غير نشط');
     }
     if (!section) {
-      throw new BadRequestException('Section is invalid or deleted');
+      throw new BadRequestException('الشعبة غير صالحة أو محذوفة');
     }
     if (!section.isActive) {
-      throw new BadRequestException('Section is inactive');
+      throw new BadRequestException('الشعبة غير نشطة');
     }
 
     await this.ensureSubjectExistsAndActive(subjectId);
@@ -1134,7 +1134,7 @@ export class SemesterGradesService {
     });
 
     if (!semesterGrade) {
-      throw new NotFoundException('Semester grade not found');
+      throw new NotFoundException('الدرجة الفصلية غير موجودة');
     }
 
     return {
@@ -1153,7 +1153,7 @@ export class SemesterGradesService {
     });
 
     if (!semesterGrade) {
-      throw new NotFoundException('Semester grade not found');
+      throw new NotFoundException('الدرجة الفصلية غير موجودة');
     }
 
     return semesterGrade;
@@ -1172,10 +1172,10 @@ export class SemesterGradesService {
     });
 
     if (!subject) {
-      throw new BadRequestException('Subject is invalid or deleted');
+      throw new BadRequestException('المادة غير صالحة أو محذوفة');
     }
     if (!subject.isActive) {
-      throw new BadRequestException('Subject is inactive');
+      throw new BadRequestException('المادة غير نشطة');
     }
   }
 
@@ -1202,7 +1202,7 @@ export class SemesterGradesService {
 
     if (offeringCount === 0) {
       throw new BadRequestException(
-        'Subject is not offered for this grade level in the selected term',
+        'المادة غير معروضة لهذه المرحلة في الفصل المحدد',
       );
     }
   }
@@ -1294,7 +1294,7 @@ export class SemesterGradesService {
   private validateScore(value: number, fieldName: string) {
     if (!Number.isFinite(value) || value < 0) {
       throw new BadRequestException(
-        `${fieldName} must be a non-negative number`,
+        `يجب أن تكون قيمة ${fieldName} رقمًا غير سالب`,
       );
     }
   }
@@ -1334,7 +1334,7 @@ export class SemesterGradesService {
       error.code === 'P2002'
     ) {
       throw new ConflictException(
-        'Semester grade already exists for this enrollment, subject, and term',
+        'توجد درجة فصلية مسبقًا لهذا القيد والمادة والفصل',
       );
     }
 
@@ -1346,6 +1346,7 @@ export class SemesterGradesService {
       return error.message;
     }
 
-    return 'Unknown error';
+    return 'خطأ غير معروف';
   }
 }
+

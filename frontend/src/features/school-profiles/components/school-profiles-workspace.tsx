@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import {
@@ -211,7 +211,7 @@ export function SchoolProfilesWorkspace() {
 
     if (isEditing && editingSchoolProfileId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية school-profiles.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: school-profiles.update.");
         return;
       }
 
@@ -230,7 +230,7 @@ export function SchoolProfilesWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية school-profiles.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: school-profiles.create.");
       return;
     }
 
@@ -293,7 +293,7 @@ export function SchoolProfilesWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>school-profiles.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>school-profiles.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
@@ -353,7 +353,7 @@ export function SchoolProfilesWorkspace() {
                 </select>
                 {!canReadOwnershipTypes ? (
                   <p className="text-xs text-muted-foreground">
-                    لا تملك صلاحية <code>lookup-ownership-types.read</code> لقراءة الأنواع.
+                    لا تملك الصلاحية المطلوبة: <code>lookup-ownership-types.read</code> لقراءة الأنواع.
                   </p>
                 ) : null}
               </div>

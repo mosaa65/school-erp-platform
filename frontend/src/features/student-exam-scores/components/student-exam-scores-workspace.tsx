@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import {
@@ -34,7 +34,7 @@ import {
   translateAssessmentType,
   translateExamAbsenceType,
 } from "@/lib/i18n/ar";
-import { formatNameCodeLabel } from "@/lib/option-labels";
+import { formatNameCodeLabel, formatSectionWithGradeLabel } from "@/lib/option-labels";
 import type { ExamAbsenceType, StudentExamScoreListItem } from "@/lib/api/client";
 
 type FormState = {
@@ -102,6 +102,7 @@ export function StudentExamScoresWorkspace() {
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [form, setForm] = React.useState<FormState>(DEFAULT_FORM);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
 
   const examPeriodsQuery = useExamPeriodOptionsQuery();
   const assessmentsForFormQuery = useExamAssessmentOptionsQuery(form.examPeriodId || undefined);
@@ -202,6 +203,7 @@ export function StudentExamScoresWorkspace() {
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setActionSuccess(null);
     if (!validateForm()) {
       return;
     }
@@ -219,21 +221,31 @@ export function StudentExamScoresWorkspace() {
 
     if (editingId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية student-exam-scores.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: student-exam-scores.update.");
         return;
       }
       updateMutation.mutate(
         { studentExamScoreId: editingId, payload },
-        { onSuccess: () => resetForm() },
+        {
+          onSuccess: () => {
+            resetForm();
+            setActionSuccess("تم تحديث درجة الاختبار بنجاح.");
+          },
+        },
       );
       return;
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية student-exam-scores.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: student-exam-scores.create.");
       return;
     }
-    createMutation.mutate(payload, { onSuccess: () => resetForm() });
+    createMutation.mutate(payload, {
+      onSuccess: () => {
+        resetForm();
+        setActionSuccess("تم إنشاء درجة الاختبار بنجاح.");
+      },
+    });
   };
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
@@ -280,7 +292,7 @@ export function StudentExamScoresWorkspace() {
               <option value="">اختر التقييم *</option>
               {(assessmentsForFormQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.title} ({formatNameCodeLabel(item.section.name, item.section.code)} / {formatNameCodeLabel(item.subject.name, item.subject.code)})
+                  {item.title} ({formatSectionWithGradeLabel(item.section)} / {formatNameCodeLabel(item.subject.name, item.subject.code)})
                 </option>
               ))}
             </select>
@@ -293,7 +305,7 @@ export function StudentExamScoresWorkspace() {
               <option value="">اختر القيد *</option>
               {formEnrollments.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.student.fullName} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatNameCodeLabel(item.section.name, item.section.code)})
+                  {item.student.fullName} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatSectionWithGradeLabel(item.section)})
                 </option>
               ))}
             </select>
@@ -346,6 +358,7 @@ export function StudentExamScoresWorkspace() {
 
             {formError ? <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">{formError}</div> : null}
             {mutationError ? <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">{mutationError}</div> : null}
+            {actionSuccess ? <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">{actionSuccess}</div> : null}
 
             <div className="flex gap-2">
               <Button type="submit" className="flex-1 gap-2" disabled={isSubmitting}>
@@ -398,8 +411,8 @@ export function StudentExamScoresWorkspace() {
           </form>
         </CardHeader>
         <CardContent className="space-y-3">
-          {scoresQuery.isPending ? <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">جارٍ التحميل...</div> : null}
-          {scoresQuery.error ? <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{scoresQuery.error instanceof Error ? scoresQuery.error.message : "فشل التحميل"}</div> : null}
+          {scoresQuery.isPending ? <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">جارٍ تحميل البيانات...</div> : null}
+          {scoresQuery.error ? <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{scoresQuery.error instanceof Error ? scoresQuery.error.message : "تعذّر تحميل البيانات."}</div> : null}
           {!scoresQuery.isPending && records.length === 0 ? <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">لا توجد نتائج.</div> : null}
 
           {records.map((item) => (
@@ -418,14 +431,14 @@ export function StudentExamScoresWorkspace() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { if (!item.examAssessment.examPeriod.isLocked) { setEditingId(item.id); setForm(toFormState(item)); setFormError(null); } }} disabled={!canUpdate || item.examAssessment.examPeriod.isLocked || updateMutation.isPending}>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { if (!item.examAssessment.examPeriod.isLocked) { setEditingId(item.id); setForm(toFormState(item)); setFormError(null); setActionSuccess(null); } }} disabled={!canUpdate || item.examAssessment.examPeriod.isLocked || updateMutation.isPending}>
                   <PencilLine className="h-3.5 w-3.5" />
                   تعديل
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => updateMutation.mutate({ studentExamScoreId: item.id, payload: { isActive: !item.isActive } })} disabled={!canUpdate || item.examAssessment.examPeriod.isLocked || updateMutation.isPending}>
+                <Button variant="outline" size="sm" onClick={() => updateMutation.mutate({ studentExamScoreId: item.id, payload: { isActive: !item.isActive } }, { onSuccess: () => setActionSuccess(item.isActive ? "تم تعطيل درجة الاختبار بنجاح." : "تم تفعيل درجة الاختبار بنجاح.") })} disabled={!canUpdate || item.examAssessment.examPeriod.isLocked || updateMutation.isPending}>
                   {item.isActive ? "تعطيل" : "تفعيل"}
                 </Button>
-                <Button variant="destructive" size="sm" className="gap-1.5" onClick={() => { if (window.confirm("تأكيد الحذف؟")) deleteMutation.mutate(item.id); }} disabled={!canDelete || item.examAssessment.examPeriod.isLocked || deleteMutation.isPending}>
+                <Button variant="destructive" size="sm" className="gap-1.5" onClick={() => { if (window.confirm("تأكيد الحذف؟")) deleteMutation.mutate(item.id, { onSuccess: () => setActionSuccess("تم حذف درجة الاختبار بنجاح.") }); }} disabled={!canDelete || item.examAssessment.examPeriod.isLocked || deleteMutation.isPending}>
                   <Trash2 className="h-3.5 w-3.5" />
                   حذف
                 </Button>

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import {
@@ -84,6 +84,7 @@ export function PromotionDecisionsWorkspace() {
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [form, setForm] = React.useState<FormState>(DEFAULT_FORM);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
 
   const promotionDecisionsQuery = usePromotionDecisionsQuery({
     page,
@@ -150,13 +151,14 @@ export function PromotionDecisionsWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>promotion-decisions.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>promotion-decisions.create</code>.
             </div>
           ) : (
             <form
               className="space-y-3"
               onSubmit={(event) => {
                 event.preventDefault();
+                setActionSuccess(null);
                 if (!validateForm()) {
                   return;
                 }
@@ -170,7 +172,7 @@ export function PromotionDecisionsWorkspace() {
 
                 if (isEditing && editingId) {
                   if (!canUpdate) {
-                    setFormError("لا تملك صلاحية promotion-decisions.update.");
+                    setFormError("لا تملك الصلاحية المطلوبة: promotion-decisions.update.");
                     return;
                   }
                   updateMutation.mutate(
@@ -178,7 +180,12 @@ export function PromotionDecisionsWorkspace() {
                       promotionDecisionId: editingId,
                       payload,
                     },
-                    { onSuccess: () => resetForm() },
+                    {
+                      onSuccess: () => {
+                        resetForm();
+                        setActionSuccess("تم تحديث قرار الترفيع بنجاح.");
+                      },
+                    },
                   );
                   return;
                 }
@@ -187,6 +194,7 @@ export function PromotionDecisionsWorkspace() {
                   onSuccess: () => {
                     resetForm();
                     setPage(1);
+                    setActionSuccess("تم إنشاء قرار الترفيع بنجاح.");
                   },
                 });
               }}
@@ -241,6 +249,11 @@ export function PromotionDecisionsWorkspace() {
               {mutationError ? (
                 <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
                   {mutationError}
+                </div>
+              ) : null}
+              {actionSuccess ? (
+                <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
+                  {actionSuccess}
                 </div>
               ) : null}
 
@@ -320,14 +333,14 @@ export function PromotionDecisionsWorkspace() {
         <CardContent className="space-y-3">
           {promotionDecisionsQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
           {promotionDecisionsQuery.error ? (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {promotionDecisionsQuery.error instanceof Error
                 ? promotionDecisionsQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
           {!promotionDecisionsQuery.isPending && records.length === 0 ? (
@@ -378,6 +391,7 @@ export function PromotionDecisionsWorkspace() {
                     setEditingId(item.id);
                     setForm(toFormState(item));
                     setFormError(null);
+                    setActionSuccess(null);
                   }}
                   disabled={!canUpdate || item.isSystem || updateMutation.isPending}
                 >
@@ -395,7 +409,11 @@ export function PromotionDecisionsWorkspace() {
                     if (!window.confirm(`تأكيد حذف القرار ${item.code}؟`)) {
                       return;
                     }
-                    deleteMutation.mutate(item.id);
+                    deleteMutation.mutate(item.id, {
+                      onSuccess: () => {
+                        setActionSuccess("تم حذف قرار الترفيع بنجاح.");
+                      },
+                    });
                   }}
                   disabled={!canDelete || item.isSystem || deleteMutation.isPending}
                 >

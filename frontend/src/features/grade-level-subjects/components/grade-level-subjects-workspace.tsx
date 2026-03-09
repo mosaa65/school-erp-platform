@@ -205,7 +205,7 @@ export function GradeLevelSubjectsWorkspace() {
 
     if (isEditing && editingMappingId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية grade-level-subjects.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: grade-level-subjects.update.");
         return;
       }
 
@@ -224,7 +224,7 @@ export function GradeLevelSubjectsWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية grade-level-subjects.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: grade-level-subjects.create.");
       return;
     }
 
@@ -289,7 +289,7 @@ export function GradeLevelSubjectsWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>grade-level-subjects.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>grade-level-subjects.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
@@ -445,7 +445,7 @@ export function GradeLevelSubjectsWorkspace() {
 
               {!hasDependenciesReadPermissions ? (
                 <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يلزم صلاحيات القراءة المرتبطة: <code>academic-years.read</code>,{" "}
+                  يتطلب هذا الجزء صلاحيات القراءة المرتبطة: <code>academic-years.read</code>,{" "}
                   <code>grade-levels.read</code>, <code>subjects.read</code>.
                 </div>
               ) : null}
@@ -586,7 +586,7 @@ export function GradeLevelSubjectsWorkspace() {
         <CardContent className="space-y-3">
           {mappingsQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
@@ -594,7 +594,7 @@ export function GradeLevelSubjectsWorkspace() {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {mappingsQuery.error instanceof Error
                 ? mappingsQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 

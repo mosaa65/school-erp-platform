@@ -4,11 +4,20 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AuditStatus, Employee, EmployeeGender, Prisma } from '@prisma/client';
+import {
+  AuditStatus,
+  Employee,
+  EmployeeGender,
+  EmployeeSystemAccessStatus,
+  Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
-import { ListEmployeesDto } from './dto/list-employees.dto';
+import {
+  ListEmployeesDto,
+  OperationalReadinessFilter,
+} from './dto/list-employees.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 
 const employeeInclude = {
@@ -68,6 +77,29 @@ const employeeInclude = {
       isActive: true,
     },
   },
+  userAccount: {
+    select: {
+      id: true,
+      email: true,
+      username: true,
+      isActive: true,
+      userRoles: {
+        where: {
+          deletedAt: null,
+        },
+        select: {
+          role: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              isActive: true,
+            },
+          },
+        },
+      },
+    },
+  },
 } as const;
 
 @Injectable()
@@ -107,8 +139,7 @@ export class EmployeesService {
           specialization: payload.specialization,
           idNumber: payload.idNumber,
           idTypeId: payload.idTypeId === null ? null : payload.idTypeId,
-          localityId:
-            payload.localityId === null ? null : payload.localityId,
+          localityId: payload.localityId === null ? null : payload.localityId,
           idExpiryDate: payload.idExpiryDate,
           experienceYears: payload.experienceYears ?? 0,
           employmentType: payload.employmentType,
@@ -158,6 +189,9 @@ export class EmployeesService {
   async findAll(query: ListEmployeesDto) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
+    const operationalReadinessWhere = this.buildOperationalReadinessWhere(
+      query.operationalReadiness,
+    );
 
     const where: Prisma.EmployeeWhereInput = {
       deletedAt: null,
@@ -193,6 +227,7 @@ export class EmployeesService {
             },
           ]
         : undefined,
+      AND: operationalReadinessWhere ? [operationalReadinessWhere] : undefined,
     };
 
     const [total, items] = await this.prisma.$transaction([
@@ -213,8 +248,63 @@ export class EmployeesService {
       }),
     ]);
 
+    const employeeIds = items.map((item) => item.id);
+    let teachingAssignmentsCountByEmployeeId = new Map<string, number>();
+    let sectionSupervisionsCountByEmployeeId = new Map<string, number>();
+
+    if (employeeIds.length > 0) {
+      const [teachingCounts, supervisionCounts] = await Promise.all([
+        Promise.all(
+          employeeIds.map((employeeId) =>
+            this.prisma.employeeTeachingAssignment.count({
+              where: {
+                employeeId,
+                deletedAt: null,
+                isActive: true,
+              },
+            }),
+          ),
+        ),
+        Promise.all(
+          employeeIds.map((employeeId) =>
+            this.prisma.employeeSectionSupervision.count({
+              where: {
+                employeeId,
+                deletedAt: null,
+                isActive: true,
+              },
+            }),
+          ),
+        ),
+      ]);
+
+      teachingAssignmentsCountByEmployeeId = new Map(
+        employeeIds.map((employeeId, index) => [
+          employeeId,
+          teachingCounts[index] ?? 0,
+        ]),
+      );
+
+      sectionSupervisionsCountByEmployeeId = new Map(
+        employeeIds.map((employeeId, index) => [
+          employeeId,
+          supervisionCounts[index] ?? 0,
+        ]),
+      );
+    }
+
+    const data = items.map((item) => ({
+      ...item,
+      operationalScope: {
+        activeTeachingAssignments:
+          teachingAssignmentsCountByEmployeeId.get(item.id) ?? 0,
+        activeSectionSupervisions:
+          sectionSupervisionsCountByEmployeeId.get(item.id) ?? 0,
+      },
+    }));
+
     return {
-      data: items,
+      data,
       pagination: {
         page,
         limit,
@@ -222,6 +312,124 @@ export class EmployeesService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  private buildOperationalReadinessWhere(
+    filter?: OperationalReadinessFilter,
+  ): Prisma.EmployeeWhereInput | undefined {
+    if (!filter) {
+      return undefined;
+    }
+
+    const hasActiveUserAndRoles: Prisma.EmployeeWhereInput = {
+      userAccount: {
+        is: {
+          deletedAt: null,
+          isActive: true,
+          userRoles: {
+            some: {
+              deletedAt: null,
+              role: {
+                isActive: true,
+                deletedAt: null,
+              },
+            },
+          },
+        },
+      },
+    };
+
+    const hasOperationalScope: Prisma.EmployeeWhereInput = {
+      OR: [
+        {
+          teachingAssignments: {
+            some: {
+              deletedAt: null,
+              isActive: true,
+            },
+          },
+        },
+        {
+          sectionSupervisions: {
+            some: {
+              deletedAt: null,
+              isActive: true,
+            },
+          },
+        },
+      ],
+    };
+
+    switch (filter) {
+      case OperationalReadinessFilter.READY:
+        return {
+          AND: [hasActiveUserAndRoles, hasOperationalScope],
+        };
+
+      case OperationalReadinessFilter.PARTIAL:
+        return {
+          AND: [
+            hasActiveUserAndRoles,
+            {
+              teachingAssignments: {
+                none: {
+                  deletedAt: null,
+                  isActive: true,
+                },
+              },
+            },
+            {
+              sectionSupervisions: {
+                none: {
+                  deletedAt: null,
+                  isActive: true,
+                },
+              },
+            },
+          ],
+        };
+
+      case OperationalReadinessFilter.NOT_READY:
+        return {
+          OR: [
+            {
+              userAccount: {
+                is: null,
+              },
+            },
+            {
+              userAccount: {
+                is: {
+                  OR: [
+                    {
+                      deletedAt: {
+                        not: null,
+                      },
+                    },
+                    {
+                      isActive: false,
+                    },
+                    {
+                      userRoles: {
+                        none: {
+                          deletedAt: null,
+                          role: {
+                            isActive: true,
+                            deletedAt: null,
+                          },
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        };
+
+      default:
+        return undefined;
+    }
   }
 
   async findOne(id: string) {
@@ -237,7 +445,31 @@ export class EmployeesService {
       throw new NotFoundException('Employee not found');
     }
 
-    return employee;
+    const [activeTeachingAssignments, activeSectionSupervisions] =
+      await this.prisma.$transaction([
+        this.prisma.employeeTeachingAssignment.count({
+          where: {
+            employeeId: id,
+            deletedAt: null,
+            isActive: true,
+          },
+        }),
+        this.prisma.employeeSectionSupervision.count({
+          where: {
+            employeeId: id,
+            deletedAt: null,
+            isActive: true,
+          },
+        }),
+      ]);
+
+    return {
+      ...employee,
+      operationalScope: {
+        activeTeachingAssignments,
+        activeSectionSupervisions,
+      },
+    };
   }
 
   async update(id: string, payload: UpdateEmployeeDto, actorUserId: string) {
@@ -278,8 +510,7 @@ export class EmployeesService {
           specialization: payload.specialization,
           idNumber: payload.idNumber,
           idTypeId: payload.idTypeId === null ? null : payload.idTypeId,
-          localityId:
-            payload.localityId === null ? null : payload.localityId,
+          localityId: payload.localityId === null ? null : payload.localityId,
           idExpiryDate: payload.idExpiryDate,
           experienceYears: payload.experienceYears,
           employmentType: payload.employmentType,
@@ -357,6 +588,71 @@ export class EmployeesService {
     }
 
     return employee;
+  }
+
+  async ensureEmployeeReadyForAcademicOperations(id: string) {
+    const employee = await this.prisma.employee.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        isActive: true,
+        systemAccessStatus: true,
+        userAccount: {
+          select: {
+            id: true,
+            isActive: true,
+            deletedAt: true,
+            userRoles: {
+              where: {
+                deletedAt: null,
+              },
+              select: {
+                role: {
+                  select: {
+                    id: true,
+                    isActive: true,
+                    deletedAt: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!employee) {
+      throw new NotFoundException('Employee not found');
+    }
+
+    if (!employee.isActive) {
+      throw new ConflictException('Employee is inactive');
+    }
+
+    if (employee.systemAccessStatus === EmployeeSystemAccessStatus.SUSPENDED) {
+      throw new ConflictException('Employee system access is suspended');
+    }
+
+    if (
+      !employee.userAccount ||
+      employee.userAccount.deletedAt ||
+      !employee.userAccount.isActive
+    ) {
+      throw new ConflictException(
+        'Employee must be linked to an active user account',
+      );
+    }
+
+    const activeRoleCount = employee.userAccount.userRoles.filter(
+      (item) => item.role.isActive && !item.role.deletedAt,
+    ).length;
+
+    if (activeRoleCount === 0) {
+      throw new ConflictException('Linked user account has no active roles');
+    }
   }
 
   private async ensureEmployeeExists(id: string): Promise<Employee> {

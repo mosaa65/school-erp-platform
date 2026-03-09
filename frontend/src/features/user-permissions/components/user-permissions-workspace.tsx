@@ -253,7 +253,7 @@ export function UserPermissionsWorkspace() {
 
     if (isEditing && editingItemId !== null) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية user-permissions.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: user-permissions.update.");
         return;
       }
 
@@ -272,7 +272,7 @@ export function UserPermissionsWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية user-permissions.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: user-permissions.create.");
       return;
     }
 
@@ -367,7 +367,7 @@ export function UserPermissionsWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>user-permissions.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>user-permissions.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="user-permission-form">

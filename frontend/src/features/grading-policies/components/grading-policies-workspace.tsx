@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import {
@@ -159,6 +159,7 @@ export function GradingPoliciesWorkspace() {
   const [editingPolicyId, setEditingPolicyId] = React.useState<string | null>(null);
   const [formState, setFormState] = React.useState<GradingPolicyFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
 
   const policiesQuery = useGradingPoliciesQuery({
     page,
@@ -267,6 +268,7 @@ export function GradingPoliciesWorkspace() {
 
   const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setActionSuccess(null);
 
     if (!validateForm()) {
       return;
@@ -291,7 +293,7 @@ export function GradingPoliciesWorkspace() {
 
     if (isEditing && editingPolicyId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية grading-policies.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: grading-policies.update.");
         return;
       }
 
@@ -303,6 +305,7 @@ export function GradingPoliciesWorkspace() {
         {
           onSuccess: () => {
             resetForm();
+            setActionSuccess("تم تحديث سياسة التقييم بنجاح.");
           },
         },
       );
@@ -310,7 +313,7 @@ export function GradingPoliciesWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية grading-policies.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: grading-policies.create.");
       return;
     }
 
@@ -318,6 +321,7 @@ export function GradingPoliciesWorkspace() {
       onSuccess: () => {
         resetForm();
         setPage(1);
+        setActionSuccess("تم إنشاء سياسة التقييم بنجاح.");
       },
     });
   };
@@ -328,6 +332,7 @@ export function GradingPoliciesWorkspace() {
     }
 
     setFormError(null);
+    setActionSuccess(null);
     setEditingPolicyId(policy.id);
     setFormState(toFormState(policy));
   };
@@ -347,6 +352,7 @@ export function GradingPoliciesWorkspace() {
         if (editingPolicyId === policy.id) {
           resetForm();
         }
+        setActionSuccess("تم حذف سياسة التقييم بنجاح.");
       },
     });
   };
@@ -368,7 +374,7 @@ export function GradingPoliciesWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>grading-policies.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>grading-policies.create</code>.
             </div>
           ) : (
             <form
@@ -584,6 +590,11 @@ export function GradingPoliciesWorkspace() {
                   {mutationError}
                 </div>
               ) : null}
+              {actionSuccess ? (
+                <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
+                  {actionSuccess}
+                </div>
+              ) : null}
 
               <div className="flex gap-2">
                 <Button
@@ -762,7 +773,7 @@ export function GradingPoliciesWorkspace() {
         <CardContent className="space-y-3">
           {policiesQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
@@ -770,7 +781,7 @@ export function GradingPoliciesWorkspace() {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {policiesQuery.error instanceof Error
                 ? policiesQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 

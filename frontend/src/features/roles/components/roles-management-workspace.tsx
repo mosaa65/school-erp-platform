@@ -109,6 +109,7 @@ export function RolesManagementWorkspace() {
     React.useState<RoleFormState | null>(null);
   const [formState, setFormState] = React.useState<RoleFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
   const [permissionSearch, setPermissionSearch] = React.useState("");
 
   const rolesQuery = useRolesQuery({
@@ -193,6 +194,7 @@ export function RolesManagementWorkspace() {
     setOriginalRoleFormState(nextFormState);
     setFormState(nextFormState);
     setFormError(null);
+    setActionSuccess(null);
   };
 
   const validateForm = (): boolean => {
@@ -215,6 +217,7 @@ export function RolesManagementWorkspace() {
 
   const handleSubmitForm = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setActionSuccess(null);
 
     if (!validateForm()) {
       return;
@@ -229,7 +232,7 @@ export function RolesManagementWorkspace() {
 
     if (!isEditing) {
       if (!canCreate) {
-        setFormError("لا تملك صلاحية roles.create.");
+        setFormError("لا تملك الصلاحية المطلوبة: roles.create.");
         return;
       }
 
@@ -244,6 +247,7 @@ export function RolesManagementWorkspace() {
         onSuccess: () => {
           resetForm();
           setPage(1);
+          setActionSuccess("تم إنشاء الدور بنجاح.");
         },
       });
 
@@ -273,12 +277,12 @@ export function RolesManagementWorkspace() {
     }
 
     if (permissionsChanged && !canAssignPermissions) {
-      setFormError("لا تملك صلاحية roles.assign-permissions لتعديل صلاحيات الدور.");
+      setFormError("لا تملك الصلاحية المطلوبة: roles.assign-permissions لتعديل صلاحيات الدور.");
       return;
     }
 
     if (baseFieldsChanged && !canUpdate) {
-      setFormError("لا تملك صلاحية roles.update لتعديل بيانات الدور.");
+      setFormError("لا تملك الصلاحية المطلوبة: roles.update لتعديل بيانات الدور.");
       return;
     }
 
@@ -314,6 +318,7 @@ export function RolesManagementWorkspace() {
       }
 
       resetForm();
+      setActionSuccess("تم تحديث الدور بنجاح.");
     } catch (error) {
       setFormError(readErrorMessage(error));
     }
@@ -324,12 +329,21 @@ export function RolesManagementWorkspace() {
       return;
     }
 
-    updateRoleMutation.mutate({
-      roleId: role.id,
-      payload: {
-        isActive: !role.isActive,
+    updateRoleMutation.mutate(
+      {
+        roleId: role.id,
+        payload: {
+          isActive: !role.isActive,
+        },
       },
-    });
+      {
+        onSuccess: () => {
+          setActionSuccess(
+            role.isActive ? "تم تعطيل الدور بنجاح." : "تم تفعيل الدور بنجاح.",
+          );
+        },
+      },
+    );
   };
 
   const handleDeleteRole = (role: RoleListItem) => {
@@ -352,6 +366,7 @@ export function RolesManagementWorkspace() {
         if (editingRoleId === role.id) {
           resetForm();
         }
+        setActionSuccess("تم حذف الدور بنجاح.");
       },
     });
   };
@@ -378,7 +393,7 @@ export function RolesManagementWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>roles.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>roles.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
@@ -446,7 +461,7 @@ export function RolesManagementWorkspace() {
                     <p className="text-xs text-muted-foreground">
                       {canReadPermissions
                         ? "لا توجد صلاحيات مطابقة."
-                        : "لا تملك صلاحية permissions.read لعرض الصلاحيات."}
+                        : "لا تملك الصلاحية المطلوبة: permissions.read لعرض الصلاحيات."}
                     </p>
                   ) : (
                     filteredPermissions.map((permission) => (
@@ -480,6 +495,11 @@ export function RolesManagementWorkspace() {
               {mutationError ? (
                 <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
                   {mutationError}
+                </div>
+              ) : null}
+              {actionSuccess ? (
+                <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
+                  {actionSuccess}
                 </div>
               ) : null}
 
@@ -535,7 +555,7 @@ export function RolesManagementWorkspace() {
         <CardContent className="space-y-3">
           {rolesQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
@@ -543,7 +563,7 @@ export function RolesManagementWorkspace() {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {rolesQuery.error instanceof Error
                 ? rolesQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 

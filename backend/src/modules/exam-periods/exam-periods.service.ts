@@ -209,7 +209,7 @@ export class ExamPeriodsService {
     });
 
     if (!examPeriod) {
-      throw new NotFoundException('Exam period not found');
+      throw new NotFoundException('لم يتم العثور على فترة الاختبار');
     }
 
     return examPeriod;
@@ -288,7 +288,7 @@ export class ExamPeriodsService {
     const existing = await this.ensureExamPeriodExists(id);
 
     if (existing.isLocked) {
-      throw new ConflictException('Cannot delete a locked exam period');
+      throw new ConflictException('لا يمكن حذف فترة اختبار مقفلة');
     }
 
     await this.prisma.examPeriod.update({
@@ -324,7 +324,7 @@ export class ExamPeriodsService {
     });
 
     if (!examPeriod) {
-      throw new NotFoundException('Exam period not found');
+      throw new NotFoundException('لم يتم العثور على فترة الاختبار');
     }
 
     return examPeriod;
@@ -347,11 +347,11 @@ export class ExamPeriodsService {
     });
 
     if (!term) {
-      throw new BadRequestException('Academic term is invalid or deleted');
+      throw new BadRequestException('الفصل الدراسي غير صالح أو محذوف');
     }
 
     if (!term.isActive) {
-      throw new BadRequestException('Academic term is inactive');
+      throw new BadRequestException('الفصل الدراسي غير نشط');
     }
 
     if (term.academicYearId !== academicYearId) {
@@ -378,7 +378,7 @@ export class ExamPeriodsService {
 
     if (normalizedEndDate < normalizedStartDate) {
       throw new BadRequestException(
-        'endDate must be after or equal to startDate',
+        'يجب أن يكون endDate بعد أو مساويًا لـ startDate',
       );
     }
   }
@@ -391,7 +391,7 @@ export class ExamPeriodsService {
     const parsedDate = value instanceof Date ? value : new Date(value);
 
     if (Number.isNaN(parsedDate.getTime())) {
-      throw new BadRequestException('Invalid datetime format');
+      throw new BadRequestException('تنسيق التاريخ/الوقت غير صالح');
     }
 
     return parsedDate;
@@ -403,7 +403,7 @@ export class ExamPeriodsService {
       error.code === 'P2002'
     ) {
       throw new ConflictException(
-        'Exam period name must be unique within the same academic term',
+        'يجب أن يكون اسم فترة الاختبار فريدًا داخل الفصل الدراسي نفسه',
       );
     }
 
@@ -415,6 +415,7 @@ export class ExamPeriodsService {
       return error.message;
     }
 
-    return 'Unknown error';
+    return 'خطأ غير معروف';
   }
 }
+

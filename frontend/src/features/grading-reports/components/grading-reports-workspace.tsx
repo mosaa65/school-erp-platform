@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import { BarChart3, RefreshCw, Search } from "lucide-react";
@@ -19,7 +19,7 @@ import { useGradeLevelOptionsQuery } from "@/features/grading-reports/hooks/use-
 import { useGradingSummaryReportQuery } from "@/features/grading-reports/hooks/use-grading-summary-report-query";
 import { useSectionOptionsQuery } from "@/features/grading-reports/hooks/use-section-options-query";
 import { translateGradingWorkflowStatus } from "@/lib/i18n/ar";
-import { formatNameCodeLabel } from "@/lib/option-labels";
+import { formatNameCodeLabel, formatSectionWithGradeLabel } from "@/lib/option-labels";
 
 type FiltersState = {
   search: string;
@@ -177,7 +177,7 @@ export function GradingReportsWorkspace() {
               <option value="">كل الشعب</option>
               {(sectionOptionsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {formatNameCodeLabel(item.name, item.code)}
+                  {formatSectionWithGradeLabel(item)}
                 </option>
               ))}
             </select>
@@ -245,7 +245,7 @@ export function GradingReportsWorkspace() {
       {reportQuery.isPending ? (
         <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
           <CardContent className="py-6 text-sm text-muted-foreground">
-            جارٍ التحميل...
+            جارٍ تحميل البيانات...
           </CardContent>
         </Card>
       ) : null}
@@ -255,7 +255,7 @@ export function GradingReportsWorkspace() {
           <CardContent className="py-4 text-sm text-destructive">
             {reportQuery.error instanceof Error
               ? reportQuery.error.message
-              : "فشل التحميل"}
+              : "تعذّر تحميل البيانات."}
           </CardContent>
         </Card>
       ) : null}
@@ -450,9 +450,9 @@ export function GradingReportsWorkspace() {
                   <p className="text-xs text-muted-foreground">
                     الحالة الوصفية:{" "}
                     {item.gradeDescription
-                      ? item.gradeDescription.nameEn
-                        ? `${item.gradeDescription.nameAr} (${item.gradeDescription.nameEn})`
-                        : item.gradeDescription.nameAr
+                      ? (item.gradeDescription.nameAr ||
+                        item.gradeDescription.nameEn ||
+                        "-")
                       : "-"}{" "}
                     | قرار الترفيع:{" "}
                     {formatNameCodeLabel(item.promotionDecision.name, item.promotionDecision.code)}

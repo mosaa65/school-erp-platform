@@ -166,7 +166,7 @@ export function EmployeeTalentsWorkspace() {
 
     if (isEditing && editingMappingId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية employee-talents.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: employee-talents.update.");
         return;
       }
 
@@ -185,7 +185,7 @@ export function EmployeeTalentsWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية employee-talents.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: employee-talents.create.");
       return;
     }
 
@@ -249,7 +249,7 @@ export function EmployeeTalentsWorkspace() {
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>employee-talents.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>employee-talents.create</code>.
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="talent-form">
@@ -331,7 +331,7 @@ export function EmployeeTalentsWorkspace() {
 
               {!hasDependenciesReadPermissions ? (
                 <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يلزم صلاحيات القراءة: <code>employees.read</code> و <code>talents.read</code>.
+                  يتطلب هذا الجزء صلاحيات القراءة: <code>employees.read</code> و <code>talents.read</code>.
                 </div>
               ) : null}
 
@@ -453,7 +453,7 @@ export function EmployeeTalentsWorkspace() {
         <CardContent className="space-y-3">
           {mappingsQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ التحميل...
+              جارٍ تحميل البيانات...
             </div>
           ) : null}
 
@@ -461,7 +461,7 @@ export function EmployeeTalentsWorkspace() {
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {mappingsQuery.error instanceof Error
                 ? mappingsQuery.error.message
-                : "فشل التحميل"}
+                : "تعذّر تحميل البيانات."}
             </div>
           ) : null}
 

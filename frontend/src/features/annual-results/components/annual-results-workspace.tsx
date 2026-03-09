@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import {
@@ -38,7 +38,7 @@ import { useAnnualResultsQuery } from "@/features/annual-results/hooks/use-annua
 import { usePromotionDecisionOptionsQuery } from "@/features/annual-results/hooks/use-promotion-decision-options-query";
 import { translateGradingWorkflowStatus } from "@/lib/i18n/ar";
 import type { AnnualResultListItem, GradingWorkflowStatus } from "@/lib/api/client";
-import { formatNameCodeLabel } from "@/lib/option-labels";
+import { formatNameCodeLabel, formatSectionWithGradeLabel } from "@/lib/option-labels";
 
 type FormState = {
   academicYearId: string;
@@ -134,6 +134,7 @@ export function AnnualResultsWorkspace() {
   const [calcSection, setCalcSection] = React.useState("");
   const [formError, setFormError] = React.useState<string | null>(null);
   const [calcInfo, setCalcInfo] = React.useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
 
   const academicYearsQuery = useAcademicYearOptionsQuery();
   const sectionsQuery = useSectionOptionsQuery();
@@ -265,7 +266,7 @@ export function AnnualResultsWorkspace() {
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={calcSection} onChange={(event) => setCalcSection(event.target.value)}>
                 <option value="">الشعبة</option>
-                {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
+                {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatSectionWithGradeLabel(item)}</option>)}
               </select>
             </div>
             <Button type="button" variant="outline" className="w-full gap-2" disabled={!canCalculate || calculateMutation.isPending} onClick={() => {
@@ -292,6 +293,7 @@ export function AnnualResultsWorkspace() {
 
           <form className="space-y-3" onSubmit={(event) => {
             event.preventDefault();
+            setActionSuccess(null);
             if (!validateForm()) return;
             const totalAllSubjects = parseOptionalNumber(form.totalAllSubjects);
             const maxPossibleTotal = parseOptionalNumber(form.maxPossibleTotal);
@@ -299,12 +301,12 @@ export function AnnualResultsWorkspace() {
             const passedSubjectsCount = parseOptionalInt(form.passedSubjectsCount);
             const failedSubjectsCount = parseOptionalInt(form.failedSubjectsCount);
             if (editingId) {
-              if (!canUpdate) { setFormError("لا تملك صلاحية annual-results.update."); return; }
-              updateMutation.mutate({ annualResultId: editingId, payload: { totalAllSubjects, maxPossibleTotal, percentage, passedSubjectsCount, failedSubjectsCount, promotionDecisionId: form.promotionDecisionId, status: form.status, notes: toOptionalString(form.notes), isActive: form.isActive } }, { onSuccess: () => resetForm() });
+              if (!canUpdate) { setFormError("لا تملك الصلاحية المطلوبة: annual-results.update."); return; }
+              updateMutation.mutate({ annualResultId: editingId, payload: { totalAllSubjects, maxPossibleTotal, percentage, passedSubjectsCount, failedSubjectsCount, promotionDecisionId: form.promotionDecisionId, status: form.status, notes: toOptionalString(form.notes), isActive: form.isActive } }, { onSuccess: () => { resetForm(); setActionSuccess("تم تحديث النتيجة السنوية بنجاح."); } });
               return;
             }
-            if (!canCreate) { setFormError("لا تملك صلاحية annual-results.create."); return; }
-            createMutation.mutate({ studentEnrollmentId: form.studentEnrollmentId, academicYearId: form.academicYearId, totalAllSubjects, maxPossibleTotal, percentage, passedSubjectsCount, failedSubjectsCount, promotionDecisionId: form.promotionDecisionId, status: form.status, notes: toOptionalString(form.notes), isActive: form.isActive }, { onSuccess: () => resetForm() });
+            if (!canCreate) { setFormError("لا تملك الصلاحية المطلوبة: annual-results.create."); return; }
+            createMutation.mutate({ studentEnrollmentId: form.studentEnrollmentId, academicYearId: form.academicYearId, totalAllSubjects, maxPossibleTotal, percentage, passedSubjectsCount, failedSubjectsCount, promotionDecisionId: form.promotionDecisionId, status: form.status, notes: toOptionalString(form.notes), isActive: form.isActive }, { onSuccess: () => { resetForm(); setActionSuccess("تم إنشاء النتيجة السنوية بنجاح."); } });
           }}>
             <div className="grid gap-2 md:grid-cols-2">
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.academicYearId} disabled={editingId !== null} onChange={(event) => setForm((prev) => ({ ...prev, academicYearId: event.target.value, studentEnrollmentId: "" }))}>
@@ -313,13 +315,13 @@ export function AnnualResultsWorkspace() {
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.sectionId} disabled={editingId !== null} onChange={(event) => setForm((prev) => ({ ...prev, sectionId: event.target.value, studentEnrollmentId: "" }))}>
                 <option value="">الشعبة *</option>
-                {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
+                {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatSectionWithGradeLabel(item)}</option>)}
               </select>
             </div>
             <div className="grid gap-2 md:grid-cols-2">
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.studentEnrollmentId} disabled={editingId !== null} onChange={(event) => setForm((prev) => ({ ...prev, studentEnrollmentId: event.target.value }))}>
                 <option value="">القيد *</option>
-                {(enrollmentsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.student.fullName} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatNameCodeLabel(item.section.name, item.section.code)})</option>)}
+                {(enrollmentsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.student.fullName} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatSectionWithGradeLabel(item.section)})</option>)}
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.promotionDecisionId} onChange={(event) => setForm((prev) => ({ ...prev, promotionDecisionId: event.target.value }))}>
                 <option value="">قرار الترفيع *</option>
@@ -350,6 +352,7 @@ export function AnnualResultsWorkspace() {
             </label>
             {formError ? <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">{formError}</div> : null}
             {mutationError ? <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">{mutationError}</div> : null}
+            {actionSuccess ? <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">{actionSuccess}</div> : null}
             <div className="flex gap-2">
               <Button type="submit" className="flex-1 gap-2" disabled={isSubmitting}>
                 {isSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Medal className="h-4 w-4" />}
@@ -378,7 +381,7 @@ export function AnnualResultsWorkspace() {
             </select>
             <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={sectionFilter} onChange={(event) => { setPage(1); setSectionFilter(event.target.value); }}>
               <option value="all">كل الشعب</option>
-              {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
+              {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatSectionWithGradeLabel(item)}</option>)}
             </select>
             <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={activeFilter} onChange={(event) => { setPage(1); setActiveFilter(event.target.value as "all" | "active" | "inactive"); }}>
               <option value="all">الكل</option>
@@ -389,8 +392,8 @@ export function AnnualResultsWorkspace() {
           </form>
         </CardHeader>
         <CardContent className="space-y-3">
-          {annualResultsQuery.isPending ? <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">جارٍ التحميل...</div> : null}
-          {annualResultsQuery.error ? <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{annualResultsQuery.error instanceof Error ? annualResultsQuery.error.message : "فشل التحميل"}</div> : null}
+          {annualResultsQuery.isPending ? <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">جارٍ تحميل البيانات...</div> : null}
+          {annualResultsQuery.error ? <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{annualResultsQuery.error instanceof Error ? annualResultsQuery.error.message : "تعذّر تحميل البيانات."}</div> : null}
           {!annualResultsQuery.isPending && records.length === 0 ? <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">لا توجد نتائج.</div> : null}
 
           {records.map((item) => (
@@ -398,7 +401,7 @@ export function AnnualResultsWorkspace() {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="space-y-1">
                   <p className="font-medium">{item.studentEnrollment.student.fullName}</p>
-                  <p className="text-xs text-muted-foreground">{formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} | {formatNameCodeLabel(item.studentEnrollment.section.name, item.studentEnrollment.section.code)} | {formatNameCodeLabel(item.promotionDecision.name, item.promotionDecision.code)}</p>
+                  <p className="text-xs text-muted-foreground">{formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} | {formatSectionWithGradeLabel(item.studentEnrollment.section)} | {formatNameCodeLabel(item.promotionDecision.name, item.promotionDecision.code)}</p>
                   <p className="text-xs text-muted-foreground">الإجمالي: {item.totalAllSubjects}/{item.maxPossibleTotal} | النسبة: {item.percentage}% | ترتيب الشعبة: {item.rankInClass ?? "-"} | ترتيب الصف: {item.rankInGrade ?? "-"}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -408,17 +411,17 @@ export function AnnualResultsWorkspace() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { if (!item.isLocked && canUpdate) { setEditingId(item.id); setEditingItem(item); setForm(toFormState(item)); setFormError(null); } }} disabled={!canUpdate || item.isLocked || updateMutation.isPending}>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { if (!item.isLocked && canUpdate) { setEditingId(item.id); setEditingItem(item); setForm(toFormState(item)); setFormError(null); setActionSuccess(null); } }} disabled={!canUpdate || item.isLocked || updateMutation.isPending}>
                   <PencilLine className="h-3.5 w-3.5" />تعديل
                 </Button>
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { if (item.isLocked) { if (canUnlock) unlockMutation.mutate(item.id); } else if (canLock) { lockMutation.mutate(item.id); } }} disabled={(item.isLocked && !canUnlock) || (!item.isLocked && !canLock) || lockMutation.isPending || unlockMutation.isPending}>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { if (item.isLocked) { if (canUnlock) unlockMutation.mutate(item.id, { onSuccess: () => setActionSuccess("تم إلغاء قفل النتيجة السنوية بنجاح.") }); } else if (canLock) { lockMutation.mutate(item.id, { onSuccess: () => setActionSuccess("تم قفل النتيجة السنوية بنجاح.") }); } }} disabled={(item.isLocked && !canUnlock) || (!item.isLocked && !canLock) || lockMutation.isPending || unlockMutation.isPending}>
                   {item.isLocked ? <LockOpen className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
                   {item.isLocked ? "إلغاء القفل" : "قفل"}
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => updateMutation.mutate({ annualResultId: item.id, payload: { isActive: !item.isActive } })} disabled={!canUpdate || item.isLocked || updateMutation.isPending}>
+                <Button variant="outline" size="sm" onClick={() => updateMutation.mutate({ annualResultId: item.id, payload: { isActive: !item.isActive } }, { onSuccess: () => setActionSuccess(item.isActive ? "تم تعطيل النتيجة السنوية بنجاح." : "تم تفعيل النتيجة السنوية بنجاح.") })} disabled={!canUpdate || item.isLocked || updateMutation.isPending}>
                   {item.isActive ? "تعطيل" : "تفعيل"}
                 </Button>
-                <Button variant="destructive" size="sm" className="gap-1.5" onClick={() => { if (window.confirm("تأكيد الحذف؟")) deleteMutation.mutate(item.id); }} disabled={!canDelete || item.isLocked || deleteMutation.isPending}>
+                <Button variant="destructive" size="sm" className="gap-1.5" onClick={() => { if (window.confirm("تأكيد الحذف؟")) deleteMutation.mutate(item.id, { onSuccess: () => setActionSuccess("تم حذف النتيجة السنوية بنجاح.") }); }} disabled={!canDelete || item.isLocked || deleteMutation.isPending}>
                   <Trash2 className="h-3.5 w-3.5" />حذف
                 </Button>
               </div>
@@ -441,6 +444,7 @@ export function AnnualResultsWorkspace() {
     </div>
   );
 }
+
 
 
 

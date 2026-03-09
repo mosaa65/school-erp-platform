@@ -349,7 +349,7 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
       },
       {
         href: "/app/grading-policies",
-        label: "سياسات الدرجات",
+        label: "سياسات التقييم والدرجات",
         icon: Medal,
         requiredPermission: "grading-policies.read",
       },
@@ -360,10 +360,22 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         requiredPermission: "homework-types.read",
       },
       {
+        href: "/app/exam-periods",
+        label: "الفترات الاختبارية",
+        icon: CalendarClock,
+        requiredPermission: "exam-periods.read",
+      },
+      {
         href: "/app/homeworks",
         label: "الواجبات",
         icon: ClipboardList,
         requiredPermission: "homeworks.read",
+      },
+      {
+        href: "/app/exam-assessments",
+        label: "التقييمات والاختبارات",
+        icon: ClipboardList,
+        requiredPermission: "exam-assessments.read",
       },
       {
         href: "/app/student-homeworks",
@@ -372,34 +384,22 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         requiredPermission: "student-homeworks.read",
       },
       {
-        href: "/app/exam-periods",
-        label: "الفترات الاختبارية",
-        icon: CalendarClock,
-        requiredPermission: "exam-periods.read",
-      },
-      {
-        href: "/app/exam-assessments",
-        label: "الاختبارات",
-        icon: ClipboardList,
-        requiredPermission: "exam-assessments.read",
-      },
-      {
         href: "/app/student-exam-scores",
         label: "درجات الاختبارات",
         icon: ClipboardCheck,
         requiredPermission: "student-exam-scores.read",
       },
       {
-        href: "/app/monthly-custom-component-scores",
-        label: "مكونات الدرجات الشهرية",
-        icon: Medal,
-        requiredPermission: "monthly-custom-component-scores.read",
-      },
-      {
         href: "/app/monthly-grades",
         label: "الدرجات الشهرية",
         icon: Medal,
         requiredPermission: "monthly-grades.read",
+      },
+      {
+        href: "/app/monthly-custom-component-scores",
+        label: "مكوّنات التقييم الشهري",
+        icon: Medal,
+        requiredPermission: "monthly-custom-component-scores.read",
       },
       {
         href: "/app/semester-grades",

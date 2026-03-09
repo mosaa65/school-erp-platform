@@ -1,7 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { Cable, LoaderCircle, PencilLine, RefreshCw, Search, Trash2 } from "lucide-react";
+import Link from "next/link";
+import {
+  Cable,
+  LoaderCircle,
+  PencilLine,
+  RefreshCw,
+  Search,
+  Trash2,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,10 +77,13 @@ export function EmployeeSectionSupervisionsWorkspace() {
   const [employeeFilter, setEmployeeFilter] = React.useState("all");
   const [sectionFilter, setSectionFilter] = React.useState("all");
   const [academicYearFilter, setAcademicYearFilter] = React.useState("all");
-  const [statusFilter, setStatusFilter] = React.useState<"all" | "active" | "inactive">("all");
+  const [statusFilter, setStatusFilter] = React.useState<
+    "all" | "active" | "inactive"
+  >("all");
 
   const [editingItemId, setEditingItemId] = React.useState<string | null>(null);
-  const [formState, setFormState] = React.useState<FormState>(DEFAULT_FORM_STATE);
+  const [formState, setFormState] =
+    React.useState<FormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
 
   const employeesOptionsQuery = useEmployeeOptionsQuery();
@@ -85,7 +96,8 @@ export function EmployeeSectionSupervisionsWorkspace() {
     search: search || undefined,
     employeeId: employeeFilter === "all" ? undefined : employeeFilter,
     sectionId: sectionFilter === "all" ? undefined : sectionFilter,
-    academicYearId: academicYearFilter === "all" ? undefined : academicYearFilter,
+    academicYearId:
+      academicYearFilter === "all" ? undefined : academicYearFilter,
     isActive: statusFilter === "all" ? undefined : statusFilter === "active",
   });
 
@@ -97,7 +109,14 @@ export function EmployeeSectionSupervisionsWorkspace() {
     () => employeesOptionsQuery.data ?? [],
     [employeesOptionsQuery.data],
   );
-  const sections = React.useMemo(() => sectionsOptionsQuery.data ?? [], [sectionsOptionsQuery.data]);
+  const selectedEmployee = React.useMemo(
+    () => employees.find((employee) => employee.id === formState.employeeId),
+    [employees, formState.employeeId],
+  );
+  const sections = React.useMemo(
+    () => sectionsOptionsQuery.data ?? [],
+    [sectionsOptionsQuery.data],
+  );
   const academicYears = React.useMemo(
     () => academicYearsOptionsQuery.data ?? [],
     [academicYearsOptionsQuery.data],
@@ -148,7 +167,11 @@ export function EmployeeSectionSupervisionsWorkspace() {
   };
 
   const validateForm = (): boolean => {
-    if (!formState.employeeId || !formState.sectionId || !formState.academicYearId) {
+    if (
+      !formState.employeeId ||
+      !formState.sectionId ||
+      !formState.academicYearId
+    ) {
       setFormError("اختر الموظف والشعبة والسنة الأكاديمية.");
       return false;
     }
@@ -185,7 +208,7 @@ export function EmployeeSectionSupervisionsWorkspace() {
 
     if (isEditing && editingItemId) {
       if (!canUpdate) {
-        setFormError("لا تملك صلاحية employee-section-supervisions.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: employee-section-supervisions.update.");
         return;
       }
 
@@ -204,7 +227,7 @@ export function EmployeeSectionSupervisionsWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك صلاحية employee-section-supervisions.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: employee-section-supervisions.create.");
       return;
     }
 
@@ -246,13 +269,14 @@ export function EmployeeSectionSupervisionsWorkspace() {
             {isEditing ? "تعديل نطاق إشراف" : "إضافة نطاق إشراف"}
           </CardTitle>
           <CardDescription>
-            يحدد هذا الربط ما يمكن للموظف عمله داخل شعبة محددة في سنة أكاديمية محددة.
+            يحدد هذا الربط ما يمكن للموظف عمله داخل شعبة محددة في سنة أكاديمية
+            محددة. لا يستبدل ربط المستخدم بالأدوار.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {!canCreate && !isEditing ? (
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك صلاحية <code>employee-section-supervisions.create</code>.
+              لا تملك الصلاحية المطلوبة: <code>employee-section-supervisions.create</code>.
             </div>
           ) : (
             <form
@@ -261,12 +285,17 @@ export function EmployeeSectionSupervisionsWorkspace() {
               data-testid="employee-section-supervision-form"
             >
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
+                <label className="text-xs font-medium text-muted-foreground">
+                  الموظف *
+                </label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={formState.employeeId}
                   onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
+                    setFormState((prev) => ({
+                      ...prev,
+                      employeeId: event.target.value,
+                    }))
                   }
                   data-testid="employee-section-supervision-form-employee"
                 >
@@ -277,15 +306,34 @@ export function EmployeeSectionSupervisionsWorkspace() {
                     </option>
                   ))}
                 </select>
+                {selectedEmployee && !selectedEmployee.userAccount ? (
+                  <p className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-300">
+                    الموظف المختار لا يملك حساب مستخدم مرتبط. نطاق الإشراف
+                    سيُحفظ، لكن التطبيق يحتاج حسابًا مرتبطًا لتفعيل الوصول داخل
+                    النظام من{" "}
+                    <Link
+                      href={`/app/users?q=${encodeURIComponent(selectedEmployee.fullName)}`}
+                      className="underline underline-offset-2"
+                    >
+                      إدارة المستخدمين
+                    </Link>
+                    .
+                  </p>
+                ) : null}
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الشعبة *</label>
+                <label className="text-xs font-medium text-muted-foreground">
+                  الشعبة *
+                </label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={formState.sectionId}
                   onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, sectionId: event.target.value }))
+                    setFormState((prev) => ({
+                      ...prev,
+                      sectionId: event.target.value,
+                    }))
                   }
                   data-testid="employee-section-supervision-form-section"
                 >
@@ -323,7 +371,9 @@ export function EmployeeSectionSupervisionsWorkspace() {
               </div>
 
               <div className="space-y-2 rounded-md border border-border/70 p-3">
-                <p className="text-xs font-medium text-muted-foreground">القدرات</p>
+                <p className="text-xs font-medium text-muted-foreground">
+                  القدرات
+                </p>
                 <label className="flex items-center justify-between gap-2 text-sm">
                   <span>عرض الطلاب</span>
                   <input
@@ -369,7 +419,10 @@ export function EmployeeSectionSupervisionsWorkspace() {
                     type="checkbox"
                     checked={formState.isActive}
                     onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                      setFormState((prev) => ({
+                        ...prev,
+                        isActive: event.target.checked,
+                      }))
                     }
                   />
                 </label>
@@ -416,10 +469,14 @@ export function EmployeeSectionSupervisionsWorkspace() {
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <CardTitle>نطاقات إشراف الموظفين</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+            <Badge variant="secondary">
+              الإجمالي: {pagination?.total ?? 0}
+            </Badge>
           </div>
           <CardDescription>
-            يستخدم النظام هذه السجلات لتحديد من يمكنه الوصول للطلاب والواجبات والدرجات خارج الإسناد المباشر.
+            يستخدم النظام هذه السجلات لتحديد من يمكنه الوصول للطلاب والواجبات
+            والدرجات خارج الإسناد المباشر. التحكم النهائي = صلاحيات الدور + هذا
+            النطاق.
           </CardDescription>
 
           <form
@@ -489,7 +546,9 @@ export function EmployeeSectionSupervisionsWorkspace() {
               value={statusFilter}
               onChange={(event) => {
                 setPage(1);
-                setStatusFilter(event.target.value as "all" | "active" | "inactive");
+                setStatusFilter(
+                  event.target.value as "all" | "active" | "inactive",
+                );
               }}
             >
               <option value="all">كل الحالات</option>
@@ -512,7 +571,9 @@ export function EmployeeSectionSupervisionsWorkspace() {
 
           {query.error ? (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {query.error instanceof Error ? query.error.message : "فشل تحميل البيانات"}
+              {query.error instanceof Error
+                ? query.error.message
+                : "فشل تحميل البيانات"}
             </div>
           ) : null}
 
@@ -533,20 +594,33 @@ export function EmployeeSectionSupervisionsWorkspace() {
                   {item.employee.fullName} - {item.employee.jobTitle}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {item.section.name} ({item.section.code}) | {item.academicYear.name}
+                  {item.section.name} ({item.section.code}) |{" "}
+                  {item.academicYear.name}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   <Badge variant={item.isActive ? "default" : "outline"}>
                     {item.isActive ? "نشط" : "غير نشط"}
                   </Badge>
-                  <Badge variant={item.canViewStudents ? "secondary" : "outline"}>
-                    {item.canViewStudents ? "عرض الطلاب: نعم" : "عرض الطلاب: لا"}
+                  <Badge
+                    variant={item.canViewStudents ? "secondary" : "outline"}
+                  >
+                    {item.canViewStudents
+                      ? "عرض الطلاب: نعم"
+                      : "عرض الطلاب: لا"}
                   </Badge>
-                  <Badge variant={item.canManageHomeworks ? "secondary" : "outline"}>
-                    {item.canManageHomeworks ? "إدارة الواجبات: نعم" : "إدارة الواجبات: لا"}
+                  <Badge
+                    variant={item.canManageHomeworks ? "secondary" : "outline"}
+                  >
+                    {item.canManageHomeworks
+                      ? "إدارة الواجبات: نعم"
+                      : "إدارة الواجبات: لا"}
                   </Badge>
-                  <Badge variant={item.canManageGrades ? "secondary" : "outline"}>
-                    {item.canManageGrades ? "إدارة الدرجات: نعم" : "إدارة الدرجات: لا"}
+                  <Badge
+                    variant={item.canManageGrades ? "secondary" : "outline"}
+                  >
+                    {item.canManageGrades
+                      ? "إدارة الدرجات: نعم"
+                      : "إدارة الدرجات: لا"}
                   </Badge>
                 </div>
               </div>
@@ -585,7 +659,9 @@ export function EmployeeSectionSupervisionsWorkspace() {
                 variant="outline"
                 size="sm"
                 onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={!pagination || pagination.page <= 1 || query.isFetching}
+                disabled={
+                  !pagination || pagination.page <= 1 || query.isFetching
+                }
               >
                 السابق
               </Button>
@@ -593,9 +669,17 @@ export function EmployeeSectionSupervisionsWorkspace() {
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  setPage((prev) => (pagination ? Math.min(prev + 1, pagination.totalPages) : prev))
+                  setPage((prev) =>
+                    pagination
+                      ? Math.min(prev + 1, pagination.totalPages)
+                      : prev,
+                  )
                 }
-                disabled={!pagination || pagination.page >= pagination.totalPages || query.isFetching}
+                disabled={
+                  !pagination ||
+                  pagination.page >= pagination.totalPages ||
+                  query.isFetching
+                }
               >
                 التالي
               </Button>
@@ -606,7 +690,9 @@ export function EmployeeSectionSupervisionsWorkspace() {
                 onClick={() => void query.refetch()}
                 disabled={query.isFetching}
               >
-                <RefreshCw className={`h-4 w-4 ${query.isFetching ? "animate-spin" : ""}`} />
+                <RefreshCw
+                  className={`h-4 w-4 ${query.isFetching ? "animate-spin" : ""}`}
+                />
                 تحديث
               </Button>
             </div>

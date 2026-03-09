@@ -217,7 +217,7 @@ export class ExamAssessmentsService {
     });
 
     if (!examAssessment) {
-      throw new NotFoundException('Exam assessment not found');
+      throw new NotFoundException('لم يتم العثور على تقييم الاختبار');
     }
 
     return examAssessment;
@@ -316,7 +316,7 @@ export class ExamAssessmentsService {
     });
 
     if (!examAssessment) {
-      throw new NotFoundException('Exam assessment not found');
+      throw new NotFoundException('لم يتم العثور على تقييم الاختبار');
     }
 
     return examAssessment;
@@ -338,11 +338,11 @@ export class ExamAssessmentsService {
     });
 
     if (!examPeriod) {
-      throw new BadRequestException('Exam period is invalid or deleted');
+      throw new BadRequestException('فترة الاختبار غير صالحة أو محذوفة');
     }
 
     if (!examPeriod.isActive) {
-      throw new BadRequestException('Exam period is inactive');
+      throw new BadRequestException('فترة الاختبار غير نشطة');
     }
 
     if (examPeriod.isLocked) {
@@ -367,7 +367,7 @@ export class ExamAssessmentsService {
     });
 
     if (!examPeriod) {
-      throw new BadRequestException('Exam period is invalid or deleted');
+      throw new BadRequestException('فترة الاختبار غير صالحة أو محذوفة');
     }
 
     if (examPeriod.isLocked) {
@@ -390,11 +390,11 @@ export class ExamAssessmentsService {
     });
 
     if (!section) {
-      throw new BadRequestException('Section is invalid or deleted');
+      throw new BadRequestException('الشعبة غير صالحة أو محذوفة');
     }
 
     if (!section.isActive) {
-      throw new BadRequestException('Section is inactive');
+      throw new BadRequestException('الشعبة غير نشطة');
     }
   }
 
@@ -411,11 +411,11 @@ export class ExamAssessmentsService {
     });
 
     if (!subject) {
-      throw new BadRequestException('Subject is invalid or deleted');
+      throw new BadRequestException('المادة غير صالحة أو محذوفة');
     }
 
     if (!subject.isActive) {
-      throw new BadRequestException('Subject is inactive');
+      throw new BadRequestException('المادة غير نشطة');
     }
   }
 
@@ -429,25 +429,25 @@ export class ExamAssessmentsService {
     const normalizedExamDate = this.parseDate(examDate);
 
     if (!normalizedExamDate) {
-      throw new BadRequestException('Invalid examDate');
+      throw new BadRequestException('تاريخ الاختبار غير صالح');
     }
 
     if (examPeriod.startDate && normalizedExamDate < examPeriod.startDate) {
       throw new BadRequestException(
-        'examDate cannot be before the exam period startDate',
+        'لا يمكن أن يكون examDate قبل startDate لفترة الاختبار',
       );
     }
 
     if (examPeriod.endDate && normalizedExamDate > examPeriod.endDate) {
       throw new BadRequestException(
-        'examDate cannot be after the exam period endDate',
+        'لا يمكن أن يكون examDate بعد endDate لفترة الاختبار',
       );
     }
   }
 
   private ensurePositiveMaxScore(maxScore?: number) {
     if (maxScore !== undefined && maxScore <= 0) {
-      throw new BadRequestException('maxScore must be greater than zero');
+      throw new BadRequestException('يجب أن تكون الدرجة العظمى أكبر من صفر');
     }
   }
 
@@ -467,7 +467,7 @@ export class ExamAssessmentsService {
       error.code === 'P2002'
     ) {
       throw new ConflictException(
-        'Exam assessment must be unique by period, section, subject, and date',
+        'يجب أن يكون تقييم الاختبار فريدًا حسب الفترة والشعبة والمادة والتاريخ',
       );
     }
 
@@ -479,6 +479,7 @@ export class ExamAssessmentsService {
       return error.message;
     }
 
-    return 'Unknown error';
+    return 'خطأ غير معروف';
   }
 }
+

@@ -225,7 +225,7 @@ export class MonthlyGradesService {
 
     if (existing) {
       throw new ConflictException(
-        'Monthly grade already exists for this enrollment, subject, and month',
+        'توجد درجة شهرية مسبقًا لهذا القيد والمادة والشهر',
       );
     }
 
@@ -358,7 +358,7 @@ export class MonthlyGradesService {
     if (enrollments.length === 0) {
       return {
         message:
-          'No active enrollments found for the selected section and month',
+          'لا توجد قيود طلاب نشطة للشعبة والشهر المحددين',
         summary: {
           totalEnrollments: 0,
           created: 0,
@@ -510,7 +510,7 @@ export class MonthlyGradesService {
     });
 
     return {
-      message: 'Monthly grade calculation completed',
+      message: 'اكتمل احتساب الدرجات الشهرية',
       summary,
     };
   }
@@ -674,7 +674,7 @@ export class MonthlyGradesService {
     });
 
     if (!monthlyGrade) {
-      throw new NotFoundException('Monthly grade not found');
+      throw new NotFoundException('الدرجة الشهرية غير موجودة');
     }
 
     await this.ensureActorAuthorized(
@@ -695,7 +695,7 @@ export class MonthlyGradesService {
     const existing = await this.ensureMonthlyGradeExists(id);
 
     if (existing.isLocked) {
-      throw new ConflictException('Cannot update a locked monthly grade');
+      throw new ConflictException('لا يمكن تعديل درجة شهرية مقفلة');
     }
 
     const context = await this.ensureMonthlyGradeContext(id);
@@ -766,7 +766,7 @@ export class MonthlyGradesService {
     );
 
     if (existing.isLocked) {
-      throw new ConflictException('Monthly grade is already locked');
+      throw new ConflictException('الدرجة الشهرية مقفلة بالفعل');
     }
 
     const monthlyGrade = await this.prisma.monthlyGrade.update({
@@ -805,7 +805,7 @@ export class MonthlyGradesService {
     );
 
     if (!existing.isLocked) {
-      throw new ConflictException('Monthly grade is not locked');
+      throw new ConflictException('الدرجة الشهرية غير مقفلة');
     }
 
     const monthlyGrade = await this.prisma.monthlyGrade.update({
@@ -844,7 +844,7 @@ export class MonthlyGradesService {
     );
 
     if (existing.isLocked) {
-      throw new ConflictException('Cannot delete a locked monthly grade');
+      throw new ConflictException('لا يمكن حذف درجة شهرية مقفلة');
     }
 
     await this.prisma.$transaction([
@@ -926,28 +926,28 @@ export class MonthlyGradesService {
     ]);
 
     if (!enrollment) {
-      throw new BadRequestException('Student enrollment is invalid or deleted');
+      throw new BadRequestException('قيد الطالب غير صالح أو محذوف');
     }
 
     if (!enrollment.isActive) {
-      throw new BadRequestException('Student enrollment is inactive');
+      throw new BadRequestException('قيد الطالب غير نشط');
     }
 
     if (!enrollment.section.isActive) {
-      throw new BadRequestException('Enrollment section is inactive');
+      throw new BadRequestException('شعبة القيد غير نشطة');
     }
 
     if (!month) {
-      throw new BadRequestException('Academic month is invalid or deleted');
+      throw new BadRequestException('الشهر الأكاديمي غير صالح أو محذوف');
     }
 
     if (!month.isActive) {
-      throw new BadRequestException('Academic month is inactive');
+      throw new BadRequestException('الشهر الأكاديمي غير نشط');
     }
 
     if (enrollment.academicYearId !== month.academicYearId) {
       throw new BadRequestException(
-        'Student enrollment academic year does not match academic month year',
+        'السنة الدراسية لقيد الطالب لا تطابق سنة الشهر الأكاديمي',
       );
     }
 
@@ -1000,7 +1000,7 @@ export class MonthlyGradesService {
     });
 
     if (!monthlyGrade) {
-      throw new NotFoundException('Monthly grade not found');
+      throw new NotFoundException('الدرجة الشهرية غير موجودة');
     }
 
     const policy = await this.findMonthlyPolicy(
@@ -1024,7 +1024,7 @@ export class MonthlyGradesService {
     });
 
     if (!monthlyGrade) {
-      throw new NotFoundException('Monthly grade not found');
+      throw new NotFoundException('الدرجة الشهرية غير موجودة');
     }
 
     return monthlyGrade;
@@ -1047,11 +1047,11 @@ export class MonthlyGradesService {
     });
 
     if (!month) {
-      throw new BadRequestException('Academic month is invalid or deleted');
+      throw new BadRequestException('الشهر الأكاديمي غير صالح أو محذوف');
     }
 
     if (!month.isActive) {
-      throw new BadRequestException('Academic month is inactive');
+      throw new BadRequestException('الشهر الأكاديمي غير نشط');
     }
 
     return month;
@@ -1071,11 +1071,11 @@ export class MonthlyGradesService {
     });
 
     if (!section) {
-      throw new BadRequestException('Section is invalid or deleted');
+      throw new BadRequestException('الشعبة غير صالحة أو محذوفة');
     }
 
     if (!section.isActive) {
-      throw new BadRequestException('Section is inactive');
+      throw new BadRequestException('الشعبة غير نشطة');
     }
 
     return section;
@@ -1094,11 +1094,11 @@ export class MonthlyGradesService {
     });
 
     if (!subject) {
-      throw new BadRequestException('Subject is invalid or deleted');
+      throw new BadRequestException('المادة غير صالحة أو محذوفة');
     }
 
     if (!subject.isActive) {
-      throw new BadRequestException('Subject is inactive');
+      throw new BadRequestException('المادة غير نشطة');
     }
 
     return subject;
@@ -1127,7 +1127,7 @@ export class MonthlyGradesService {
 
     if (offeringCount === 0) {
       throw new BadRequestException(
-        'Subject is not offered for this grade level in the selected term',
+        'المادة غير معروضة لهذه المرحلة في الفصل المحدد',
       );
     }
   }
@@ -1196,7 +1196,7 @@ export class MonthlyGradesService {
 
     if (!policy) {
       throw new BadRequestException(
-        'No monthly grading policy found for selected year, grade, and subject',
+        'لا توجد سياسة درجات شهرية للسنة والمرحلة والمادة المحددة',
       );
     }
 
@@ -1391,7 +1391,7 @@ export class MonthlyGradesService {
   ) {
     if (activityScore < 0 || activityScore > policy.maxActivityScore) {
       throw new BadRequestException(
-        `activityScore must be between 0 and ${policy.maxActivityScore}`,
+        `يجب أن تكون activityScore بين 0 و${policy.maxActivityScore}`,
       );
     }
 
@@ -1400,7 +1400,7 @@ export class MonthlyGradesService {
       contributionScore > policy.maxContributionScore
     ) {
       throw new BadRequestException(
-        `contributionScore must be between 0 and ${policy.maxContributionScore}`,
+        `يجب أن تكون contributionScore بين 0 و${policy.maxContributionScore}`,
       );
     }
   }
@@ -1458,7 +1458,7 @@ export class MonthlyGradesService {
       error.code === 'P2002'
     ) {
       throw new ConflictException(
-        'Monthly grade already exists for this enrollment, subject, and month',
+        'توجد درجة شهرية مسبقًا لهذا القيد والمادة والشهر',
       );
     }
 
@@ -1470,6 +1470,7 @@ export class MonthlyGradesService {
       return error.message;
     }
 
-    return 'Unknown error';
+    return 'خطأ غير معروف';
   }
 }
+
