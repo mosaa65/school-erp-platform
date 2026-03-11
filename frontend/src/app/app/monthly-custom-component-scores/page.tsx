@@ -1,6 +1,6 @@
-﻿import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { PermissionGuard } from "@/features/auth/components/permission-guard";
-import { MonthlyCustomComponentScoresWorkspace } from "@/features/monthly-custom-component-scores/components/monthly-custom-component-scores-workspace";
+import { MonthlyCustomComponentScoresWorkspace } from "@/features/grade-aggregation/monthly-custom-component-scores/components/monthly-custom-component-scores-workspace";
 
 export default function MonthlyCustomComponentScoresPage() {
   return (

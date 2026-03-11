@@ -1,6 +1,6 @@
-﻿import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { PermissionGuard } from "@/features/auth/components/permission-guard";
-import { ExamPeriodsWorkspace } from "@/features/exam-periods/components/exam-periods-workspace";
+import { ExamPeriodsWorkspace } from "@/features/exams/exam-periods/components/exam-periods-workspace";
 
 export default function ExamPeriodsPage() {
   return (

@@ -65,9 +65,12 @@ JWT_SECRET="change_me_with_very_strong_secret"
 JWT_EXPIRES_IN="1d"
 SWAGGER_PATH="api/docs"
 STRICT_EMPLOYEE_WORKFLOW=false
+SEED_ADMIN_EMAIL="admin@school.local"
+SEED_ADMIN_PASSWORD="ChangeMe123!"
 ```
 
 - `STRICT_EMPLOYEE_WORKFLOW=true` يفعّل التحقق الصارم قبل تفعيل إسناد التدريس/الإشراف (يتطلب: موظف نشط + حساب مستخدم نشط + دور فعّال).
+- `SEED_ADMIN_EMAIL` و `SEED_ADMIN_PASSWORD` (اختياري) لإنشاء حساب المدير في البذور الأساسية.
 
 ## Local Run
 
@@ -90,10 +93,10 @@ npm run prisma:generate
 npm run prisma:migrate:deploy
 ```
 
-5. Seed core data:
+5. Seed core data (ثابتة):
 
 ```bash
-npm run prisma:seed
+npm run prisma:seed:core
 ```
 
 6. (Optional) Seed demo data for testing:
@@ -102,7 +105,13 @@ npm run prisma:seed
 npm run prisma:seed:demo
 ```
 
-7. Run API:
+7. (Optional) Seed all data (core + demo):
+
+```bash
+npm run prisma:seed:all
+```
+
+8. Run API:
 
 ```bash
 npm run start:dev
@@ -135,6 +144,12 @@ E2E tests require running MySQL and applied migrations.
 - Swagger UI: `http://localhost:3000/api/docs`
 - Health endpoint: `GET /health`
 
+## Recent Changes (Operational Notes)
+
+- **Flexible Academic Terms**: النتائج/الدرجات السنوية لم تعد تفترض فصلين فقط. يتم احتساب النسبة السنوية حسب عدد الفصول النشطة في السنة الدراسية.
+- **Annual Grade Term Breakdown**: تمت إضافة جدول `annual_grade_terms` لتخزين مجموع كل فصل على حدة. ما زال النظام يدعم `semester1Total` و `semester2Total` للتوافق الخلفي.
+- **Grading Scores**: تم إزالة القيم الافتراضية من سياسات الدرجات والمكونات. يجب إدخال القيم صراحة (أو تعريف المكونات) حتى يتم احتساب الدرجات بشكل صحيح.
+
 ## Frontend Start Gate
 
 Frontend implementation starts after this backend gate is met:
@@ -144,33 +159,3 @@ Frontend implementation starts after this backend gate is met:
 3. Auth + RBAC contracts are stable for frontend integration.
 
 Until that gate, work continues on backend systems and contract hardening.
-# School System (NestJS + React + MySQL)
-
-Monorepo for a school MVP:
-- `apps/api`: NestJS API
-- `apps/web`: React web app
-- `apps/mobile`: mobile starter (Expo-ready skeleton)
-
-## Included MVP modules
-- Students
-- Classes
-- Attendance
-- Grades
-
-## Local setup
-1. Start MySQL:
-   - `docker compose up -d`
-2. Install packages:
-   - `npm install`
-3. Configure API env:
-   - Copy `apps/api/.env.example` to `apps/api/.env`
-4. Run Prisma migration:
-   - `npm run prisma:migrate -w apps/api`
-5. Start API:
-   - `npm run dev:api`
-6. Start web app:
-   - `npm run dev:web`
-
-## Notes
-- Existing Arabic SQL/analysis folders are preserved.
-- This implementation is a clean MVP foundation using your selected stack.

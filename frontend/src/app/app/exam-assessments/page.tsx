@@ -1,6 +1,6 @@
-﻿import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { PermissionGuard } from "@/features/auth/components/permission-guard";
-import { ExamAssessmentsWorkspace } from "@/features/exam-assessments/components/exam-assessments-workspace";
+import { ExamAssessmentsWorkspace } from "@/features/exams/exam-assessments/components/exam-assessments-workspace";
 
 export default function ExamAssessmentsPage() {
   return (

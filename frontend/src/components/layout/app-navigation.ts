@@ -354,6 +354,12 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         requiredPermission: "grading-policies.read",
       },
       {
+        href: "/app/grading-policy-components",
+        label: "مكوّنات سياسات التقييم",
+        icon: Medal,
+        requiredPermission: "grading-policy-components.read",
+      },
+      {
         href: "/app/homework-types",
         label: "أنواع الواجبات",
         icon: BookOpenText,

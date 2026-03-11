@@ -25,6 +25,9 @@ async function main() {
   console.log(
     `Students: ${result.students.total} | Guardians: ${result.students.guardians} | Guardian users: ${result.students.guardianUsers} | Enrollments: ${result.students.enrollments} | Attendance: ${result.students.attendance} | Books: ${result.students.books} | Talents: ${result.students.talents} | Siblings: ${result.students.siblings} | Problems: ${result.students.problems} | Parent notifications: ${result.students.parentNotifications}`,
   );
+  console.log(
+    `Teaching & Grades: Policies: ${result.teachingGrades.gradingPolicies} | Components: ${result.teachingGrades.gradingPolicyComponents} | Exam periods: ${result.teachingGrades.examPeriods} | Exam assessments: ${result.teachingGrades.examAssessments} | Student exam scores: ${result.teachingGrades.studentExamScores} | Homework types: ${result.teachingGrades.homeworkTypes} | Homeworks: ${result.teachingGrades.homeworks} | Student homeworks: ${result.teachingGrades.studentHomeworks}`,
+  );
   console.log('Sample credentials:');
   for (const credential of result.sampleCredentials) {
     console.log(

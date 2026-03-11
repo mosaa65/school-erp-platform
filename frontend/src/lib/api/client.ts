@@ -1,4 +1,4 @@
-﻿import { appConfig } from "@/lib/env";
+import { appConfig } from "@/lib/env";
 import type { AuthSession } from "@/features/auth/types/auth-session";
 import { getAccessTokenFromStorage } from "@/lib/auth/session";
 
@@ -1625,6 +1625,7 @@ export type GradingPolicyListItem = {
   maxActivityScore: number;
   maxContributionScore: number;
   passingScore: number;
+  totalMaxScore: number;
   isDefault: boolean;
   status: GradingWorkflowStatus;
   notes: string | null;
@@ -1653,20 +1654,58 @@ export type GradingPolicyListItem = {
     category: SubjectCategory;
     isActive: boolean;
   };
-  components: Array<{
+  components: GradingPolicyComponentListItem[];
+  createdBy: {
     id: string;
-    gradingPolicyId: string;
-    code: string;
-    name: string;
-    maxScore: number;
-    calculationMode: GradingComponentCalculationMode;
-    includeInMonthly: boolean;
-    includeInSemester: boolean;
-    sortOrder: number;
+    email: string;
+  } | null;
+  updatedBy: {
+    id: string;
+    email: string;
+  } | null;
+};
+
+export type GradingPolicyComponentListItem = {
+  id: string;
+  gradingPolicyId: string;
+  code: string;
+  name: string;
+  maxScore: number;
+  calculationMode: GradingComponentCalculationMode;
+  includeInMonthly: boolean;
+  includeInSemester: boolean;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  gradingPolicy?: {
+    id: string;
+    academicYearId: string;
+    gradeLevelId: string;
+    subjectId: string;
+    assessmentType: AssessmentType;
+    status: GradingWorkflowStatus;
     isActive: boolean;
-    createdAt: string;
-    updatedAt: string;
-  }>;
+  };
+  createdBy: {
+    id: string;
+    email: string;
+  } | null;
+  updatedBy: {
+    id: string;
+    email: string;
+  } | null;
+};
+
+export type PeriodGradeComponentListItem = {
+  id: string;
+  monthlyGradeId: string;
+  gradingPolicyComponentId: string;
+  score: number;
+  isManual: boolean;
+  createdAt: string;
+  updatedAt: string;
+  gradingPolicyComponent: GradingPolicyComponentListItem;
   createdBy: {
     id: string;
     email: string;
@@ -1692,6 +1731,7 @@ export type MonthlyGradeListItem = {
   customComponentsScore: number;
   examScore: number;
   monthlyTotal: number;
+  periodGradeComponents: PeriodGradeComponentListItem[];
   status: GradingWorkflowStatus;
   isLocked: boolean;
   lockedAt: string | null;
@@ -1702,6 +1742,7 @@ export type MonthlyGradeListItem = {
   updatedAt: string;
   _count: {
     customComponentScores: number;
+    periodGradeComponents: number;
   };
   studentEnrollment: {
     id: string;
@@ -2065,6 +2106,18 @@ export type AnnualGradeListItem = {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  termTotals: Array<{
+    id: string;
+    academicTermId: string;
+    termTotal: number;
+    academicTerm: {
+      id: string;
+      code: string;
+      name: string;
+      sequence: number;
+      termType: AcademicTermType;
+    };
+  }>;
   studentEnrollment: {
     id: string;
     studentId: string;
@@ -3690,6 +3743,29 @@ export type UpdateGradingPolicyPayload = {
   isActive?: boolean;
 };
 
+export type CreateGradingPolicyComponentPayload = {
+  gradingPolicyId: string;
+  code: string;
+  name: string;
+  maxScore: number;
+  calculationMode: GradingComponentCalculationMode;
+  includeInMonthly?: boolean;
+  includeInSemester?: boolean;
+  sortOrder?: number;
+  isActive?: boolean;
+};
+
+export type UpdateGradingPolicyComponentPayload = {
+  code?: string;
+  name?: string;
+  maxScore?: number;
+  calculationMode?: GradingComponentCalculationMode;
+  includeInMonthly?: boolean;
+  includeInSemester?: boolean;
+  sortOrder?: number;
+  isActive?: boolean;
+};
+
 export type CreateAnnualStatusPayload = {
   code: string;
   name: string;
@@ -3750,6 +3826,10 @@ export type CreateAnnualGradePayload = {
   academicYearId: string;
   semester1Total?: number;
   semester2Total?: number;
+  termTotals?: Array<{
+    academicTermId: string;
+    termTotal: number;
+  }>;
   annualPercentage?: number;
   finalStatusId: string;
   status?: GradingWorkflowStatus;
@@ -3760,6 +3840,10 @@ export type CreateAnnualGradePayload = {
 export type UpdateAnnualGradePayload = {
   semester1Total?: number;
   semester2Total?: number;
+  termTotals?: Array<{
+    academicTermId: string;
+    termTotal: number;
+  }>;
   annualPercentage?: number;
   finalStatusId?: string;
   status?: GradingWorkflowStatus;
@@ -5217,6 +5301,57 @@ export const apiClient = {
   deleteGradingPolicy: (gradingPolicyId: string) =>
     request<DeleteEntityResponse>(
       `/grading-policies/${gradingPolicyId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
+  listGradingPolicyComponents: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    gradingPolicyId?: string;
+    calculationMode?: GradingComponentCalculationMode;
+    includeInMonthly?: boolean;
+    includeInSemester?: boolean;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<GradingPolicyComponentListItem>>(
+      `/grading-policy-components${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        gradingPolicyId: query?.gradingPolicyId,
+        calculationMode: query?.calculationMode,
+        includeInMonthly: query?.includeInMonthly,
+        includeInSemester: query?.includeInSemester,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createGradingPolicyComponent: (payload: CreateGradingPolicyComponentPayload) =>
+    request<GradingPolicyComponentListItem>("/grading-policy-components", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateGradingPolicyComponent: (
+    gradingPolicyComponentId: string,
+    payload: UpdateGradingPolicyComponentPayload,
+  ) =>
+    request<GradingPolicyComponentListItem>(
+      `/grading-policy-components/${gradingPolicyComponentId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  deleteGradingPolicyComponent: (gradingPolicyComponentId: string) =>
+    request<DeleteEntityResponse>(
+      `/grading-policy-components/${gradingPolicyComponentId}`,
       "DELETE",
       {
         withAuth: true,

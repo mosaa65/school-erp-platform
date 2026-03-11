@@ -1,6 +1,6 @@
-﻿import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { PermissionGuard } from "@/features/auth/components/permission-guard";
-import { MonthlyGradesWorkspace } from "@/features/monthly-grades/components/monthly-grades-workspace";
+import { MonthlyGradesWorkspace } from "@/features/grade-aggregation/monthly-grades/components/monthly-grades-workspace";
 
 export default function MonthlyGradesPage() {
   return (

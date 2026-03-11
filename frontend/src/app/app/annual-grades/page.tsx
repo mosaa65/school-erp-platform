@@ -1,6 +1,6 @@
-﻿import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { PermissionGuard } from "@/features/auth/components/permission-guard";
-import { AnnualGradesWorkspace } from "@/features/annual-grades/components/annual-grades-workspace";
+import { AnnualGradesWorkspace } from "@/features/grade-aggregation/annual-grades/components/annual-grades-workspace";
 
 export default function AnnualGradesPage() {
   return (

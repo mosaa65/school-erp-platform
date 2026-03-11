@@ -5,6 +5,7 @@ import { seedDemoEmployeeTalents } from './employee-talents.seed';
 import { seedDemoStudentData } from './student.seed';
 import { seedDemoStudentExtensions } from './student-extensions.seed';
 import { seedDemoSubject } from './subject.seed';
+import { seedDemoTeachingGrades } from './teaching-grades.seed';
 import { seedDemoTimetable } from './timetable.seed';
 
 export async function runDemoSeed(prisma: PrismaClient) {
@@ -14,6 +15,7 @@ export async function runDemoSeed(prisma: PrismaClient) {
   const employeeTalents = await seedDemoEmployeeTalents(prisma, employee);
   const student = await seedDemoStudentData(prisma, academic);
   const studentExtensions = await seedDemoStudentExtensions(prisma, academic);
+  const teachingGrades = await seedDemoTeachingGrades(prisma, academic);
   await seedDemoTimetable(prisma, academic);
 
   return {
@@ -40,6 +42,16 @@ export async function runDemoSeed(prisma: PrismaClient) {
       siblings: studentExtensions.studentSiblingsTotal,
       problems: studentExtensions.studentProblemsTotal,
       parentNotifications: studentExtensions.parentNotificationsTotal,
+    },
+    teachingGrades: {
+      gradingPolicies: teachingGrades.gradingPoliciesTotal,
+      gradingPolicyComponents: teachingGrades.gradingPolicyComponentsTotal,
+      examPeriods: teachingGrades.examPeriodsTotal,
+      examAssessments: teachingGrades.examAssessmentsTotal,
+      studentExamScores: teachingGrades.studentExamScoresTotal,
+      homeworkTypes: teachingGrades.homeworkTypesTotal,
+      homeworks: teachingGrades.homeworksTotal,
+      studentHomeworks: teachingGrades.studentHomeworksTotal,
     },
     sampleCredentials: [
       ...employee.sampleCredentials.slice(0, 4),

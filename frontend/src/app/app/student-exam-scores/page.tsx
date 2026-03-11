@@ -1,6 +1,6 @@
-﻿import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { PermissionGuard } from "@/features/auth/components/permission-guard";
-import { StudentExamScoresWorkspace } from "@/features/student-exam-scores/components/student-exam-scores-workspace";
+import { StudentExamScoresWorkspace } from "@/features/exams/student-exam-scores/components/student-exam-scores-workspace";
 
 export default function StudentExamScoresPage() {
   return (
