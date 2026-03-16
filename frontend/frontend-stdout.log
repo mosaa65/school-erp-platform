@@ -1,0 +1,16 @@
+
+> frontend@0.1.0 predev
+> node scripts/swc-workaround.cjs
+
+
+> frontend@0.1.0 dev
+> next dev -p 3001
+
+  ▲ Next.js 14.2.28
+  - Local:        http://localhost:3001
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 15.4s
+ ○ Compiling /auth/login ...
+ ✓ Compiled /auth/login in 19.1s (847 modules)

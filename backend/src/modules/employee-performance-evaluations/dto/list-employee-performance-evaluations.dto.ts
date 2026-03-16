@@ -1,0 +1,60 @@
+import { Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { PerformanceRatingLevel } from '@prisma/client';
+
+export class ListEmployeePerformanceEvaluationsDto {
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ example: 20 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number;
+
+  @ApiPropertyOptional({ example: 'pedagogy' })
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @ApiPropertyOptional({ example: 'cmf2f32b60000uvh95h7tk7q1' })
+  @IsOptional()
+  @IsString()
+  employeeId?: string;
+
+  @ApiPropertyOptional({ example: 'cmf2f32b60000uvh95h7tk7q2' })
+  @IsOptional()
+  @IsString()
+  academicYearId?: string;
+
+  @ApiPropertyOptional({ enum: PerformanceRatingLevel })
+  @IsOptional()
+  @IsEnum(PerformanceRatingLevel)
+  ratingLevel?: PerformanceRatingLevel;
+
+  @ApiPropertyOptional({ example: 'cmf2f32b60000uvh95h7tk7q3' })
+  @IsOptional()
+  @IsString()
+  evaluatorEmployeeId?: string;
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  isActive?: boolean;
+}

@@ -1,0 +1,18 @@
+﻿_runtime_logs/
+_tmp_docker_diag/
+
+# safeguard for local artifacts
+**/node_modules/
+**/dist/
+**/.next/
+**/coverage/
+**/playwright-report/
+**/test-results/
+
+# env
+**/.env
+**/.env.local
+
+# local frontend logs
+frontend/frontend-stdout.log
+frontend/frontend-stderr.log

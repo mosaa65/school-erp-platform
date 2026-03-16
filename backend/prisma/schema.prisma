@@ -1,0 +1,3078 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum AuditStatus {
+  SUCCESS
+  FAILURE
+}
+
+enum SettingValueType {
+  STRING
+  NUMBER
+  BOOLEAN
+  JSON
+}
+
+enum AcademicYearStatus {
+  PLANNED
+  ACTIVE
+  CLOSED
+  ARCHIVED
+}
+
+enum AcademicTermType {
+  SEMESTER
+  TRIMESTER
+  QUARTER
+  CUSTOM
+}
+
+enum GradeStage {
+  PRE_SCHOOL
+  PRIMARY
+  MIDDLE
+  HIGH
+  OTHER
+}
+
+enum SubjectCategory {
+  CORE
+  ELECTIVE
+  LANGUAGE
+  SCIENCE
+  MATHEMATICS
+  HUMANITIES
+  ARTS
+  SPORTS
+  TECHNOLOGY
+  OTHER
+}
+
+enum TimetableDay {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum EmployeeGender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum EmploymentType {
+  PERMANENT
+  CONTRACT
+  VOLUNTEER
+}
+
+enum EmployeeSystemAccessStatus {
+  GRANTED
+  SUSPENDED
+}
+
+enum EmployeeAttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED_ABSENCE
+  EARLY_LEAVE
+}
+
+enum PerformanceRatingLevel {
+  EXCELLENT
+  VERY_GOOD
+  GOOD
+  ACCEPTABLE
+  POOR
+}
+
+enum ViolationSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum StudentGender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum StudentHealthStatus {
+  HEALTHY
+  CHRONIC_DISEASE
+  SPECIAL_NEEDS
+  DISABILITY
+  OTHER
+}
+
+enum StudentOrphanStatus {
+  NONE
+  FATHER_DECEASED
+  MOTHER_DECEASED
+  BOTH_DECEASED
+}
+
+enum GuardianRelationship {
+  FATHER
+  MOTHER
+  BROTHER
+  SISTER
+  UNCLE
+  AUNT
+  GRANDFATHER
+  GRANDMOTHER
+  OTHER
+}
+
+enum StudentEnrollmentStatus {
+  NEW
+  TRANSFERRED
+  ACTIVE
+  PROMOTED
+  REPEATED
+  WITHDRAWN
+  GRADUATED
+  SUSPENDED
+}
+
+enum StudentAttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED_ABSENCE
+  EARLY_LEAVE
+}
+
+enum StudentBookStatus {
+  ISSUED
+  RETURNED
+  LOST
+  DAMAGED
+}
+
+enum StudentSiblingRelationship {
+  BROTHER
+  SISTER
+}
+
+enum ParentNotificationType {
+  POSITIVE
+  NEGATIVE
+}
+
+enum ParentNotificationSendMethod {
+  PAPER
+  WHATSAPP
+  PHONE
+  OTHER
+}
+
+enum GradingWorkflowStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  ARCHIVED
+}
+
+enum AssessmentType {
+  MONTHLY
+  MIDTERM
+  FINAL
+  QUIZ
+  ORAL
+  PRACTICAL
+  PROJECT
+}
+
+enum GradingComponentCalculationMode {
+  MANUAL
+  AUTO_ATTENDANCE
+  AUTO_HOMEWORK
+  AUTO_EXAM
+}
+
+enum ExamAbsenceType {
+  EXCUSED
+  UNEXCUSED
+}
+
+enum TieBreakStrategy {
+  PERCENTAGE_ONLY
+  PERCENTAGE_THEN_TOTAL
+  PERCENTAGE_THEN_NAME
+}
+
+enum LookupAppliesTo {
+  STUDENTS
+  EMPLOYEES
+  ALL
+}
+
+enum LookupRelationshipGender {
+  MALE
+  FEMALE
+  ALL
+}
+
+enum LocalityType {
+  RURAL
+  URBAN
+}
+
+enum CalendarAdjustmentType {
+  MOON_SIGHTING     @map("moon_sighting")
+  HOLIDAY_ADD       @map("holiday_add")
+  HOLIDAY_REMOVE    @map("holiday_remove")
+  SCHOOL_DAY_TOGGLE @map("school_day_toggle")
+  OTHER             @map("other")
+}
+
+enum SystemSettingType {
+  TEXT    @map("text")
+  NUMBER  @map("number")
+  BOOLEAN @map("boolean")
+  IMAGE   @map("image")
+  JSON    @map("json")
+}
+
+enum ReminderTickerType {
+  DHIKR        @map("ذكر")
+  ALERT        @map("تنبيه")
+  ANNOUNCEMENT @map("إعلان")
+  VERSE        @map("آية")
+  HADITH       @map("حديث")
+}
+
+model User {
+  id           String    @id @default(cuid()) @db.VarChar(191)
+  email        String    @unique @db.VarChar(191)
+  username     String?   @unique @db.VarChar(64)
+  employeeId   String?   @unique @map("employee_id") @db.VarChar(191)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  firstName    String    @map("first_name") @db.VarChar(120)
+  lastName     String    @map("last_name") @db.VarChar(120)
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+  createdById  String?   @map("created_by") @db.VarChar(191)
+  updatedById  String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User?     @relation("user_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User?     @relation("user_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+  employee  Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+
+  createdUsers User[] @relation("user_created_by")
+  updatedUsers User[] @relation("user_updated_by")
+
+  userRoles                           UserRole[]
+  auditLogsAsActor                    AuditLog[]                      @relation("audit_actor")
+  auditLogsCreated                    AuditLog[]                      @relation("audit_created_by")
+  auditLogsUpdated                    AuditLog[]                      @relation("audit_updated_by")
+  rolesCreated                        Role[]                          @relation("role_created_by")
+  rolesUpdated                        Role[]                          @relation("role_updated_by")
+  permissionsCreated                  Permission[]                    @relation("permission_created_by")
+  permissionsUpdated                  Permission[]                    @relation("permission_updated_by")
+  userRolesCreated                    UserRole[]                      @relation("user_role_created_by")
+  userRolesUpdated                    UserRole[]                      @relation("user_role_updated_by")
+  rolePermissionsCreated              RolePermission[]                @relation("role_permission_created_by")
+  rolePermissionsUpdated              RolePermission[]                @relation("role_permission_updated_by")
+  directPermissions                   UserPermission[]                @relation("direct_permission_user")
+  directPermissionsGranted            UserPermission[]                @relation("direct_permission_granted_by")
+  directPermissionsRevoked            UserPermission[]                @relation("direct_permission_revoked_by")
+  directPermissionsCreated            UserPermission[]                @relation("direct_permission_created_by")
+  directPermissionsUpdated            UserPermission[]                @relation("direct_permission_updated_by")
+  sessions                            UserSession[]                   @relation("session_user")
+  sessionsCreated                     UserSession[]                   @relation("session_created_by")
+  sessionsUpdated                     UserSession[]                   @relation("session_updated_by")
+  settingsCreated                     GlobalSetting[]                 @relation("setting_created_by")
+  settingsUpdated                     GlobalSetting[]                 @relation("setting_updated_by")
+  calendarSettingsCreated             CalendarSetting[]               @relation("calendar_setting_created_by")
+  calendarSettingsUpdated             CalendarSetting[]               @relation("calendar_setting_updated_by")
+  systemSettingsCreated               SystemSetting[]                 @relation("system_setting_created_by")
+  systemSettingsUpdated               SystemSetting[]                 @relation("system_setting_updated_by")
+  remindersCreated                    ReminderTicker[]                @relation("reminder_ticker_created_by")
+  remindersUpdated                    ReminderTicker[]                @relation("reminder_ticker_updated_by")
+  uploadedFiles                       FileAttachment[]                @relation("file_attachment_uploaded_by")
+  fileAttachmentsCreated              FileAttachment[]                @relation("file_attachment_created_by")
+  fileAttachmentsUpdated              FileAttachment[]                @relation("file_attachment_updated_by")
+  calendarDaysAdjusted                CalendarMaster[]                @relation("calendar_master_adjusted_by")
+  calendarDaysCreated                 CalendarMaster[]                @relation("calendar_master_created_by")
+  calendarDaysUpdated                 CalendarMaster[]                @relation("calendar_master_updated_by")
+  calendarAdjustmentsApplied          CalendarAdjustmentLog[]         @relation("calendar_adjustment_adjusted_by")
+  calendarAdjustmentsCreated          CalendarAdjustmentLog[]         @relation("calendar_adjustment_created_by")
+  calendarAdjustmentsUpdated          CalendarAdjustmentLog[]         @relation("calendar_adjustment_updated_by")
+  schoolProfilesCreated               SchoolProfile[]                 @relation("school_profile_created_by")
+  schoolProfilesUpdated               SchoolProfile[]                 @relation("school_profile_updated_by")
+  bloodTypesCreated                   LookupBloodType[]               @relation("lookup_blood_type_created_by")
+  bloodTypesUpdated                   LookupBloodType[]               @relation("lookup_blood_type_updated_by")
+  idTypesCreated                      LookupIdType[]                  @relation("lookup_id_type_created_by")
+  idTypesUpdated                      LookupIdType[]                  @relation("lookup_id_type_updated_by")
+  ownershipTypesCreated               LookupOwnershipType[]           @relation("lookup_ownership_type_created_by")
+  ownershipTypesUpdated               LookupOwnershipType[]           @relation("lookup_ownership_type_updated_by")
+  periodsCreated                      LookupPeriod[]                  @relation("lookup_period_created_by")
+  periodsUpdated                      LookupPeriod[]                  @relation("lookup_period_updated_by")
+  enrollmentStatusesCreated           LookupEnrollmentStatus[]        @relation("lookup_enrollment_status_created_by")
+  enrollmentStatusesUpdated           LookupEnrollmentStatus[]        @relation("lookup_enrollment_status_updated_by")
+  orphanStatusesCreated               LookupOrphanStatus[]            @relation("lookup_orphan_status_created_by")
+  orphanStatusesUpdated               LookupOrphanStatus[]            @relation("lookup_orphan_status_updated_by")
+  abilityLevelsCreated                LookupAbilityLevel[]            @relation("lookup_ability_level_created_by")
+  abilityLevelsUpdated                LookupAbilityLevel[]            @relation("lookup_ability_level_updated_by")
+  activityTypesCreated                LookupActivityType[]            @relation("lookup_activity_type_created_by")
+  activityTypesUpdated                LookupActivityType[]            @relation("lookup_activity_type_updated_by")
+  schoolTypesCreated                  LookupSchoolType[]              @relation("lookup_school_type_created_by")
+  schoolTypesUpdated                  LookupSchoolType[]              @relation("lookup_school_type_updated_by")
+  gendersCreated                      LookupGender[]                  @relation("lookup_gender_created_by")
+  gendersUpdated                      LookupGender[]                  @relation("lookup_gender_updated_by")
+  qualificationsCreated               LookupQualification[]           @relation("lookup_qualification_created_by")
+  qualificationsUpdated               LookupQualification[]           @relation("lookup_qualification_updated_by")
+  jobRolesCreated                     LookupJobRole[]                 @relation("lookup_job_role_created_by")
+  jobRolesUpdated                     LookupJobRole[]                 @relation("lookup_job_role_updated_by")
+  daysCreated                         LookupDay[]                     @relation("lookup_day_created_by")
+  daysUpdated                         LookupDay[]                     @relation("lookup_day_updated_by")
+  attendanceStatusesCreated           LookupAttendanceStatus[]        @relation("lookup_attendance_status_created_by")
+  attendanceStatusesUpdated           LookupAttendanceStatus[]        @relation("lookup_attendance_status_updated_by")
+  maritalStatusesCreated              LookupMaritalStatus[]           @relation("lookup_marital_status_created_by")
+  maritalStatusesUpdated              LookupMaritalStatus[]           @relation("lookup_marital_status_updated_by")
+  healthStatusesCreated               LookupHealthStatus[]            @relation("lookup_health_status_created_by")
+  healthStatusesUpdated               LookupHealthStatus[]            @relation("lookup_health_status_updated_by")
+  healthVisitsCreated                StudentHealthVisit[]            @relation("health_visit_created_by")
+  healthVisitsUpdated                StudentHealthVisit[]            @relation("health_visit_updated_by")
+  relationshipTypesCreated            LookupRelationshipType[]        @relation("lookup_relationship_type_created_by")
+  relationshipTypesUpdated            LookupRelationshipType[]        @relation("lookup_relationship_type_updated_by")
+  lookupTalentsCreated                LookupTalent[]                  @relation("lookup_talent_created_by")
+  lookupTalentsUpdated                LookupTalent[]                  @relation("lookup_talent_updated_by")
+  hijriMonthsCreated                  LookupHijriMonth[]              @relation("lookup_hijri_month_created_by")
+  hijriMonthsUpdated                  LookupHijriMonth[]              @relation("lookup_hijri_month_updated_by")
+  weeksCreated                        LookupWeek[]                    @relation("lookup_week_created_by")
+  weeksUpdated                        LookupWeek[]                    @relation("lookup_week_updated_by")
+  buildingsCreated                    LookupBuilding[]                @relation("lookup_building_created_by")
+  buildingsUpdated                    LookupBuilding[]                @relation("lookup_building_updated_by")
+  governoratesCreated                 Governorate[]                   @relation("governorate_created_by")
+  governoratesUpdated                 Governorate[]                   @relation("governorate_updated_by")
+  directoratesCreated                 Directorate[]                   @relation("directorate_created_by")
+  directoratesUpdated                 Directorate[]                   @relation("directorate_updated_by")
+  subDistrictsCreated                 SubDistrict[]                   @relation("sub_district_created_by")
+  subDistrictsUpdated                 SubDistrict[]                   @relation("sub_district_updated_by")
+  villagesCreated                     Village[]                       @relation("village_created_by")
+  villagesUpdated                     Village[]                       @relation("village_updated_by")
+  localitiesCreated                   Locality[]                      @relation("locality_created_by")
+  localitiesUpdated                   Locality[]                      @relation("locality_updated_by")
+  timetableTemplatesCreated           TimetableTemplate[]             @relation("timetable_template_created_by")
+  timetableTemplatesUpdated           TimetableTemplate[]             @relation("timetable_template_updated_by")
+  timetableSlotsCreated               TimetableTemplateSlot[]         @relation("timetable_template_slot_created_by")
+  timetableSlotsUpdated               TimetableTemplateSlot[]         @relation("timetable_template_slot_updated_by")
+  academicYearsCreated                AcademicYear[]                  @relation("academic_year_created_by")
+  academicYearsUpdated                AcademicYear[]                  @relation("academic_year_updated_by")
+  academicTermsCreated                AcademicTerm[]                  @relation("academic_term_created_by")
+  academicTermsUpdated                AcademicTerm[]                  @relation("academic_term_updated_by")
+  gradeLevelsCreated                  GradeLevel[]                    @relation("grade_level_created_by")
+  gradeLevelsUpdated                  GradeLevel[]                    @relation("grade_level_updated_by")
+  gradeLevelSubjectsCreated           GradeLevelSubject[]             @relation("grade_level_subject_created_by")
+  gradeLevelSubjectsUpdated           GradeLevelSubject[]             @relation("grade_level_subject_updated_by")
+  termSubjectOfferingsCreated         TermSubjectOffering[]           @relation("term_subject_offering_created_by")
+  termSubjectOfferingsUpdated         TermSubjectOffering[]           @relation("term_subject_offering_updated_by")
+  timetableEntriesCreated             TimetableEntry[]                @relation("timetable_entry_created_by")
+  timetableEntriesUpdated             TimetableEntry[]                @relation("timetable_entry_updated_by")
+  employeesCreated                    Employee[]                      @relation("employee_created_by")
+  employeesUpdated                    Employee[]                      @relation("employee_updated_by")
+  employeeTasksCreated                EmployeeTask[]                  @relation("employee_task_created_by")
+  employeeTasksUpdated                EmployeeTask[]                  @relation("employee_task_updated_by")
+  employeeTeachingCreated             EmployeeTeachingAssignment[]    @relation("employee_teaching_created_by")
+  employeeTeachingUpdated             EmployeeTeachingAssignment[]    @relation("employee_teaching_updated_by")
+  employeeSectionSupervisionsCreated  EmployeeSectionSupervision[]    @relation("employee_section_supervision_created_by")
+  employeeSectionSupervisionsUpdated  EmployeeSectionSupervision[]    @relation("employee_section_supervision_updated_by")
+  employeeAttendanceCreated           EmployeeAttendance[]            @relation("employee_attendance_created_by")
+  employeeAttendanceUpdated           EmployeeAttendance[]            @relation("employee_attendance_updated_by")
+  employeeEvalsCreated                EmployeePerformanceEvaluation[] @relation("employee_performance_created_by")
+  employeeEvalsUpdated                EmployeePerformanceEvaluation[] @relation("employee_performance_updated_by")
+  talentsCreated                      Talent[]                        @relation("talent_created_by")
+  talentsUpdated                      Talent[]                        @relation("talent_updated_by")
+  employeeTalentsCreated              EmployeeTalent[]                @relation("employee_talent_created_by")
+  employeeTalentsUpdated              EmployeeTalent[]                @relation("employee_talent_updated_by")
+  employeeCoursesCreated              EmployeeCourse[]                @relation("employee_course_created_by")
+  employeeCoursesUpdated              EmployeeCourse[]                @relation("employee_course_updated_by")
+  employeeViolationsCreated           EmployeeViolation[]             @relation("employee_violation_created_by")
+  employeeViolationsUpdated           EmployeeViolation[]             @relation("employee_violation_updated_by")
+  sectionsCreated                     Section[]                       @relation("section_created_by")
+  sectionsUpdated                     Section[]                       @relation("section_updated_by")
+  subjectsCreated                     Subject[]                       @relation("subject_created_by")
+  subjectsUpdated                     Subject[]                       @relation("subject_updated_by")
+  studentsCreated                     Student[]                       @relation("student_created_by")
+  studentsUpdated                     Student[]                       @relation("student_updated_by")
+  guardiansCreated                    Guardian[]                      @relation("guardian_created_by")
+  guardiansUpdated                    Guardian[]                      @relation("guardian_updated_by")
+  studentGuardiansCreated             StudentGuardian[]               @relation("student_guardian_created_by")
+  studentGuardiansUpdated             StudentGuardian[]               @relation("student_guardian_updated_by")
+  studentEnrollmentsCreated           StudentEnrollment[]             @relation("student_enrollment_created_by")
+  studentEnrollmentsUpdated           StudentEnrollment[]             @relation("student_enrollment_updated_by")
+  studentAttendanceCreated            StudentAttendance[]             @relation("student_attendance_created_by")
+  studentAttendanceUpdated            StudentAttendance[]             @relation("student_attendance_updated_by")
+  studentBooksCreated                 StudentBook[]                   @relation("student_book_created_by")
+  studentBooksUpdated                 StudentBook[]                   @relation("student_book_updated_by")
+  studentTalentsCreated               StudentTalent[]                 @relation("student_talent_created_by")
+  studentTalentsUpdated               StudentTalent[]                 @relation("student_talent_updated_by")
+  studentSiblingsCreated              StudentSibling[]                @relation("student_sibling_created_by")
+  studentSiblingsUpdated              StudentSibling[]                @relation("student_sibling_updated_by")
+  studentProblemsCreated              StudentProblem[]                @relation("student_problem_created_by")
+  studentProblemsUpdated              StudentProblem[]                @relation("student_problem_updated_by")
+  parentNotificationsCreated          ParentNotification[]            @relation("parent_notification_created_by")
+  parentNotificationsUpdated          ParentNotification[]            @relation("parent_notification_updated_by")
+  gradingPoliciesCreated              GradingPolicy[]                 @relation("grading_policy_created_by")
+  gradingPoliciesUpdated              GradingPolicy[]                 @relation("grading_policy_updated_by")
+  gradingPolicyComponentsCreated      GradingPolicyComponent[]        @relation("grading_policy_component_created_by")
+  gradingPolicyComponentsUpdated      GradingPolicyComponent[]        @relation("grading_policy_component_updated_by")
+  examPeriodsCreated                  ExamPeriod[]                    @relation("exam_period_created_by")
+  examPeriodsUpdated                  ExamPeriod[]                    @relation("exam_period_updated_by")
+  examPeriodsLocked                   ExamPeriod[]                    @relation("exam_period_locked_by")
+  examAssessmentsCreated              ExamAssessment[]                @relation("exam_assessment_created_by")
+  examAssessmentsUpdated              ExamAssessment[]                @relation("exam_assessment_updated_by")
+  studentExamScoresCreated            StudentExamScore[]              @relation("student_exam_score_created_by")
+  studentExamScoresUpdated            StudentExamScore[]              @relation("student_exam_score_updated_by")
+  academicMonthsCreated               AcademicMonth[]                 @relation("academic_month_created_by")
+  academicMonthsUpdated               AcademicMonth[]                 @relation("academic_month_updated_by")
+  monthlyGradesCreated                MonthlyGrade[]                  @relation("monthly_grade_created_by")
+  monthlyGradesUpdated                MonthlyGrade[]                  @relation("monthly_grade_updated_by")
+  monthlyGradesLocked                 MonthlyGrade[]                  @relation("monthly_grade_locked_by")
+  monthlyCustomComponentScoresCreated MonthlyCustomComponentScore[]   @relation("monthly_custom_component_score_created_by")
+  monthlyCustomComponentScoresUpdated MonthlyCustomComponentScore[]   @relation("monthly_custom_component_score_updated_by")
+  homeworkTypesCreated                HomeworkType[]                  @relation("homework_type_created_by")
+  homeworkTypesUpdated                HomeworkType[]                  @relation("homework_type_updated_by")
+  homeworksCreated                    Homework[]                      @relation("homework_created_by")
+  homeworksUpdated                    Homework[]                      @relation("homework_updated_by")
+  studentHomeworksCreated             StudentHomework[]               @relation("student_homework_created_by")
+  studentHomeworksUpdated             StudentHomework[]               @relation("student_homework_updated_by")
+  gradeDescriptionsCreated            LookupGradeDescription[]        @relation("lookup_grade_description_created_by")
+  gradeDescriptionsUpdated            LookupGradeDescription[]        @relation("lookup_grade_description_updated_by")
+  annualStatusesCreated               AnnualStatusLookup[]            @relation("annual_status_created_by")
+  annualStatusesUpdated               AnnualStatusLookup[]            @relation("annual_status_updated_by")
+  promotionDecisionsCreated           PromotionDecisionLookup[]       @relation("promotion_decision_created_by")
+  promotionDecisionsUpdated           PromotionDecisionLookup[]       @relation("promotion_decision_updated_by")
+  gradingOutcomeRulesCreated          GradingOutcomeRule[]            @relation("grading_outcome_rule_created_by")
+  gradingOutcomeRulesUpdated          GradingOutcomeRule[]            @relation("grading_outcome_rule_updated_by")
+  semesterGradesCreated               SemesterGrade[]                 @relation("semester_grade_created_by")
+  semesterGradesUpdated               SemesterGrade[]                 @relation("semester_grade_updated_by")
+  semesterGradesLocked                SemesterGrade[]                 @relation("semester_grade_locked_by")
+  semesterGradesApproved              SemesterGrade[]                 @relation("semester_grade_approved_by")
+  annualGradesCreated                 AnnualGrade[]                   @relation("annual_grade_created_by")
+  annualGradesUpdated                 AnnualGrade[]                   @relation("annual_grade_updated_by")
+  annualGradesLocked                  AnnualGrade[]                   @relation("annual_grade_locked_by")
+  annualGradesApproved                AnnualGrade[]                   @relation("annual_grade_approved_by")
+  annualResultsCreated                AnnualResult[]                  @relation("annual_result_created_by")
+  annualResultsUpdated                AnnualResult[]                  @relation("annual_result_updated_by")
+  annualResultsLocked                 AnnualResult[]                  @relation("annual_result_locked_by")
+  annualResultsApproved               AnnualResult[]                  @relation("annual_result_approved_by")
+
+  @@index([deletedAt])
+  @@index([isActive, deletedAt])
+  @@map("users")
+}
+
+model Role {
+  id          String    @id @default(cuid()) @db.VarChar(191)
+  code        String    @unique @db.VarChar(120)
+  name        String    @db.VarChar(120)
+  description String?   @db.VarChar(255)
+  isSystem    Boolean   @default(false) @map("is_system")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("role_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("role_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  userRoles       UserRole[]
+  rolePermissions RolePermission[]
+
+  @@index([deletedAt])
+  @@index([isActive, deletedAt])
+  @@map("roles")
+}
+
+model Permission {
+  id          String    @id @default(cuid()) @db.VarChar(191)
+  code        String    @unique @db.VarChar(120)
+  resource    String    @db.VarChar(120)
+  action      String    @db.VarChar(120)
+  description String?   @db.VarChar(255)
+  isSystem    Boolean   @default(false) @map("is_system")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("permission_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("permission_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  rolePermissions RolePermission[]
+  userPermissions UserPermission[] @relation("direct_permission_permission")
+
+  @@index([deletedAt])
+  @@index([resource, action])
+  @@map("permissions")
+}
+
+model UserRole {
+  id          String    @id @default(cuid()) @db.VarChar(191)
+  userId      String    @map("user_id") @db.VarChar(191)
+  roleId      String    @map("role_id") @db.VarChar(191)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("user_role_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("user_role_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([userId, roleId])
+  @@index([roleId, deletedAt])
+  @@index([deletedAt])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  id           String    @id @default(cuid()) @db.VarChar(191)
+  roleId       String    @map("role_id") @db.VarChar(191)
+  permissionId String    @map("permission_id") @db.VarChar(191)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+  createdById  String?   @map("created_by") @db.VarChar(191)
+  updatedById  String?   @map("updated_by") @db.VarChar(191)
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("role_permission_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("role_permission_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([roleId, permissionId])
+  @@index([permissionId, deletedAt])
+  @@index([deletedAt])
+  @@map("role_permissions")
+}
+
+model UserPermission {
+  id           Int       @id @default(autoincrement())
+  userId       String    @map("user_id") @db.VarChar(191)
+  permissionId String    @map("permission_id") @db.VarChar(191)
+  validFrom    DateTime  @default(now()) @map("valid_from")
+  validUntil   DateTime? @map("valid_until")
+  grantReason  String    @map("grant_reason") @db.Text
+  notes        String?   @db.VarChar(500)
+  grantedById  String    @map("granted_by") @db.VarChar(191)
+  grantedAt    DateTime  @default(now()) @map("granted_at")
+  revokedAt    DateTime? @map("revoked_at")
+  revokedById  String?   @map("revoked_by") @db.VarChar(191)
+  revokeReason String?   @map("revoke_reason") @db.VarChar(255)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+  createdById  String?   @map("created_by") @db.VarChar(191)
+  updatedById  String?   @map("updated_by") @db.VarChar(191)
+
+  user       User       @relation("direct_permission_user", fields: [userId], references: [id], onDelete: Restrict)
+  permission Permission @relation("direct_permission_permission", fields: [permissionId], references: [id], onDelete: Restrict)
+  grantedBy  User       @relation("direct_permission_granted_by", fields: [grantedById], references: [id], onDelete: Restrict)
+  revokedBy  User?      @relation("direct_permission_revoked_by", fields: [revokedById], references: [id], onDelete: SetNull)
+  createdBy  User?      @relation("direct_permission_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy  User?      @relation("direct_permission_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([userId, permissionId], map: "upr_user_permission_uq")
+  @@index([validUntil], map: "upr_valid_until_idx")
+  @@index([revokedAt], map: "upr_revoked_at_idx")
+  @@index([grantedById], map: "upr_granted_by_idx")
+  @@index([deletedAt], map: "upr_deleted_at_idx")
+  @@map("user_permissions")
+}
+
+model UserSession {
+  id           String    @id @db.VarChar(128)
+  userId       String    @map("user_id") @db.VarChar(191)
+  ipAddress    String?   @map("ip_address") @db.VarChar(45)
+  userAgent    String?   @map("user_agent") @db.VarChar(255)
+  payload      String?   @db.Text
+  lastActivity DateTime  @default(now()) @map("last_activity")
+  expiresAt    DateTime  @map("expires_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+  createdById  String?   @map("created_by") @db.VarChar(191)
+  updatedById  String?   @map("updated_by") @db.VarChar(191)
+
+  user      User  @relation("session_user", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy User? @relation("session_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("session_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([userId], map: "session_user_idx")
+  @@index([expiresAt], map: "session_expires_at_idx")
+  @@index([deletedAt], map: "session_deleted_at_idx")
+  @@map("sessions")
+}
+
+model AuditLog {
+  id          String      @id @default(cuid()) @db.VarChar(191)
+  actorUserId String?     @map("actor_user_id") @db.VarChar(191)
+  action      String      @db.VarChar(120)
+  resource    String      @db.VarChar(120)
+  resourceId  String?     @map("resource_id") @db.VarChar(191)
+  status      AuditStatus @default(SUCCESS)
+  ipAddress   String?     @map("ip_address") @db.VarChar(64)
+  userAgent   String?     @map("user_agent") @db.VarChar(255)
+  details     Json?
+  occurredAt  DateTime    @default(now()) @map("occurred_at")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  deletedAt   DateTime?   @map("deleted_at")
+  createdById String?     @map("created_by") @db.VarChar(191)
+  updatedById String?     @map("updated_by") @db.VarChar(191)
+
+  actorUser User? @relation("audit_actor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  createdBy User? @relation("audit_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("audit_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([resource, resourceId])
+  @@index([actorUserId, occurredAt])
+  @@index([deletedAt])
+  @@map("audit_logs")
+}
+
+model GlobalSetting {
+  id          String           @id @default(cuid()) @db.VarChar(191)
+  key         String           @unique @db.VarChar(120)
+  value       Json
+  valueType   SettingValueType @default(JSON) @map("value_type")
+  description String?          @db.VarChar(255)
+  isPublic    Boolean          @default(false) @map("is_public")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  deletedAt   DateTime?        @map("deleted_at")
+  createdById String?          @map("created_by") @db.VarChar(191)
+  updatedById String?          @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("setting_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("setting_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([deletedAt])
+  @@map("global_settings")
+}
+
+model LookupBloodType {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique @db.VarChar(10)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("lookup_blood_type_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("lookup_blood_type_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  students Student[]
+
+  @@index([isActive, deletedAt], map: "lbt_active_del_idx")
+  @@index([deletedAt], map: "lbt_deleted_at_idx")
+  @@map("lookup_blood_types")
+}
+
+model LookupIdType {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique @db.VarChar(50)
+  nameAr      String    @map("name_ar") @db.VarChar(100)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("lookup_id_type_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("lookup_id_type_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  employees Employee[]
+  guardians Guardian[]
+
+  @@index([isActive, deletedAt], map: "lit_active_del_idx")
+  @@index([deletedAt], map: "lit_deleted_at_idx")
+  @@map("lookup_id_types")
+}
+
+model LookupOwnershipType {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique @db.VarChar(50)
+  nameAr      String    @map("name_ar") @db.VarChar(100)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("lookup_ownership_type_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("lookup_ownership_type_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  schoolProfiles SchoolProfile[]
+
+  @@index([isActive, deletedAt], map: "lot_active_del_idx")
+  @@index([deletedAt], map: "lot_deleted_at_idx")
+  @@map("lookup_ownership_types")
+}
+
+model LookupPeriod {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique @db.VarChar(50)
+  nameAr      String    @map("name_ar") @db.VarChar(100)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("lookup_period_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("lookup_period_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  timetableTemplateSlots TimetableTemplateSlot[]
+
+  @@index([isActive, deletedAt], map: "lpd_active_del_idx")
+  @@index([deletedAt], map: "lpd_deleted_at_idx")
+  @@map("lookup_periods")
+}
+
+model LookupEnrollmentStatus {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique @db.VarChar(50)
+  nameAr      String    @map("name_ar") @db.VarChar(100)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("lookup_enrollment_status_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("lookup_enrollment_status_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([isActive, deletedAt], map: "les_active_del_idx")
+  @@index([deletedAt], map: "les_deleted_at_idx")
+  @@map("lookup_enrollment_statuses")
+}
+
+model LookupOrphanStatus {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique @db.VarChar(50)
+  nameAr      String    @map("name_ar") @db.VarChar(100)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("lookup_orphan_status_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("lookup_orphan_status_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  studentsByOrphanStatus Student[] @relation("student_orphan_status_lookup")
+
+  @@index([isActive, deletedAt], map: "los_active_del_idx")
+  @@index([deletedAt], map: "los_deleted_at_idx")
+  @@map("lookup_orphan_statuses")
+}
+
+model LookupAbilityLevel {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique @db.VarChar(50)
+  nameAr      String    @map("name_ar") @db.VarChar(100)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("lookup_ability_level_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("lookup_ability_level_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([isActive, deletedAt], map: "lal_active_del_idx")
+  @@index([deletedAt], map: "lal_deleted_at_idx")
+  @@map("lookup_ability_levels")
+}
+
+model LookupActivityType {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique @db.VarChar(50)
+  nameAr      String    @map("name_ar") @db.VarChar(100)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("lookup_activity_type_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("lookup_activity_type_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([isActive, deletedAt], map: "lat_active_del_idx")
+  @@index([deletedAt], map: "lat_deleted_at_idx")
+  @@map("lookup_activity_types")
+}
+
+model LookupGradeDescription {
+  id            Int       @id @default(autoincrement())
+  minPercentage Decimal   @map("min_percentage") @db.Decimal(5, 2)
+  maxPercentage Decimal   @map("max_percentage") @db.Decimal(5, 2)
+  nameAr        String    @map("name_ar") @db.VarChar(100)
+  nameEn        String?   @map("name_en") @db.VarChar(100)
+  colorCode     String?   @map("color_code") @db.VarChar(20)
+  sortOrder     Int       @default(1) @map("sort_order")
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+  createdById   String?   @map("created_by") @db.VarChar(191)
+  updatedById   String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("lookup_grade_description_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("lookup_grade_description_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([minPercentage, maxPercentage], map: "lgd_percentage_range_uq")
+  @@index([sortOrder, deletedAt], map: "lgd_sort_del_idx")
+  @@index([isActive, deletedAt], map: "lgd_active_del_idx")
+  @@index([deletedAt], map: "lgd_deleted_at_idx")
+  @@map("lookup_grade_descriptions")
+}
+
+model LookupSchoolType {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique @db.VarChar(50)
+  nameAr      String    @map("name_ar") @db.VarChar(100)
+  nameEn      String?   @map("name_en") @db.VarChar(100)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("lookup_school_type_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("lookup_school_type_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([isActive, deletedAt], map: "lst_active_del_idx")
+  @@index([deletedAt], map: "lst_deleted_at_idx")
+  @@map("lookup_school_types")
+}
+
+model LookupGender {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique @db.VarChar(50)
+  nameAr      String    @map("name_ar") @db.VarChar(50)
+  nameEn      String?   @map("name_en") @db.VarChar(50)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("lookup_gender_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("lookup_gender_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  employeesByGender Employee[] @relation("employee_gender_lookup")
+  studentsByGender  Student[]  @relation("student_gender_lookup")
+  guardiansByGender Guardian[] @relation("guardian_gender_lookup")
+
+  @@index([isActive, deletedAt], map: "lgn_active_del_idx")
+  @@index([deletedAt], map: "lgn_deleted_at_idx")
+  @@map("lookup_genders")
+}
+
+model LookupQualification {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique @db.VarChar(50)
+  nameAr      String    @map("name_ar") @db.VarChar(100)
+  sortOrder   Int       @default(0) @map("sort_order")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("lookup_qualification_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("lookup_qualification_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  employeesByQualification Employee[] @relation("employee_qualification_lookup")
+
+  @@index([sortOrder, deletedAt], map: "lqu_sort_del_idx")
+  @@index([isActive, deletedAt], map: "lqu_active_del_idx")
+  @@index([deletedAt], map: "lqu_deleted_at_idx")
+  @@map("lookup_qualifications")
+}
+
+model LookupJobRole {
+  id           Int       @id @default(autoincrement())
+  code         String    @unique @db.VarChar(50)
+  nameAr       String    @map("name_ar") @db.VarChar(100)
+  nameArFemale String?   @map("name_ar_female") @db.VarChar(100)
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+  createdById  String?   @map("created_by") @db.VarChar(191)
+  updatedById  String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("lookup_job_role_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("lookup_job_role_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  employeesByJobRole Employee[] @relation("employee_job_role_lookup")
+
+  @@index([isActive, deletedAt], map: "ljr_active_del_idx")
+  @@index([deletedAt], map: "ljr_deleted_at_idx")
+  @@map("lookup_job_roles")
+}
+
+model LookupDay {
+  id           Int       @id @default(autoincrement())
+  code         String    @unique @db.VarChar(50)
+  nameAr       String    @map("name_ar") @db.VarChar(20)
+  nameEn       String?   @map("name_en") @db.VarChar(20)
+  orderNum     Int       @map("order_num")
+  isWorkingDay Boolean   @default(true) @map("is_working_day")
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+  createdById  String?   @map("created_by") @db.VarChar(191)
+  updatedById  String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("lookup_day_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("lookup_day_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([orderNum, deletedAt], map: "ldy_order_del_idx")
+  @@index([isWorkingDay, deletedAt], map: "ldy_working_del_idx")
+  @@index([isActive, deletedAt], map: "ldy_active_del_idx")
+  @@index([deletedAt], map: "ldy_deleted_at_idx")
+  @@map("lookup_days")
+}
+
+model LookupAttendanceStatus {
+  id          Int             @id @default(autoincrement())
+  code        String          @unique @db.VarChar(20)
+  nameAr      String          @map("name_ar") @db.VarChar(50)
+  appliesTo   LookupAppliesTo @default(ALL) @map("applies_to")
+  colorCode   String?         @map("color_code") @db.VarChar(7)
+  isActive    Boolean         @default(true) @map("is_active")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  deletedAt   DateTime?       @map("deleted_at")
+  createdById String?         @map("created_by") @db.VarChar(191)
+  updatedById String?         @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("lookup_attendance_status_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("lookup_attendance_status_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([appliesTo, deletedAt], map: "las_apply_del_idx")
+  @@index([isActive, deletedAt], map: "las_active_del_idx")
+  @@index([deletedAt], map: "las_deleted_at_idx")
+  @@map("lookup_attendance_statuses")
+}
+
+model LookupMaritalStatus {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique @db.VarChar(50)
+  nameAr      String    @map("name_ar") @db.VarChar(50)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("lookup_marital_status_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("lookup_marital_status_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([isActive, deletedAt], map: "lms_active_del_idx")
+  @@index([deletedAt], map: "lms_deleted_at_idx")
+  @@map("lookup_marital_statuses")
+}
+
+model LookupHealthStatus {
+  id              Int       @id @default(autoincrement())
+  code            String    @unique @db.VarChar(50)
+  nameAr          String    @map("name_ar") @db.VarChar(50)
+  requiresDetails Boolean   @default(false) @map("requires_details")
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+  createdById     String?   @map("created_by") @db.VarChar(191)
+  updatedById     String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("lookup_health_status_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("lookup_health_status_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  studentsByHealthStatus Student[] @relation("student_health_status_lookup")
+  healthVisits StudentHealthVisit[] @relation("health_visit_status")
+
+  @@index([requiresDetails, deletedAt], map: "lhs_details_del_idx")
+  @@index([isActive, deletedAt], map: "lhs_active_del_idx")
+  @@index([deletedAt], map: "lhs_deleted_at_idx")
+  @@map("lookup_health_statuses")
+}
+
+model LookupRelationshipType {
+  id          Int                      @id @default(autoincrement())
+  code        String                   @unique @db.VarChar(50)
+  nameAr      String                   @map("name_ar") @db.VarChar(50)
+  gender      LookupRelationshipGender @default(ALL)
+  isActive    Boolean                  @default(true) @map("is_active")
+  createdAt   DateTime                 @default(now()) @map("created_at")
+  updatedAt   DateTime                 @updatedAt @map("updated_at")
+  deletedAt   DateTime?                @map("deleted_at")
+  createdById String?                  @map("created_by") @db.VarChar(191)
+  updatedById String?                  @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("lookup_relationship_type_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("lookup_relationship_type_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  studentGuardianRelations   StudentGuardian[]   @relation("student_guardian_relationship_lookup")
+  parentNotificationTitles   ParentNotification[] @relation("parent_notification_guardian_title_lookup")
+
+  @@index([gender, deletedAt], map: "lrt_gender_del_idx")
+  @@index([isActive, deletedAt], map: "lrt_active_del_idx")
+  @@index([deletedAt], map: "lrt_deleted_at_idx")
+  @@map("lookup_relationship_types")
+}
+
+model LookupTalent {
+  id          Int             @id @default(autoincrement())
+  code        String          @unique @db.VarChar(50)
+  nameAr      String          @map("name_ar") @db.VarChar(100)
+  category    String?         @db.VarChar(50)
+  appliesTo   LookupAppliesTo @default(ALL) @map("applies_to")
+  isActive    Boolean         @default(true) @map("is_active")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  deletedAt   DateTime?       @map("deleted_at")
+  createdById String?         @map("created_by") @db.VarChar(191)
+  updatedById String?         @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("lookup_talent_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("lookup_talent_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([category, deletedAt], map: "lta_category_del_idx")
+  @@index([appliesTo, deletedAt], map: "lta_apply_del_idx")
+  @@index([isActive, deletedAt], map: "lta_active_del_idx")
+  @@index([deletedAt], map: "lta_deleted_at_idx")
+  @@map("lookup_talents")
+}
+
+model LookupHijriMonth {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique @db.VarChar(50)
+  nameAr      String    @map("name_ar") @db.VarChar(30)
+  nameEn      String?   @map("name_en") @db.VarChar(30)
+  orderNum    Int       @map("order_num")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("lookup_hijri_month_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("lookup_hijri_month_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([orderNum, deletedAt], map: "lhm_order_del_idx")
+  @@index([isActive, deletedAt], map: "lhm_active_del_idx")
+  @@index([deletedAt], map: "lhm_deleted_at_idx")
+  @@map("lookup_hijri_months")
+}
+
+model LookupWeek {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique @db.VarChar(50)
+  nameAr      String    @map("name_ar") @db.VarChar(30)
+  orderNum    Int       @map("order_num")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("lookup_week_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("lookup_week_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([orderNum, deletedAt], map: "lwk_order_del_idx")
+  @@index([isActive, deletedAt], map: "lwk_active_del_idx")
+  @@index([deletedAt], map: "lwk_deleted_at_idx")
+  @@map("lookup_weeks")
+}
+
+model LookupBuilding {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique @db.VarChar(50)
+  nameAr      String    @map("name_ar") @db.VarChar(100)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("lookup_building_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("lookup_building_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([isActive, deletedAt], map: "lbd_active_del_idx")
+  @@index([deletedAt], map: "lbd_deleted_at_idx")
+  @@map("lookup_buildings")
+}
+
+model Governorate {
+  id          Int       @id @default(autoincrement())
+  code        String?   @unique @db.VarChar(10)
+  nameAr      String    @map("name_ar") @db.VarChar(100)
+  nameEn      String?   @map("name_en") @db.VarChar(100)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("governorate_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("governorate_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  directorates Directorate[]
+
+  @@index([nameAr, deletedAt], map: "gov_name_del_idx")
+  @@index([isActive, deletedAt], map: "gov_active_del_idx")
+  @@index([deletedAt], map: "gov_deleted_at_idx")
+  @@map("governorates")
+}
+
+model Directorate {
+  id            Int       @id @default(autoincrement())
+  governorateId Int       @map("governorate_id")
+  code          String?   @db.VarChar(10)
+  nameAr        String    @map("name_ar") @db.VarChar(100)
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+  createdById   String?   @map("created_by") @db.VarChar(191)
+  updatedById   String?   @map("updated_by") @db.VarChar(191)
+
+  governorate Governorate @relation(fields: [governorateId], references: [id], onDelete: Restrict)
+  createdBy   User?       @relation("directorate_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy   User?       @relation("directorate_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  subDistricts SubDistrict[]
+  localities   Locality[]
+
+  @@unique([governorateId, nameAr], map: "dir_governorate_name_uq")
+  @@index([governorateId, deletedAt], map: "dir_governorate_del_idx")
+  @@index([isActive, deletedAt], map: "dir_active_del_idx")
+  @@index([deletedAt], map: "dir_deleted_at_idx")
+  @@map("directorates")
+}
+
+model SubDistrict {
+  id            Int       @id @default(autoincrement())
+  directorateId Int       @map("directorate_id")
+  nameAr        String    @map("name_ar") @db.VarChar(100)
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+  createdById   String?   @map("created_by") @db.VarChar(191)
+  updatedById   String?   @map("updated_by") @db.VarChar(191)
+
+  directorate Directorate @relation(fields: [directorateId], references: [id], onDelete: Restrict)
+  createdBy   User?       @relation("sub_district_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy   User?       @relation("sub_district_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  villages Village[]
+
+  @@unique([directorateId, nameAr], map: "sub_district_directorate_name_uq")
+  @@index([directorateId, deletedAt], map: "sub_district_directorate_del_idx")
+  @@index([isActive, deletedAt], map: "sub_district_active_del_idx")
+  @@index([deletedAt], map: "sub_district_deleted_at_idx")
+  @@map("sub_districts")
+}
+
+model Village {
+  id            Int       @id @default(autoincrement())
+  subDistrictId Int       @map("sub_district_id")
+  nameAr        String    @map("name_ar") @db.VarChar(100)
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+  createdById   String?   @map("created_by") @db.VarChar(191)
+  updatedById   String?   @map("updated_by") @db.VarChar(191)
+
+  subDistrict SubDistrict @relation(fields: [subDistrictId], references: [id], onDelete: Restrict)
+  createdBy   User?       @relation("village_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy   User?       @relation("village_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  localities Locality[]
+
+  @@unique([subDistrictId, nameAr], map: "village_sub_district_name_uq")
+  @@index([subDistrictId, deletedAt], map: "village_sub_district_del_idx")
+  @@index([isActive, deletedAt], map: "village_active_del_idx")
+  @@index([deletedAt], map: "village_deleted_at_idx")
+  @@map("villages")
+}
+
+model Locality {
+  id            Int          @id @default(autoincrement())
+  villageId     Int?         @map("village_id")
+  directorateId Int?         @map("directorate_id")
+  nameAr        String       @map("name_ar") @db.VarChar(100)
+  localityType  LocalityType @default(RURAL) @map("locality_type")
+  isActive      Boolean      @default(true) @map("is_active")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+  deletedAt     DateTime?    @map("deleted_at")
+  createdById   String?      @map("created_by") @db.VarChar(191)
+  updatedById   String?      @map("updated_by") @db.VarChar(191)
+
+  village     Village?     @relation(fields: [villageId], references: [id], onDelete: SetNull)
+  directorate Directorate? @relation(fields: [directorateId], references: [id], onDelete: SetNull)
+  createdBy   User?        @relation("locality_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy   User?        @relation("locality_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+  students    Student[]
+  guardians   Guardian[]
+  employees   Employee[]
+
+  @@index([villageId, deletedAt], map: "locality_village_del_idx")
+  @@index([directorateId, deletedAt], map: "locality_directorate_del_idx")
+  @@index([localityType, deletedAt], map: "locality_type_del_idx")
+  @@index([isActive, deletedAt], map: "locality_active_del_idx")
+  @@index([deletedAt], map: "locality_deleted_at_idx")
+  @@map("localities")
+}
+
+model FileAttachment {
+  id           BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  entityType   String    @map("entity_type") @db.VarChar(50)
+  entityId     String    @map("entity_id") @db.VarChar(191)
+  fileName     String    @map("file_name") @db.VarChar(255)
+  filePath     String    @map("file_path") @db.VarChar(500)
+  fileType     String?   @map("file_type") @db.VarChar(100)
+  fileSize     Int?      @map("file_size") @db.UnsignedInt
+  fileCategory String?   @map("file_category") @db.VarChar(50)
+  description  String?   @db.Text
+  uploadedById String?   @map("uploaded_by") @db.VarChar(191)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+  createdById  String?   @map("created_by") @db.VarChar(191)
+  updatedById  String?   @map("updated_by") @db.VarChar(191)
+
+  uploadedBy User? @relation("file_attachment_uploaded_by", fields: [uploadedById], references: [id], onDelete: SetNull)
+  createdBy  User? @relation("file_attachment_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy  User? @relation("file_attachment_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId], map: "fat_entity_idx")
+  @@index([fileCategory], map: "fat_category_idx")
+  @@index([deletedAt], map: "fat_deleted_at_idx")
+  @@map("file_attachments")
+}
+
+model CalendarMaster {
+  id             Int       @id @default(autoincrement())
+  gregorianDate  DateTime  @unique @map("gregorian_date") @db.Date
+  hijriDate      String    @map("hijri_date") @db.VarChar(10)
+  hijriDay       Int       @map("hijri_day") @db.UnsignedTinyInt
+  hijriMonth     Int       @map("hijri_month") @db.UnsignedTinyInt
+  hijriYear      Int       @map("hijri_year") @db.UnsignedSmallInt
+  hijriMonthName String    @map("hijri_month_name") @db.VarChar(20)
+  dayOfWeek      Int       @map("day_of_week") @db.UnsignedTinyInt
+  dayNameAr      String    @map("day_name_ar") @db.VarChar(20)
+  isWeekend      Boolean   @default(false) @map("is_weekend")
+  isSchoolDay    Boolean   @default(true) @map("is_school_day")
+  academicYearId String?   @map("academic_year_id") @db.VarChar(191)
+  semester       Int?      @db.UnsignedTinyInt
+  academicWeek   Int?      @map("academic_week") @db.UnsignedTinyInt
+  isAdjusted     Boolean   @default(false) @map("is_adjusted")
+  adjustedAt     DateTime? @map("adjusted_at")
+  adjustedById   String?   @map("adjusted_by") @db.VarChar(191)
+  isHoliday      Boolean   @default(false) @map("is_holiday")
+  holidayName    String?   @map("holiday_name") @db.VarChar(100)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+  createdById    String?   @map("created_by") @db.VarChar(191)
+  updatedById    String?   @map("updated_by") @db.VarChar(191)
+
+  academicYear AcademicYear? @relation(fields: [academicYearId], references: [id], onDelete: SetNull)
+  adjustedBy   User?         @relation("calendar_master_adjusted_by", fields: [adjustedById], references: [id], onDelete: SetNull)
+  createdBy    User?         @relation("calendar_master_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy    User?         @relation("calendar_master_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([hijriYear, hijriMonth, hijriDay], map: "cal_hijri_idx")
+  @@index([isSchoolDay, gregorianDate], map: "cal_school_day_idx")
+  @@index([academicYearId], map: "cal_academic_year_idx")
+  @@index([deletedAt], map: "cal_deleted_at_idx")
+  @@map("calendar_master")
+}
+
+model CalendarSetting {
+  id           Int       @id @default(autoincrement())
+  settingKey   String    @unique @map("setting_key") @db.VarChar(50)
+  settingValue String    @map("setting_value") @db.VarChar(255)
+  description  String?   @db.Text
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+  createdById  String?   @map("created_by") @db.VarChar(191)
+  updatedById  String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("calendar_setting_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("calendar_setting_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([deletedAt], map: "cal_setting_deleted_at_idx")
+  @@map("calendar_settings")
+}
+
+model CalendarAdjustmentLog {
+  id              Int                    @id @default(autoincrement())
+  adjustmentDate  DateTime               @map("adjustment_date") @db.Date
+  hijriYear       Int                    @map("hijri_year") @db.UnsignedSmallInt
+  hijriMonth      Int                    @map("hijri_month") @db.UnsignedTinyInt
+  adjustmentType  CalendarAdjustmentType @map("adjustment_type")
+  offsetDays      Int?                   @map("offset_days") @db.TinyInt
+  reason          String                 @db.Text
+  affectedRecords Int?                   @map("affected_records") @db.UnsignedInt
+  adjustedById    String                 @map("adjusted_by") @db.VarChar(191)
+  adjustedAt      DateTime               @default(now()) @map("adjusted_at")
+  createdAt       DateTime               @default(now()) @map("created_at")
+  updatedAt       DateTime               @updatedAt @map("updated_at")
+  deletedAt       DateTime?              @map("deleted_at")
+  createdById     String?                @map("created_by") @db.VarChar(191)
+  updatedById     String?                @map("updated_by") @db.VarChar(191)
+
+  adjustedBy User  @relation("calendar_adjustment_adjusted_by", fields: [adjustedById], references: [id], onDelete: Restrict)
+  createdBy  User? @relation("calendar_adjustment_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy  User? @relation("calendar_adjustment_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([adjustmentDate], map: "cal_adj_date_idx")
+  @@index([deletedAt], map: "cal_adj_deleted_at_idx")
+  @@map("calendar_adjustments_log")
+}
+
+model SystemSetting {
+  id           Int               @id @default(autoincrement())
+  settingKey   String            @unique @map("setting_key") @db.VarChar(100)
+  settingValue String?           @map("setting_value") @db.Text
+  settingType  SystemSettingType @default(TEXT) @map("setting_type")
+  category     String?           @db.VarChar(50)
+  description  String?           @db.Text
+  isEditable   Boolean           @default(true) @map("is_editable")
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+  deletedAt    DateTime?         @map("deleted_at")
+  createdById  String?           @map("created_by") @db.VarChar(191)
+  updatedById  String?           @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("system_setting_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("system_setting_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([category], map: "sys_setting_category_idx")
+  @@index([deletedAt], map: "sys_setting_deleted_at_idx")
+  @@map("system_settings")
+}
+
+model ReminderTicker {
+  id           Int                @id @default(autoincrement())
+  content      String             @db.Text
+  tickerType   ReminderTickerType @default(DHIKR) @map("ticker_type")
+  isActive     Boolean            @default(true) @map("is_active")
+  displayOrder Int                @default(0) @map("display_order") @db.UnsignedTinyInt
+  startDate    DateTime?          @map("start_date") @db.Date
+  endDate      DateTime?          @map("end_date") @db.Date
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @updatedAt @map("updated_at")
+  deletedAt    DateTime?          @map("deleted_at")
+  createdById  String?            @map("created_by") @db.VarChar(191)
+  updatedById  String?            @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("reminder_ticker_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("reminder_ticker_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([tickerType], map: "rem_ticker_type_idx")
+  @@index([isActive], map: "rem_ticker_active_idx")
+  @@index([deletedAt], map: "rem_ticker_deleted_at_idx")
+  @@map("reminders_ticker")
+}
+
+model SchoolProfile {
+  id              String    @id @default(cuid()) @db.VarChar(191)
+  code            String    @unique @db.VarChar(40)
+  nameAr          String    @map("name_ar") @db.VarChar(150)
+  nameEn          String?   @map("name_en") @db.VarChar(150)
+  ownershipTypeId Int?      @map("ownership_type_id")
+  phone           String?   @db.VarChar(20)
+  email           String?   @db.VarChar(191)
+  addressText     String?   @map("address_text") @db.VarChar(255)
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+  createdById     String?   @map("created_by") @db.VarChar(191)
+  updatedById     String?   @map("updated_by") @db.VarChar(191)
+
+  ownershipType LookupOwnershipType? @relation(fields: [ownershipTypeId], references: [id], onDelete: SetNull)
+  createdBy     User?                @relation("school_profile_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy     User?                @relation("school_profile_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([ownershipTypeId, deletedAt], map: "scp_owner_del_idx")
+  @@index([isActive, deletedAt], map: "scp_active_del_idx")
+  @@index([deletedAt], map: "scp_deleted_at_idx")
+  @@map("school_profiles")
+}
+
+model TimetableTemplate {
+  id             String    @id @default(cuid()) @db.VarChar(191)
+  academicTermId String    @map("academic_term_id") @db.VarChar(191)
+  sectionId      String    @map("section_id") @db.VarChar(191)
+  name           String    @db.VarChar(120)
+  isDefault      Boolean   @default(false) @map("is_default")
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+  createdById    String?   @map("created_by") @db.VarChar(191)
+  updatedById    String?   @map("updated_by") @db.VarChar(191)
+
+  academicTerm AcademicTerm @relation(fields: [academicTermId], references: [id], onDelete: Restrict)
+  section      Section      @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  createdBy    User?        @relation("timetable_template_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy    User?        @relation("timetable_template_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  slots TimetableTemplateSlot[]
+
+  @@unique([academicTermId, sectionId, name], map: "ttpl_term_section_name_uq")
+  @@index([academicTermId, sectionId, deletedAt], map: "ttpl_term_section_del_idx")
+  @@index([isDefault, deletedAt], map: "ttpl_default_del_idx")
+  @@index([isActive, deletedAt], map: "ttpl_active_del_idx")
+  @@index([deletedAt], map: "ttpl_deleted_at_idx")
+  @@map("timetable_templates")
+}
+
+model TimetableTemplateSlot {
+  id                  String       @id @default(cuid()) @db.VarChar(191)
+  timetableTemplateId String       @map("timetable_template_id") @db.VarChar(191)
+  lookupPeriodId      Int          @map("lookup_period_id")
+  dayOfWeek           TimetableDay @map("day_of_week")
+  periodOrder         Int          @map("period_order")
+  startTime           String       @map("start_time") @db.VarChar(5)
+  endTime             String       @map("end_time") @db.VarChar(5)
+  isBreak             Boolean      @default(false) @map("is_break")
+  isActive            Boolean      @default(true) @map("is_active")
+  createdAt           DateTime     @default(now()) @map("created_at")
+  updatedAt           DateTime     @updatedAt @map("updated_at")
+  deletedAt           DateTime?    @map("deleted_at")
+  createdById         String?      @map("created_by") @db.VarChar(191)
+  updatedById         String?      @map("updated_by") @db.VarChar(191)
+
+  timetableTemplate TimetableTemplate @relation(fields: [timetableTemplateId], references: [id], onDelete: Restrict)
+  lookupPeriod      LookupPeriod      @relation(fields: [lookupPeriodId], references: [id], onDelete: Restrict)
+  createdBy         User?             @relation("timetable_template_slot_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy         User?             @relation("timetable_template_slot_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([timetableTemplateId, dayOfWeek, periodOrder], map: "tts_template_day_order_uq")
+  @@unique([timetableTemplateId, dayOfWeek, lookupPeriodId], map: "tts_template_day_period_uq")
+  @@index([lookupPeriodId, deletedAt], map: "tts_period_del_idx")
+  @@index([isActive, deletedAt], map: "tts_active_del_idx")
+  @@index([deletedAt], map: "tts_deleted_at_idx")
+  @@map("timetable_template_slots")
+}
+
+model AcademicYear {
+  id          String             @id @default(cuid()) @db.VarChar(191)
+  code        String             @unique @db.VarChar(40)
+  name        String             @db.VarChar(120)
+  startDate   DateTime           @map("start_date")
+  endDate     DateTime           @map("end_date")
+  status      AcademicYearStatus @default(PLANNED)
+  isCurrent   Boolean            @default(false) @map("is_current")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+  deletedAt   DateTime?          @map("deleted_at")
+  createdById String?            @map("created_by") @db.VarChar(191)
+  updatedById String?            @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("academic_year_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("academic_year_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  terms                          AcademicTerm[]
+  gradeLevelSubjects             GradeLevelSubject[]
+  employeeTasks                  EmployeeTask[]
+  employeeTeachingAssignments    EmployeeTeachingAssignment[]
+  employeeSectionSupervisions    EmployeeSectionSupervision[]
+  employeePerformanceEvaluations EmployeePerformanceEvaluation[]
+  studentEnrollments             StudentEnrollment[]
+  gradingPolicies                GradingPolicy[]
+  examPeriods                    ExamPeriod[]
+  months                         AcademicMonth[]
+  monthlyGrades                  MonthlyGrade[]
+  homeworks                      Homework[]
+  gradingOutcomeRules            GradingOutcomeRule[]
+  semesterGrades                 SemesterGrade[]
+  annualGrades                   AnnualGrade[]
+  annualResults                  AnnualResult[]
+  calendarDays                   CalendarMaster[]
+
+  @@index([status, deletedAt])
+  @@index([isCurrent, deletedAt])
+  @@index([deletedAt])
+  @@map("academic_years")
+}
+
+model AcademicTerm {
+  id             String           @id @default(cuid()) @db.VarChar(191)
+  academicYearId String           @map("academic_year_id") @db.VarChar(191)
+  code           String           @db.VarChar(40)
+  name           String           @db.VarChar(120)
+  termType       AcademicTermType @default(SEMESTER) @map("term_type")
+  sequence       Int
+  startDate      DateTime         @map("start_date")
+  endDate        DateTime         @map("end_date")
+  isActive       Boolean          @default(true) @map("is_active")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+  deletedAt      DateTime?        @map("deleted_at")
+  createdById    String?          @map("created_by") @db.VarChar(191)
+  updatedById    String?          @map("updated_by") @db.VarChar(191)
+
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("academic_term_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("academic_term_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  termSubjectOfferings TermSubjectOffering[]
+  timetableEntries     TimetableEntry[]
+  timetableTemplates   TimetableTemplate[]
+  examPeriods          ExamPeriod[]
+  months               AcademicMonth[]
+  monthlyGrades        MonthlyGrade[]
+  homeworks            Homework[]
+  semesterGrades       SemesterGrade[]
+
+  @@unique([academicYearId, code])
+  @@unique([academicYearId, sequence])
+  @@index([academicYearId, deletedAt])
+  @@index([isActive, deletedAt])
+  @@index([deletedAt])
+  @@map("academic_terms")
+}
+
+model AcademicMonth {
+  id             String                @id @default(cuid()) @db.VarChar(191)
+  academicYearId String                @map("academic_year_id") @db.VarChar(191)
+  academicTermId String                @map("academic_term_id") @db.VarChar(191)
+  code           String                @db.VarChar(40)
+  name           String                @db.VarChar(120)
+  sequence       Int
+  startDate      DateTime              @map("start_date")
+  endDate        DateTime              @map("end_date")
+  status         GradingWorkflowStatus @default(DRAFT)
+  isCurrent      Boolean               @default(false) @map("is_current")
+  isActive       Boolean               @default(true) @map("is_active")
+  createdAt      DateTime              @default(now()) @map("created_at")
+  updatedAt      DateTime              @updatedAt @map("updated_at")
+  deletedAt      DateTime?             @map("deleted_at")
+  createdById    String?               @map("created_by") @db.VarChar(191)
+  updatedById    String?               @map("updated_by") @db.VarChar(191)
+
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  academicTerm AcademicTerm @relation(fields: [academicTermId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("academic_month_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("academic_month_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  monthlyGrades MonthlyGrade[]
+
+  @@unique([academicTermId, code], map: "acm_term_code_uq")
+  @@unique([academicTermId, sequence], map: "acm_term_sequence_uq")
+  @@index([academicYearId, academicTermId, deletedAt], map: "acm_year_term_del_idx")
+  @@index([startDate, deletedAt], map: "acm_start_del_idx")
+  @@index([endDate, deletedAt], map: "acm_end_del_idx")
+  @@index([status, deletedAt], map: "acm_status_del_idx")
+  @@index([isCurrent, deletedAt], map: "acm_current_del_idx")
+  @@index([isActive, deletedAt], map: "acm_active_del_idx")
+  @@index([deletedAt], map: "acm_deleted_at_idx")
+  @@map("academic_months")
+}
+
+model GradeLevel {
+  id          String     @id @default(cuid()) @db.VarChar(191)
+  code        String     @unique @db.VarChar(40)
+  name        String     @db.VarChar(120)
+  stage       GradeStage @default(OTHER)
+  sequence    Int
+  isActive    Boolean    @default(true) @map("is_active")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  deletedAt   DateTime?  @map("deleted_at")
+  createdById String?    @map("created_by") @db.VarChar(191)
+  updatedById String?    @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("grade_level_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("grade_level_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  sections            Section[]
+  gradeLevelSubjects  GradeLevelSubject[]
+  gradingPolicies     GradingPolicy[]
+  gradingOutcomeRules GradingOutcomeRule[]
+
+  @@unique([stage, sequence])
+  @@index([isActive, deletedAt])
+  @@index([deletedAt])
+  @@map("grade_levels")
+}
+
+model Section {
+  id           String    @id @default(cuid()) @db.VarChar(191)
+  gradeLevelId String    @map("grade_level_id") @db.VarChar(191)
+  code         String    @db.VarChar(40)
+  name         String    @db.VarChar(120)
+  capacity     Int?
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+  createdById  String?   @map("created_by") @db.VarChar(191)
+  updatedById  String?   @map("updated_by") @db.VarChar(191)
+
+  gradeLevel GradeLevel @relation(fields: [gradeLevelId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("section_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("section_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  timetableEntries            TimetableEntry[]
+  timetableTemplates          TimetableTemplate[]
+  employeeTeachingAssignments EmployeeTeachingAssignment[]
+  employeeSectionSupervisions EmployeeSectionSupervision[]
+  studentEnrollments          StudentEnrollment[]
+  examAssessments             ExamAssessment[]
+  homeworks                   Homework[]
+
+  @@unique([gradeLevelId, code])
+  @@index([gradeLevelId, deletedAt])
+  @@index([isActive, deletedAt])
+  @@index([deletedAt])
+  @@map("sections")
+}
+
+model Subject {
+  id          String          @id @default(cuid()) @db.VarChar(191)
+  code        String          @unique @db.VarChar(40)
+  name        String          @db.VarChar(120)
+  shortName   String?         @map("short_name") @db.VarChar(50)
+  category    SubjectCategory @default(OTHER)
+  isActive    Boolean         @default(true) @map("is_active")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  deletedAt   DateTime?       @map("deleted_at")
+  createdById String?         @map("created_by") @db.VarChar(191)
+  updatedById String?         @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("subject_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("subject_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  gradeLevelSubjects          GradeLevelSubject[]
+  employeeTeachingAssignments EmployeeTeachingAssignment[]
+  studentBooks                StudentBook[]
+  gradingPolicies             GradingPolicy[]
+  examAssessments             ExamAssessment[]
+  monthlyGrades               MonthlyGrade[]
+  homeworks                   Homework[]
+  semesterGrades              SemesterGrade[]
+  annualGrades                AnnualGrade[]
+
+  @@index([category, deletedAt])
+  @@index([isActive, deletedAt])
+  @@index([deletedAt])
+  @@map("subjects")
+}
+
+model GradeLevelSubject {
+  id             String    @id @default(cuid()) @db.VarChar(191)
+  academicYearId String    @map("academic_year_id") @db.VarChar(191)
+  gradeLevelId   String    @map("grade_level_id") @db.VarChar(191)
+  subjectId      String    @map("subject_id") @db.VarChar(191)
+  isMandatory    Boolean   @default(true) @map("is_mandatory")
+  weeklyPeriods  Int       @default(1) @map("weekly_periods")
+  displayOrder   Int?      @map("display_order")
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+  createdById    String?   @map("created_by") @db.VarChar(191)
+  updatedById    String?   @map("updated_by") @db.VarChar(191)
+
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  gradeLevel   GradeLevel   @relation(fields: [gradeLevelId], references: [id], onDelete: Restrict)
+  subject      Subject      @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("grade_level_subject_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("grade_level_subject_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  termSubjectOfferings TermSubjectOffering[]
+
+  @@unique([academicYearId, gradeLevelId, subjectId], map: "gls_year_grade_subject_uq")
+  @@index([academicYearId, gradeLevelId, deletedAt], map: "gls_year_grade_del_idx")
+  @@index([subjectId, deletedAt], map: "gls_subject_del_idx")
+  @@index([isActive, deletedAt], map: "gls_active_del_idx")
+  @@index([deletedAt], map: "gls_deleted_at_idx")
+  @@map("grade_level_subjects")
+}
+
+model TermSubjectOffering {
+  id                  String    @id @default(cuid()) @db.VarChar(191)
+  academicTermId      String    @map("academic_term_id") @db.VarChar(191)
+  gradeLevelSubjectId String    @map("grade_level_subject_id") @db.VarChar(191)
+  weeklyPeriods       Int       @default(1) @map("weekly_periods")
+  displayOrder        Int?      @map("display_order")
+  isActive            Boolean   @default(true) @map("is_active")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  deletedAt           DateTime? @map("deleted_at")
+  createdById         String?   @map("created_by") @db.VarChar(191)
+  updatedById         String?   @map("updated_by") @db.VarChar(191)
+
+  academicTerm      AcademicTerm      @relation(fields: [academicTermId], references: [id], onDelete: Restrict)
+  gradeLevelSubject GradeLevelSubject @relation(fields: [gradeLevelSubjectId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("term_subject_offering_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("term_subject_offering_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  timetableEntries TimetableEntry[]
+
+  @@unique([academicTermId, gradeLevelSubjectId], map: "tso_term_gls_uq")
+  @@index([academicTermId, deletedAt], map: "tso_term_del_idx")
+  @@index([gradeLevelSubjectId, deletedAt], map: "tso_gls_del_idx")
+  @@index([isActive, deletedAt], map: "tso_active_del_idx")
+  @@index([deletedAt], map: "tso_deleted_at_idx")
+  @@map("term_subject_offerings")
+}
+
+model TimetableEntry {
+  id                    String       @id @default(cuid()) @db.VarChar(191)
+  academicTermId        String       @map("academic_term_id") @db.VarChar(191)
+  sectionId             String       @map("section_id") @db.VarChar(191)
+  termSubjectOfferingId String       @map("term_subject_offering_id") @db.VarChar(191)
+  dayOfWeek             TimetableDay @map("day_of_week")
+  periodIndex           Int          @map("period_index")
+  roomLabel             String?      @map("room_label") @db.VarChar(80)
+  notes                 String?      @db.VarChar(255)
+  isActive              Boolean      @default(true) @map("is_active")
+  createdAt             DateTime     @default(now()) @map("created_at")
+  updatedAt             DateTime     @updatedAt @map("updated_at")
+  deletedAt             DateTime?    @map("deleted_at")
+  createdById           String?      @map("created_by") @db.VarChar(191)
+  updatedById           String?      @map("updated_by") @db.VarChar(191)
+
+  academicTerm        AcademicTerm        @relation(fields: [academicTermId], references: [id], onDelete: Restrict)
+  section             Section             @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  termSubjectOffering TermSubjectOffering @relation(fields: [termSubjectOfferingId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("timetable_entry_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("timetable_entry_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([academicTermId, sectionId, dayOfWeek, periodIndex], map: "tte_term_section_slot_uq")
+  @@index([termSubjectOfferingId, deletedAt], map: "tte_tso_del_idx")
+  @@index([academicTermId, sectionId, deletedAt], map: "tte_term_section_del_idx")
+  @@index([isActive, deletedAt], map: "tte_active_del_idx")
+  @@index([deletedAt], map: "tte_deleted_at_idx")
+  @@map("timetable_entries")
+}
+
+model Employee {
+  id                 String                     @id @default(cuid()) @db.VarChar(191)
+  jobNumber          String?                    @unique @map("job_number") @db.VarChar(40)
+  financialNumber    String?                    @unique @map("financial_number") @db.VarChar(40)
+  fullName           String                     @map("full_name") @db.VarChar(150)
+  gender             EmployeeGender
+  genderId           Int?                       @map("gender_id")
+  birthDate          DateTime?                  @map("birth_date")
+  phonePrimary       String?                    @map("phone_primary") @db.VarChar(20)
+  phoneSecondary     String?                    @map("phone_secondary") @db.VarChar(20)
+  hasWhatsapp        Boolean                    @default(true) @map("has_whatsapp")
+  qualification      String?                    @db.VarChar(120)
+  qualificationId    Int?                       @map("qualification_id")
+  qualificationDate  DateTime?                  @map("qualification_date")
+  specialization     String?                    @db.VarChar(100)
+  idNumber           String?                    @map("id_number") @db.VarChar(30)
+  idTypeId           Int?                       @map("id_type_id")
+  localityId         Int?                       @map("locality_id")
+  idExpiryDate       DateTime?                  @map("id_expiry_date")
+  experienceYears    Int                        @default(0) @map("experience_years")
+  employmentType     EmploymentType?            @map("employment_type")
+  jobTitle           String?                    @map("job_title") @db.VarChar(120)
+  jobRoleId          Int?                       @map("job_role_id")
+  hireDate           DateTime?                  @map("hire_date")
+  previousSchool     String?                    @map("previous_school") @db.VarChar(120)
+  salaryApproved     Boolean                    @default(false) @map("salary_approved")
+  systemAccessStatus EmployeeSystemAccessStatus @default(GRANTED) @map("system_access_status")
+  isActive           Boolean                    @default(true) @map("is_active")
+  createdAt          DateTime                   @default(now()) @map("created_at")
+  updatedAt          DateTime                   @updatedAt @map("updated_at")
+  deletedAt          DateTime?                  @map("deleted_at")
+  createdById        String?                    @map("created_by") @db.VarChar(191)
+  updatedById        String?                    @map("updated_by") @db.VarChar(191)
+
+  createdBy           User?                @relation("employee_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy           User?                @relation("employee_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+  userAccount         User?
+  genderLookup        LookupGender?        @relation("employee_gender_lookup", fields: [genderId], references: [id], onDelete: SetNull)
+  qualificationLookup LookupQualification? @relation("employee_qualification_lookup", fields: [qualificationId], references: [id], onDelete: SetNull)
+  jobRoleLookup       LookupJobRole?       @relation("employee_job_role_lookup", fields: [jobRoleId], references: [id], onDelete: SetNull)
+  idType              LookupIdType?        @relation(fields: [idTypeId], references: [id], onDelete: SetNull)
+  locality            Locality?            @relation(fields: [localityId], references: [id], onDelete: SetNull)
+
+  tasks                  EmployeeTask[]
+  healthVisits           StudentHealthVisit[] @relation("employee_health_visits")
+  teachingAssignments    EmployeeTeachingAssignment[]
+  sectionSupervisions    EmployeeSectionSupervision[]
+  attendanceRecords      EmployeeAttendance[]
+  talents                EmployeeTalent[]
+  courses                EmployeeCourse[]
+  violations             EmployeeViolation[]             @relation("employee_violation_employee")
+  violationsReported     EmployeeViolation[]             @relation("employee_violation_reported_by")
+  performanceEvaluations EmployeePerformanceEvaluation[] @relation("employee_performance_employee")
+  evaluationsConducted   EmployeePerformanceEvaluation[] @relation("employee_performance_evaluator")
+
+  @@index([fullName, deletedAt], map: "emp_name_del_idx")
+  @@index([genderId, deletedAt], map: "emp_gender_id_del_idx")
+  @@index([employmentType, deletedAt], map: "emp_type_del_idx")
+  @@index([qualificationId, deletedAt], map: "emp_qualification_id_del_idx")
+  @@index([idTypeId, deletedAt], map: "emp_id_type_del_idx")
+  @@index([localityId, deletedAt], map: "emp_locality_del_idx")
+  @@index([jobRoleId, deletedAt], map: "emp_job_role_id_del_idx")
+  @@index([jobTitle, deletedAt], map: "emp_job_del_idx")
+  @@index([isActive, deletedAt], map: "emp_active_del_idx")
+  @@index([deletedAt], map: "emp_deleted_at_idx")
+  @@map("employees")
+}
+
+model EmployeeSectionSupervision {
+  id                 String    @id @default(cuid()) @db.VarChar(191)
+  employeeId         String    @map("employee_id") @db.VarChar(191)
+  sectionId          String    @map("section_id") @db.VarChar(191)
+  academicYearId     String    @map("academic_year_id") @db.VarChar(191)
+  canViewStudents    Boolean   @default(true) @map("can_view_students")
+  canManageHomeworks Boolean   @default(true) @map("can_manage_homeworks")
+  canManageGrades    Boolean   @default(true) @map("can_manage_grades")
+  isActive           Boolean   @default(true) @map("is_active")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  deletedAt          DateTime? @map("deleted_at")
+  createdById        String?   @map("created_by") @db.VarChar(191)
+  updatedById        String?   @map("updated_by") @db.VarChar(191)
+
+  employee     Employee     @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  section      Section      @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("employee_section_supervision_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("employee_section_supervision_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([employeeId, sectionId, academicYearId], map: "ess_employee_section_year_uq")
+  @@index([employeeId, academicYearId, deletedAt], map: "ess_emp_year_del_idx")
+  @@index([sectionId, deletedAt], map: "ess_section_del_idx")
+  @@index([isActive, deletedAt], map: "ess_active_del_idx")
+  @@index([deletedAt], map: "ess_deleted_at_idx")
+  @@map("employee_section_supervisions")
+}
+
+model EmployeeTask {
+  id             String        @id @default(cuid()) @db.VarChar(191)
+  employeeId     String        @map("employee_id") @db.VarChar(191)
+  academicYearId String?       @map("academic_year_id") @db.VarChar(191)
+  taskName       String        @map("task_name") @db.VarChar(120)
+  dayOfWeek      TimetableDay? @map("day_of_week")
+  assignmentDate DateTime?     @map("assignment_date")
+  notes          String?       @db.VarChar(255)
+  isActive       Boolean       @default(true) @map("is_active")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  deletedAt      DateTime?     @map("deleted_at")
+  createdById    String?       @map("created_by") @db.VarChar(191)
+  updatedById    String?       @map("updated_by") @db.VarChar(191)
+
+  employee     Employee      @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  academicYear AcademicYear? @relation(fields: [academicYearId], references: [id], onDelete: SetNull)
+
+  createdBy User? @relation("employee_task_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("employee_task_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([employeeId, deletedAt], map: "et_employee_del_idx")
+  @@index([academicYearId, deletedAt], map: "et_year_del_idx")
+  @@index([dayOfWeek, deletedAt], map: "et_day_del_idx")
+  @@index([isActive, deletedAt], map: "et_active_del_idx")
+  @@index([deletedAt], map: "et_deleted_at_idx")
+  @@map("employee_tasks")
+}
+
+model EmployeeTeachingAssignment {
+  id             String    @id @default(cuid()) @db.VarChar(191)
+  employeeId     String    @map("employee_id") @db.VarChar(191)
+  sectionId      String    @map("section_id") @db.VarChar(191)
+  subjectId      String    @map("subject_id") @db.VarChar(191)
+  academicYearId String    @map("academic_year_id") @db.VarChar(191)
+  weeklyPeriods  Int       @default(1) @map("weekly_periods")
+  isPrimary      Boolean   @default(true) @map("is_primary")
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+  createdById    String?   @map("created_by") @db.VarChar(191)
+  updatedById    String?   @map("updated_by") @db.VarChar(191)
+
+  employee     Employee     @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  section      Section      @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  subject      Subject      @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("employee_teaching_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("employee_teaching_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([sectionId, subjectId, academicYearId], map: "eta_section_subject_year_uq")
+  @@index([employeeId, academicYearId, deletedAt], map: "eta_emp_year_del_idx")
+  @@index([sectionId, deletedAt], map: "eta_section_del_idx")
+  @@index([subjectId, deletedAt], map: "eta_subject_del_idx")
+  @@index([isActive, deletedAt], map: "eta_active_del_idx")
+  @@index([deletedAt], map: "eta_deleted_at_idx")
+  @@map("employee_teaching_assignments")
+}
+
+model EmployeeAttendance {
+  id             String                   @id @default(cuid()) @db.VarChar(191)
+  employeeId     String                   @map("employee_id") @db.VarChar(191)
+  attendanceDate DateTime                 @map("attendance_date")
+  status         EmployeeAttendanceStatus
+  checkInAt      DateTime?                @map("check_in_at")
+  checkOutAt     DateTime?                @map("check_out_at")
+  notes          String?                  @db.VarChar(255)
+  isActive       Boolean                  @default(true) @map("is_active")
+  createdAt      DateTime                 @default(now()) @map("created_at")
+  updatedAt      DateTime                 @updatedAt @map("updated_at")
+  deletedAt      DateTime?                @map("deleted_at")
+  createdById    String?                  @map("created_by") @db.VarChar(191)
+  updatedById    String?                  @map("updated_by") @db.VarChar(191)
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("employee_attendance_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("employee_attendance_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([employeeId, attendanceDate], map: "ea_employee_date_uq")
+  @@index([attendanceDate, deletedAt], map: "ea_date_del_idx")
+  @@index([status, deletedAt], map: "ea_status_del_idx")
+  @@index([isActive, deletedAt], map: "ea_active_del_idx")
+  @@index([deletedAt], map: "ea_deleted_at_idx")
+  @@map("employee_attendance")
+}
+
+model EmployeePerformanceEvaluation {
+  id                  String                 @id @default(cuid()) @db.VarChar(191)
+  employeeId          String                 @map("employee_id") @db.VarChar(191)
+  academicYearId      String                 @map("academic_year_id") @db.VarChar(191)
+  evaluationDate      DateTime               @map("evaluation_date")
+  score               Int
+  ratingLevel         PerformanceRatingLevel @map("rating_level")
+  evaluatorEmployeeId String?                @map("evaluator_employee_id") @db.VarChar(191)
+  strengths           String?                @db.VarChar(1000)
+  weaknesses          String?                @db.VarChar(1000)
+  recommendations     String?                @db.VarChar(1000)
+  isActive            Boolean                @default(true) @map("is_active")
+  createdAt           DateTime               @default(now()) @map("created_at")
+  updatedAt           DateTime               @updatedAt @map("updated_at")
+  deletedAt           DateTime?              @map("deleted_at")
+  createdById         String?                @map("created_by") @db.VarChar(191)
+  updatedById         String?                @map("updated_by") @db.VarChar(191)
+
+  employee     Employee     @relation("employee_performance_employee", fields: [employeeId], references: [id], onDelete: Restrict)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  evaluator    Employee?    @relation("employee_performance_evaluator", fields: [evaluatorEmployeeId], references: [id], onDelete: SetNull)
+
+  createdBy User? @relation("employee_performance_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("employee_performance_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([employeeId, academicYearId], map: "epe_employee_year_uq")
+  @@index([academicYearId, deletedAt], map: "epe_year_del_idx")
+  @@index([evaluatorEmployeeId, deletedAt], map: "epe_eval_del_idx")
+  @@index([ratingLevel, deletedAt], map: "epe_rating_del_idx")
+  @@index([isActive, deletedAt], map: "epe_active_del_idx")
+  @@index([deletedAt], map: "epe_deleted_at_idx")
+  @@map("employee_performance_evaluations")
+}
+
+model Talent {
+  id          String    @id @default(cuid()) @db.VarChar(191)
+  code        String    @unique @db.VarChar(40)
+  name        String    @db.VarChar(120)
+  description String?   @db.VarChar(255)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("talent_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("talent_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  employeeTalents EmployeeTalent[]
+  studentTalents  StudentTalent[]
+
+  @@index([name, deletedAt], map: "tal_name_del_idx")
+  @@index([isActive, deletedAt], map: "tal_active_del_idx")
+  @@index([deletedAt], map: "tal_deleted_at_idx")
+  @@map("talents")
+}
+
+model EmployeeTalent {
+  id          String    @id @default(cuid()) @db.VarChar(191)
+  employeeId  String    @map("employee_id") @db.VarChar(191)
+  talentId    String    @map("talent_id") @db.VarChar(191)
+  notes       String?   @db.VarChar(255)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  talent   Talent   @relation(fields: [talentId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("employee_talent_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("employee_talent_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([employeeId, talentId], map: "emt_employee_talent_uq")
+  @@index([employeeId, deletedAt], map: "emt_employee_del_idx")
+  @@index([talentId, deletedAt], map: "emt_talent_del_idx")
+  @@index([isActive, deletedAt], map: "emt_active_del_idx")
+  @@index([deletedAt], map: "emt_deleted_at_idx")
+  @@map("employee_talents")
+}
+
+model EmployeeCourse {
+  id                String    @id @default(cuid()) @db.VarChar(191)
+  employeeId        String    @map("employee_id") @db.VarChar(191)
+  courseName        String    @map("course_name") @db.VarChar(150)
+  courseProvider    String?   @map("course_provider") @db.VarChar(120)
+  courseDate        DateTime? @map("course_date")
+  durationDays      Int?      @map("duration_days")
+  certificateNumber String?   @map("certificate_number") @db.VarChar(60)
+  notes             String?   @db.VarChar(255)
+  isActive          Boolean   @default(true) @map("is_active")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  deletedAt         DateTime? @map("deleted_at")
+  createdById       String?   @map("created_by") @db.VarChar(191)
+  updatedById       String?   @map("updated_by") @db.VarChar(191)
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("employee_course_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("employee_course_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([employeeId, courseDate, deletedAt], map: "emc_employee_date_del_idx")
+  @@index([isActive, deletedAt], map: "emc_active_del_idx")
+  @@index([deletedAt], map: "emc_deleted_at_idx")
+  @@map("employee_courses")
+}
+
+model EmployeeViolation {
+  id                   String            @id @default(cuid()) @db.VarChar(191)
+  employeeId           String            @map("employee_id") @db.VarChar(191)
+  violationDate        DateTime          @map("violation_date")
+  violationAspect      String            @map("violation_aspect") @db.VarChar(100)
+  violationText        String            @map("violation_text") @db.VarChar(1000)
+  actionTaken          String?           @map("action_taken") @db.VarChar(1000)
+  severity             ViolationSeverity @default(MEDIUM)
+  hasWarning           Boolean           @default(false) @map("has_warning")
+  hasMinutes           Boolean           @default(false) @map("has_minutes")
+  reportedByEmployeeId String?           @map("reported_by_employee_id") @db.VarChar(191)
+  isActive             Boolean           @default(true) @map("is_active")
+  createdAt            DateTime          @default(now()) @map("created_at")
+  updatedAt            DateTime          @updatedAt @map("updated_at")
+  deletedAt            DateTime?         @map("deleted_at")
+  createdById          String?           @map("created_by") @db.VarChar(191)
+  updatedById          String?           @map("updated_by") @db.VarChar(191)
+
+  employee   Employee  @relation("employee_violation_employee", fields: [employeeId], references: [id], onDelete: Restrict)
+  reportedBy Employee? @relation("employee_violation_reported_by", fields: [reportedByEmployeeId], references: [id], onDelete: SetNull)
+
+  createdBy User? @relation("employee_violation_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("employee_violation_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([employeeId, violationDate, deletedAt], map: "emv_employee_date_del_idx")
+  @@index([reportedByEmployeeId, deletedAt], map: "emv_reporter_del_idx")
+  @@index([severity, deletedAt], map: "emv_severity_del_idx")
+  @@index([isActive, deletedAt], map: "emv_active_del_idx")
+  @@index([deletedAt], map: "emv_deleted_at_idx")
+  @@map("employee_violations")
+}
+
+model Student {
+  id             String               @id @default(cuid()) @db.VarChar(191)
+  admissionNo    String?              @unique @map("admission_no") @db.VarChar(40)
+  fullName       String               @map("full_name") @db.VarChar(150)
+  gender         StudentGender
+  genderId       Int?                 @map("gender_id")
+  birthDate      DateTime?            @map("birth_date")
+  bloodTypeId    Int?                 @map("blood_type_id")
+  localityId     Int?                 @map("locality_id")
+  healthStatus   StudentHealthStatus? @map("health_status")
+  healthStatusId Int?                 @map("health_status_id")
+  healthNotes    String?              @map("health_notes") @db.VarChar(1000)
+  orphanStatus   StudentOrphanStatus  @default(NONE) @map("orphan_status")
+  orphanStatusId Int?                 @map("orphan_status_id")
+  isActive       Boolean              @default(true) @map("is_active")
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+  deletedAt      DateTime?            @map("deleted_at")
+  createdById    String?              @map("created_by") @db.VarChar(191)
+  updatedById    String?              @map("updated_by") @db.VarChar(191)
+
+  createdBy          User?               @relation("student_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy          User?               @relation("student_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+  bloodType          LookupBloodType?    @relation(fields: [bloodTypeId], references: [id], onDelete: SetNull)
+  locality           Locality?           @relation(fields: [localityId], references: [id], onDelete: SetNull)
+  genderLookup       LookupGender?       @relation("student_gender_lookup", fields: [genderId], references: [id], onDelete: SetNull)
+  orphanStatusLookup LookupOrphanStatus? @relation("student_orphan_status_lookup", fields: [orphanStatusId], references: [id], onDelete: SetNull)
+  healthStatusLookup LookupHealthStatus? @relation("student_health_status_lookup", fields: [healthStatusId], references: [id], onDelete: SetNull)
+  healthVisits       StudentHealthVisit[] @relation("student_health_visit_student")
+
+  guardians   StudentGuardian[]
+  enrollments StudentEnrollment[]
+  talents     StudentTalent[]
+  siblings    StudentSibling[]    @relation("student_sibling_student")
+  asSiblingIn StudentSibling[]    @relation("student_sibling_sibling")
+  problems    StudentProblem[]
+  parentNotifications ParentNotification[]
+
+  @@index([fullName, deletedAt], map: "stu_name_del_idx")
+  @@index([isActive, deletedAt], map: "stu_active_del_idx")
+  @@index([gender, deletedAt], map: "stu_gender_del_idx")
+  @@index([genderId, deletedAt], map: "stu_gender_id_del_idx")
+  @@index([bloodTypeId, deletedAt], map: "stu_blood_type_del_idx")
+  @@index([localityId, deletedAt], map: "stu_locality_del_idx")
+  @@index([healthStatusId, deletedAt], map: "stu_health_status_id_del_idx")
+  @@index([orphanStatus, deletedAt], map: "stu_orphan_del_idx")
+  @@index([orphanStatusId, deletedAt], map: "stu_orphan_id_del_idx")
+  @@index([deletedAt], map: "stu_deleted_at_idx")
+  @@map("students")
+}
+
+model StudentHealthVisit {
+  id              String               @id @default(cuid()) @db.VarChar(191)
+  studentId       String               @map("student_id") @db.VarChar(191)
+  nurseId         String?              @map("nurse_id") @db.VarChar(191)
+  healthStatusId  Int?                 @map("health_status_id")
+  visitDate       DateTime             @map("visit_date")
+  notes           String?              @db.VarChar(1000)
+  followUpRequired Boolean              @default(false) @map("follow_up_required")
+  followUpNotes   String?              @map("follow_up_notes") @db.VarChar(1000)
+  isActive        Boolean              @default(true) @map("is_active")
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+  deletedAt       DateTime?            @map("deleted_at")
+  createdById     String?              @map("created_by") @db.VarChar(191)
+  updatedById     String?              @map("updated_by") @db.VarChar(191)
+
+  student      Student             @relation("student_health_visit_student", fields: [studentId], references: [id], onDelete: Cascade)
+  nurse        Employee?           @relation("employee_health_visits", fields: [nurseId], references: [id], onDelete: SetNull)
+  healthStatus LookupHealthStatus? @relation("health_visit_status", fields: [healthStatusId], references: [id], onDelete: SetNull)
+  createdBy    User?               @relation("health_visit_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy    User?               @relation("health_visit_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([studentId, visitDate], map: "shv_student_visit_date_idx")
+  @@index([healthStatusId], map: "shv_health_status_idx")
+  @@index([nurseId], map: "shv_nurse_idx")
+  @@index([deletedAt], map: "shv_deleted_at_idx")
+  @@map("student_health_visits")
+}
+
+model Guardian {
+  id             String        @id @default(cuid()) @db.VarChar(191)
+  fullName       String        @map("full_name") @db.VarChar(150)
+  gender         StudentGender
+  genderId       Int?          @map("gender_id")
+  idNumber       String?       @map("id_number") @db.VarChar(30)
+  idTypeId       Int?          @map("id_type_id")
+  localityId     Int?          @map("locality_id")
+  phonePrimary   String?       @map("phone_primary") @db.VarChar(20)
+  phoneSecondary String?       @map("phone_secondary") @db.VarChar(20)
+  whatsappNumber String?       @map("whatsapp_number") @db.VarChar(20)
+  residenceText  String?       @map("residence_text") @db.VarChar(255)
+  isActive       Boolean       @default(true) @map("is_active")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  deletedAt      DateTime?     @map("deleted_at")
+  createdById    String?       @map("created_by") @db.VarChar(191)
+  updatedById    String?       @map("updated_by") @db.VarChar(191)
+
+  createdBy    User?         @relation("guardian_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy    User?         @relation("guardian_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+  idType       LookupIdType? @relation(fields: [idTypeId], references: [id], onDelete: SetNull)
+  locality     Locality?     @relation(fields: [localityId], references: [id], onDelete: SetNull)
+  genderLookup LookupGender? @relation("guardian_gender_lookup", fields: [genderId], references: [id], onDelete: SetNull)
+
+  students StudentGuardian[]
+
+  @@index([fullName, deletedAt], map: "gdn_name_del_idx")
+  @@index([genderId, deletedAt], map: "gdn_gender_id_del_idx")
+  @@index([idTypeId, deletedAt], map: "gdn_id_type_del_idx")
+  @@index([localityId, deletedAt], map: "gdn_locality_del_idx")
+  @@index([phonePrimary, deletedAt], map: "gdn_phone_del_idx")
+  @@index([isActive, deletedAt], map: "gdn_active_del_idx")
+  @@index([deletedAt], map: "gdn_deleted_at_idx")
+  @@map("guardians")
+}
+
+model StudentGuardian {
+  id                      String               @id @default(cuid()) @db.VarChar(191)
+  studentId               String               @map("student_id") @db.VarChar(191)
+  guardianId              String               @map("guardian_id") @db.VarChar(191)
+  relationship            GuardianRelationship
+  relationshipTypeId      Int?                 @map("relationship_type_id")
+  isPrimary               Boolean              @default(false) @map("is_primary")
+  canReceiveNotifications Boolean              @default(true) @map("can_receive_notifications")
+  canPickup               Boolean              @default(true) @map("can_pickup")
+  startDate               DateTime?            @map("start_date")
+  endDate                 DateTime?            @map("end_date")
+  notes                   String?              @db.VarChar(255)
+  isActive                Boolean              @default(true) @map("is_active")
+  createdAt               DateTime             @default(now()) @map("created_at")
+  updatedAt               DateTime             @updatedAt @map("updated_at")
+  deletedAt               DateTime?            @map("deleted_at")
+  createdById             String?              @map("created_by") @db.VarChar(191)
+  updatedById             String?              @map("updated_by") @db.VarChar(191)
+
+  student                Student                 @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  guardian               Guardian                @relation(fields: [guardianId], references: [id], onDelete: Restrict)
+  relationshipTypeLookup LookupRelationshipType? @relation("student_guardian_relationship_lookup", fields: [relationshipTypeId], references: [id], onDelete: SetNull)
+
+  createdBy User? @relation("student_guardian_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("student_guardian_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([studentId, guardianId, relationship], map: "sg_student_guardian_relation_uq")
+  @@index([studentId, isPrimary, deletedAt], map: "sg_student_primary_del_idx")
+  @@index([guardianId, deletedAt], map: "sg_guardian_del_idx")
+  @@index([relationshipTypeId, deletedAt], map: "sg_relationship_type_del_idx")
+  @@index([isActive, deletedAt], map: "sg_active_del_idx")
+  @@index([deletedAt], map: "sg_deleted_at_idx")
+  @@map("student_guardians")
+}
+
+model StudentEnrollment {
+  id             String                  @id @default(cuid()) @db.VarChar(191)
+  studentId      String                  @map("student_id") @db.VarChar(191)
+  academicYearId String                  @map("academic_year_id") @db.VarChar(191)
+  sectionId      String                  @map("section_id") @db.VarChar(191)
+  enrollmentDate DateTime?               @map("enrollment_date")
+  status         StudentEnrollmentStatus @default(ACTIVE)
+  notes          String?                 @db.VarChar(255)
+  isActive       Boolean                 @default(true) @map("is_active")
+  createdAt      DateTime                @default(now()) @map("created_at")
+  updatedAt      DateTime                @updatedAt @map("updated_at")
+  deletedAt      DateTime?               @map("deleted_at")
+  createdById    String?                 @map("created_by") @db.VarChar(191)
+  updatedById    String?                 @map("updated_by") @db.VarChar(191)
+
+  student      Student      @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  section      Section      @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("student_enrollment_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("student_enrollment_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  attendanceRecords StudentAttendance[]
+  bookRecords       StudentBook[]
+  examScores        StudentExamScore[]
+  monthlyGrades     MonthlyGrade[]
+  homeworkRecords   StudentHomework[]
+  semesterGrades    SemesterGrade[]
+  annualGrades      AnnualGrade[]
+  annualResults     AnnualResult[]
+
+  @@unique([studentId, academicYearId], map: "sen_student_year_uq")
+  @@index([academicYearId, sectionId, deletedAt], map: "sen_year_section_del_idx")
+  @@index([status, deletedAt], map: "sen_status_del_idx")
+  @@index([isActive, deletedAt], map: "sen_active_del_idx")
+  @@index([deletedAt], map: "sen_deleted_at_idx")
+  @@map("student_enrollments")
+}
+
+model StudentAttendance {
+  id                  String                  @id @default(cuid()) @db.VarChar(191)
+  studentEnrollmentId String                  @map("student_enrollment_id") @db.VarChar(191)
+  attendanceDate      DateTime                @map("attendance_date")
+  status              StudentAttendanceStatus
+  checkInAt           DateTime?               @map("check_in_at")
+  checkOutAt          DateTime?               @map("check_out_at")
+  notes               String?                 @db.VarChar(255)
+  isActive            Boolean                 @default(true) @map("is_active")
+  createdAt           DateTime                @default(now()) @map("created_at")
+  updatedAt           DateTime                @updatedAt @map("updated_at")
+  deletedAt           DateTime?               @map("deleted_at")
+  createdById         String?                 @map("created_by") @db.VarChar(191)
+  updatedById         String?                 @map("updated_by") @db.VarChar(191)
+
+  studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("student_attendance_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("student_attendance_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([studentEnrollmentId, attendanceDate], map: "sat_enrollment_date_uq")
+  @@index([studentEnrollmentId, deletedAt], map: "sat_enrollment_del_idx")
+  @@index([attendanceDate, deletedAt], map: "sat_date_del_idx")
+  @@index([status, deletedAt], map: "sat_status_del_idx")
+  @@index([isActive, deletedAt], map: "sat_active_del_idx")
+  @@index([deletedAt], map: "sat_deleted_at_idx")
+  @@map("student_attendance")
+}
+
+model StudentBook {
+  id                  String            @id @default(cuid()) @db.VarChar(191)
+  studentEnrollmentId String            @map("student_enrollment_id") @db.VarChar(191)
+  subjectId           String            @map("subject_id") @db.VarChar(191)
+  bookPart            String            @default("MAIN") @map("book_part") @db.VarChar(50)
+  issuedDate          DateTime          @map("issued_date")
+  dueDate             DateTime?         @map("due_date")
+  returnedDate        DateTime?         @map("returned_date")
+  status              StudentBookStatus @default(ISSUED)
+  notes               String?           @db.VarChar(255)
+  isActive            Boolean           @default(true) @map("is_active")
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+  deletedAt           DateTime?         @map("deleted_at")
+  createdById         String?           @map("created_by") @db.VarChar(191)
+  updatedById         String?           @map("updated_by") @db.VarChar(191)
+
+  studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Restrict)
+  subject           Subject           @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("student_book_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("student_book_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([studentEnrollmentId, subjectId, bookPart], map: "sbk_enrollment_subject_part_uq")
+  @@index([studentEnrollmentId, deletedAt], map: "sbk_enrollment_del_idx")
+  @@index([subjectId, deletedAt], map: "sbk_subject_del_idx")
+  @@index([status, deletedAt], map: "sbk_status_del_idx")
+  @@index([isActive, deletedAt], map: "sbk_active_del_idx")
+  @@index([deletedAt], map: "sbk_deleted_at_idx")
+  @@map("student_books")
+}
+
+model StudentTalent {
+  id          String    @id @default(cuid()) @db.VarChar(191)
+  studentId   String    @map("student_id") @db.VarChar(191)
+  talentId    String    @map("talent_id") @db.VarChar(191)
+  notes       String?   @db.VarChar(255)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  talent  Talent  @relation(fields: [talentId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("student_talent_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("student_talent_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([studentId, talentId], map: "stt_student_talent_uq")
+  @@index([studentId, deletedAt], map: "stt_student_del_idx")
+  @@index([talentId, deletedAt], map: "stt_talent_del_idx")
+  @@index([isActive, deletedAt], map: "stt_active_del_idx")
+  @@index([deletedAt], map: "stt_deleted_at_idx")
+  @@map("student_talents")
+}
+
+model StudentSibling {
+  id           String                     @id @default(cuid()) @db.VarChar(191)
+  studentId    String                     @map("student_id") @db.VarChar(191)
+  siblingId    String                     @map("sibling_id") @db.VarChar(191)
+  relationship StudentSiblingRelationship
+  notes        String?                    @db.VarChar(255)
+  isActive     Boolean                    @default(true) @map("is_active")
+  createdAt    DateTime                   @default(now()) @map("created_at")
+  updatedAt    DateTime                   @updatedAt @map("updated_at")
+  deletedAt    DateTime?                  @map("deleted_at")
+  createdById  String?                    @map("created_by") @db.VarChar(191)
+  updatedById  String?                    @map("updated_by") @db.VarChar(191)
+
+  student Student @relation("student_sibling_student", fields: [studentId], references: [id], onDelete: Restrict)
+  sibling Student @relation("student_sibling_sibling", fields: [siblingId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("student_sibling_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("student_sibling_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([studentId, siblingId], map: "ssb_student_sibling_uq")
+  @@index([studentId, deletedAt], map: "ssb_student_del_idx")
+  @@index([siblingId, deletedAt], map: "ssb_sibling_del_idx")
+  @@index([relationship, deletedAt], map: "ssb_relationship_del_idx")
+  @@index([isActive, deletedAt], map: "ssb_active_del_idx")
+  @@index([deletedAt], map: "ssb_deleted_at_idx")
+  @@map("student_siblings")
+}
+
+model StudentProblem {
+  id                 String    @id @default(cuid()) @db.VarChar(191)
+  studentId          String    @map("student_id") @db.VarChar(191)
+  problemDate        DateTime  @map("problem_date")
+  problemType        String?   @map("problem_type") @db.VarChar(50)
+  problemDescription String    @map("problem_description") @db.VarChar(1000)
+  actionsTaken       String?   @map("actions_taken") @db.VarChar(1000)
+  hasMinutes         Boolean   @default(false) @map("has_minutes")
+  isResolved         Boolean   @default(false) @map("is_resolved")
+  isActive           Boolean   @default(true) @map("is_active")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  deletedAt          DateTime? @map("deleted_at")
+  createdById        String?   @map("created_by") @db.VarChar(191)
+  updatedById        String?   @map("updated_by") @db.VarChar(191)
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("student_problem_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("student_problem_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([studentId, deletedAt], map: "spr_student_del_idx")
+  @@index([problemDate, deletedAt], map: "spr_date_del_idx")
+  @@index([isResolved, deletedAt], map: "spr_resolved_del_idx")
+  @@index([isActive, deletedAt], map: "spr_active_del_idx")
+  @@index([deletedAt], map: "spr_deleted_at_idx")
+  @@map("student_problems")
+}
+
+model ParentNotification {
+  id                  String                       @id @default(cuid()) @db.VarChar(191)
+  notificationNumber  Int                          @unique @map("notification_number")
+  studentId           String                       @map("student_id") @db.VarChar(191)
+  notificationType    ParentNotificationType       @map("notification_type")
+  guardianTitleId     Int?                         @map("guardian_title_id")
+  behaviorType        String?                      @map("behavior_type") @db.VarChar(100)
+  behaviorDescription String?                      @map("behavior_description") @db.VarChar(1000)
+  requiredAction      String?                      @map("required_action") @db.VarChar(1000)
+  sendMethod          ParentNotificationSendMethod @default(PAPER) @map("send_method")
+  messengerName       String?                      @map("messenger_name") @db.VarChar(100)
+  isSent              Boolean                      @default(false) @map("is_sent")
+  sentDate            DateTime?                    @map("sent_date")
+  results             String?                      @db.VarChar(1000)
+  isActive            Boolean                      @default(true) @map("is_active")
+  createdAt           DateTime                     @default(now()) @map("created_at")
+  updatedAt           DateTime                     @updatedAt @map("updated_at")
+  deletedAt           DateTime?                    @map("deleted_at")
+  createdById         String?                      @map("created_by") @db.VarChar(191)
+  updatedById         String?                      @map("updated_by") @db.VarChar(191)
+
+  student             Student                 @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  guardianTitleLookup LookupRelationshipType? @relation("parent_notification_guardian_title_lookup", fields: [guardianTitleId], references: [id], onDelete: SetNull)
+
+  createdBy User? @relation("parent_notification_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("parent_notification_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([studentId, deletedAt], map: "pnt_student_del_idx")
+  @@index([notificationType, deletedAt], map: "pnt_type_del_idx")
+  @@index([guardianTitleId, deletedAt], map: "pnt_guardian_title_del_idx")
+  @@index([isSent, sentDate, deletedAt], map: "pnt_sent_del_idx")
+  @@index([isActive, deletedAt], map: "pnt_active_del_idx")
+  @@index([deletedAt], map: "pnt_deleted_at_idx")
+  @@map("parent_notifications")
+}
+
+model GradingPolicy {
+  id                   String                @id @default(cuid()) @db.VarChar(191)
+  academicYearId       String                @map("academic_year_id") @db.VarChar(191)
+  gradeLevelId         String                @map("grade_level_id") @db.VarChar(191)
+  subjectId            String                @map("subject_id") @db.VarChar(191)
+  assessmentType       AssessmentType        @default(MONTHLY) @map("assessment_type")
+  maxExamScore         Decimal               @default(20.00) @map("max_exam_score") @db.Decimal(6, 2)
+  maxHomeworkScore     Decimal               @default(5.00) @map("max_homework_score") @db.Decimal(6, 2)
+  maxAttendanceScore   Decimal               @default(5.00) @map("max_attendance_score") @db.Decimal(6, 2)
+  maxActivityScore     Decimal               @default(5.00) @map("max_activity_score") @db.Decimal(6, 2)
+  maxContributionScore Decimal               @default(0.00) @map("max_contribution_score") @db.Decimal(6, 2)
+  passingScore         Decimal               @default(50.00) @map("passing_score") @db.Decimal(6, 2)
+  isDefault            Boolean               @default(false) @map("is_default")
+  status               GradingWorkflowStatus @default(DRAFT)
+  notes                String?               @db.VarChar(255)
+  isActive             Boolean               @default(true) @map("is_active")
+  createdAt            DateTime              @default(now()) @map("created_at")
+  updatedAt            DateTime              @updatedAt @map("updated_at")
+  deletedAt            DateTime?             @map("deleted_at")
+  createdById          String?               @map("created_by") @db.VarChar(191)
+  updatedById          String?               @map("updated_by") @db.VarChar(191)
+
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  gradeLevel   GradeLevel   @relation(fields: [gradeLevelId], references: [id], onDelete: Restrict)
+  subject      Subject      @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("grading_policy_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("grading_policy_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  components    GradingPolicyComponent[]
+  monthlyGrades MonthlyGrade[]
+
+  @@unique([academicYearId, gradeLevelId, subjectId, assessmentType], map: "grp_year_grade_subject_type_uq")
+  @@index([assessmentType, deletedAt], map: "grp_type_del_idx")
+  @@index([status, deletedAt], map: "grp_status_del_idx")
+  @@index([isDefault, deletedAt], map: "grp_default_del_idx")
+  @@index([isActive, deletedAt], map: "grp_active_del_idx")
+  @@index([deletedAt], map: "grp_deleted_at_idx")
+  @@map("grading_policies")
+}
+
+model GradingPolicyComponent {
+  id                String                          @id @default(cuid()) @db.VarChar(191)
+  gradingPolicyId   String                          @map("grading_policy_id") @db.VarChar(191)
+  code              String                          @db.VarChar(50)
+  name              String                          @db.VarChar(120)
+  maxScore          Decimal                         @default(0.00) @map("max_score") @db.Decimal(6, 2)
+  calculationMode   GradingComponentCalculationMode @default(MANUAL) @map("calculation_mode")
+  includeInMonthly  Boolean                         @default(true) @map("include_in_monthly")
+  includeInSemester Boolean                         @default(true) @map("include_in_semester")
+  sortOrder         Int                             @default(1) @map("sort_order")
+  isActive          Boolean                         @default(true) @map("is_active")
+  createdAt         DateTime                        @default(now()) @map("created_at")
+  updatedAt         DateTime                        @updatedAt @map("updated_at")
+  deletedAt         DateTime?                       @map("deleted_at")
+  createdById       String?                         @map("created_by") @db.VarChar(191)
+  updatedById       String?                         @map("updated_by") @db.VarChar(191)
+
+  gradingPolicy GradingPolicy @relation(fields: [gradingPolicyId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("grading_policy_component_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("grading_policy_component_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  monthlyCustomScores MonthlyCustomComponentScore[]
+
+  @@unique([gradingPolicyId, code], map: "gpc_policy_code_uq")
+  @@index([isActive, deletedAt], map: "gpc_active_del_idx")
+  @@index([deletedAt], map: "gpc_deleted_at_idx")
+  @@map("grading_policy_components")
+}
+
+model ExamPeriod {
+  id             String                @id @default(cuid()) @db.VarChar(191)
+  academicYearId String                @map("academic_year_id") @db.VarChar(191)
+  academicTermId String                @map("academic_term_id") @db.VarChar(191)
+  name           String                @db.VarChar(120)
+  assessmentType AssessmentType        @default(MONTHLY) @map("assessment_type")
+  startDate      DateTime?             @map("start_date")
+  endDate        DateTime?             @map("end_date")
+  status         GradingWorkflowStatus @default(DRAFT)
+  isLocked       Boolean               @default(false) @map("is_locked")
+  lockedAt       DateTime?             @map("locked_at")
+  lockedByUserId String?               @map("locked_by_user_id") @db.VarChar(191)
+  isActive       Boolean               @default(true) @map("is_active")
+  createdAt      DateTime              @default(now()) @map("created_at")
+  updatedAt      DateTime              @updatedAt @map("updated_at")
+  deletedAt      DateTime?             @map("deleted_at")
+  createdById    String?               @map("created_by") @db.VarChar(191)
+  updatedById    String?               @map("updated_by") @db.VarChar(191)
+
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  academicTerm AcademicTerm @relation(fields: [academicTermId], references: [id], onDelete: Restrict)
+  lockedByUser User?        @relation("exam_period_locked_by", fields: [lockedByUserId], references: [id], onDelete: SetNull)
+  createdBy    User?        @relation("exam_period_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy    User?        @relation("exam_period_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  assessments ExamAssessment[]
+
+  @@unique([academicTermId, name], map: "exp_term_name_uq")
+  @@index([assessmentType, deletedAt], map: "exp_type_del_idx")
+  @@index([status, deletedAt], map: "exp_status_del_idx")
+  @@index([isLocked, deletedAt], map: "exp_locked_del_idx")
+  @@index([isActive, deletedAt], map: "exp_active_del_idx")
+  @@index([deletedAt], map: "exp_deleted_at_idx")
+  @@map("exam_periods")
+}
+
+model ExamAssessment {
+  id           String    @id @default(cuid()) @db.VarChar(191)
+  examPeriodId String    @map("exam_period_id") @db.VarChar(191)
+  sectionId    String    @map("section_id") @db.VarChar(191)
+  subjectId    String    @map("subject_id") @db.VarChar(191)
+  title        String    @db.VarChar(120)
+  examDate     DateTime  @map("exam_date")
+  maxScore     Decimal   @default(20.00) @map("max_score") @db.Decimal(6, 2)
+  notes        String?   @db.VarChar(255)
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+  createdById  String?   @map("created_by") @db.VarChar(191)
+  updatedById  String?   @map("updated_by") @db.VarChar(191)
+
+  examPeriod ExamPeriod @relation(fields: [examPeriodId], references: [id], onDelete: Restrict)
+  section    Section    @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  subject    Subject    @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("exam_assessment_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("exam_assessment_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  scores StudentExamScore[]
+
+  @@unique([examPeriodId, sectionId, subjectId, examDate], map: "exa_period_section_subject_date_uq")
+  @@index([examPeriodId, deletedAt], map: "exa_period_del_idx")
+  @@index([sectionId, deletedAt], map: "exa_section_del_idx")
+  @@index([subjectId, deletedAt], map: "exa_subject_del_idx")
+  @@index([isActive, deletedAt], map: "exa_active_del_idx")
+  @@index([deletedAt], map: "exa_deleted_at_idx")
+  @@map("exam_assessments")
+}
+
+model StudentExamScore {
+  id                  String           @id @default(cuid()) @db.VarChar(191)
+  examAssessmentId    String           @map("exam_assessment_id") @db.VarChar(191)
+  studentEnrollmentId String           @map("student_enrollment_id") @db.VarChar(191)
+  score               Decimal          @default(0.00) @db.Decimal(6, 2)
+  isPresent           Boolean          @default(true) @map("is_present")
+  absenceType         ExamAbsenceType? @map("absence_type")
+  excuseDetails       String?          @map("excuse_details") @db.VarChar(255)
+  teacherNotes        String?          @map("teacher_notes") @db.VarChar(255)
+  isActive            Boolean          @default(true) @map("is_active")
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+  deletedAt           DateTime?        @map("deleted_at")
+  createdById         String?          @map("created_by") @db.VarChar(191)
+  updatedById         String?          @map("updated_by") @db.VarChar(191)
+
+  examAssessment    ExamAssessment    @relation(fields: [examAssessmentId], references: [id], onDelete: Restrict)
+  studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("student_exam_score_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("student_exam_score_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([examAssessmentId, studentEnrollmentId], map: "ses_assessment_enrollment_uq")
+  @@index([studentEnrollmentId, deletedAt], map: "ses_enrollment_del_idx")
+  @@index([isPresent, deletedAt], map: "ses_present_del_idx")
+  @@index([isActive, deletedAt], map: "ses_active_del_idx")
+  @@index([deletedAt], map: "ses_deleted_at_idx")
+  @@map("student_exam_scores")
+}
+
+model HomeworkType {
+  id          String    @id @default(cuid()) @db.VarChar(191)
+  code        String    @unique @db.VarChar(40)
+  name        String    @db.VarChar(120)
+  description String?   @db.VarChar(255)
+  isSystem    Boolean   @default(false) @map("is_system")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("homework_type_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("homework_type_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  homeworks Homework[]
+
+  @@index([isActive, deletedAt], map: "hwt_active_del_idx")
+  @@index([deletedAt], map: "hwt_deleted_at_idx")
+  @@map("homework_types")
+}
+
+model Homework {
+  id             String    @id @default(cuid()) @db.VarChar(191)
+  academicYearId String    @map("academic_year_id") @db.VarChar(191)
+  academicTermId String    @map("academic_term_id") @db.VarChar(191)
+  sectionId      String    @map("section_id") @db.VarChar(191)
+  subjectId      String    @map("subject_id") @db.VarChar(191)
+  homeworkTypeId String    @map("homework_type_id") @db.VarChar(191)
+  title          String    @db.VarChar(120)
+  content        String?   @db.Text
+  homeworkDate   DateTime  @map("homework_date")
+  dueDate        DateTime? @map("due_date")
+  maxScore       Decimal   @default(5.00) @map("max_score") @db.Decimal(6, 2)
+  notes          String?   @db.VarChar(255)
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+  createdById    String?   @map("created_by") @db.VarChar(191)
+  updatedById    String?   @map("updated_by") @db.VarChar(191)
+
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  academicTerm AcademicTerm @relation(fields: [academicTermId], references: [id], onDelete: Restrict)
+  section      Section      @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  subject      Subject      @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  homeworkType HomeworkType @relation(fields: [homeworkTypeId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("homework_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("homework_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  studentHomeworks StudentHomework[]
+
+  @@unique([academicTermId, sectionId, subjectId, title, homeworkDate], map: "hw_term_section_subject_title_date_uq")
+  @@index([academicYearId, deletedAt], map: "hw_year_del_idx")
+  @@index([academicTermId, deletedAt], map: "hw_term_del_idx")
+  @@index([sectionId, deletedAt], map: "hw_section_del_idx")
+  @@index([subjectId, deletedAt], map: "hw_subject_del_idx")
+  @@index([homeworkTypeId, deletedAt], map: "hw_type_del_idx")
+  @@index([homeworkDate, deletedAt], map: "hw_date_del_idx")
+  @@index([dueDate, deletedAt], map: "hw_due_del_idx")
+  @@index([isActive, deletedAt], map: "hw_active_del_idx")
+  @@index([deletedAt], map: "hw_deleted_at_idx")
+  @@map("homeworks")
+}
+
+model StudentHomework {
+  id                  String    @id @default(cuid()) @db.VarChar(191)
+  homeworkId          String    @map("homework_id") @db.VarChar(191)
+  studentEnrollmentId String    @map("student_enrollment_id") @db.VarChar(191)
+  isCompleted         Boolean   @default(false) @map("is_completed")
+  submittedAt         DateTime? @map("submitted_at")
+  manualScore         Decimal?  @map("manual_score") @db.Decimal(6, 2)
+  teacherNotes        String?   @map("teacher_notes") @db.VarChar(255)
+  isActive            Boolean   @default(true) @map("is_active")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  deletedAt           DateTime? @map("deleted_at")
+  createdById         String?   @map("created_by") @db.VarChar(191)
+  updatedById         String?   @map("updated_by") @db.VarChar(191)
+
+  homework          Homework          @relation(fields: [homeworkId], references: [id], onDelete: Restrict)
+  studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("student_homework_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("student_homework_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([homeworkId, studentEnrollmentId], map: "shw_homework_enrollment_uq")
+  @@index([studentEnrollmentId, deletedAt], map: "shw_enrollment_del_idx")
+  @@index([isCompleted, deletedAt], map: "shw_completed_del_idx")
+  @@index([submittedAt, deletedAt], map: "shw_submitted_del_idx")
+  @@index([isActive, deletedAt], map: "shw_active_del_idx")
+  @@index([deletedAt], map: "shw_deleted_at_idx")
+  @@map("student_homeworks")
+}
+
+model MonthlyGrade {
+  id                    String                @id @default(cuid()) @db.VarChar(191)
+  studentEnrollmentId   String                @map("student_enrollment_id") @db.VarChar(191)
+  subjectId             String                @map("subject_id") @db.VarChar(191)
+  academicMonthId       String                @map("academic_month_id") @db.VarChar(191)
+  academicTermId        String                @map("academic_term_id") @db.VarChar(191)
+  academicYearId        String                @map("academic_year_id") @db.VarChar(191)
+  gradingPolicyId       String                @map("grading_policy_id") @db.VarChar(191)
+  attendanceScore       Decimal               @default(0.00) @map("attendance_score") @db.Decimal(6, 2)
+  homeworkScore         Decimal               @default(0.00) @map("homework_score") @db.Decimal(6, 2)
+  activityScore         Decimal               @default(0.00) @map("activity_score") @db.Decimal(6, 2)
+  contributionScore     Decimal               @default(0.00) @map("contribution_score") @db.Decimal(6, 2)
+  customComponentsScore Decimal               @default(0.00) @map("custom_components_score") @db.Decimal(6, 2)
+  examScore             Decimal               @default(0.00) @map("exam_score") @db.Decimal(6, 2)
+  monthlyTotal          Decimal               @default(0.00) @map("monthly_total") @db.Decimal(7, 2)
+  status                GradingWorkflowStatus @default(DRAFT)
+  isLocked              Boolean               @default(false) @map("is_locked")
+  lockedAt              DateTime?             @map("locked_at")
+  lockedByUserId        String?               @map("locked_by_user_id") @db.VarChar(191)
+  calculatedAt          DateTime?             @map("calculated_at")
+  notes                 String?               @db.VarChar(255)
+  isActive              Boolean               @default(true) @map("is_active")
+  createdAt             DateTime              @default(now()) @map("created_at")
+  updatedAt             DateTime              @updatedAt @map("updated_at")
+  deletedAt             DateTime?             @map("deleted_at")
+  createdById           String?               @map("created_by") @db.VarChar(191)
+  updatedById           String?               @map("updated_by") @db.VarChar(191)
+
+  studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Restrict)
+  subject           Subject           @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  academicMonth     AcademicMonth     @relation(fields: [academicMonthId], references: [id], onDelete: Restrict)
+  academicTerm      AcademicTerm      @relation(fields: [academicTermId], references: [id], onDelete: Restrict)
+  academicYear      AcademicYear      @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  gradingPolicy     GradingPolicy     @relation(fields: [gradingPolicyId], references: [id], onDelete: Restrict)
+
+  lockedByUser User? @relation("monthly_grade_locked_by", fields: [lockedByUserId], references: [id], onDelete: SetNull)
+  createdBy    User? @relation("monthly_grade_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy    User? @relation("monthly_grade_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  customComponentScores MonthlyCustomComponentScore[]
+
+  @@unique([studentEnrollmentId, subjectId, academicMonthId], map: "mng_enrollment_subject_month_uq")
+  @@index([academicMonthId, subjectId, deletedAt], map: "mng_month_subject_del_idx")
+  @@index([academicYearId, academicTermId, deletedAt], map: "mng_year_term_del_idx")
+  @@index([gradingPolicyId, deletedAt], map: "mng_policy_del_idx")
+  @@index([status, deletedAt], map: "mng_status_del_idx")
+  @@index([isLocked, deletedAt], map: "mng_locked_del_idx")
+  @@index([isActive, deletedAt], map: "mng_active_del_idx")
+  @@index([deletedAt], map: "mng_deleted_at_idx")
+  @@map("monthly_grades")
+}
+
+model MonthlyCustomComponentScore {
+  id                       String    @id @default(cuid()) @db.VarChar(191)
+  monthlyGradeId           String    @map("monthly_grade_id") @db.VarChar(191)
+  gradingPolicyComponentId String    @map("grading_policy_component_id") @db.VarChar(191)
+  score                    Decimal   @default(0.00) @db.Decimal(6, 2)
+  notes                    String?   @db.VarChar(255)
+  isActive                 Boolean   @default(true) @map("is_active")
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
+  deletedAt                DateTime? @map("deleted_at")
+  createdById              String?   @map("created_by") @db.VarChar(191)
+  updatedById              String?   @map("updated_by") @db.VarChar(191)
+
+  monthlyGrade           MonthlyGrade           @relation(fields: [monthlyGradeId], references: [id], onDelete: Restrict)
+  gradingPolicyComponent GradingPolicyComponent @relation(fields: [gradingPolicyComponentId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("monthly_custom_component_score_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("monthly_custom_component_score_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([monthlyGradeId, gradingPolicyComponentId], map: "mcc_monthly_grade_component_uq")
+  @@index([gradingPolicyComponentId, deletedAt], map: "mcc_component_del_idx")
+  @@index([isActive, deletedAt], map: "mcc_active_del_idx")
+  @@index([deletedAt], map: "mcc_deleted_at_idx")
+  @@map("monthly_custom_component_scores")
+}
+
+model AnnualStatusLookup {
+  id          String    @id @default(cuid()) @db.VarChar(191)
+  code        String    @unique @db.VarChar(40)
+  name        String    @db.VarChar(120)
+  description String?   @db.VarChar(255)
+  isSystem    Boolean   @default(true) @map("is_system")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("annual_status_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("annual_status_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  annualGrades AnnualGrade[]
+
+  @@index([isActive, deletedAt], map: "las_active_del_idx")
+  @@index([deletedAt], map: "las_deleted_at_idx")
+  @@map("lookup_annual_statuses")
+}
+
+model PromotionDecisionLookup {
+  id          String    @id @default(cuid()) @db.VarChar(191)
+  code        String    @unique @db.VarChar(40)
+  name        String    @db.VarChar(120)
+  description String?   @db.VarChar(255)
+  isSystem    Boolean   @default(true) @map("is_system")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("promotion_decision_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("promotion_decision_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  annualResults       AnnualResult[]
+  conditionalForRules GradingOutcomeRule[] @relation("outcome_rule_conditional_decision")
+  retainedForRules    GradingOutcomeRule[] @relation("outcome_rule_retained_decision")
+
+  @@index([isActive, deletedAt], map: "lpd_active_del_idx")
+  @@index([deletedAt], map: "lpd_deleted_at_idx")
+  @@map("lookup_promotion_decisions")
+}
+
+model GradingOutcomeRule {
+  id                           String           @id @default(cuid()) @db.VarChar(191)
+  academicYearId               String           @map("academic_year_id") @db.VarChar(191)
+  gradeLevelId                 String           @map("grade_level_id") @db.VarChar(191)
+  promotedMaxFailedSubjects    Int              @default(0) @map("promoted_max_failed_subjects")
+  conditionalMaxFailedSubjects Int              @default(2) @map("conditional_max_failed_subjects")
+  conditionalDecisionId        String           @map("conditional_decision_id") @db.VarChar(191)
+  retainedDecisionId           String           @map("retained_decision_id") @db.VarChar(191)
+  tieBreakStrategy             TieBreakStrategy @default(PERCENTAGE_THEN_NAME) @map("tie_break_strategy")
+  isActive                     Boolean          @default(true) @map("is_active")
+  createdAt                    DateTime         @default(now()) @map("created_at")
+  updatedAt                    DateTime         @updatedAt @map("updated_at")
+  deletedAt                    DateTime?        @map("deleted_at")
+  createdById                  String?          @map("created_by") @db.VarChar(191)
+  updatedById                  String?          @map("updated_by") @db.VarChar(191)
+
+  academicYear        AcademicYear            @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  gradeLevel          GradeLevel              @relation(fields: [gradeLevelId], references: [id], onDelete: Restrict)
+  conditionalDecision PromotionDecisionLookup @relation("outcome_rule_conditional_decision", fields: [conditionalDecisionId], references: [id], onDelete: Restrict)
+  retainedDecision    PromotionDecisionLookup @relation("outcome_rule_retained_decision", fields: [retainedDecisionId], references: [id], onDelete: Restrict)
+  createdBy           User?                   @relation("grading_outcome_rule_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy           User?                   @relation("grading_outcome_rule_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([academicYearId, gradeLevelId], map: "gor_year_grade_uq")
+  @@index([isActive, deletedAt], map: "gor_active_del_idx")
+  @@index([deletedAt], map: "gor_deleted_at_idx")
+  @@map("grading_outcome_rules")
+}
+
+model SemesterGrade {
+  id                  String                @id @default(cuid()) @db.VarChar(191)
+  studentEnrollmentId String                @map("student_enrollment_id") @db.VarChar(191)
+  subjectId           String                @map("subject_id") @db.VarChar(191)
+  academicTermId      String                @map("academic_term_id") @db.VarChar(191)
+  academicYearId      String                @map("academic_year_id") @db.VarChar(191)
+  semesterWorkTotal   Decimal               @default(0.00) @map("semester_work_total") @db.Decimal(7, 2)
+  finalExamScore      Decimal?              @map("final_exam_score") @db.Decimal(7, 2)
+  semesterTotal       Decimal               @default(0.00) @map("semester_total") @db.Decimal(7, 2)
+  status              GradingWorkflowStatus @default(DRAFT)
+  isLocked            Boolean               @default(false) @map("is_locked")
+  lockedAt            DateTime?             @map("locked_at")
+  lockedByUserId      String?               @map("locked_by_user_id") @db.VarChar(191)
+  calculatedAt        DateTime?             @map("calculated_at")
+  approvedByUserId    String?               @map("approved_by_user_id") @db.VarChar(191)
+  approvedAt          DateTime?             @map("approved_at")
+  notes               String?               @db.VarChar(255)
+  isActive            Boolean               @default(true) @map("is_active")
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @updatedAt @map("updated_at")
+  deletedAt           DateTime?             @map("deleted_at")
+  createdById         String?               @map("created_by") @db.VarChar(191)
+  updatedById         String?               @map("updated_by") @db.VarChar(191)
+
+  studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Restrict)
+  subject           Subject           @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  academicTerm      AcademicTerm      @relation(fields: [academicTermId], references: [id], onDelete: Restrict)
+  academicYear      AcademicYear      @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+
+  lockedByUser   User? @relation("semester_grade_locked_by", fields: [lockedByUserId], references: [id], onDelete: SetNull)
+  approvedByUser User? @relation("semester_grade_approved_by", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  createdBy      User? @relation("semester_grade_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy      User? @relation("semester_grade_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([studentEnrollmentId, subjectId, academicTermId], map: "smg_enrollment_subject_term_uq")
+  @@index([academicYearId, academicTermId, deletedAt], map: "smg_year_term_del_idx")
+  @@index([academicTermId, subjectId, deletedAt], map: "smg_term_subject_del_idx")
+  @@index([status, deletedAt], map: "smg_status_del_idx")
+  @@index([isLocked, deletedAt], map: "smg_locked_del_idx")
+  @@index([isActive, deletedAt], map: "smg_active_del_idx")
+  @@index([deletedAt], map: "smg_deleted_at_idx")
+  @@map("semester_grades")
+}
+
+model AnnualGrade {
+  id                  String                @id @default(cuid()) @db.VarChar(191)
+  studentEnrollmentId String                @map("student_enrollment_id") @db.VarChar(191)
+  subjectId           String                @map("subject_id") @db.VarChar(191)
+  academicYearId      String                @map("academic_year_id") @db.VarChar(191)
+  semester1Total      Decimal               @default(0.00) @map("semester1_total") @db.Decimal(7, 2)
+  semester2Total      Decimal               @default(0.00) @map("semester2_total") @db.Decimal(7, 2)
+  annualTotal         Decimal               @default(0.00) @map("annual_total") @db.Decimal(8, 2)
+  annualPercentage    Decimal?              @map("annual_percentage") @db.Decimal(5, 2)
+  finalStatusId       String                @map("final_status_id") @db.VarChar(191)
+  status              GradingWorkflowStatus @default(DRAFT)
+  isLocked            Boolean               @default(false) @map("is_locked")
+  lockedAt            DateTime?             @map("locked_at")
+  lockedByUserId      String?               @map("locked_by_user_id") @db.VarChar(191)
+  calculatedAt        DateTime?             @map("calculated_at")
+  approvedByUserId    String?               @map("approved_by_user_id") @db.VarChar(191)
+  approvedAt          DateTime?             @map("approved_at")
+  notes               String?               @db.VarChar(255)
+  isActive            Boolean               @default(true) @map("is_active")
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @updatedAt @map("updated_at")
+  deletedAt           DateTime?             @map("deleted_at")
+  createdById         String?               @map("created_by") @db.VarChar(191)
+  updatedById         String?               @map("updated_by") @db.VarChar(191)
+
+  studentEnrollment StudentEnrollment  @relation(fields: [studentEnrollmentId], references: [id], onDelete: Restrict)
+  subject           Subject            @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  academicYear      AcademicYear       @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  finalStatus       AnnualStatusLookup @relation(fields: [finalStatusId], references: [id], onDelete: Restrict)
+
+  lockedByUser   User? @relation("annual_grade_locked_by", fields: [lockedByUserId], references: [id], onDelete: SetNull)
+  approvedByUser User? @relation("annual_grade_approved_by", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  createdBy      User? @relation("annual_grade_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy      User? @relation("annual_grade_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([studentEnrollmentId, subjectId, academicYearId], map: "ang_enrollment_subject_year_uq")
+  @@index([academicYearId, subjectId, deletedAt], map: "ang_year_subject_del_idx")
+  @@index([finalStatusId, deletedAt], map: "ang_final_status_del_idx")
+  @@index([status, deletedAt], map: "ang_status_del_idx")
+  @@index([isLocked, deletedAt], map: "ang_locked_del_idx")
+  @@index([isActive, deletedAt], map: "ang_active_del_idx")
+  @@index([deletedAt], map: "ang_deleted_at_idx")
+  @@map("annual_grades")
+}
+
+model AnnualResult {
+  id                  String                @id @default(cuid()) @db.VarChar(191)
+  studentEnrollmentId String                @map("student_enrollment_id") @db.VarChar(191)
+  academicYearId      String                @map("academic_year_id") @db.VarChar(191)
+  totalAllSubjects    Decimal               @default(0.00) @map("total_all_subjects") @db.Decimal(9, 2)
+  maxPossibleTotal    Decimal               @default(0.00) @map("max_possible_total") @db.Decimal(9, 2)
+  percentage          Decimal               @default(0.00) @db.Decimal(5, 2)
+  rankInClass         Int?                  @map("rank_in_class")
+  rankInGrade         Int?                  @map("rank_in_grade")
+  passedSubjectsCount Int                   @default(0) @map("passed_subjects_count")
+  failedSubjectsCount Int                   @default(0) @map("failed_subjects_count")
+  promotionDecisionId String                @map("promotion_decision_id") @db.VarChar(191)
+  status              GradingWorkflowStatus @default(DRAFT)
+  isLocked            Boolean               @default(false) @map("is_locked")
+  lockedAt            DateTime?             @map("locked_at")
+  lockedByUserId      String?               @map("locked_by_user_id") @db.VarChar(191)
+  calculatedAt        DateTime?             @map("calculated_at")
+  approvedByUserId    String?               @map("approved_by_user_id") @db.VarChar(191)
+  approvedAt          DateTime?             @map("approved_at")
+  notes               String?               @db.Text
+  isActive            Boolean               @default(true) @map("is_active")
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @updatedAt @map("updated_at")
+  deletedAt           DateTime?             @map("deleted_at")
+  createdById         String?               @map("created_by") @db.VarChar(191)
+  updatedById         String?               @map("updated_by") @db.VarChar(191)
+
+  studentEnrollment StudentEnrollment       @relation(fields: [studentEnrollmentId], references: [id], onDelete: Restrict)
+  academicYear      AcademicYear            @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  promotionDecision PromotionDecisionLookup @relation(fields: [promotionDecisionId], references: [id], onDelete: Restrict)
+
+  lockedByUser   User? @relation("annual_result_locked_by", fields: [lockedByUserId], references: [id], onDelete: SetNull)
+  approvedByUser User? @relation("annual_result_approved_by", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  createdBy      User? @relation("annual_result_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy      User? @relation("annual_result_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([studentEnrollmentId, academicYearId], map: "anr_enrollment_year_uq")
+  @@index([academicYearId, deletedAt], map: "anr_year_del_idx")
+  @@index([promotionDecisionId, deletedAt], map: "anr_decision_del_idx")
+  @@index([percentage, deletedAt], map: "anr_percentage_del_idx")
+  @@index([status, deletedAt], map: "anr_status_del_idx")
+  @@index([isLocked, deletedAt], map: "anr_locked_del_idx")
+  @@index([isActive, deletedAt], map: "anr_active_del_idx")
+  @@index([deletedAt], map: "anr_deleted_at_idx")
+  @@map("annual_results")
+}
