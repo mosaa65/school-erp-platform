@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
@@ -13,7 +13,7 @@ import {
   StudentHealthStatus,
   StudentOrphanStatus,
 } from '@prisma/client';
-import { DataScopeService } from '../data-scope/data-scope.service';
+import { DataScopeService } from '../teaching-assignments/data-scope/data-scope.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { CreateStudentDto } from './dto/create-student.dto';
@@ -893,3 +893,4 @@ export class StudentsService {
     return 'Unknown error';
   }
 }
+

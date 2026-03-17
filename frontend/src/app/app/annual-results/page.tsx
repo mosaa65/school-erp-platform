@@ -1,6 +1,6 @@
-﻿import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { PermissionGuard } from "@/features/auth/components/permission-guard";
-import { AnnualResultsWorkspace } from "@/features/annual-results/components/annual-results-workspace";
+import { AnnualResultsWorkspace } from "@/features/results-decisions/annual-results/components/annual-results-workspace";
 
 export default function AnnualResultsPage() {
   return (

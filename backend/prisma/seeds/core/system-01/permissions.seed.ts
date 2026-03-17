@@ -210,6 +210,10 @@
   'grading-policies.read',
   'grading-policies.update',
   'grading-policies.delete',
+  'grading-policy-components.create',
+  'grading-policy-components.read',
+  'grading-policy-components.update',
+  'grading-policy-components.delete',
   'exam-periods.create',
   'exam-periods.read',
   'exam-periods.update',
@@ -362,3 +366,4 @@
 ];
 
 export { DEFAULT_PERMISSION_CODES };
+

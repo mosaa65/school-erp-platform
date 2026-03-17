@@ -1,6 +1,6 @@
-﻿import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { PermissionGuard } from "@/features/auth/components/permission-guard";
-import { HomeworksWorkspace } from "@/features/homeworks/components/homeworks-workspace";
+import { HomeworksWorkspace } from "@/features/assignments/homeworks/components/homeworks-workspace";
 
 export default function HomeworksPage() {
   return (

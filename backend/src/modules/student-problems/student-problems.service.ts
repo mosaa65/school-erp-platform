@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+﻿import { Injectable, NotFoundException } from '@nestjs/common';
 import { AuditStatus, Prisma, StudentProblem } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
@@ -247,9 +247,7 @@ export class StudentProblemsService {
     };
   }
 
-  private async ensureStudentProblemExists(
-    id: string,
-  ): Promise<StudentProblem> {
+  private async ensureStudentProblemExists(id: string): Promise<StudentProblem> {
     const studentProblem = await this.prisma.studentProblem.findFirst({
       where: {
         id,
@@ -272,3 +270,4 @@ export class StudentProblemsService {
     return 'Unknown error';
   }
 }
+

@@ -1,12 +1,13 @@
-import type { PrismaClient } from '@prisma/client';
+﻿import type { PrismaClient } from '@prisma/client';
 import { seedDemoAcademicFoundation } from './academic-foundation.seed';
 import { seedDemoEmployees } from './employee.seed';
 import { seedDemoEmployeeTalents } from './employee-talents.seed';
 import { seedDemoStudentData } from './student.seed';
 import { seedDemoStudentExtensions } from './student-extensions.seed';
 import { seedDemoSubject } from './subject.seed';
-import { seedDemoTimetable } from './timetable.seed';
 import { seedDemoHealthVisits } from './health-visits.seed';
+import { seedDemoTeachingGrades } from './teaching-grades.seed';
+import { seedDemoTimetable } from './timetable.seed';
 
 export async function runDemoSeed(prisma: PrismaClient) {
   const academic = await seedDemoAcademicFoundation(prisma);
@@ -15,8 +16,8 @@ export async function runDemoSeed(prisma: PrismaClient) {
   const employeeTalents = await seedDemoEmployeeTalents(prisma, employee);
   const student = await seedDemoStudentData(prisma, academic);
   const studentExtensions = await seedDemoStudentExtensions(prisma, academic);
-  await seedDemoTimetable(prisma, academic);
   const healthVisits = await seedDemoHealthVisits(prisma);
+  const teachingGrades = await seedDemoTeachingGrades(prisma, academic);
 
   return {
     academicYearCode: academic.academicYearCode,
@@ -43,6 +44,16 @@ export async function runDemoSeed(prisma: PrismaClient) {
       problems: studentExtensions.studentProblemsTotal,
       parentNotifications: studentExtensions.parentNotificationsTotal,
     },
+    teachingGrades: {
+      gradingPolicies: teachingGrades.gradingPoliciesTotal,
+      gradingPolicyComponents: teachingGrades.gradingPolicyComponentsTotal,
+      examPeriods: teachingGrades.examPeriodsTotal,
+      examAssessments: teachingGrades.examAssessmentsTotal,
+      studentExamScores: teachingGrades.studentExamScoresTotal,
+      homeworkTypes: teachingGrades.homeworkTypesTotal,
+      homeworks: teachingGrades.homeworksTotal,
+      studentHomeworks: teachingGrades.studentHomeworksTotal,
+    },
     sampleCredentials: [
       ...employee.sampleCredentials.slice(0, 4),
       ...student.sampleCredentials.slice(0, 4),
@@ -52,3 +63,4 @@ export async function runDemoSeed(prisma: PrismaClient) {
     healthVisitsRecorded: healthVisits.created,
   };
 }
+

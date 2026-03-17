@@ -1,6 +1,6 @@
-﻿import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { PermissionGuard } from "@/features/auth/components/permission-guard";
-import { SemesterGradesWorkspace } from "@/features/semester-grades/components/semester-grades-workspace";
+import { SemesterGradesWorkspace } from "@/features/grade-aggregation/semester-grades/components/semester-grades-workspace";
 
 export default function SemesterGradesPage() {
   return (

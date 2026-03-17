@@ -1,6 +1,6 @@
-﻿import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { PermissionGuard } from "@/features/auth/components/permission-guard";
-import { GradingReportsWorkspace } from "@/features/grading-reports/components/grading-reports-workspace";
+import { GradingReportsWorkspace } from "@/features/results-decisions/grading-reports/components/grading-reports-workspace";
 
 export default function GradingReportsPage() {
   return (

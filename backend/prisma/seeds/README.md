@@ -22,6 +22,7 @@ This directory keeps seed data organized by system and purpose.
   - `subject.seed.ts`: demo subject records.
   - `employee.seed.ts`: demo employee baseline.
   - `student.seed.ts`: demo student + guardian + enrollment.
+  - `teaching-grades.seed.ts`: demo exams, assignments, grading policies, and scores.
   - `timetable.seed.ts`: demo timetable template/slot.
   - `index.ts`: central runner for demo seed.
 

@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   ConflictException,
   Injectable,
@@ -89,8 +89,7 @@ export class ParentNotificationsService {
             behaviorType: payload.behaviorType,
             behaviorDescription: payload.behaviorDescription,
             requiredAction: payload.requiredAction,
-            sendMethod:
-              payload.sendMethod ?? ParentNotificationSendMethod.PAPER,
+            sendMethod: payload.sendMethod ?? ParentNotificationSendMethod.PAPER,
             messengerName: payload.messengerName,
             isSent: sentFields.isSent,
             sentDate: sentFields.sentDate,
@@ -337,18 +336,16 @@ export class ParentNotificationsService {
   }
 
   private async ensureRelationshipTypeExists(relationshipTypeId: number) {
-    const relationshipType = await this.prisma.lookupRelationshipType.findFirst(
-      {
-        where: {
-          id: relationshipTypeId,
-          deletedAt: null,
-        },
-        select: {
-          id: true,
-          isActive: true,
-        },
+    const relationshipType = await this.prisma.lookupRelationshipType.findFirst({
+      where: {
+        id: relationshipTypeId,
+        deletedAt: null,
       },
-    );
+      select: {
+        id: true,
+        isActive: true,
+      },
+    });
 
     if (!relationshipType) {
       throw new BadRequestException('guardianTitleId is not valid');
@@ -430,3 +427,4 @@ export class ParentNotificationsService {
     return 'Unknown error';
   }
 }
+

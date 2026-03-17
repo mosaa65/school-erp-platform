@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+﻿import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDateString,
@@ -54,3 +54,4 @@ export class CreateStudentProblemDto {
   @IsBoolean()
   isActive?: boolean;
 }
+

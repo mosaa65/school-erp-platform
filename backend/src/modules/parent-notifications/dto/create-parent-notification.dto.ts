@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+﻿import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDateString,
@@ -96,3 +96,4 @@ export class CreateParentNotificationDto {
   @IsBoolean()
   isActive?: boolean;
 }
+

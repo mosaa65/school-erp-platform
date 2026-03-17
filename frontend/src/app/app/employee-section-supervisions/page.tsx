@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { PermissionGuard } from "@/features/auth/components/permission-guard";
-import { EmployeeSectionSupervisionsWorkspace } from "@/features/employee-section-supervisions/components/employee-section-supervisions-workspace";
+import { EmployeeSectionSupervisionsWorkspace } from "@/features/teaching-assignments/employee-section-supervisions/components/employee-section-supervisions-workspace";
 
 export default function EmployeeSectionSupervisionsPage() {
   return (

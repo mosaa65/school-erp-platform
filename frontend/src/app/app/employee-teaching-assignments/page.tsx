@@ -1,6 +1,6 @@
-﻿import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { PermissionGuard } from "@/features/auth/components/permission-guard";
-import { EmployeeTeachingAssignmentsWorkspace } from "@/features/employee-teaching-assignments/components/employee-teaching-assignments-workspace";
+import { EmployeeTeachingAssignmentsWorkspace } from "@/features/teaching-assignments/employee-teaching-assignments/components/employee-teaching-assignments-workspace";
 
 export default function EmployeeTeachingAssignmentsPage() {
   return (

@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+﻿import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsEnum,
@@ -37,3 +37,4 @@ export class CreateStudentSiblingDto {
   @IsBoolean()
   isActive?: boolean;
 }
+

@@ -1,4 +1,4 @@
-import { hash } from 'bcrypt';
+﻿import { hash } from 'bcrypt';
 import type { PrismaClient } from '@prisma/client';
 
 type SeedPermission = {
@@ -433,3 +433,4 @@ export async function seedSuperAdmin(
     password: adminPassword,
   };
 }
+

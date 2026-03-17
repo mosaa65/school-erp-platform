@@ -1,6 +1,6 @@
-﻿import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 import { PermissionGuard } from "@/features/auth/components/permission-guard";
-import { GradingOutcomeRulesWorkspace } from "@/features/grading-outcome-rules/components/grading-outcome-rules-workspace";
+import { GradingOutcomeRulesWorkspace } from "@/features/evaluation-policies/grading-outcome-rules/components/grading-outcome-rules-workspace";
 
 export default function GradingOutcomeRulesPage() {
   return (
