@@ -3,10 +3,11 @@
 import * as React from "react";
 import {
   BadgeCheck,
+  Filter,
   LoaderCircle,
   PencilLine,
+  Plus,
   RefreshCw,
-  Search,
   Trash2,
 } from "lucide-react";
 import type {
@@ -17,6 +18,9 @@ import type { LookupCatalogDefinition } from "@/features/lookup-catalog/config/l
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField } from "@/components/ui/select-field";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
   CardContent,
@@ -24,6 +28,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateLookupCatalogItemMutation,
@@ -156,10 +163,20 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
-  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
+  const [debounceTimer, setDebounceTimer] = React.useState<NodeJS.Timeout | null>(null);
+  const [activeFilter, setActiveFilter] = React.useState<
+    "all" | "active" | "inactive" | "deleted"
+  >(
+    "all",
+  );
+  const [filterDraft, setFilterDraft] = React.useState<
+    "all" | "active" | "inactive" | "deleted"
+  >(
     "all",
   );
   const [editingItemId, setEditingItemId] = React.useState<number | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<LookupCatalogFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
 
@@ -167,7 +184,11 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
     page,
     limit: PAGE_SIZE,
     search: search || undefined,
-    isActive: activeFilter === "all" ? undefined : activeFilter === "active",
+    isActive:
+      activeFilter === "all" || activeFilter === "deleted"
+        ? undefined
+        : activeFilter === "active",
+    deletedOnly: activeFilter === "deleted" ? true : undefined,
   });
 
   const createMutation = useCreateLookupCatalogItemMutation(definition.type);
@@ -197,16 +218,47 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
     }
   }, [editingItemId, isEditing, items]);
 
+  React.useEffect(() => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+
+    const timer = setTimeout(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 400);
+
+    setDebounceTimer(timer);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [searchInput]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setFilterDraft(activeFilter);
+  }, [activeFilter, isFilterOpen]);
+
   const resetForm = () => {
     setEditingItemId(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
+    setIsFormOpen(false);
   };
 
-  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPage(1);
-    setSearch(searchInput.trim());
+  const handleStartCreate = () => {
+    if (!canCreate) {
+      return;
+    }
+
+    setFormError(null);
+    setEditingItemId(null);
+    setFormState(DEFAULT_FORM_STATE);
+    setIsFormOpen(true);
   };
 
   const validateForm = (): boolean => {
@@ -287,8 +339,8 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
     return payload;
   };
 
-  const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
 
     if (!validateForm()) {
       return;
@@ -338,6 +390,7 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
     setFormError(null);
     setEditingItemId(item.id);
     setFormState(toFormState(item));
+    setIsFormOpen(true);
   };
 
   const handleDelete = (item: LookupCatalogListItem) => {
@@ -363,83 +416,273 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
 
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setActiveFilter("all");
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    setPage(1);
+    setActiveFilter(filterDraft);
+    setIsFilterOpen(false);
+  };
+
+  const activeFiltersCount = React.useMemo(() => {
+    const count = [searchInput.trim() ? 1 : 0, activeFilter !== "all" ? 1 : 0].reduce(
+      (a, b) => a + b,
+      0,
+    );
+    return count;
+  }, [activeFilter, searchInput]);
+
   return (
-    <div className="grid gap-4 xl:grid-cols-[410px_1fr]">
-      <Card className="h-fit border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BadgeCheck className="h-5 w-5 text-primary" />
-            {isEditing ? `تعديل ${definition.title}` : `إنشاء ${definition.title}`}
-          </CardTitle>
-          <CardDescription>{definition.description}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!canCreate && !isEditing ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك الصلاحية المطلوبة: <code>{definition.createPermission}</code>.
+    <>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[260px] max-w-lg">
+            <SearchField
+              containerClassName="flex-1"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="بحث..."
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterTriggerButton
+              count={activeFiltersCount}
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+            />
+          </div>
+        </div>
+
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="فلاتر البحث"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={clearFilters}
+                className="flex-1 gap-1.5"
+              >
+                <Trash2 className="h-4 w-4" />
+                مسح
+              </Button>
+              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
+                تطبيق
+              </Button>
             </div>
-          ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="lookup-catalog-form">
-              {definition.fields.map((field) => {
-                if (field.type === "checkbox") {
-                  return (
-                    <label
-                      key={field.key}
-                      className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
-                    >
-                      <span>{field.label}</span>
-                      <input
-                        data-testid={`lookup-catalog-form-${field.key}`}
-                        type="checkbox"
-                        checked={Boolean((formState as Record<string, unknown>)[field.key])}
-                        onChange={(event) =>
-                          setFormState((prev) => ({
-                            ...prev,
-                            [field.key]: event.target.checked,
-                          }))
-                        }
-                      />
-                    </label>
-                  );
-                }
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectField
+              value={filterDraft}
+              onChange={(event) =>
+                setFilterDraft(
+                  event.target.value as "all" | "active" | "inactive" | "deleted",
+                )
+              }
+            >
+              <option value="all">كل الحالات</option>
+              <option value="active">نشط فقط</option>
+              <option value="inactive">غير نشط فقط</option>
+              <option value="deleted">محذوف فقط</option>
+            </SelectField>
+          </div>
+        </FilterDrawer>
 
-                if (field.type === "select") {
-                  return (
-                    <div key={field.key} className="space-y-1.5">
-                      <label className="text-xs font-medium text-muted-foreground">
-                        {field.label}
-                        {field.required ? " *" : ""}
-                      </label>
-                      <select
-                        data-testid={`lookup-catalog-form-${field.key}`}
-                        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                        value={String((formState as Record<string, unknown>)[field.key] ?? "")}
-                        onChange={(event) =>
-                          setFormState((prev) => ({
-                            ...prev,
-                            [field.key]: event.target.value,
-                          }))
-                        }
-                      >
-                        {(field.options ?? []).map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  );
-                }
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+          <CardHeader className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>{definition.title}</CardTitle>
+              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+            </div>
+            <CardDescription>{definition.description}</CardDescription>
+          </CardHeader>
 
+          <CardContent className="space-y-3">
+            {listQuery.isPending ? (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                جارٍ تحميل البيانات...
+              </div>
+            ) : null}
+
+            {listQuery.error ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                {listQuery.error instanceof Error ? listQuery.error.message : "فشل تحميل البيانات"}
+              </div>
+            ) : null}
+
+            {!listQuery.isPending && items.length === 0 ? (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                لا توجد نتائج مطابقة.
+              </div>
+            ) : null}
+
+            {items.map((item) => (
+              <div
+                key={item.id}
+                data-testid="lookup-catalog-card"
+                className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="space-y-1">
+                    <p className="font-medium">
+                      {item.nameAr ?? item.name ?? item.code ?? `#${item.id}`}
+                    </p>
+                    {item.code ? (
+                      <p className="text-xs text-muted-foreground">
+                        <code>{item.code}</code>
+                      </p>
+                    ) : null}
+                  </div>
+                  <Badge variant={item.isActive ? "default" : "outline"}>
+                    {item.isActive ? "نشط" : "غير نشط"}
+                  </Badge>
+                </div>
+
+                <div className="grid gap-1 text-xs text-muted-foreground md:grid-cols-2">
+                  {definition.fields
+                    .filter(
+                      (field) =>
+                        field.key !== "code" && field.key !== "nameAr" && field.key !== "name",
+                    )
+                    .map((field) => (
+                      <p key={`${item.id}-${field.key}`}>
+                        {field.label}: {resolveDisplayValue(item, field.key)}
+                      </p>
+                    ))}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleStartEdit(item)}
+                    disabled={!canUpdate || updateMutation.isPending}
+                  >
+                    <PencilLine className="h-3.5 w-3.5" />
+                    تعديل
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleDelete(item)}
+                    disabled={!canDelete || deleteMutation.isPending}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    حذف
+                  </Button>
+                </div>
+              </div>
+            ))}
+
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
+              <p className="text-xs text-muted-foreground">
+                صفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={!pagination || pagination.page <= 1 || listQuery.isFetching}
+                >
+                  السابق
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setPage((prev) =>
+                      pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
+                    )
+                  }
+                  disabled={
+                    !pagination || pagination.page >= pagination.totalPages || listQuery.isFetching
+                  }
+                >
+                  التالي
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => void listQuery.refetch()}
+                  disabled={listQuery.isFetching}
+                >
+                  <RefreshCw className={`h-4 w-4 ${listQuery.isFetching ? "animate-spin" : ""}`} />
+                  تحديث
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Fab
+        icon={<Plus className="h-4 w-4" />}
+        label="إنشاء"
+        ariaLabel={`إنشاء ${definition.title}`}
+        onClick={handleStartCreate}
+        disabled={!canCreate}
+      />
+
+      <BottomSheetForm
+        open={isFormOpen}
+        title={isEditing ? `تعديل ${definition.title}` : `إنشاء ${definition.title}`}
+        onClose={resetForm}
+        onSubmit={() => handleSubmitForm()}
+        isSubmitting={isFormSubmitting}
+        submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء"}
+        showFooter={false}
+      >
+        {!canCreate && !isEditing ? (
+          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+            لا تملك الصلاحية المطلوبة: <code>{definition.createPermission}</code>.
+          </div>
+        ) : (
+          <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="lookup-catalog-form">
+            {definition.fields.map((field) => {
+              if (field.type === "checkbox") {
+                return (
+                  <label
+                    key={field.key}
+                    className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
+                  >
+                    <span>{field.label}</span>
+                    <input
+                      data-testid={`lookup-catalog-form-${field.key}`}
+                      type="checkbox"
+                      checked={Boolean((formState as Record<string, unknown>)[field.key])}
+                      onChange={(event) =>
+                        setFormState((prev) => ({
+                          ...prev,
+                          [field.key]: event.target.checked,
+                        }))
+                      }
+                    />
+                  </label>
+                );
+              }
+
+              if (field.type === "select") {
                 return (
                   <div key={field.key} className="space-y-1.5">
                     <label className="text-xs font-medium text-muted-foreground">
                       {field.label}
                       {field.required ? " *" : ""}
                     </label>
-                    <Input
+                    <SelectField
                       data-testid={`lookup-catalog-form-${field.key}`}
-                      type={field.type === "number" ? "number" : field.type === "color" ? "color" : "text"}
                       value={String((formState as Record<string, unknown>)[field.key] ?? "")}
                       onChange={(event) =>
                         setFormState((prev) => ({
@@ -447,214 +690,90 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
                           [field.key]: event.target.value,
                         }))
                       }
-                      placeholder={field.placeholder}
-                      required={field.required}
-                    />
+                    >
+                      {(field.options ?? []).map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </SelectField>
                   </div>
                 );
-              })}
+              }
 
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشط</span>
-                <input
-                  data-testid="lookup-catalog-form-is-active"
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                />
-              </label>
+              const inputType =
+                field.type === "number" ? "number" : field.type === "color" ? "color" : "text";
 
-              {formError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {formError}
+              return (
+                <div key={field.key} className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    {field.label}
+                    {field.required ? " *" : ""}
+                  </label>
+                  <Input
+                    data-testid={`lookup-catalog-form-${field.key}`}
+                    type={inputType}
+                    value={String((formState as Record<string, unknown>)[field.key] ?? "")}
+                    onChange={(event) =>
+                      setFormState((prev) => ({
+                        ...prev,
+                        [field.key]: event.target.value,
+                      }))
+                    }
+                    placeholder={field.placeholder}
+                    required={field.required}
+                  />
                 </div>
-              ) : null}
+              );
+            })}
 
-              {mutationError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {mutationError}
-                </div>
-              ) : null}
-
-              <div className="flex gap-2">
-                <Button
-                  data-testid="lookup-catalog-form-submit"
-                  type="submit"
-                  className="flex-1 gap-2"
-                  disabled={isFormSubmitting || (!canCreate && !isEditing)}
-                >
-                  {isFormSubmitting ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <BadgeCheck className="h-4 w-4" />
-                  )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء"}
-                </Button>
-                {isEditing ? (
-                  <Button type="button" variant="outline" onClick={resetForm}>
-                    إلغاء
-                  </Button>
-                ) : null}
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>{definition.title}</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
-          </div>
-          <CardDescription>{definition.description}</CardDescription>
-
-          <form onSubmit={handleSearchSubmit} className="grid gap-2 md:grid-cols-[1fr_130px_auto]">
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث..."
-                className="pr-8"
-              />
-            </div>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={activeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setActiveFilter(event.target.value as "all" | "active" | "inactive");
-              }}
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">نشط فقط</option>
-              <option value="inactive">غير نشط فقط</option>
-            </select>
-
-            <Button type="submit" variant="outline" className="gap-2">
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
-          </form>
-        </CardHeader>
-
-        <CardContent className="space-y-3">
-          {listQuery.isPending ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ تحميل البيانات...
-            </div>
-          ) : null}
-
-          {listQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {listQuery.error instanceof Error ? listQuery.error.message : "فشل تحميل البيانات"}
-            </div>
-          ) : null}
-
-          {!listQuery.isPending && items.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              لا توجد نتائج مطابقة.
-            </div>
-          ) : null}
-
-          {items.map((item) => (
-            <div
-              key={item.id}
-              data-testid="lookup-catalog-card"
-              className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <p className="font-medium">{item.nameAr ?? item.name ?? item.code ?? `#${item.id}`}</p>
-                  {item.code ? (
-                    <p className="text-xs text-muted-foreground">
-                      <code>{item.code}</code>
-                    </p>
-                  ) : null}
-                </div>
-                <Badge variant={item.isActive ? "default" : "outline"}>
-                  {item.isActive ? "نشط" : "غير نشط"}
-                </Badge>
-              </div>
-
-              <div className="grid gap-1 text-xs text-muted-foreground md:grid-cols-2">
-                {definition.fields
-                  .filter((field) => field.key !== "code" && field.key !== "nameAr" && field.key !== "name")
-                  .map((field) => (
-                    <p key={`${item.id}-${field.key}`}>
-                      {field.label}: {resolveDisplayValue(item, field.key)}
-                    </p>
-                  ))}
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleStartEdit(item)}
-                  disabled={!canUpdate || updateMutation.isPending}
-                >
-                  <PencilLine className="h-3.5 w-3.5" />
-                  تعديل
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleDelete(item)}
-                  disabled={!canDelete || deleteMutation.isPending}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  حذف
-                </Button>
-              </div>
-            </div>
-          ))}
-
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-            <p className="text-xs text-muted-foreground">
-              صفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={!pagination || pagination.page <= 1 || listQuery.isFetching}
-              >
-                السابق
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPage((prev) =>
-                    pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                  )
+            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+              <span>نشط</span>
+              <input
+                data-testid="lookup-catalog-form-is-active"
+                type="checkbox"
+                checked={formState.isActive}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
                 }
-                disabled={!pagination || pagination.page >= pagination.totalPages || listQuery.isFetching}
-              >
-                التالي
-              </Button>
+              />
+            </label>
+
+            {formError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {formError}
+              </div>
+            ) : null}
+
+            {mutationError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {mutationError}
+              </div>
+            ) : null}
+
+            <div className="flex gap-2">
               <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => void listQuery.refetch()}
-                disabled={listQuery.isFetching}
+                data-testid="lookup-catalog-form-submit"
+                type="submit"
+                className="flex-1 gap-2"
+                disabled={isFormSubmitting || (!canCreate && !isEditing)}
               >
-                <RefreshCw className={`h-4 w-4 ${listQuery.isFetching ? "animate-spin" : ""}`} />
-                تحديث
+                {isFormSubmitting ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <BadgeCheck className="h-4 w-4" />
+                )}
+                {isEditing ? "حفظ التعديلات" : "إنشاء"}
               </Button>
+              {isEditing ? (
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  إلغاء
+                </Button>
+              ) : null}
             </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+          </form>
+        )}
+      </BottomSheetForm>
+    </>
   );
 }

@@ -35,4 +35,10 @@ export class ListLookupBloodTypesDto {
   @Type(() => Boolean)
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({ example: false })
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  deletedOnly?: boolean;
 }

@@ -5,13 +5,14 @@ import {
   LoaderCircle,
   PencilLine,
   RefreshCw,
-  Search,
   ShieldPlus,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
   CardContent,
@@ -19,6 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useAssignRolePermissionsMutation,
@@ -103,8 +105,10 @@ export function RolesManagementWorkspace() {
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
+  const [debounceTimer, setDebounceTimer] = React.useState<NodeJS.Timeout | null>(null);
 
   const [editingRoleId, setEditingRoleId] = React.useState<string | null>(null);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [originalRoleFormState, setOriginalRoleFormState] =
     React.useState<RoleFormState | null>(null);
   const [formState, setFormState] = React.useState<RoleFormState>(DEFAULT_FORM_STATE);
@@ -165,6 +169,23 @@ export function RolesManagementWorkspace() {
     }
   }, [editingRoleId, isEditing, roles]);
 
+  React.useEffect(() => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+
+    const timer = setTimeout(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 400);
+
+    setDebounceTimer(timer);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [searchInput]);
+
   const togglePermission = (permissionId: string, checked: boolean) => {
     setFormState((prev) => ({
       ...prev,
@@ -180,12 +201,21 @@ export function RolesManagementWorkspace() {
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
     setPermissionSearch("");
+    setIsFormOpen(false);
   };
 
-  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPage(1);
-    setSearch(searchInput.trim());
+  const handleStartCreate = () => {
+    if (!canCreate) {
+      return;
+    }
+
+    setFormError(null);
+    setActionSuccess(null);
+    setEditingRoleId(null);
+    setOriginalRoleFormState(null);
+    setFormState(DEFAULT_FORM_STATE);
+    setPermissionSearch("");
+    setIsFormOpen(true);
   };
 
   const handleStartEdit = (role: RoleListItem) => {
@@ -195,6 +225,7 @@ export function RolesManagementWorkspace() {
     setFormState(nextFormState);
     setFormError(null);
     setActionSuccess(null);
+    setIsFormOpen(true);
   };
 
   const validateForm = (): boolean => {
@@ -215,8 +246,8 @@ export function RolesManagementWorkspace() {
     return true;
   };
 
-  const handleSubmitForm = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmitForm = async (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
     setActionSuccess(null);
 
     if (!validateForm()) {
@@ -377,328 +408,306 @@ export function RolesManagementWorkspace() {
     assignPermissionsMutation.isPending;
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[380px_1fr]">
-      <Card className="h-fit border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ShieldPlus className="h-5 w-5 text-primary" />
-            {isEditing ? "تعديل دور" : "إنشاء دور"}
-          </CardTitle>
-          <CardDescription>
-            {isEditing
-              ? "تعديل بيانات الدور وإسناد الصلاحيات."
-              : "إضافة دور جديد للاستخدام في نظام الصلاحيات."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!canCreate && !isEditing ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك الصلاحية المطلوبة: <code>roles.create</code>.
-            </div>
-          ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm}>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الكود *</label>
-                <Input
-                  value={formState.code}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, code: event.target.value }))
-                  }
-                  placeholder="school_admin"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
-                <Input
-                  value={formState.name}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, name: event.target.value }))
-                  }
-                  placeholder="مدير المدرسة"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الوصف</label>
-                <Input
-                  value={formState.description}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, description: event.target.value }))
-                  }
-                  placeholder="وصول كامل لعمليات المدرسة"
-                />
-              </div>
-
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>الحالة</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                />
-              </label>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-medium text-muted-foreground">الصلاحيات</p>
-                  {!canAssignPermissions ? (
-                    <Badge variant="outline">يتطلب صلاحية roles.assign-permissions</Badge>
-                  ) : null}
-                </div>
-                <Input
-                  value={permissionSearch}
-                  onChange={(event) => setPermissionSearch(event.target.value)}
-                  placeholder="ابحث عن صلاحية..."
-                  disabled={!canReadPermissions || !canAssignPermissions}
-                />
-                <div className="max-h-52 space-y-1 overflow-y-auto rounded-md border p-2">
-                  {(filteredPermissions ?? []).length === 0 ? (
-                    <p className="text-xs text-muted-foreground">
-                      {canReadPermissions
-                        ? "لا توجد صلاحيات مطابقة."
-                        : "لا تملك الصلاحية المطلوبة: permissions.read لعرض الصلاحيات."}
-                    </p>
-                  ) : (
-                    filteredPermissions.map((permission) => (
-                      <label
-                        key={permission.id}
-                        className="flex cursor-pointer items-center justify-between gap-2 rounded-md border border-transparent px-2 py-1 text-xs hover:border-border"
-                      >
-                        <span className="truncate">
-                          {translatePermissionCode(permission.code)} ({permission.code})
-                        </span>
-                        <input
-                          type="checkbox"
-                          checked={formState.permissionIds.includes(permission.id)}
-                          onChange={(event) =>
-                            togglePermission(permission.id, event.target.checked)
-                          }
-                          disabled={!canAssignPermissions}
-                        />
-                      </label>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {formError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {formError}
-                </div>
-              ) : null}
-
-              {mutationError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {mutationError}
-                </div>
-              ) : null}
-              {actionSuccess ? (
-                <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
-                  {actionSuccess}
-                </div>
-              ) : null}
-
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  className="flex-1 gap-2"
-                  disabled={isFormSubmitting || (!canCreate && !isEditing)}
-                >
-                  {isFormSubmitting ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <ShieldPlus className="h-4 w-4" />
-                  )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء دور"}
-                </Button>
-                {isEditing ? (
-                  <Button type="button" variant="outline" onClick={resetForm}>
-                    إلغاء
-                  </Button>
-                ) : null}
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>قائمة الأدوار</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+    <>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[260px] max-w-lg">
+            <SearchField
+              containerClassName="flex-1"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="ابحث بالاسم أو الكود..."
+            />
           </div>
-          <CardDescription>
-            إدارة الأدوار مع إمكانيات البحث والتعديل والإسناد والحذف الناعم.
-          </CardDescription>
-          <form onSubmit={handleSearchSubmit} className="grid gap-2 md:grid-cols-[1fr_auto]">
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        </div>
+
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+          <CardHeader className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>قائمة الأدوار</CardTitle>
+              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+            </div>
+            <CardDescription>
+              إدارة الأدوار مع صلاحياتها وتحديد حالة التفعيل لكل دور.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {rolesQuery.isPending ? (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                جارٍ تحميل الأدوار...
+              </div>
+            ) : null}
+
+            {rolesQuery.error ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                {rolesQuery.error instanceof Error ? rolesQuery.error.message : "تعذر تحميل الأدوار"}
+              </div>
+            ) : null}
+
+            {!rolesQuery.isPending && roles.length === 0 ? (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                لا توجد أدوار مطابقة.
+              </div>
+            ) : null}
+
+            {roles.map((role) => (
+              <div
+                key={role.id}
+                className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="space-y-1">
+                    <p className="font-medium">{role.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      <code>{role.code}</code>
+                    </p>
+                    {role.description ? (
+                      <p className="text-xs text-muted-foreground">{role.description}</p>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {role.isSystem ? <Badge variant="outline">نظامي</Badge> : null}
+                    <Badge variant={role.isActive ? "default" : "destructive"}>
+                      {role.isActive ? "نشط" : "غير نشط"}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+                  عدد الصلاحيات: {role.rolePermissions.length}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleStartEdit(role)}
+                    disabled={!canUpdate || updateRoleMutation.isPending}
+                  >
+                    <PencilLine className="h-3.5 w-3.5" />
+                    تعديل
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleToggleActive(role)}
+                    disabled={!canUpdate || updateRoleMutation.isPending}
+                  >
+                    {role.isActive ? "تعطيل" : "تفعيل"}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleDeleteRole(role)}
+                    disabled={!canDelete || deleteRoleMutation.isPending || role.isSystem}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    حذف
+                  </Button>
+                </div>
+              </div>
+            ))}
+
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
+              <p className="text-xs text-muted-foreground">
+                صفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={!pagination || pagination.page <= 1 || rolesQuery.isFetching}
+                >
+                  السابق
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setPage((prev) =>
+                      pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
+                    )
+                  }
+                  disabled={
+                    !pagination ||
+                    pagination.page >= pagination.totalPages ||
+                    rolesQuery.isFetching
+                  }
+                >
+                  التالي
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => void rolesQuery.refetch()}
+                  disabled={rolesQuery.isFetching}
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${rolesQuery.isFetching ? "animate-spin" : ""}`}
+                  />
+                  تحديث
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Fab
+        icon={<ShieldPlus className="h-4 w-4" />}
+        label="إنشاء"
+        ariaLabel="إنشاء دور"
+        onClick={handleStartCreate}
+        disabled={!canCreate}
+      />
+
+      <BottomSheetForm
+        open={isFormOpen}
+        title={isEditing ? "تعديل دور" : "إنشاء دور"}
+        onClose={resetForm}
+        onSubmit={() => handleSubmitForm()}
+        isSubmitting={isFormSubmitting}
+        submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء دور"}
+        showFooter={false}
+      >
+        {!canCreate && !isEditing ? (
+          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+            ليس لديك الصلاحية المطلوبة: <code>roles.create</code>.
+          </div>
+        ) : (
+          <form className="space-y-3" onSubmit={handleSubmitForm}>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الكود *</label>
               <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث في الكود أو الاسم..."
-                className="pr-8"
+                value={formState.code}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, code: event.target.value }))
+                }
+                placeholder="school_admin"
+                required
               />
             </div>
-            <Button type="submit" variant="outline" className="gap-2">
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
-          </form>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {rolesQuery.isPending ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ تحميل البيانات...
-            </div>
-          ) : null}
 
-          {rolesQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {rolesQuery.error instanceof Error
-                ? rolesQuery.error.message
-                : "تعذّر تحميل البيانات."}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
+              <Input
+                value={formState.name}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, name: event.target.value }))
+                }
+                placeholder="اسم الدور"
+                required
+              />
             </div>
-          ) : null}
 
-          {!rolesQuery.isPending && roles.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              لا توجد أدوار مطابقة.
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الوصف</label>
+              <Input
+                value={formState.description}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, description: event.target.value }))
+                }
+                placeholder="وصف مختصر للصلاحيات المتاحة"
+              />
             </div>
-          ) : null}
 
-          {roles.map((role) => (
-            <div
-              key={role.id}
-              className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <p className="font-medium">{role.name}</p>
+            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+              <span>نشط</span>
+              <input
+                type="checkbox"
+                checked={formState.isActive}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                }
+              />
+            </label>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-medium text-muted-foreground">الصلاحيات</p>
+                {!canAssignPermissions ? (
+                  <Badge variant="outline">صلاحية مفقودة roles.assign-permissions</Badge>
+                ) : null}
+              </div>
+              <SearchField
+                value={permissionSearch}
+                onChange={(event) => setPermissionSearch(event.target.value)}
+                placeholder="ابحث عن صلاحية..."
+                disabled={!canReadPermissions || !canAssignPermissions}
+              />
+              <div className="max-h-52 space-y-1 overflow-y-auto rounded-md border p-2">
+                {(filteredPermissions ?? []).length === 0 ? (
                   <p className="text-xs text-muted-foreground">
-                    <code>{role.code}</code>
+                    {canReadPermissions
+                      ? "لا توجد صلاحيات مطابقة."
+                      : "ليس لديك الصلاحية المطلوبة: permissions.read لعرض الصلاحيات."}
                   </p>
-                  {role.description ? (
-                    <p className="text-xs text-muted-foreground">{role.description}</p>
-                  ) : null}
-                </div>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant={role.isActive ? "default" : "destructive"}>
-                    {role.isActive ? "نشط" : "غير نشط"}
-                  </Badge>
-                  {role.isSystem ? <Badge variant="outline">نظامي</Badge> : null}
-                  <Badge variant="secondary">
-                    الصلاحيات: {role.rolePermissions.length}
-                  </Badge>
-                </div>
-              </div>
-
-              {role.rolePermissions.length > 0 ? (
-                <div className="flex flex-wrap gap-1">
-                  {role.rolePermissions.slice(0, 6).map((item) => (
-                    <Badge key={item.id} variant="outline">
-                      {translatePermissionCode(item.permission.code)}
-                    </Badge>
-                  ))}
-                  {role.rolePermissions.length > 6 ? (
-                    <Badge variant="secondary">+{role.rolePermissions.length - 6}</Badge>
-                  ) : null}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">لا توجد صلاحيات مسندة.</p>
-              )}
-
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleStartEdit(role)}
-                  disabled={(!canUpdate && !canAssignPermissions) || isFormSubmitting}
-                >
-                  <PencilLine className="h-3.5 w-3.5" />
-                  تعديل
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleToggleActive(role)}
-                  disabled={!canUpdate || updateRoleMutation.isPending}
-                >
-                  {role.isActive ? "تعطيل" : "تفعيل"}
-                </Button>
-
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleDeleteRole(role)}
-                  disabled={!canDelete || role.isSystem || deleteRoleMutation.isPending}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  حذف
-                </Button>
+                ) : (
+                  filteredPermissions.map((permission) => (
+                    <label
+                      key={permission.id}
+                      className="flex cursor-pointer items-center justify-between gap-2 rounded-md border border-transparent px-2 py-1 text-xs hover:border-border"
+                    >
+                      <span className="truncate">
+                        {translatePermissionCode(permission.code)} ({permission.code})
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={formState.permissionIds.includes(permission.id)}
+                        onChange={(event) =>
+                          togglePermission(permission.id, event.target.checked)
+                        }
+                        disabled={!canAssignPermissions}
+                      />
+                    </label>
+                  ))
+                )}
               </div>
             </div>
-          ))}
 
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-            <p className="text-xs text-muted-foreground">
-              الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-            </p>
-            <div className="flex items-center gap-2">
+            {formError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {formError}
+              </div>
+            ) : null}
+
+            {mutationError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {mutationError}
+              </div>
+            ) : null}
+            {actionSuccess ? (
+              <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
+                {actionSuccess}
+              </div>
+            ) : null}
+
+            <div className="flex gap-2">
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={!pagination || pagination.page <= 1 || rolesQuery.isFetching}
+                type="submit"
+                className="flex-1 gap-2"
+                disabled={isFormSubmitting || (!canCreate && !isEditing)}
               >
-                السابق
+                {isFormSubmitting ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ShieldPlus className="h-4 w-4" />
+                )}
+                {isEditing ? "حفظ التعديلات" : "إنشاء دور"}
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPage((prev) =>
-                    pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                  )
-                }
-                disabled={
-                  !pagination ||
-                  pagination.page >= pagination.totalPages ||
-                  rolesQuery.isFetching
-                }
-              >
-                التالي
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => void rolesQuery.refetch()}
-                disabled={rolesQuery.isFetching}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${rolesQuery.isFetching ? "animate-spin" : ""}`}
-                />
-                تحديث
-              </Button>
+              {isEditing ? (
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  إلغاء
+                </Button>
+              ) : null}
             </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+          </form>
+        )}
+      </BottomSheetForm>
+    </>
   );
 }
-
-
-
-
-

@@ -83,11 +83,12 @@ export class RemindersTickerService {
   async findAll(query: ListRemindersTickerDto) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
+    const deletedOnly = query.deletedOnly ?? false;
 
     const where: Prisma.ReminderTickerWhereInput = {
-      deletedAt: null,
+      deletedAt: deletedOnly ? { not: null } : null,
       tickerType: query.tickerType,
-      isActive: query.isActive,
+      isActive: deletedOnly ? undefined : query.isActive,
       OR: query.search ? [{ content: { contains: query.search } }] : undefined,
     };
 

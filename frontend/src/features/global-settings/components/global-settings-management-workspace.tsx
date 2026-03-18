@@ -4,16 +4,19 @@ import * as React from "react";
 import {
   Eye,
   EyeOff,
+  Filter,
   LoaderCircle,
   PencilLine,
   RefreshCw,
-  Search,
   Settings2,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField } from "@/components/ui/select-field";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
   CardContent,
@@ -21,6 +24,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateGlobalSettingMutation,
@@ -39,6 +45,12 @@ type GlobalSettingFormState = {
 };
 
 const PAGE_SIZE = 12;
+const VALUE_TYPE_OPTIONS: Array<{ value: SettingValueType; label: string }> = [
+  { value: "STRING", label: "نصي" },
+  { value: "NUMBER", label: "رقمي" },
+  { value: "BOOLEAN", label: "منطقي" },
+  { value: "JSON", label: "JSON" },
+];
 
 const DEFAULT_FORM_STATE: GlobalSettingFormState = {
   key: "",
@@ -172,11 +184,17 @@ export function GlobalSettingsManagementWorkspace() {
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
+  const [debounceTimer, setDebounceTimer] = React.useState<NodeJS.Timeout | null>(null);
   const [visibilityFilter, setVisibilityFilter] = React.useState<
     "all" | "public" | "private"
   >("all");
+  const [filterDraft, setFilterDraft] = React.useState<"all" | "public" | "private">(
+    "all",
+  );
 
   const [editingSettingId, setEditingSettingId] = React.useState<string | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<GlobalSettingFormState>(
     DEFAULT_FORM_STATE,
   );
@@ -221,19 +239,51 @@ export function GlobalSettingsManagementWorkspace() {
       setEditingSettingId(null);
       setFormState(DEFAULT_FORM_STATE);
       setFormError(null);
+      setIsFormOpen(false);
     }
   }, [editingSettingId, isEditing, settings]);
+
+  React.useEffect(() => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+
+    const timer = setTimeout(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 400);
+
+    setDebounceTimer(timer);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [searchInput]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setFilterDraft(visibilityFilter);
+  }, [isFilterOpen, visibilityFilter]);
 
   const resetForm = () => {
     setEditingSettingId(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
+    setIsFormOpen(false);
   };
 
-  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPage(1);
-    setSearch(searchInput.trim());
+  const handleStartCreate = () => {
+    if (!canCreate) {
+      return;
+    }
+
+    setFormError(null);
+    setEditingSettingId(null);
+    setFormState(DEFAULT_FORM_STATE);
+    setIsFormOpen(true);
   };
 
   const handleVisibilityFilterChange = (value: "all" | "public" | "private") => {
@@ -249,6 +299,7 @@ export function GlobalSettingsManagementWorkspace() {
     setFormError(null);
     setEditingSettingId(setting.id);
     setFormState(toFormState(setting));
+    setIsFormOpen(true);
   };
 
   const validateForm = (): { valid: true; parsedValue: unknown } | { valid: false } => {
@@ -274,8 +325,8 @@ export function GlobalSettingsManagementWorkspace() {
     return { valid: true, parsedValue: parsed.value };
   };
 
-  const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
 
     const validation = validateForm();
     if (!validation.valid) {
@@ -349,318 +400,366 @@ export function GlobalSettingsManagementWorkspace() {
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
 
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setVisibilityFilter("all");
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    setPage(1);
+    setVisibilityFilter(filterDraft);
+    setIsFilterOpen(false);
+  };
+
+  const activeFiltersCount = React.useMemo(() => {
+    const count = [searchInput.trim() ? 1 : 0, visibilityFilter !== "all" ? 1 : 0].reduce(
+      (a, b) => a + b,
+      0,
+    );
+    return count;
+  }, [searchInput, visibilityFilter]);
+
   return (
-    <div className="grid gap-4 xl:grid-cols-[380px_1fr]">
-      <Card className="h-fit border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings2 className="h-5 w-5 text-primary" />
-            {isEditing ? "تعديل إعداد" : "إنشاء إعداد عام"}
-          </CardTitle>
-          <CardDescription>
-            {isEditing
-              ? "تعديل قيمة الإعداد ونوعه ووصفه."
-              : "إضافة مفتاح إعداد جديد على مستوى النظام."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!canCreate && !isEditing ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك الصلاحية المطلوبة: <code>global-settings.create</code>.
-            </div>
-          ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm}>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">المفتاح *</label>
-                <Input
-                  value={formState.key}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, key: event.target.value }))
-                  }
-                  placeholder="school.name"
-                  required
-                  disabled={isEditing}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">نوع القيمة *</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.valueType}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      valueType: event.target.value as SettingValueType,
-                    }))
-                  }
-                >
-                  <option value="STRING">نصي</option>
-                  <option value="NUMBER">رقمي</option>
-                  <option value="BOOLEAN">منطقي</option>
-                  <option value="JSON">JSON</option>
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">القيمة *</label>
-                {formState.valueType === "JSON" ? (
-                  <textarea
-                    className="min-h-[120px] w-full rounded-md border border-input bg-background p-3 text-sm"
-                    value={formState.valueInput}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, valueInput: event.target.value }))
-                    }
-                    placeholder='{"name":"نظام المدرسة"}'
-                  />
-                ) : formState.valueType === "BOOLEAN" ? (
-                  <select
-                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    value={formState.valueInput.toLowerCase() === "true" ? "true" : "false"}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, valueInput: event.target.value }))
-                    }
-                  >
-                    <option value="true">true (صحيح)</option>
-                    <option value="false">false (خطأ)</option>
-                  </select>
-                ) : (
-                  <Input
-                    value={formState.valueInput}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, valueInput: event.target.value }))
-                    }
-                    placeholder={formState.valueType === "NUMBER" ? "123" : "اسم المدرسة"}
-                  />
-                )}
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الوصف</label>
-                <Input
-                  value={formState.description}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, description: event.target.value }))
-                  }
-                  placeholder="يظهر في التقارير"
-                />
-              </div>
-
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>إعداد عام</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isPublic}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isPublic: event.target.checked }))
-                  }
-                />
-              </label>
-
-              {formError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {formError}
-                </div>
-              ) : null}
-
-              {mutationError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {mutationError}
-                </div>
-              ) : null}
-
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  className="flex-1 gap-2"
-                  disabled={isFormSubmitting || (!canCreate && !isEditing)}
-                >
-                  {isFormSubmitting ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Settings2 className="h-4 w-4" />
-                  )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء إعداد"}
-                </Button>
-                {isEditing ? (
-                  <Button type="button" variant="outline" onClick={resetForm}>
-                    إلغاء
-                  </Button>
-                ) : null}
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>قائمة الإعدادات</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+    <>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[260px] max-w-lg">
+            <SearchField
+              containerClassName="flex-1"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="ابحث بالمفتاح أو الوصف..."
+            />
           </div>
-          <CardDescription>
-            إعدادات عامة قابلة للبحث والفلترة حسب عام/خاص.
-          </CardDescription>
-          <form onSubmit={handleSearchSubmit} className="grid gap-2 md:grid-cols-[1fr_160px_auto]">
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث في المفتاح أو الوصف..."
-                className="pr-8"
-              />
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterTriggerButton
+              count={activeFiltersCount}
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+            />
+          </div>
+        </div>
+
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="خيارات الفلترة"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={clearFilters}
+                className="flex-1 gap-1.5"
+              >
+                <Trash2 className="h-4 w-4" />
+                مسح
+              </Button>
+              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
+                تطبيق
+              </Button>
             </div>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={visibilityFilter}
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectField
+              value={filterDraft}
               onChange={(event) =>
-                handleVisibilityFilterChange(
-                  event.target.value as "all" | "public" | "private",
-                )
+                setFilterDraft(event.target.value as "all" | "public" | "private")
               }
             >
-              <option value="all">الكل</option>
+              <option value="all">كل الحالات</option>
               <option value="public">عام</option>
               <option value="private">خاص</option>
-            </select>
-            <Button type="submit" variant="outline" className="gap-2">
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
-          </form>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {settingsQuery.isPending ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ تحميل البيانات...
-            </div>
-          ) : null}
+            </SelectField>
+          </div>
+        </FilterDrawer>
 
-          {settingsQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {settingsQuery.error instanceof Error
-                ? settingsQuery.error.message
-                : "تعذّر تحميل البيانات."}
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+          <CardHeader className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>قائمة الإعدادات العامة</CardTitle>
+              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
-          ) : null}
+            <CardDescription>
+              إعدادات عامة للتطبيق ويمكن تحديد ظهورها كعام/خاص.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {settingsQuery.isPending ? (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                جارٍ تحميل الإعدادات...
+              </div>
+            ) : null}
 
-          {!settingsQuery.isPending && settings.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              لا توجد إعدادات مطابقة.
-            </div>
-          ) : null}
+            {settingsQuery.error ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                {settingsQuery.error instanceof Error
+                  ? settingsQuery.error.message
+                  : "تعذر تحميل الإعدادات"}
+              </div>
+            ) : null}
 
-          {settings.map((setting) => (
-            <div
-              key={setting.id}
-              className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <p className="font-medium">
-                    <code>{setting.key}</code>
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    <Badge variant="outline">{getValueTypeLabel(setting.valueType)}</Badge>
+            {!settingsQuery.isPending && settings.length === 0 ? (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                لا توجد إعدادات مطابقة.
+              </div>
+            ) : null}
+
+            {settings.map((setting) => (
+              <div
+                key={setting.id}
+                className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="space-y-1">
+                    <p className="font-medium">
+                      <code>{setting.key}</code>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {setting.description ?? "بدون وصف"}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge variant="secondary">{setting.valueType}</Badge>
+                      <Badge variant={setting.isPublic ? "default" : "outline"}>
+                        {setting.isPublic ? "عام" : "خاص"}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
                     {setting.isPublic ? (
-                      <Badge variant="secondary" className="gap-1.5">
-                        <Eye className="h-3.5 w-3.5" />
-                        عام
-                      </Badge>
+                      <Eye className="h-4 w-4 text-muted-foreground" />
                     ) : (
-                      <Badge variant="secondary" className="gap-1.5">
-                        <EyeOff className="h-3.5 w-3.5" />
-                        خاص
-                      </Badge>
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
                     )}
                   </div>
-                  {setting.description ? (
-                    <p className="text-xs text-muted-foreground">{setting.description}</p>
-                  ) : null}
+                </div>
+
+                <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+                  القيمة: <code>{formatSettingValueForDisplay(setting.valueType, setting.value)}</code>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleStartEdit(setting)}
+                    disabled={!canUpdate || updateMutation.isPending}
+                  >
+                    <PencilLine className="h-3.5 w-3.5" />
+                    تعديل
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleDelete(setting)}
+                    disabled={!canDelete || deleteMutation.isPending}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    حذف
+                  </Button>
                 </div>
               </div>
+            ))}
 
-              <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                القيمة: <code>{valuePreview(setting.value)}</code>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
+              <p className="text-xs text-muted-foreground">
+                صفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
+              </p>
+              <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleStartEdit(setting)}
-                  disabled={!canUpdate || updateMutation.isPending}
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={!pagination || pagination.page <= 1 || settingsQuery.isFetching}
                 >
-                  <PencilLine className="h-3.5 w-3.5" />
-                  تعديل
+                  السابق
                 </Button>
                 <Button
-                  variant="destructive"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setPage((prev) =>
+                      pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
+                    )
+                  }
+                  disabled={
+                    !pagination ||
+                    pagination.page >= pagination.totalPages ||
+                    settingsQuery.isFetching
+                  }
+                >
+                  التالي
+                </Button>
+                <Button
+                  variant="ghost"
                   size="sm"
                   className="gap-1.5"
-                  onClick={() => handleDelete(setting)}
-                  disabled={!canDelete || deleteMutation.isPending}
+                  onClick={() => void settingsQuery.refetch()}
+                  disabled={settingsQuery.isFetching}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  حذف
+                  <RefreshCw
+                    className={`h-4 w-4 ${settingsQuery.isFetching ? "animate-spin" : ""}`}
+                  />
+                  تحديث
                 </Button>
               </div>
             </div>
-          ))}
+          </CardContent>
+        </Card>
+      </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-            <p className="text-xs text-muted-foreground">
-              الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={!pagination || pagination.page <= 1 || settingsQuery.isFetching}
-              >
-                السابق
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPage((prev) =>
-                    pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                  )
-                }
-                disabled={
-                  !pagination ||
-                  pagination.page >= pagination.totalPages ||
-                  settingsQuery.isFetching
-                }
-              >
-                التالي
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => void settingsQuery.refetch()}
-                disabled={settingsQuery.isFetching}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${settingsQuery.isFetching ? "animate-spin" : ""}`}
-                />
-                تحديث
-              </Button>
-            </div>
+      <Fab
+        icon={<Settings2 className="h-4 w-4" />}
+        label="إنشاء"
+        ariaLabel="إنشاء إعداد عام"
+        onClick={handleStartCreate}
+        disabled={!canCreate}
+      />
+
+      <BottomSheetForm
+        open={isFormOpen}
+        title={isEditing ? "تعديل إعداد" : "إنشاء إعداد عام"}
+        onClose={resetForm}
+        onSubmit={() => handleSubmitForm()}
+        isSubmitting={isFormSubmitting}
+        submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء إعداد"}
+        showFooter={false}
+      >
+        {!canCreate && !isEditing ? (
+          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+            ليس لديك الصلاحية المطلوبة: <code>global-settings.create</code>.
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        ) : (
+          <form className="space-y-3" onSubmit={handleSubmitForm}>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">المفتاح *</label>
+              <Input
+                value={formState.key}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, key: event.target.value }))
+                }
+                placeholder="school_name"
+                required
+                disabled={isEditing}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">نوع القيمة</label>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={formState.valueType}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    valueType: event.target.value as SettingValueType,
+                    valueInput: "",
+                  }))
+                }
+              >
+                {VALUE_TYPE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">القيمة *</label>
+              {formState.valueType === "JSON" ? (
+                <textarea
+                  className="min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={formState.valueInput}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, valueInput: event.target.value }))
+                  }
+                  placeholder='{ "primary": "#2563eb" }'
+                />
+              ) : formState.valueType === "BOOLEAN" ? (
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={formState.valueInput.toLowerCase() === "true" ? "true" : "false"}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, valueInput: event.target.value }))
+                  }
+                >
+                  <option value="true">نعم</option>
+                  <option value="false">لا</option>
+                </select>
+              ) : (
+                <Input
+                  value={formState.valueInput}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, valueInput: event.target.value }))
+                  }
+                  placeholder={formState.valueType === "NUMBER" ? "123" : "قيمة نصية"}
+                  required
+                />
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الوصف</label>
+              <Input
+                value={formState.description}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, description: event.target.value }))
+                }
+                placeholder="وصف مختصر للإعداد"
+              />
+            </div>
+
+            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+              <span>عام</span>
+              <input
+                type="checkbox"
+                checked={formState.isPublic}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, isPublic: event.target.checked }))
+                }
+              />
+            </label>
+
+            {formError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {formError}
+              </div>
+            ) : null}
+
+            {mutationError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {mutationError}
+              </div>
+            ) : null}
+
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                className="flex-1 gap-2"
+                disabled={isFormSubmitting || (!canCreate && !isEditing)}
+              >
+                {isFormSubmitting ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Settings2 className="h-4 w-4" />
+                )}
+                {isEditing ? "حفظ التعديلات" : "إنشاء إعداد"}
+              </Button>
+              {isEditing ? (
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  إلغاء
+                </Button>
+              ) : null}
+            </div>
+          </form>
+        )}
+      </BottomSheetForm>
+    </>
   );
 }
-
-
-
-
-

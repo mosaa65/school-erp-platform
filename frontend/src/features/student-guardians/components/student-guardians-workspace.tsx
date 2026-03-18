@@ -1,10 +1,21 @@
 "use client";
 
 import * as React from "react";
-import { Link2, LoaderCircle, PencilLine, RefreshCw, Search, Trash2 } from "lucide-react";
+import {
+  Filter,
+  Link2,
+  LoaderCircle,
+  PencilLine,
+  Plus,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField } from "@/components/ui/select-field";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
   CardContent,
@@ -12,6 +23,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateStudentGuardianMutation,
@@ -174,6 +188,7 @@ export function StudentGuardiansWorkspace() {
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
+  const [debounceTimer, setDebounceTimer] = React.useState<NodeJS.Timeout | null>(null);
   const [studentFilter, setStudentFilter] = React.useState("all");
   const [guardianFilter, setGuardianFilter] = React.useState("all");
   const [relationshipTypeFilter, setRelationshipTypeFilter] = React.useState("all");
@@ -183,8 +198,23 @@ export function StudentGuardiansWorkspace() {
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
     "all",
   );
+  const [filterDraft, setFilterDraft] = React.useState<{
+    student: string;
+    guardian: string;
+    relationshipType: string;
+    primary: "all" | "primary" | "secondary";
+    active: "all" | "active" | "inactive";
+  }>({
+    student: "all",
+    guardian: "all",
+    relationshipType: "all",
+    primary: "all",
+    active: "all",
+  });
 
   const [editingRelationId, setEditingRelationId] = React.useState<string | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<RelationFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
@@ -239,8 +269,47 @@ export function StudentGuardiansWorkspace() {
       setEditingRelationId(null);
       setFormState(DEFAULT_FORM_STATE);
       setFormError(null);
+      setIsFormOpen(false);
     }
   }, [editingRelationId, isEditing, relations]);
+
+  React.useEffect(() => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+
+    const timer = setTimeout(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 400);
+
+    setDebounceTimer(timer);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [searchInput]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setFilterDraft({
+      student: studentFilter,
+      guardian: guardianFilter,
+      relationshipType: relationshipTypeFilter,
+      primary: primaryFilter,
+      active: activeFilter,
+    });
+  }, [
+    activeFilter,
+    guardianFilter,
+    isFilterOpen,
+    primaryFilter,
+    relationshipTypeFilter,
+    studentFilter,
+  ]);
 
   React.useEffect(() => {
     if (isEditing || formState.relationshipTypeId || !canReadRelationshipTypes) {
@@ -275,12 +344,19 @@ export function StudentGuardiansWorkspace() {
     setEditingRelationId(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
+    setIsFormOpen(false);
   };
 
-  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPage(1);
-    setSearch(searchInput.trim());
+  const handleStartCreate = () => {
+    if (!canCreate) {
+      return;
+    }
+
+    setActionSuccess(null);
+    setFormError(null);
+    setEditingRelationId(null);
+    setFormState(DEFAULT_FORM_STATE);
+    setIsFormOpen(true);
   };
 
   const validateForm = (): boolean => {
@@ -312,8 +388,8 @@ export function StudentGuardiansWorkspace() {
     return true;
   };
 
-  const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
     setActionSuccess(null);
 
     if (!validateForm()) {
@@ -400,6 +476,7 @@ export function StudentGuardiansWorkspace() {
       }
     }
     setFormState(nextState);
+    setIsFormOpen(true);
   };
 
   const handleToggleActive = (item: StudentGuardianListItem) => {
@@ -448,262 +525,94 @@ export function StudentGuardiansWorkspace() {
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
 
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setStudentFilter("all");
+    setGuardianFilter("all");
+    setRelationshipTypeFilter("all");
+    setPrimaryFilter("all");
+    setActiveFilter("all");
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    setPage(1);
+    setStudentFilter(filterDraft.student);
+    setGuardianFilter(filterDraft.guardian);
+    setRelationshipTypeFilter(filterDraft.relationshipType);
+    setPrimaryFilter(filterDraft.primary);
+    setActiveFilter(filterDraft.active);
+    setIsFilterOpen(false);
+  };
+
+  const activeFiltersCount = React.useMemo(() => {
+    const count = [
+      searchInput.trim() ? 1 : 0,
+      studentFilter !== "all" ? 1 : 0,
+      guardianFilter !== "all" ? 1 : 0,
+      relationshipTypeFilter !== "all" ? 1 : 0,
+      primaryFilter !== "all" ? 1 : 0,
+      activeFilter !== "all" ? 1 : 0,
+    ].reduce((acc, value) => acc + value, 0);
+    return count;
+  }, [
+    activeFilter,
+    guardianFilter,
+    primaryFilter,
+    relationshipTypeFilter,
+    searchInput,
+    studentFilter,
+  ]);
+
   return (
-    <div className="grid gap-4 xl:grid-cols-[460px_1fr]">
-      <Card className="h-fit border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Link2 className="h-5 w-5 text-primary" />
-            {isEditing ? "تعديل علاقة طالب-ولي أمر" : "إنشاء علاقة طالب-ولي أمر"}
-          </CardTitle>
-          <CardDescription>
-            {isEditing
-              ? "تحديث خصائص العلاقة الحالية."
-              : "إضافة ربط جديد بين الطالب وولي الأمر ضمن النظام."}
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent>
-          {!canCreate && !isEditing ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك الصلاحية المطلوبة: <code>student-guardians.create</code>.
-            </div>
-          ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm}>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الطالب *</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.studentId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, studentId: event.target.value }))
-                  }
-                  disabled={!canReadStudents}
-                >
-                  <option value="">اختر الطالب</option>
-                  {(studentsQuery.data ?? []).map((student) => (
-                    <option key={student.id} value={student.id}>
-                      {student.fullName} ({student.admissionNo ?? "غير متوفر"})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">ولي الأمر *</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.guardianId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, guardianId: event.target.value }))
-                  }
-                  disabled={!canReadGuardians}
-                >
-                  <option value="">اختر ولي الأمر</option>
-                  {(guardiansQuery.data ?? []).map((guardian) => (
-                    <option key={guardian.id} value={guardian.id}>
-                      {guardian.fullName} ({guardian.phonePrimary ?? "لا يوجد رقم"})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">صلة القرابة *</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.relationshipTypeId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      relationshipTypeId: event.target.value,
-                    }))
-                  }
-                  disabled={
-                    !canReadRelationshipTypes || relationshipTypeOptionsQuery.isLoading
-                  }
-                >
-                  <option value="">اختر صلة القرابة</option>
-                  {relationshipTypeOptions.map((value) => (
-                    <option key={value.id} value={value.id}>
-                      {value.nameAr ??
-                        (value.code
-                          ? translateGuardianRelationship(
-                              mapRelationshipCodeToEnum(value.code) ?? "OTHER",
-                            )
-                          : String(value.id))}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">تاريخ البداية</label>
-                  <Input
-                    type="date"
-                    value={formState.startDate}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, startDate: event.target.value }))
-                    }
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">تاريخ النهاية</label>
-                  <Input
-                    type="date"
-                    value={formState.endDate}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, endDate: event.target.value }))
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
-                <Input
-                  value={formState.notes}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, notes: event.target.value }))
-                  }
-                  placeholder="مثال: جهة الاتصال الأساسية لمتابعة الحضور"
-                />
-              </div>
-
-              <div className="grid gap-2 md:grid-cols-2">
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>صلة أساسية</span>
-                  <input
-                    type="checkbox"
-                    checked={formState.isPrimary}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, isPrimary: event.target.checked }))
-                    }
-                  />
-                </label>
-
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>يستقبل الإشعارات</span>
-                  <input
-                    type="checkbox"
-                    checked={formState.canReceiveNotifications}
-                    onChange={(event) =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        canReceiveNotifications: event.target.checked,
-                      }))
-                    }
-                  />
-                </label>
-
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>مصرح بالاستلام</span>
-                  <input
-                    type="checkbox"
-                    checked={formState.canPickup}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, canPickup: event.target.checked }))
-                    }
-                  />
-                </label>
-
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>نشط</span>
-                  <input
-                    type="checkbox"
-                    checked={formState.isActive}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                    }
-                  />
-                </label>
-              </div>
-
-              {formError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {formError}
-                </div>
-              ) : null}
-
-              {mutationError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {mutationError}
-                </div>
-              ) : null}
-              {actionSuccess ? (
-                <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
-                  {actionSuccess}
-                </div>
-              ) : null}
-
-              {!hasDependenciesReadPermissions ? (
-                <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يتطلب هذا الجزء صلاحيات القراءة: <code>students.read</code> و{" "}
-                  <code>guardians.read</code> و <code>lookup-relationship-types.read</code>.
-                </div>
-              ) : null}
-
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  className="flex-1 gap-2"
-                  disabled={
-                    isFormSubmitting ||
-                    (!canCreate && !isEditing) ||
-                    !hasDependenciesReadPermissions
-                  }
-                >
-                  {isFormSubmitting ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Link2 className="h-4 w-4" />
-                  )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء علاقة"}
-                </Button>
-                {isEditing ? (
-                  <Button type="button" variant="outline" onClick={resetForm}>
-                    إلغاء
-                  </Button>
-                ) : null}
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>قائمة روابط الطلاب وأولياء الأمور</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+    <>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[260px] max-w-lg">
+            <SearchField
+              containerClassName="flex-1"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="بحث بالطالب/ولي الأمر/الهاتف..."
+            />
           </div>
-          <CardDescription>
-            إدارة علاقات الطلاب بأولياء الأمور مع تحديد العلاقة الأساسية والصلاحيات.
-          </CardDescription>
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterTriggerButton
+              count={activeFiltersCount}
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+            />
+          </div>
+        </div>
 
-          <form
-            onSubmit={handleSearchSubmit}
-            className="grid gap-2 md:grid-cols-[1fr_170px_170px_150px_150px_130px_auto]"
-          >
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث بالطالب/ولي الأمر/الهاتف..."
-                className="pr-8"
-              />
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="فلاتر علاقات أولياء الأمور"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={clearFilters}
+                className="flex-1 gap-1.5"
+              >
+                <Trash2 className="h-4 w-4" />
+                مسح
+              </Button>
+              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
+                تطبيق
+              </Button>
             </div>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={studentFilter}
-              onChange={(event) => {
-                setPage(1);
-                setStudentFilter(event.target.value);
-              }}
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectField
+              value={filterDraft.student}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, student: event.target.value }))
+              }
               disabled={!canReadStudents}
             >
               <option value="all">كل الطلاب</option>
@@ -712,15 +621,13 @@ export function StudentGuardiansWorkspace() {
                   {student.admissionNo ?? student.fullName}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={guardianFilter}
-              onChange={(event) => {
-                setPage(1);
-                setGuardianFilter(event.target.value);
-              }}
+            <SelectField
+              value={filterDraft.guardian}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, guardian: event.target.value }))
+              }
               disabled={!canReadGuardians}
             >
               <option value="all">كل أولياء الأمور</option>
@@ -729,15 +636,16 @@ export function StudentGuardiansWorkspace() {
                   {guardian.fullName}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={relationshipTypeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setRelationshipTypeFilter(event.target.value);
-              }}
+            <SelectField
+              value={filterDraft.relationshipType}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  relationshipType: event.target.value,
+                }))
+              }
               disabled={!canReadRelationshipTypes || relationshipTypeOptionsQuery.isLoading}
             >
               <option value="all">كل صلات القرابة</option>
@@ -751,42 +659,50 @@ export function StudentGuardiansWorkspace() {
                       : String(value.id))}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={primaryFilter}
-              onChange={(event) => {
-                setPage(1);
-                setPrimaryFilter(event.target.value as "all" | "primary" | "secondary");
-              }}
+            <SelectField
+              value={filterDraft.primary}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  primary: event.target.value as "all" | "primary" | "secondary",
+                }))
+              }
             >
               <option value="all">كل الأولويات</option>
               <option value="primary">الأساسية فقط</option>
               <option value="secondary">غير الأساسية فقط</option>
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={activeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setActiveFilter(event.target.value as "all" | "active" | "inactive");
-              }}
+            <SelectField
+              value={filterDraft.active}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  active: event.target.value as "all" | "active" | "inactive",
+                }))
+              }
             >
               <option value="all">كل الحالات</option>
               <option value="active">النشطة فقط</option>
               <option value="inactive">غير النشطة فقط</option>
-            </select>
+            </SelectField>
+          </div>
+        </FilterDrawer>
 
-            <Button type="submit" variant="outline" className="gap-2">
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
-          </form>
-        </CardHeader>
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+          <CardHeader className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>قائمة روابط الطلاب وأولياء الأمور</CardTitle>
+              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+            </div>
+            <CardDescription>
+              إدارة علاقات الطلاب بأولياء الأمور مع تحديد العلاقة الأساسية والصلاحيات.
+            </CardDescription>
+          </CardHeader>
 
-        <CardContent className="space-y-3">
+          <CardContent className="space-y-3">
           {relationsQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
               جارٍ تحميل البيانات...
@@ -928,8 +844,232 @@ export function StudentGuardiansWorkspace() {
             </div>
           </div>
         </CardContent>
-      </Card>
-    </div>
+        </Card>
+      </div>
+
+      <Fab
+        icon={<Plus className="h-4 w-4" />}
+        label="إنشاء"
+        ariaLabel="إنشاء علاقة طالب-ولي أمر"
+        onClick={handleStartCreate}
+        disabled={!canCreate}
+      />
+
+      <BottomSheetForm
+        open={isFormOpen}
+        title={isEditing ? "تعديل علاقة طالب-ولي أمر" : "إنشاء علاقة طالب-ولي أمر"}
+        onClose={resetForm}
+        onSubmit={() => handleSubmitForm()}
+        isSubmitting={isFormSubmitting}
+        submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء علاقة"}
+        showFooter={false}
+      >
+        {!canCreate && !isEditing ? (
+          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+            لا تملك الصلاحية المطلوبة: <code>student-guardians.create</code>.
+          </div>
+        ) : (
+          <form className="space-y-3" onSubmit={handleSubmitForm}>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الطالب *</label>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={formState.studentId}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, studentId: event.target.value }))
+                }
+                disabled={!canReadStudents}
+              >
+                <option value="">اختر الطالب</option>
+                {(studentsQuery.data ?? []).map((student) => (
+                  <option key={student.id} value={student.id}>
+                    {student.fullName} ({student.admissionNo ?? "غير متوفر"})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">ولي الأمر *</label>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={formState.guardianId}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, guardianId: event.target.value }))
+                }
+                disabled={!canReadGuardians}
+              >
+                <option value="">اختر ولي الأمر</option>
+                {(guardiansQuery.data ?? []).map((guardian) => (
+                  <option key={guardian.id} value={guardian.id}>
+                    {guardian.fullName} ({guardian.phonePrimary ?? "لا يوجد رقم"})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">صلة القرابة *</label>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={formState.relationshipTypeId}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    relationshipTypeId: event.target.value,
+                  }))
+                }
+                disabled={!canReadRelationshipTypes || relationshipTypeOptionsQuery.isLoading}
+              >
+                <option value="">اختر صلة القرابة</option>
+                {relationshipTypeOptions.map((value) => (
+                  <option key={value.id} value={value.id}>
+                    {value.nameAr ??
+                      (value.code
+                        ? translateGuardianRelationship(
+                            mapRelationshipCodeToEnum(value.code) ?? "OTHER",
+                          )
+                        : String(value.id))}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">تاريخ البداية</label>
+                <Input
+                  type="date"
+                  value={formState.startDate}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, startDate: event.target.value }))
+                  }
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">تاريخ النهاية</label>
+                <Input
+                  type="date"
+                  value={formState.endDate}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, endDate: event.target.value }))
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
+              <Input
+                value={formState.notes}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, notes: event.target.value }))
+                }
+                placeholder="مثال: جهة الاتصال الأساسية لمتابعة الحضور"
+              />
+            </div>
+
+            <div className="grid gap-2 md:grid-cols-2">
+              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                <span>صلة أساسية</span>
+                <input
+                  type="checkbox"
+                  checked={formState.isPrimary}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, isPrimary: event.target.checked }))
+                  }
+                />
+              </label>
+
+              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                <span>يستقبل الإشعارات</span>
+                <input
+                  type="checkbox"
+                  checked={formState.canReceiveNotifications}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      canReceiveNotifications: event.target.checked,
+                    }))
+                  }
+                />
+              </label>
+
+              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                <span>مصرح بالاستلام</span>
+                <input
+                  type="checkbox"
+                  checked={formState.canPickup}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, canPickup: event.target.checked }))
+                  }
+                />
+              </label>
+
+              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                <span>نشط</span>
+                <input
+                  type="checkbox"
+                  checked={formState.isActive}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                  }
+                />
+              </label>
+            </div>
+
+            {formError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {formError}
+              </div>
+            ) : null}
+
+            {mutationError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {mutationError}
+              </div>
+            ) : null}
+            {actionSuccess ? (
+              <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
+                {actionSuccess}
+              </div>
+            ) : null}
+
+            {!hasDependenciesReadPermissions ? (
+              <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+                يتطلب هذا الجزء صلاحيات القراءة: <code>students.read</code> و{" "}
+                <code>guardians.read</code> و <code>lookup-relationship-types.read</code>.
+              </div>
+            ) : null}
+
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                className="flex-1 gap-2"
+                disabled={
+                  isFormSubmitting ||
+                  (!canCreate && !isEditing) ||
+                  !hasDependenciesReadPermissions
+                }
+              >
+                {isFormSubmitting ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Link2 className="h-4 w-4" />
+                )}
+                {isEditing ? "حفظ التعديلات" : "إنشاء علاقة"}
+              </Button>
+              {isEditing ? (
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  إلغاء
+                </Button>
+              ) : null}
+            </div>
+          </form>
+        )}
+      </BottomSheetForm>
+    </>
   );
 }
 

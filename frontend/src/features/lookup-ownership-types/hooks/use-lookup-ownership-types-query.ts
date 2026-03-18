@@ -9,6 +9,7 @@ type UseLookupOwnershipTypesQueryOptions = {
   limit?: number;
   search?: string;
   isActive?: boolean;
+  deletedOnly?: boolean;
 };
 
 export function useLookupOwnershipTypesQuery(
@@ -23,7 +24,13 @@ export function useLookupOwnershipTypesQuery(
       options.page ?? 1,
       options.limit ?? 12,
       options.search ?? "",
-      options.isActive === undefined ? "all" : options.isActive ? "active" : "inactive",
+      options.deletedOnly
+        ? "deleted"
+        : options.isActive === undefined
+          ? "all"
+          : options.isActive
+            ? "active"
+            : "inactive",
     ],
     enabled: auth.isHydrated && auth.isAuthenticated,
     queryFn: async () => {
@@ -33,6 +40,7 @@ export function useLookupOwnershipTypesQuery(
           limit: options.limit ?? 12,
           search: options.search,
           isActive: options.isActive,
+          deletedOnly: options.deletedOnly ? true : undefined,
         });
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) {

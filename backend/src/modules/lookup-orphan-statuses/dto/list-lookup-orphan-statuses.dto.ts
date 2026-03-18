@@ -35,4 +35,10 @@ export class ListLookupOrphanStatusesDto {
   @Type(() => Boolean)
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({ example: false })
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  deletedOnly?: boolean;
 }

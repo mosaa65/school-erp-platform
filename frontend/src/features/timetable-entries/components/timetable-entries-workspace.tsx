@@ -3,15 +3,19 @@
 import * as React from "react";
 import {
   CalendarClock,
+  Filter,
   LoaderCircle,
   PencilLine,
+  Plus,
   RefreshCw,
-  Search,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField } from "@/components/ui/select-field";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
   CardContent,
@@ -19,6 +23,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateTimetableEntryMutation,
@@ -112,6 +118,7 @@ export function TimetableEntriesWorkspace() {
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
+  const [debounceTimer, setDebounceTimer] = React.useState<NodeJS.Timeout | null>(null);
   const [termFilter, setTermFilter] = React.useState("all");
   const [sectionFilter, setSectionFilter] = React.useState("all");
   const [offeringFilter, setOfferingFilter] = React.useState("all");
@@ -119,8 +126,23 @@ export function TimetableEntriesWorkspace() {
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
     "all",
   );
+  const [filterDraft, setFilterDraft] = React.useState<{
+    term: string;
+    section: string;
+    offering: string;
+    day: TimetableDay | "all";
+    active: "all" | "active" | "inactive";
+  }>({
+    term: "all",
+    section: "all",
+    offering: "all",
+    day: "all",
+    active: "all",
+  });
 
   const [editingEntryId, setEditingEntryId] = React.useState<string | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<TimetableEntryFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
 
@@ -137,8 +159,9 @@ export function TimetableEntriesWorkspace() {
 
   const academicTermOptionsQuery = useAcademicTermOptionsQuery();
   const filterSectionOptionsQuery = useSectionOptionsQuery();
+  const filterOfferingTermId = isFilterOpen ? filterDraft.term : termFilter;
   const filterOfferingOptionsQuery = useTermSubjectOfferingOptionsQuery({
-    academicTermId: termFilter === "all" ? undefined : termFilter,
+    academicTermId: filterOfferingTermId === "all" ? undefined : filterOfferingTermId,
   });
 
   const formOfferingOptionsQuery = useTermSubjectOfferingOptionsQuery({
@@ -198,11 +221,58 @@ export function TimetableEntriesWorkspace() {
       setEditingEntryId(null);
       setFormState(DEFAULT_FORM_STATE);
       setFormError(null);
+      setIsFormOpen(false);
     }
-  }, [editingEntryId, isEditing, entries]);
+  }, [editingEntryId, entries, isEditing]);
 
   React.useEffect(() => {
-    if (!formState.sectionId) {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+
+    const timer = setTimeout(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 400);
+
+    setDebounceTimer(timer);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [searchInput]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setFilterDraft({
+      term: termFilter,
+      section: sectionFilter,
+      offering: offeringFilter,
+      day: dayFilter,
+      active: activeFilter,
+    });
+  }, [activeFilter, dayFilter, isFilterOpen, offeringFilter, sectionFilter, termFilter]);
+
+  React.useEffect(() => {
+    if (!formState.termSubjectOfferingId || formOfferingOptionsQuery.isPending) {
+      return;
+    }
+
+    const exists = formOfferings.some((offering) => offering.id === formState.termSubjectOfferingId);
+    if (!exists) {
+      setFormState((prev) => ({
+        ...prev,
+        termSubjectOfferingId: "",
+        sectionId: "",
+      }));
+    }
+  }, [formOfferingOptionsQuery.isPending, formOfferings, formState.termSubjectOfferingId]);
+
+  React.useEffect(() => {
+    if (!formState.sectionId || formSectionOptionsQuery.isPending) {
       return;
     }
 
@@ -210,18 +280,24 @@ export function TimetableEntriesWorkspace() {
     if (!exists) {
       setFormState((prev) => ({ ...prev, sectionId: "" }));
     }
-  }, [formSectionOptions, formState.sectionId]);
+  }, [formSectionOptions, formSectionOptionsQuery.isPending, formState.sectionId]);
 
   const resetForm = () => {
     setEditingEntryId(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
+    setIsFormOpen(false);
   };
 
-  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPage(1);
-    setSearch(searchInput.trim());
+  const handleStartCreate = () => {
+    if (!canCreate) {
+      return;
+    }
+
+    setFormError(null);
+    setEditingEntryId(null);
+    setFormState(DEFAULT_FORM_STATE);
+    setIsFormOpen(true);
   };
 
   const validateForm = (): boolean => {
@@ -285,8 +361,8 @@ export function TimetableEntriesWorkspace() {
     return true;
   };
 
-  const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
 
     if (!validateForm()) {
       return;
@@ -344,6 +420,7 @@ export function TimetableEntriesWorkspace() {
     setFormError(null);
     setEditingEntryId(entry.id);
     setFormState(toFormState(entry));
+    setIsFormOpen(true);
   };
 
   const handleDelete = (entry: TimetableEntryListItem) => {
@@ -371,252 +448,100 @@ export function TimetableEntriesWorkspace() {
   const hasDependenciesReadPermissions =
     canReadAcademicTerms && canReadSections && canReadTermSubjectOfferings;
 
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setTermFilter("all");
+    setSectionFilter("all");
+    setOfferingFilter("all");
+    setDayFilter("all");
+    setActiveFilter("all");
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    setPage(1);
+    setTermFilter(filterDraft.term);
+    setSectionFilter(filterDraft.section);
+    setOfferingFilter(filterDraft.offering);
+    setDayFilter(filterDraft.day);
+    setActiveFilter(filterDraft.active);
+    setIsFilterOpen(false);
+  };
+
+  const activeFiltersCount = React.useMemo(() => {
+    return [
+      searchInput.trim() ? 1 : 0,
+      termFilter !== "all" ? 1 : 0,
+      sectionFilter !== "all" ? 1 : 0,
+      offeringFilter !== "all" ? 1 : 0,
+      dayFilter !== "all" ? 1 : 0,
+      activeFilter !== "all" ? 1 : 0,
+    ].reduce((acc, value) => acc + value, 0);
+  }, [activeFilter, dayFilter, offeringFilter, searchInput, sectionFilter, termFilter]);
+
   return (
-    <div className="grid gap-4 xl:grid-cols-[460px_1fr]">
-      <Card className="h-fit border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CalendarClock className="h-5 w-5 text-primary" />
-            {isEditing ? "تعديل حصة جدول" : "إنشاء حصة جدول"}
-          </CardTitle>
-          <CardDescription>
-            {isEditing
-              ? "تعديل وقت ومكان الحصة وربطها بالشعبة والفصل."
-              : "إضافة حصة جديدة ضمن جدول الفصل الأكاديمي."}
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent>
-          {!canCreate && !isEditing ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك الصلاحية المطلوبة: <code>timetable-entries.create</code>.
-            </div>
-          ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm}>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  الفصل الأكاديمي *
-                </label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.academicTermId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      academicTermId: event.target.value,
-                      termSubjectOfferingId: "",
-                      sectionId: "",
-                    }))
-                  }
-                  disabled={!canReadAcademicTerms}
-                >
-                  <option value="">اختر الفصل الدراسي</option>
-                  {termOptions.map((term) => (
-                    <option key={term.id} value={term.id}>
-                      {term.name} ({term.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  عرض المادة *
-                </label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.termSubjectOfferingId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      termSubjectOfferingId: event.target.value,
-                      sectionId: "",
-                    }))
-                  }
-                  disabled={!canReadTermSubjectOfferings || !formState.academicTermId}
-                >
-                  <option value="">اختر الطرح</option>
-                  {formOfferings.map((offering) => (
-                    <option key={offering.id} value={offering.id}>
-                      {offering.gradeLevelSubject.gradeLevel.code} -{" "}
-                      {offering.gradeLevelSubject.subject.code}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الشعبة *</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.sectionId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      sectionId: event.target.value,
-                    }))
-                  }
-                  disabled={!canReadSections || !formState.termSubjectOfferingId}
-                >
-                  <option value="">اختر الشعبة</option>
-                  {formSectionOptions.map((section) => (
-                    <option key={section.id} value={section.id}>
-                      {section.name} ({section.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">اليوم *</label>
-                  <select
-                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    value={formState.dayOfWeek}
-                    onChange={(event) =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        dayOfWeek: event.target.value as TimetableDay,
-                      }))
-                    }
-                  >
-                    {DAY_OPTIONS.map((day) => (
-                      <option key={day} value={day}>
-                        {translateTimetableDay(day)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    رقم الحصة *
-                  </label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={20}
-                    value={formState.periodIndex}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, periodIndex: event.target.value }))
-                    }
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">اسم القاعة</label>
-                <Input
-                  value={formState.roomLabel}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, roomLabel: event.target.value }))
-                  }
-                  placeholder="A-204"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
-                <Input
-                  value={formState.notes}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, notes: event.target.value }))
-                  }
-                  placeholder="ملاحظات اختيارية"
-                />
-              </div>
-
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشط</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                />
-              </label>
-
-              {formError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {formError}
-                </div>
-              ) : null}
-
-              {mutationError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {mutationError}
-                </div>
-              ) : null}
-
-              {!hasDependenciesReadPermissions ? (
-                <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يتطلب هذا الجزء صلاحيات القراءة المرتبطة: <code>academic-terms.read</code>,{" "}
-                  <code>sections.read</code>, <code>term-subject-offerings.read</code>.
-                </div>
-              ) : null}
-
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  className="flex-1 gap-2"
-                  disabled={
-                    isFormSubmitting ||
-                    (!canCreate && !isEditing) ||
-                    !hasDependenciesReadPermissions
-                  }
-                >
-                  {isFormSubmitting ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <CalendarClock className="h-4 w-4" />
-                  )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء حصة"}
-                </Button>
-                {isEditing ? (
-                  <Button type="button" variant="outline" onClick={resetForm}>
-                    إلغاء
-                  </Button>
-                ) : null}
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>حصص الجدول الدراسي</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+    <>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-1 flex-wrap items-center gap-2 min-w-[240px] max-w-lg">
+            <SearchField
+              containerClassName="flex-1"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="بحث بالمادة أو الشعبة أو القاعة..."
+            />
           </div>
-          <CardDescription>
-            إدارة الحصص المجدولة مع فلترة حسب الفصل والشعبة والمادة واليوم.
-          </CardDescription>
 
-          <form
-            onSubmit={handleSearchSubmit}
-            className="grid gap-2 md:grid-cols-[1fr_180px_180px_220px_160px_140px_auto]"
-          >
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث بالمادة/الشعبة/الغرفة..."
-                className="pr-8"
-              />
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+            >
+              <Filter className="h-4 w-4" />
+              فلترة
+              {activeFiltersCount > 0 ? (
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
+                  {activeFiltersCount}
+                </span>
+              ) : null}
+            </Button>
+          </div>
+        </div>
+
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="فلاتر الجدول الدراسي"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={clearFilters}
+                className="flex-1 gap-1.5"
+              >
+                <Trash2 className="h-4 w-4" />
+                مسح
+              </Button>
+              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
+                تطبيق
+              </Button>
             </div>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={termFilter}
-              onChange={(event) => {
-                setPage(1);
-                setTermFilter(event.target.value);
-                setOfferingFilter("all");
-              }}
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectField
+              value={filterDraft.term}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  term: event.target.value,
+                  offering: "all",
+                }))
+              }
               disabled={!canReadAcademicTerms}
             >
               <option value="all">كل الفصول</option>
@@ -625,15 +550,16 @@ export function TimetableEntriesWorkspace() {
                   {term.code}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={sectionFilter}
-              onChange={(event) => {
-                setPage(1);
-                setSectionFilter(event.target.value);
-              }}
+            <SelectField
+              value={filterDraft.section}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  section: event.target.value,
+                }))
+              }
               disabled={!canReadSections}
             >
               <option value="all">كل الشعب</option>
@@ -642,15 +568,16 @@ export function TimetableEntriesWorkspace() {
                   {section.code}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={offeringFilter}
-              onChange={(event) => {
-                setPage(1);
-                setOfferingFilter(event.target.value);
-              }}
+            <SelectField
+              value={filterDraft.offering}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  offering: event.target.value,
+                }))
+              }
               disabled={!canReadTermSubjectOfferings}
             >
               <option value="all">كل العروض</option>
@@ -660,15 +587,16 @@ export function TimetableEntriesWorkspace() {
                   {offering.gradeLevelSubject.subject.code}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={dayFilter}
-              onChange={(event) => {
-                setPage(1);
-                setDayFilter(event.target.value as TimetableDay | "all");
-              }}
+            <SelectField
+              value={filterDraft.day}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  day: event.target.value as TimetableDay | "all",
+                }))
+              }
             >
               <option value="all">كل الأيام</option>
               {DAY_OPTIONS.map((day) => (
@@ -676,160 +604,367 @@ export function TimetableEntriesWorkspace() {
                   {translateTimetableDay(day)}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={activeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setActiveFilter(event.target.value as "all" | "active" | "inactive");
-              }}
+            <SelectField
+              value={filterDraft.active}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  active: event.target.value as "all" | "active" | "inactive",
+                }))
+              }
             >
               <option value="all">كل الحالات</option>
               <option value="active">النشطة فقط</option>
               <option value="inactive">غير النشطة فقط</option>
-            </select>
+            </SelectField>
+          </div>
+        </FilterDrawer>
 
-            <Button type="submit" variant="outline" className="gap-2">
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
-          </form>
-        </CardHeader>
-
-        <CardContent className="space-y-3">
-          {entriesQuery.isPending ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ تحميل البيانات...
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+          <CardHeader className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>حصص الجدول الدراسي</CardTitle>
+              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
-          ) : null}
+            <CardDescription>
+              إدارة الحصص المجدولة مع بحث موحد وفلاتر واضحة حسب الفصل والشعبة والمادة واليوم.
+            </CardDescription>
+          </CardHeader>
 
-          {entriesQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {entriesQuery.error instanceof Error
-                ? entriesQuery.error.message
-                : "تعذّر تحميل البيانات."}
-            </div>
-          ) : null}
+          <CardContent className="space-y-3">
+            {entriesQuery.isPending ? (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                جارٍ تحميل البيانات...
+              </div>
+            ) : null}
 
-          {!entriesQuery.isPending && entries.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              لا توجد حصص مطابقة.
-            </div>
-          ) : null}
+            {entriesQuery.error ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                {entriesQuery.error instanceof Error
+                  ? entriesQuery.error.message
+                  : "تعذّر تحميل البيانات."}
+              </div>
+            ) : null}
 
-          {entries.map((entry) => (
-            <div
-              key={entry.id}
-              className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <p className="font-medium">
-                    {entry.section.name} - {entry.termSubjectOffering.gradeLevelSubject.subject.name}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    الفصل: {entry.academicTerm.name} ({entry.academicTerm.code})
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    اليوم: {translateTimetableDay(entry.dayOfWeek)} | الحصة: {entry.periodIndex}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    الشعبة: {entry.section.code}
-                    {entry.roomLabel ? ` | القاعة: ${entry.roomLabel}` : ""}
-                  </p>
-                  {entry.notes ? (
-                    <p className="text-xs text-muted-foreground">ملاحظات: {entry.notes}</p>
-                  ) : null}
+            {!entriesQuery.isPending && entries.length === 0 ? (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                لا توجد حصص مطابقة.
+              </div>
+            ) : null}
+
+            {entries.map((entry) => (
+              <div
+                key={entry.id}
+                className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="space-y-1">
+                    <p className="font-medium">
+                      {entry.section.name} - {entry.termSubjectOffering.gradeLevelSubject.subject.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      الفصل: {entry.academicTerm.name} ({entry.academicTerm.code})
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      اليوم: {translateTimetableDay(entry.dayOfWeek)} | الحصة: {entry.periodIndex}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      الشعبة: {entry.section.code}
+                      {entry.roomLabel ? ` | القاعة: ${entry.roomLabel}` : ""}
+                    </p>
+                    {entry.notes ? (
+                      <p className="text-xs text-muted-foreground">ملاحظات: {entry.notes}</p>
+                    ) : null}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge variant="outline">{translateTimetableDay(entry.dayOfWeek)}</Badge>
+                    <Badge variant={entry.isActive ? "default" : "outline"}>
+                      {entry.isActive ? "نشط" : "غير نشط"}
+                    </Badge>
+                  </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant="outline">{translateTimetableDay(entry.dayOfWeek)}</Badge>
-                  <Badge variant={entry.isActive ? "default" : "outline"}>
-                    {entry.isActive ? "نشط" : "غير نشط"}
-                  </Badge>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleStartEdit(entry)}
+                    disabled={!canUpdate || updateMutation.isPending}
+                  >
+                    <PencilLine className="h-3.5 w-3.5" />
+                    تعديل
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleDelete(entry)}
+                    disabled={!canDelete || deleteMutation.isPending}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    حذف
+                  </Button>
                 </div>
               </div>
+            ))}
 
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
+              <p className="text-xs text-muted-foreground">
+                الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
+              </p>
+
+              <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleStartEdit(entry)}
-                  disabled={!canUpdate || updateMutation.isPending}
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={!pagination || pagination.page <= 1 || entriesQuery.isFetching}
                 >
-                  <PencilLine className="h-3.5 w-3.5" />
-                  تعديل
+                  السابق
                 </Button>
+
                 <Button
-                  variant="destructive"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setPage((prev) =>
+                      pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
+                    )
+                  }
+                  disabled={
+                    !pagination ||
+                    pagination.page >= pagination.totalPages ||
+                    entriesQuery.isFetching
+                  }
+                >
+                  التالي
+                </Button>
+
+                <Button
+                  variant="ghost"
                   size="sm"
                   className="gap-1.5"
-                  onClick={() => handleDelete(entry)}
-                  disabled={!canDelete || deleteMutation.isPending}
+                  onClick={() => void entriesQuery.refetch()}
+                  disabled={entriesQuery.isFetching}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  حذف
+                  <RefreshCw
+                    className={`h-4 w-4 ${entriesQuery.isFetching ? "animate-spin" : ""}`}
+                  />
+                  تحديث
                 </Button>
               </div>
             </div>
-          ))}
+          </CardContent>
+        </Card>
+      </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-            <p className="text-xs text-muted-foreground">
-              الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-            </p>
+      <Fab
+        icon={<Plus className="h-4 w-4" />}
+        label="إنشاء"
+        ariaLabel="إنشاء حصة جدول"
+        onClick={handleStartCreate}
+        disabled={!canCreate}
+      />
 
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={!pagination || pagination.page <= 1 || entriesQuery.isFetching}
-              >
-                السابق
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPage((prev) =>
-                    pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                  )
-                }
-                disabled={
-                  !pagination ||
-                  pagination.page >= pagination.totalPages ||
-                  entriesQuery.isFetching
-                }
-              >
-                التالي
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => void entriesQuery.refetch()}
-                disabled={entriesQuery.isFetching}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${entriesQuery.isFetching ? "animate-spin" : ""}`}
-                />
-                تحديث
-              </Button>
-            </div>
+      <BottomSheetForm
+        open={isFormOpen}
+        title={isEditing ? "تعديل حصة جدول" : "إنشاء حصة جدول"}
+        onClose={resetForm}
+        onSubmit={() => handleSubmitForm()}
+        isSubmitting={isFormSubmitting}
+        submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء حصة"}
+        showFooter={false}
+      >
+        {!canCreate && !isEditing ? (
+          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+            لا تملك الصلاحية المطلوبة: <code>timetable-entries.create</code>.
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        ) : (
+          <form className="space-y-3" onSubmit={handleSubmitForm}>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الفصل الأكاديمي *</label>
+              <SelectField
+                value={formState.academicTermId}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    academicTermId: event.target.value,
+                    termSubjectOfferingId: "",
+                    sectionId: "",
+                  }))
+                }
+                disabled={!canReadAcademicTerms}
+              >
+                <option value="">اختر الفصل الدراسي</option>
+                {termOptions.map((term) => (
+                  <option key={term.id} value={term.id}>
+                    {term.name} ({term.code})
+                  </option>
+                ))}
+              </SelectField>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">عرض المادة *</label>
+              <SelectField
+                value={formState.termSubjectOfferingId}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    termSubjectOfferingId: event.target.value,
+                    sectionId: "",
+                  }))
+                }
+                disabled={!canReadTermSubjectOfferings || !formState.academicTermId}
+              >
+                <option value="">اختر الطرح</option>
+                {formOfferings.map((offering) => (
+                  <option key={offering.id} value={offering.id}>
+                    {offering.gradeLevelSubject.gradeLevel.code} -{" "}
+                    {offering.gradeLevelSubject.subject.code}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الشعبة *</label>
+              <SelectField
+                value={formState.sectionId}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    sectionId: event.target.value,
+                  }))
+                }
+                disabled={!canReadSections || !formState.termSubjectOfferingId}
+              >
+                <option value="">اختر الشعبة</option>
+                {formSectionOptions.map((section) => (
+                  <option key={section.id} value={section.id}>
+                    {section.name} ({section.code})
+                  </option>
+                ))}
+              </SelectField>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">اليوم *</label>
+                <SelectField
+                  value={formState.dayOfWeek}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      dayOfWeek: event.target.value as TimetableDay,
+                    }))
+                  }
+                >
+                  {DAY_OPTIONS.map((day) => (
+                    <option key={day} value={day}>
+                      {translateTimetableDay(day)}
+                    </option>
+                  ))}
+                </SelectField>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">رقم الحصة *</label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={formState.periodIndex}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, periodIndex: event.target.value }))
+                  }
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">اسم القاعة</label>
+              <Input
+                value={formState.roomLabel}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, roomLabel: event.target.value }))
+                }
+                placeholder="A-204"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
+              <Input
+                value={formState.notes}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, notes: event.target.value }))
+                }
+                placeholder="ملاحظات اختيارية"
+              />
+            </div>
+
+            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+              <span>نشط</span>
+              <input
+                type="checkbox"
+                checked={formState.isActive}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                }
+              />
+            </label>
+
+            {formError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {formError}
+              </div>
+            ) : null}
+
+            {mutationError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {mutationError}
+              </div>
+            ) : null}
+
+            {!hasDependenciesReadPermissions ? (
+              <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+                يتطلب هذا الجزء صلاحيات القراءة المرتبطة: <code>academic-terms.read</code>,{" "}
+                <code>sections.read</code>, <code>term-subject-offerings.read</code>.
+              </div>
+            ) : null}
+
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                className="flex-1 gap-2"
+                disabled={
+                  isFormSubmitting ||
+                  (!canCreate && !isEditing) ||
+                  !hasDependenciesReadPermissions
+                }
+              >
+                {isFormSubmitting ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CalendarClock className="h-4 w-4" />
+                )}
+                {isEditing ? "حفظ التعديلات" : "إنشاء حصة"}
+              </Button>
+              {isEditing ? (
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  إلغاء
+                </Button>
+              ) : null}
+            </div>
+          </form>
+        )}
+      </BottomSheetForm>
+    </>
   );
 }
-
-
-
-
-

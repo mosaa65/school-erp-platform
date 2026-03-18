@@ -25,44 +25,36 @@ export class CreateGradingPolicyDto {
   @IsString()
   subjectId!: string;
 
+  @ApiPropertyOptional({ example: 'cmabc123assessmentTypeLookup' })
+  @IsOptional()
+  @IsString()
+  assessmentTypeLookupId?: string;
+
   @ApiProperty({ enum: AssessmentType, example: AssessmentType.MONTHLY })
   @IsEnum(AssessmentType)
   assessmentType!: AssessmentType;
 
-  @ApiPropertyOptional({ example: 20 })
+  @ApiPropertyOptional({ example: 100 })
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
-  maxExamScore?: number;
+  totalMaxScore?: number;
 
-  @ApiPropertyOptional({ example: 5 })
+  @ApiPropertyOptional({ example: 'cmabc123section' })
   @IsOptional()
-  @Type(() => Number)
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  maxHomeworkScore?: number;
+  @IsString()
+  sectionId?: string;
 
-  @ApiPropertyOptional({ example: 5 })
+  @ApiPropertyOptional({ example: 'cmabc123term' })
   @IsOptional()
-  @Type(() => Number)
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  maxAttendanceScore?: number;
+  @IsString()
+  academicTermId?: string;
 
-  @ApiPropertyOptional({ example: 5 })
+  @ApiPropertyOptional({ example: 'cmabc123teacher' })
   @IsOptional()
-  @Type(() => Number)
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  maxActivityScore?: number;
-
-  @ApiPropertyOptional({ example: 0 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  maxContributionScore?: number;
+  @IsString()
+  teacherEmployeeId?: string;
 
   @ApiPropertyOptional({ example: 50 })
   @IsOptional()

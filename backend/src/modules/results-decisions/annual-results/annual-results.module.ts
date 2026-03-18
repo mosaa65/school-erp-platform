@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
 import { AuditLogsModule } from '../../audit-logs/audit-logs.module';
+import { GradingPoliciesModule } from '../../evaluation-policies/grading-policies/grading-policies.module';
 import { AnnualResultsController } from './annual-results.controller';
 import { AnnualResultsService } from './annual-results.service';
 
 @Module({
-  imports: [AuditLogsModule],
+  imports: [AuditLogsModule, GradingPoliciesModule],
   controllers: [AnnualResultsController],
   providers: [AnnualResultsService],
   exports: [AnnualResultsService],

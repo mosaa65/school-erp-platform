@@ -1,31 +1,9 @@
 import { Type } from 'class-transformer';
-import {
-  IsBoolean,
-  IsEnum,
-  IsNumber,
-  IsOptional,
-  IsString,
-  MaxLength,
-  Min,
-} from 'class-validator';
+import { IsBoolean, IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { GradingWorkflowStatus } from '@prisma/client';
 
 export class UpdateMonthlyGradeDto {
-  @ApiPropertyOptional({ example: 2.5 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  activityScore?: number;
-
-  @ApiPropertyOptional({ example: 1.5 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  contributionScore?: number;
-
   @ApiPropertyOptional({
     enum: GradingWorkflowStatus,
     example: GradingWorkflowStatus.IN_REVIEW,

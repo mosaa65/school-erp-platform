@@ -3,16 +3,17 @@
 import * as React from "react";
 import {
   CalendarCheck2,
+  Filter,
   LoaderCircle,
   Lock,
   PencilLine,
+  Plus,
   RefreshCw,
-  Search,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -20,16 +21,22 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Fab } from "@/components/ui/fab";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField } from "@/components/ui/select-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateStudentExamScoreMutation,
   useDeleteStudentExamScoreMutation,
   useUpdateStudentExamScoreMutation,
 } from "@/features/exams/student-exam-scores/hooks/use-student-exam-scores-mutations";
-import { useStudentExamScoresQuery } from "@/features/exams/student-exam-scores/hooks/use-student-exam-scores-query";
-import { useExamPeriodOptionsQuery } from "@/features/exams/student-exam-scores/hooks/use-exam-period-options-query";
 import { useExamAssessmentOptionsQuery } from "@/features/exams/student-exam-scores/hooks/use-exam-assessment-options-query";
+import { useExamPeriodOptionsQuery } from "@/features/exams/student-exam-scores/hooks/use-exam-period-options-query";
 import { useStudentEnrollmentOptionsQuery } from "@/features/exams/student-exam-scores/hooks/use-student-enrollment-options-query";
+import { useStudentExamScoresQuery } from "@/features/exams/student-exam-scores/hooks/use-student-exam-scores-query";
 import {
   translateAssessmentType,
   translateExamAbsenceType,
@@ -94,20 +101,35 @@ export function StudentExamScoresWorkspace() {
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
+  const [debounceTimer, setDebounceTimer] = React.useState<NodeJS.Timeout | null>(null);
   const [examPeriodFilter, setExamPeriodFilter] = React.useState("all");
   const [assessmentFilter, setAssessmentFilter] = React.useState("all");
   const [presenceFilter, setPresenceFilter] = React.useState<"all" | "present" | "absent">("all");
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">("all");
+  const [filterDraft, setFilterDraft] = React.useState<{
+    examPeriod: string;
+    assessment: string;
+    presence: "all" | "present" | "absent";
+    active: "all" | "active" | "inactive";
+  }>({
+    examPeriod: "all",
+    assessment: "all",
+    presence: "all",
+    active: "all",
+  });
 
   const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [form, setForm] = React.useState<FormState>(DEFAULT_FORM);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
 
   const examPeriodsQuery = useExamPeriodOptionsQuery();
   const assessmentsForFormQuery = useExamAssessmentOptionsQuery(form.examPeriodId || undefined);
+  const filterExamPeriodId = isFilterOpen ? filterDraft.examPeriod : examPeriodFilter;
   const assessmentsForFilterQuery = useExamAssessmentOptionsQuery(
-    examPeriodFilter === "all" ? undefined : examPeriodFilter,
+    filterExamPeriodId === "all" ? undefined : filterExamPeriodId,
   );
   const enrollmentsQuery = useStudentEnrollmentOptionsQuery();
 
@@ -148,27 +170,100 @@ export function StudentExamScoresWorkspace() {
     (deleteMutation.error as Error | null)?.message ??
     null;
 
-  const resetForm = () => {
+  React.useEffect(() => {
+    if (!editingId) {
+      return;
+    }
+
+    const stillExists = records.some((item) => item.id === editingId);
+    if (!stillExists) {
+      setEditingId(null);
+      setForm(DEFAULT_FORM);
+      setFormError(null);
+      setIsFormOpen(false);
+    }
+  }, [editingId, records]);
+
+  React.useEffect(() => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+
+    const timer = setTimeout(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 400);
+
+    setDebounceTimer(timer);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [searchInput]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setFilterDraft({
+      examPeriod: examPeriodFilter,
+      assessment: assessmentFilter,
+      presence: presenceFilter,
+      active: activeFilter,
+    });
+  }, [activeFilter, assessmentFilter, examPeriodFilter, isFilterOpen, presenceFilter]);
+
+  const resetFormState = () => {
     setEditingId(null);
     setForm(DEFAULT_FORM);
     setFormError(null);
   };
 
+  const resetForm = () => {
+    resetFormState();
+    setIsFormOpen(false);
+  };
+
+  const handleStartCreate = () => {
+    if (!canCreate) {
+      return;
+    }
+
+    setFormError(null);
+    setActionSuccess(null);
+    setEditingId(null);
+    setForm(DEFAULT_FORM);
+    setIsFormOpen(true);
+  };
+
+  const handleStartEdit = (item: StudentExamScoreListItem) => {
+    if (!canUpdate || item.examAssessment.examPeriod.isLocked) {
+      return;
+    }
+
+    setFormError(null);
+    setActionSuccess(null);
+    setEditingId(item.id);
+    setForm(toFormState(item));
+    setIsFormOpen(true);
+  };
+
   const validateForm = (): boolean => {
     if (!form.examAssessmentId || !form.studentEnrollmentId) {
-      setFormError("الاختبار والقيد مطلوبان.");
+      setFormError("???????? ?????? ???????.");
       return false;
     }
     if (form.teacherNotes.trim().length > 255 || form.excuseDetails.trim().length > 255) {
-      setFormError("ملاحظات المعلم وتفاصيل العذر يجب ألا تتجاوز 255 حرفًا.");
+      setFormError("??????? ?????? ??????? ????? ??? ??? ?????? 255 ?????.");
       return false;
     }
     if (!selectedAssessment) {
-      setFormError("الاختبار غير صالح.");
+      setFormError("???????? ??? ????.");
       return false;
     }
     if (selectedAssessment.examPeriod.isLocked) {
-      setFormError("الفترة الاختبارية مقفلة.");
+      setFormError("?????? ?????????? ?????.");
       return false;
     }
 
@@ -176,24 +271,24 @@ export function StudentExamScoresWorkspace() {
       (item) => item.id === form.studentEnrollmentId,
     );
     if (!selectedEnrollment) {
-      setFormError("قيد الطالب غير صالح.");
+      setFormError("??? ?????? ??? ????.");
       return false;
     }
     if (
       selectedEnrollment.sectionId !== selectedAssessment.sectionId ||
       selectedEnrollment.academicYearId !== selectedAssessment.examPeriod.academicYearId
     ) {
-      setFormError("قيد الطالب لا يطابق الشعبة/السنة الخاصة بالاختبار.");
+      setFormError("??? ?????? ?? ????? ??????/????? ?????? ?????????.");
       return false;
     }
 
     const score = Number(form.score || "0");
     if (!Number.isFinite(score) || score < 0) {
-      setFormError("الدرجة يجب أن تكون رقمًا صالحًا أكبر من أو يساوي 0.");
+      setFormError("?????? ??? ?? ???? ????? ?????? ???? ?? ?? ????? 0.");
       return false;
     }
     if (form.isPresent && score > selectedAssessment.maxScore) {
-      setFormError(`الدرجة يجب ألا تتجاوز ${selectedAssessment.maxScore}.`);
+      setFormError(`?????? ??? ??? ?????? ${selectedAssessment.maxScore}.`);
       return false;
     }
 
@@ -221,7 +316,7 @@ export function StudentExamScoresWorkspace() {
 
     if (editingId) {
       if (!canUpdate) {
-        setFormError("لا تملك الصلاحية المطلوبة: student-exam-scores.update.");
+        setFormError("?? ???? ???????? ????????: student-exam-scores.update.");
         return;
       }
       updateMutation.mutate(
@@ -229,7 +324,7 @@ export function StudentExamScoresWorkspace() {
         {
           onSuccess: () => {
             resetForm();
-            setActionSuccess("تم تحديث درجة الاختبار بنجاح.");
+            setActionSuccess("?? ????? ???? ???????? ?????.");
           },
         },
       );
@@ -237,236 +332,498 @@ export function StudentExamScoresWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("لا تملك الصلاحية المطلوبة: student-exam-scores.create.");
+      setFormError("?? ???? ???????? ????????: student-exam-scores.create.");
       return;
     }
     createMutation.mutate(payload, {
       onSuccess: () => {
         resetForm();
-        setActionSuccess("تم إنشاء درجة الاختبار بنجاح.");
+        setPage(1);
+        setActionSuccess("?? ????? ???? ???????? ?????.");
+      },
+    });
+  };
+
+  const handleToggleActive = (item: StudentExamScoreListItem) => {
+    if (!canUpdate || item.examAssessment.examPeriod.isLocked) {
+      return;
+    }
+
+    updateMutation.mutate(
+      {
+        studentExamScoreId: item.id,
+        payload: { isActive: !item.isActive },
+      },
+      {
+        onSuccess: () => {
+          setActionSuccess(
+            item.isActive ? "?? ????? ???? ???????? ?????." : "?? ????? ???? ???????? ?????.",
+          );
+        },
+      },
+    );
+  };
+
+  const handleDelete = (item: StudentExamScoreListItem) => {
+    if (!canDelete || item.examAssessment.examPeriod.isLocked) {
+      return;
+    }
+
+    if (!window.confirm("????? ??????")) {
+      return;
+    }
+
+    deleteMutation.mutate(item.id, {
+      onSuccess: () => {
+        setActionSuccess("?? ??? ???? ???????? ?????.");
       },
     });
   };
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setExamPeriodFilter("all");
+    setAssessmentFilter("all");
+    setPresenceFilter("all");
+    setActiveFilter("all");
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    setPage(1);
+    setExamPeriodFilter(filterDraft.examPeriod);
+    setAssessmentFilter(filterDraft.assessment);
+    setPresenceFilter(filterDraft.presence);
+    setActiveFilter(filterDraft.active);
+    setIsFilterOpen(false);
+  };
+
+  const activeFiltersCount = React.useMemo(() => {
+    const count = [
+      searchInput.trim() ? 1 : 0,
+      examPeriodFilter !== "all" ? 1 : 0,
+      assessmentFilter !== "all" ? 1 : 0,
+      presenceFilter !== "all" ? 1 : 0,
+      activeFilter !== "all" ? 1 : 0,
+    ].reduce((acc, value) => acc + value, 0);
+    return count;
+  }, [activeFilter, assessmentFilter, examPeriodFilter, presenceFilter, searchInput]);
+
   return (
-    <div className="grid gap-4 xl:grid-cols-[470px_1fr]">
-      <Card className="h-fit border-border/70 bg-card/80">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CalendarCheck2 className="h-5 w-5 text-primary" />
-            {editingId ? "تعديل درجة اختبار" : "إنشاء درجة اختبار"}
-          </CardTitle>
-          <CardDescription>إدارة درجات الاختبارات للطلاب.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-3" onSubmit={handleSubmit}>
-            <select
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-              value={form.examPeriodId}
-              onChange={(event) =>
-                setForm((prev) => ({
+    <>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[260px] max-w-lg">
+            <SearchField
+              containerClassName="flex-1"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="???..."
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterTriggerButton
+              count={activeFiltersCount}
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+            />
+          </div>
+        </div>
+
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="????? ????? ??????????"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={clearFilters}
+                className="flex-1 gap-1.5"
+              >
+                <Trash2 className="h-4 w-4" />
+                ???
+              </Button>
+              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
+                ?????
+              </Button>
+            </div>
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectField
+              value={filterDraft.examPeriod}
+              onChange={(event) => {
+                const nextValue = event.target.value;
+                setFilterDraft((prev) => ({
                   ...prev,
-                  examPeriodId: event.target.value,
-                  examAssessmentId: "",
-                  studentEnrollmentId: "",
-                }))
-              }
+                  examPeriod: nextValue,
+                  assessment: "all",
+                }));
+              }}
             >
-              <option value="">اختر الفترة *</option>
+              <option value="all">?? ???????</option>
               {(examPeriodsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name} ({translateAssessmentType(item.assessmentType)})
                 </option>
               ))}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-              value={form.examAssessmentId}
+            <SelectField
+              value={filterDraft.assessment}
               onChange={(event) =>
-                setForm((prev) => ({ ...prev, examAssessmentId: event.target.value, studentEnrollmentId: "" }))
+                setFilterDraft((prev) => ({ ...prev, assessment: event.target.value }))
               }
             >
-              <option value="">اختر التقييم *</option>
-              {(assessmentsForFormQuery.data ?? []).map((item) => (
+              <option value="all">?? ?????????</option>
+              {(assessmentsForFilterQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.title} ({formatSectionWithGradeLabel(item.section)} / {formatNameCodeLabel(item.subject.name, item.subject.code)})
+                  {item.title}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-              value={form.studentEnrollmentId}
-              onChange={(event) => setForm((prev) => ({ ...prev, studentEnrollmentId: event.target.value }))}
+            <SelectField
+              value={filterDraft.presence}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  presence: event.target.value as "all" | "present" | "absent",
+                }))
+              }
             >
-              <option value="">اختر القيد *</option>
-              {formEnrollments.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.student.fullName} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatSectionWithGradeLabel(item.section)})
-                </option>
-              ))}
-            </select>
+              <option value="all">???? ??????: ????</option>
+              <option value="present">????</option>
+              <option value="absent">????</option>
+            </SelectField>
 
-            <div className="grid gap-3 md:grid-cols-2">
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>حاضر</span>
-                <input
-                  type="checkbox"
-                  checked={form.isPresent}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, isPresent: event.target.checked, score: event.target.checked ? prev.score : "0" }))
-                  }
-                />
-              </label>
-              <Input
-                type="number"
-                min={0}
-                step={0.01}
-                value={form.score}
-                onChange={(event) => setForm((prev) => ({ ...prev, score: event.target.value }))}
-                placeholder="الدرجة"
-                disabled={!form.isPresent}
-              />
+            <SelectField
+              value={filterDraft.active}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  active: event.target.value as "all" | "active" | "inactive",
+                }))
+              }
+            >
+              <option value="all">????</option>
+              <option value="active">???</option>
+              <option value="inactive">??? ???</option>
+            </SelectField>
+          </div>
+        </FilterDrawer>
+
+        <Card className="border-border/70 bg-card/80">
+          <CardHeader className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>????? ???????? ??????</CardTitle>
+              <Badge variant="secondary">????????: {pagination?.total ?? 0}</Badge>
             </div>
+            <CardDescription>????? ????? ?????????? ??????.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {actionSuccess ? (
+              <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
+                {actionSuccess}
+              </div>
+            ) : null}
+            {scoresQuery.isPending ? (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                ???? ????? ????????...
+              </div>
+            ) : null}
+            {scoresQuery.error ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                {scoresQuery.error instanceof Error
+                  ? scoresQuery.error.message
+                  : "????? ????? ????????."}
+              </div>
+            ) : null}
+            {!scoresQuery.isPending && records.length === 0 ? (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                ?? ???? ?????.
+              </div>
+            ) : null}
 
-            <div className="grid gap-3 md:grid-cols-2">
-              <select
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                value={form.absenceType}
-                onChange={(event) => setForm((prev) => ({ ...prev, absenceType: event.target.value as ExamAbsenceType }))}
-                disabled={form.isPresent}
+            {records.map((item) => (
+              <div
+                key={item.id}
+                className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
               >
-                <option value="UNEXCUSED">{translateExamAbsenceType("UNEXCUSED")}</option>
-                <option value="EXCUSED">{translateExamAbsenceType("EXCUSED")}</option>
-              </select>
-              <Input
-                value={form.excuseDetails}
-                onChange={(event) => setForm((prev) => ({ ...prev, excuseDetails: event.target.value }))}
-                placeholder="تفاصيل العذر"
-                disabled={form.isPresent}
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="space-y-1">
+                    <p className="font-medium">
+                      {item.studentEnrollment.student.fullName} - {item.examAssessment.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      ??????: {item.score}/{item.examAssessment.maxScore}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge variant={item.isPresent ? "default" : "secondary"}>
+                      {item.isPresent
+                        ? "????"
+                        : `???? (${getAbsenceTypeLabel(item.absenceType ?? "UNEXCUSED")})`}
+                    </Badge>
+                    {item.examAssessment.examPeriod.isLocked ? (
+                      <Badge variant="outline" className="gap-1.5">
+                        <Lock className="h-3.5 w-3.5" />????
+                      </Badge>
+                    ) : null}
+                    <Badge variant={item.isActive ? "default" : "outline"}>
+                      {item.isActive ? "???" : "??? ???"}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleStartEdit(item)}
+                    disabled={!canUpdate || item.examAssessment.examPeriod.isLocked || updateMutation.isPending}
+                  >
+                    <PencilLine className="h-3.5 w-3.5" />
+                    ?????
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleToggleActive(item)}
+                    disabled={!canUpdate || item.examAssessment.examPeriod.isLocked || updateMutation.isPending}
+                  >
+                    {item.isActive ? "?????" : "?????"}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleDelete(item)}
+                    disabled={!canDelete || item.examAssessment.examPeriod.isLocked || deleteMutation.isPending}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    ???
+                  </Button>
+                </div>
+              </div>
+            ))}
+
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
+              <p className="text-xs text-muted-foreground">
+                ?????? {pagination?.page ?? 1} ?? {pagination?.totalPages ?? 1}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={!pagination || pagination.page <= 1 || scoresQuery.isFetching}
+                >
+                  ??????
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setPage((prev) =>
+                      pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
+                    )
+                  }
+                  disabled={!pagination || pagination.page >= pagination.totalPages || scoresQuery.isFetching}
+                >
+                  ??????
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => void scoresQuery.refetch()}
+                  disabled={scoresQuery.isFetching}
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${scoresQuery.isFetching ? "animate-spin" : ""}`}
+                  />
+                  ?????
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Fab
+        icon={<Plus className="h-4 w-4" />}
+        label="?????"
+        ariaLabel="????? ???? ??????"
+        onClick={handleStartCreate}
+        disabled={!canCreate}
+      />
+
+      <BottomSheetForm
+        open={isFormOpen}
+        title={editingId ? "????? ???? ??????" : "????? ???? ??????"}
+        onClose={resetForm}
+        onSubmit={() => undefined}
+        isSubmitting={isSubmitting}
+        submitLabel={editingId ? "??? ?????????" : "????? ???? ??????"}
+        showFooter={false}
+      >
+        <form className="space-y-3" onSubmit={handleSubmit}>
+          <select
+            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            value={form.examPeriodId}
+            onChange={(event) =>
+              setForm((prev) => ({
+                ...prev,
+                examPeriodId: event.target.value,
+                examAssessmentId: "",
+                studentEnrollmentId: "",
+              }))
+            }
+          >
+            <option value="">???? ?????? *</option>
+            {(examPeriodsQuery.data ?? []).map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name} ({translateAssessmentType(item.assessmentType)})
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            value={form.examAssessmentId}
+            onChange={(event) =>
+              setForm((prev) => ({
+                ...prev,
+                examAssessmentId: event.target.value,
+                studentEnrollmentId: "",
+              }))
+            }
+          >
+            <option value="">???? ??????? *</option>
+            {(assessmentsForFormQuery.data ?? []).map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.title} ({formatSectionWithGradeLabel(item.section)} / {formatNameCodeLabel(item.subject.name, item.subject.code)})
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            value={form.studentEnrollmentId}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, studentEnrollmentId: event.target.value }))
+            }
+          >
+            <option value="">???? ????? *</option>
+            {formEnrollments.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.student.fullName} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatSectionWithGradeLabel(item.section)})
+              </option>
+            ))}
+          </select>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+              <span>????</span>
+              <input
+                type="checkbox"
+                checked={form.isPresent}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    isPresent: event.target.checked,
+                    score: event.target.checked ? prev.score : "0",
+                  }))
+                }
               />
-            </div>
-
+            </label>
             <Input
-              value={form.teacherNotes}
-              onChange={(event) => setForm((prev) => ({ ...prev, teacherNotes: event.target.value }))}
-              placeholder="ملاحظات المعلم"
+              type="number"
+              min={0}
+              step={0.01}
+              value={form.score}
+              onChange={(event) => setForm((prev) => ({ ...prev, score: event.target.value }))}
+              placeholder="??????"
+              disabled={!form.isPresent}
             />
-
-            {formError ? <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">{formError}</div> : null}
-            {mutationError ? <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">{mutationError}</div> : null}
-            {actionSuccess ? <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">{actionSuccess}</div> : null}
-
-            <div className="flex gap-2">
-              <Button type="submit" className="flex-1 gap-2" disabled={isSubmitting}>
-                {isSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CalendarCheck2 className="h-4 w-4" />}
-                {editingId ? "حفظ التعديلات" : "إنشاء درجة اختبار"}
-              </Button>
-              {editingId ? (
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  إلغاء
-                </Button>
-              ) : null}
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-card/80">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>درجات اختبارات الطلاب</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
-          <form onSubmit={(event) => { event.preventDefault(); setPage(1); setSearch(searchInput.trim()); }} className="grid gap-2 md:grid-cols-[1fr_170px_170px_130px_110px_110px_auto]">
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="بحث..." className="pr-8" />
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <select
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              value={form.absenceType}
+              onChange={(event) =>
+                setForm((prev) => ({
+                  ...prev,
+                  absenceType: event.target.value as ExamAbsenceType,
+                }))
+              }
+              disabled={form.isPresent}
+            >
+              <option value="UNEXCUSED">{translateExamAbsenceType("UNEXCUSED")}</option>
+              <option value="EXCUSED">{translateExamAbsenceType("EXCUSED")}</option>
+            </select>
+            <Input
+              value={form.excuseDetails}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, excuseDetails: event.target.value }))
+              }
+              placeholder="?????? ?????"
+              disabled={form.isPresent}
+            />
+          </div>
+
+          <Input
+            value={form.teacherNotes}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, teacherNotes: event.target.value }))
+            }
+            placeholder="??????? ??????"
+          />
+
+          <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+            <span>???</span>
+            <input
+              type="checkbox"
+              checked={form.isActive}
+              onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
+            />
+          </label>
+
+          {formError ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+              {formError}
             </div>
-            <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={examPeriodFilter} onChange={(event) => { setPage(1); setExamPeriodFilter(event.target.value); setAssessmentFilter("all"); }}>
-              <option value="all">كل الفترات</option>
-              {(examPeriodsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.name} ({translateAssessmentType(item.assessmentType)})</option>)}
-            </select>
-            <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={assessmentFilter} onChange={(event) => { setPage(1); setAssessmentFilter(event.target.value); }}>
-              <option value="all">كل التقييمات</option>
-              {(assessmentsForFilterQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
-            </select>
-            <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={presenceFilter} onChange={(event) => { setPage(1); setPresenceFilter(event.target.value as "all" | "present" | "absent"); }}>
-              <option value="all">حالة الحضور: الكل</option>
-              <option value="present">حاضر</option>
-              <option value="absent">غائب</option>
-            </select>
-            <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={activeFilter} onChange={(event) => { setPage(1); setActiveFilter(event.target.value as "all" | "active" | "inactive"); }}>
-              <option value="all">الكل</option>
-              <option value="active">نشط</option>
-              <option value="inactive">غير نشط</option>
-            </select>
-            <Button type="submit" variant="outline" className="gap-2">
-              <Search className="h-4 w-4" />
-              تطبيق
+          ) : null}
+          {mutationError ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+              {mutationError}
+            </div>
+          ) : null}
+
+          <div className="flex gap-2">
+            <Button type="submit" className="flex-1 gap-2" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <CalendarCheck2 className="h-4 w-4" />
+              )}
+              {editingId ? "??? ?????????" : "????? ???? ??????"}
             </Button>
-          </form>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {scoresQuery.isPending ? <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">جارٍ تحميل البيانات...</div> : null}
-          {scoresQuery.error ? <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{scoresQuery.error instanceof Error ? scoresQuery.error.message : "تعذّر تحميل البيانات."}</div> : null}
-          {!scoresQuery.isPending && records.length === 0 ? <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">لا توجد نتائج.</div> : null}
-
-          {records.map((item) => (
-            <div key={item.id} className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <p className="font-medium">{item.studentEnrollment.student.fullName} - {item.examAssessment.title}</p>
-                  <p className="text-xs text-muted-foreground">الدرجة: {item.score}/{item.examAssessment.maxScore}</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant={item.isPresent ? "default" : "secondary"}>
-                    {item.isPresent ? "حاضر" : `غائب (${getAbsenceTypeLabel(item.absenceType ?? "UNEXCUSED")})`}
-                  </Badge>
-                  {item.examAssessment.examPeriod.isLocked ? <Badge variant="outline" className="gap-1.5"><Lock className="h-3.5 w-3.5" />مقفل</Badge> : null}
-                  <Badge variant={item.isActive ? "default" : "outline"}>{item.isActive ? "نشط" : "غير نشط"}</Badge>
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { if (!item.examAssessment.examPeriod.isLocked) { setEditingId(item.id); setForm(toFormState(item)); setFormError(null); setActionSuccess(null); } }} disabled={!canUpdate || item.examAssessment.examPeriod.isLocked || updateMutation.isPending}>
-                  <PencilLine className="h-3.5 w-3.5" />
-                  تعديل
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => updateMutation.mutate({ studentExamScoreId: item.id, payload: { isActive: !item.isActive } }, { onSuccess: () => setActionSuccess(item.isActive ? "تم تعطيل درجة الاختبار بنجاح." : "تم تفعيل درجة الاختبار بنجاح.") })} disabled={!canUpdate || item.examAssessment.examPeriod.isLocked || updateMutation.isPending}>
-                  {item.isActive ? "تعطيل" : "تفعيل"}
-                </Button>
-                <Button variant="destructive" size="sm" className="gap-1.5" onClick={() => { if (window.confirm("تأكيد الحذف؟")) deleteMutation.mutate(item.id, { onSuccess: () => setActionSuccess("تم حذف درجة الاختبار بنجاح.") }); }} disabled={!canDelete || item.examAssessment.examPeriod.isLocked || deleteMutation.isPending}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                  حذف
-                </Button>
-              </div>
-            </div>
-          ))}
-
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-            <p className="text-xs text-muted-foreground">الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}</p>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setPage((prev) => Math.max(prev - 1, 1))} disabled={!pagination || pagination.page <= 1 || scoresQuery.isFetching}>السابق</Button>
-              <Button variant="outline" size="sm" onClick={() => setPage((prev) => (pagination ? Math.min(prev + 1, pagination.totalPages) : prev))} disabled={!pagination || pagination.page >= pagination.totalPages || scoresQuery.isFetching}>التالي</Button>
-              <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => void scoresQuery.refetch()} disabled={scoresQuery.isFetching}>
-                <RefreshCw className={`h-4 w-4 ${scoresQuery.isFetching ? "animate-spin" : ""}`} />
-                تحديث
+            {editingId ? (
+              <Button type="button" variant="outline" onClick={resetForm}>
+                ?????
               </Button>
-            </div>
+            ) : null}
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </form>
+      </BottomSheetForm>
+    </>
   );
 }
-
-
-
-
-
-
-
-

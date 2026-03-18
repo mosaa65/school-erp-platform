@@ -3,15 +3,19 @@
 import * as React from "react";
 import {
   ClipboardCheck,
+  Filter,
   LoaderCircle,
   PencilLine,
+  Plus,
   RefreshCw,
-  Search,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField } from "@/components/ui/select-field";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
   CardContent,
@@ -19,6 +23,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateStudentHomeworkMutation,
@@ -135,6 +141,7 @@ export function StudentHomeworksWorkspace() {
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
+  const [debounceTimer, setDebounceTimer] = React.useState<NodeJS.Timeout | null>(null);
   const [homeworkFilter, setHomeworkFilter] = React.useState("all");
   const [enrollmentFilter, setEnrollmentFilter] = React.useState("all");
   const [studentFilter, setStudentFilter] = React.useState("all");
@@ -144,14 +151,31 @@ export function StudentHomeworksWorkspace() {
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
     "all",
   );
-  const [fromSubmittedAtInput, setFromSubmittedAtInput] = React.useState("");
-  const [toSubmittedAtInput, setToSubmittedAtInput] = React.useState("");
   const [fromSubmittedAtFilter, setFromSubmittedAtFilter] = React.useState("");
   const [toSubmittedAtFilter, setToSubmittedAtFilter] = React.useState("");
+  const [filterDraft, setFilterDraft] = React.useState<{
+    homework: string;
+    enrollment: string;
+    student: string;
+    completed: "all" | "completed" | "pending";
+    active: "all" | "active" | "inactive";
+    fromSubmittedAt: string;
+    toSubmittedAt: string;
+  }>({
+    homework: "all",
+    enrollment: "all",
+    student: "all",
+    completed: "all",
+    active: "all",
+    fromSubmittedAt: "",
+    toSubmittedAt: "",
+  });
 
   const [editingStudentHomeworkId, setEditingStudentHomeworkId] = React.useState<string | null>(
     null,
   );
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<StudentHomeworkFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
@@ -205,8 +229,12 @@ export function StudentHomeworksWorkspace() {
 
   const filteredEnrollmentOptions = React.useMemo(() => {
     const all = enrollmentsQuery.data ?? [];
-    return all.filter((item) => (studentFilter === "all" ? true : item.studentId === studentFilter));
-  }, [enrollmentsQuery.data, studentFilter]);
+    const selectedStudent = isFilterOpen ? filterDraft.student : studentFilter;
+
+    return all.filter((item) =>
+      selectedStudent === "all" ? true : item.studentId === selectedStudent,
+    );
+  }, [enrollmentsQuery.data, filterDraft.student, isFilterOpen, studentFilter]);
 
   const mutationError =
     (createMutation.error as Error | null)?.message ??
@@ -224,21 +252,62 @@ export function StudentHomeworksWorkspace() {
       setEditingStudentHomeworkId(null);
       setFormState(DEFAULT_FORM_STATE);
       setFormError(null);
+      setIsFormOpen(false);
     }
   }, [editingStudentHomeworkId, isEditing, records]);
 
-  const resetForm = () => {
+  React.useEffect(() => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+
+    const timer = setTimeout(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 400);
+
+    setDebounceTimer(timer);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [searchInput]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setFilterDraft({
+      homework: homeworkFilter,
+      enrollment: enrollmentFilter,
+      student: studentFilter,
+      completed: completedFilter,
+      active: activeFilter,
+      fromSubmittedAt: fromSubmittedAtFilter,
+      toSubmittedAt: toSubmittedAtFilter,
+    });
+  }, [
+    activeFilter,
+    completedFilter,
+    enrollmentFilter,
+    fromSubmittedAtFilter,
+    homeworkFilter,
+    isFilterOpen,
+    studentFilter,
+    toSubmittedAtFilter,
+  ]);
+
+  const resetFormState = () => {
     setEditingStudentHomeworkId(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
   };
 
-  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPage(1);
-    setSearch(searchInput.trim());
-    setFromSubmittedAtFilter(fromSubmittedAtInput);
-    setToSubmittedAtFilter(toSubmittedAtInput);
+  const resetForm = () => {
+    resetFormState();
+    setIsFormOpen(false);
+    setActionSuccess(null);
   };
 
   const validateForm = (): boolean => {
@@ -315,7 +384,7 @@ export function StudentHomeworksWorkspace() {
         },
         {
           onSuccess: () => {
-            resetForm();
+            resetFormState();
             setActionSuccess("تم تحديث واجب الطالب بنجاح.");
           },
         },
@@ -330,11 +399,23 @@ export function StudentHomeworksWorkspace() {
 
     createMutation.mutate(payload, {
       onSuccess: () => {
-        resetForm();
+        resetFormState();
         setPage(1);
         setActionSuccess("تم إنشاء واجب الطالب بنجاح.");
       },
     });
+  };
+
+  const handleStartCreate = () => {
+    if (!canCreate) {
+      return;
+    }
+
+    setFormError(null);
+    setActionSuccess(null);
+    setEditingStudentHomeworkId(null);
+    setFormState(DEFAULT_FORM_STATE);
+    setIsFormOpen(true);
   };
 
   const handleStartEdit = (item: StudentHomeworkListItem) => {
@@ -346,6 +427,7 @@ export function StudentHomeworksWorkspace() {
     setActionSuccess(null);
     setEditingStudentHomeworkId(item.id);
     setFormState(toFormState(item));
+    setIsFormOpen(true);
   };
 
   const handleToggleActive = (item: StudentHomeworkListItem) => {
@@ -397,6 +479,55 @@ export function StudentHomeworksWorkspace() {
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
   const hasDependenciesReadPermissions =
     canReadHomeworks && canReadEnrollments && canReadStudents;
+
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setHomeworkFilter("all");
+    setEnrollmentFilter("all");
+    setStudentFilter("all");
+    setCompletedFilter("all");
+    setActiveFilter("all");
+    setFromSubmittedAtFilter("");
+    setToSubmittedAtFilter("");
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    setPage(1);
+    setHomeworkFilter(filterDraft.homework);
+    setEnrollmentFilter(filterDraft.enrollment);
+    setStudentFilter(filterDraft.student);
+    setCompletedFilter(filterDraft.completed);
+    setActiveFilter(filterDraft.active);
+    setFromSubmittedAtFilter(filterDraft.fromSubmittedAt);
+    setToSubmittedAtFilter(filterDraft.toSubmittedAt);
+    setIsFilterOpen(false);
+  };
+
+  const activeFiltersCount = React.useMemo(() => {
+    const count = [
+      searchInput.trim() ? 1 : 0,
+      homeworkFilter !== "all" ? 1 : 0,
+      enrollmentFilter !== "all" ? 1 : 0,
+      studentFilter !== "all" ? 1 : 0,
+      completedFilter !== "all" ? 1 : 0,
+      activeFilter !== "all" ? 1 : 0,
+      fromSubmittedAtFilter ? 1 : 0,
+      toSubmittedAtFilter ? 1 : 0,
+    ].reduce((acc, value) => acc + value, 0);
+    return count;
+  }, [
+    activeFilter,
+    completedFilter,
+    enrollmentFilter,
+    fromSubmittedAtFilter,
+    homeworkFilter,
+    searchInput,
+    studentFilter,
+    toSubmittedAtFilter,
+  ]);
 
   return (
     <div className="grid gap-4 xl:grid-cols-[440px_1fr]">
@@ -562,103 +693,6 @@ export function StudentHomeworksWorkspace() {
           </div>
           <CardDescription>فلترة ومراجعة حالة إنجاز الواجب لكل طالب.</CardDescription>
 
-          <form
-            onSubmit={handleSearchSubmit}
-            className="grid gap-2 md:grid-cols-[1fr_150px_170px_150px_140px_140px_130px_130px_auto]"
-          >
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث..."
-                className="pr-8"
-              />
-            </div>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={studentFilter}
-              onChange={(event) => {
-                setPage(1);
-                setStudentFilter(event.target.value);
-              }}
-            >
-              <option value="all">كل الطلاب</option>
-              {(studentsQuery.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.fullName} {item.admissionNo ? `(${item.admissionNo})` : ""}
-                </option>
-              ))}
-            </select>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={enrollmentFilter}
-              onChange={(event) => {
-                setPage(1);
-                setEnrollmentFilter(event.target.value);
-              }}
-            >
-              <option value="all">كل القيود</option>
-              {filteredEnrollmentOptions.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.student.fullName} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatSectionWithGradeLabel(item.section)})
-                </option>
-              ))}
-            </select>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={homeworkFilter}
-              onChange={(event) => {
-                setPage(1);
-                setHomeworkFilter(event.target.value);
-              }}
-            >
-              <option value="all">كل الواجبات</option>
-              {(homeworksQuery.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.title} ({formatSectionWithGradeLabel(item.section)})
-                </option>
-              ))}
-            </select>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={completedFilter}
-              onChange={(event) => {
-                setPage(1);
-                setCompletedFilter(event.target.value as "all" | "completed" | "pending");
-              }}
-            >
-              <option value="all">كل الحالات</option>
-              <option value="completed">مكتمل</option>
-              <option value="pending">قيد الإنجاز</option>
-            </select>
-            <Input
-              type="date"
-              value={fromSubmittedAtInput}
-              onChange={(event) => setFromSubmittedAtInput(event.target.value)}
-            />
-            <Input
-              type="date"
-              value={toSubmittedAtInput}
-              onChange={(event) => setToSubmittedAtInput(event.target.value)}
-            />
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={activeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setActiveFilter(event.target.value as "all" | "active" | "inactive");
-              }}
-            >
-              <option value="all">الكل</option>
-              <option value="active">نشط</option>
-              <option value="inactive">غير نشط</option>
-            </select>
-            <Button type="submit" variant="outline" className="gap-2">
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
-          </form>
         </CardHeader>
 
         <CardContent className="space-y-3">

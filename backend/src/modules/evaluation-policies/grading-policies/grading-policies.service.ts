@@ -83,12 +83,9 @@ export class GradingPoliciesService {
           gradeLevelId: payload.gradeLevelId,
           subjectId: payload.subjectId,
           assessmentType: payload.assessmentType,
-          maxExamScore: payload.maxExamScore ?? 0,
-          maxHomeworkScore: payload.maxHomeworkScore ?? 0,
-          maxAttendanceScore: payload.maxAttendanceScore ?? 0,
-          maxActivityScore: payload.maxActivityScore ?? 0,
-          maxContributionScore: payload.maxContributionScore ?? 0,
-          passingScore: payload.passingScore ?? 0,
+          assessmentTypeLookupId: payload.assessmentTypeLookupId,
+          totalMaxScore: payload.totalMaxScore ?? 100,
+          passingScore: payload.passingScore ?? 50,
           isDefault: payload.isDefault ?? false,
           status: payload.status,
           notes: payload.notes,
@@ -141,6 +138,8 @@ export class GradingPoliciesService {
       academicYearId: query.academicYearId,
       gradeLevelId: query.gradeLevelId,
       subjectId: query.subjectId,
+      academicTermId: query.academicTermId,
+      assessmentTypeLookupId: query.assessmentTypeLookupId,
       assessmentType: query.assessmentType,
       status: query.status,
       isDefault: query.isDefault,
@@ -267,11 +266,7 @@ export class GradingPoliciesService {
           gradeLevelId: payload.gradeLevelId,
           subjectId: payload.subjectId,
           assessmentType: payload.assessmentType,
-          maxExamScore: payload.maxExamScore,
-          maxHomeworkScore: payload.maxHomeworkScore,
-          maxAttendanceScore: payload.maxAttendanceScore,
-          maxActivityScore: payload.maxActivityScore,
-          maxContributionScore: payload.maxContributionScore,
+          totalMaxScore: payload.totalMaxScore,
           passingScore: payload.passingScore,
           isDefault: payload.isDefault,
           status: payload.status,
@@ -385,23 +380,9 @@ export class GradingPoliciesService {
   }
 
   private validateScoreRules(
-    payload: Pick<
-      CreateGradingPolicyDto,
-      | 'maxExamScore'
-      | 'maxHomeworkScore'
-      | 'maxAttendanceScore'
-      | 'maxActivityScore'
-      | 'maxContributionScore'
-      | 'passingScore'
-    >,
+    payload: Pick<CreateGradingPolicyDto, 'totalMaxScore' | 'passingScore'>,
   ) {
-    const scorePairs = [
-      ['maxExamScore', payload.maxExamScore],
-      ['maxHomeworkScore', payload.maxHomeworkScore],
-      ['maxAttendanceScore', payload.maxAttendanceScore],
-      ['maxActivityScore', payload.maxActivityScore],
-      ['maxContributionScore', payload.maxContributionScore],
-    ] as const;
+    const scorePairs = [['totalMaxScore', payload.totalMaxScore]] as const;
 
     for (const [fieldName, value] of scorePairs) {
       if (value !== undefined && value < 0) {
@@ -410,8 +391,15 @@ export class GradingPoliciesService {
     }
 
     if (payload.passingScore !== undefined) {
-      if (payload.passingScore < 0 || payload.passingScore > 100) {
-        throw new BadRequestException('يجب أن تكون درجة النجاح بين 0 و100');
+      if (payload.passingScore < 0) {
+        throw new BadRequestException('لا يمكن أن تكون درجة النجاح سالبة');
+      }
+
+      const maxAllowed = payload.totalMaxScore ?? 100;
+      if (payload.passingScore > maxAllowed) {
+        throw new BadRequestException(
+          `يجب ألا تتجاوز درجة النجاح ${maxAllowed}`,
+        );
       }
     }
   }

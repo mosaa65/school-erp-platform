@@ -9,6 +9,7 @@ type UseUsersQueryOptions = {
   limit?: number;
   search?: string;
   isActive?: boolean;
+  deletedOnly?: boolean;
 };
 
 export function useUsersQuery(options: UseUsersQueryOptions = {}) {
@@ -21,7 +22,13 @@ export function useUsersQuery(options: UseUsersQueryOptions = {}) {
       options.page ?? 1,
       options.limit ?? 8,
       options.search ?? "",
-      options.isActive === undefined ? "all" : options.isActive ? "active" : "inactive",
+      options.deletedOnly
+        ? "deleted"
+        : options.isActive === undefined
+          ? "all"
+          : options.isActive
+            ? "active"
+            : "inactive",
     ],
     enabled: auth.isHydrated && auth.isAuthenticated,
     queryFn: async () => {
@@ -31,6 +38,7 @@ export function useUsersQuery(options: UseUsersQueryOptions = {}) {
           limit: options.limit ?? 8,
           search: options.search,
           isActive: options.isActive,
+          deletedOnly: options.deletedOnly ? true : undefined,
         });
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) {

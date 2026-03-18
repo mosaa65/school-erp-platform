@@ -3,16 +3,20 @@
 import * as React from "react";
 import Link from "next/link";
 import {
+  Filter,
   LoaderCircle,
   PencilLine,
+  Plus,
   RefreshCw,
-  Search,
   Trash2,
   Users,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField } from "@/components/ui/select-field";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
   CardContent,
@@ -20,6 +24,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useGeographyOptionsQuery } from "@/features/lookup-catalog/hooks/use-geography-options-query";
 import {
@@ -78,6 +85,17 @@ type EmployeeFormState = {
   isActive: boolean;
 };
 
+type EmployeeFilterDraft = {
+  gender: string;
+  employmentType: EmploymentType | "all";
+  idType: string;
+  locality: string;
+  qualification: string;
+  jobRole: string;
+  active: "all" | "active" | "inactive";
+  operationalReadiness: OperationalReadinessFilter | "all";
+};
+
 const PAGE_SIZE = 12;
 
 const DEFAULT_FORM_STATE: EmployeeFormState = {
@@ -104,6 +122,17 @@ const DEFAULT_FORM_STATE: EmployeeFormState = {
   salaryApproved: false,
   systemAccessStatus: "GRANTED",
   isActive: true,
+};
+
+const DEFAULT_FILTER_DRAFT: EmployeeFilterDraft = {
+  gender: "all",
+  employmentType: "all",
+  idType: "all",
+  locality: "all",
+  qualification: "all",
+  jobRole: "all",
+  active: "all",
+  operationalReadiness: "all",
 };
 
 const EMPLOYEE_GENDER_CODES: EmployeeGender[] = ["MALE", "FEMALE", "OTHER"];
@@ -250,6 +279,7 @@ export function EmployeesWorkspace() {
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
+  const [debounceTimer, setDebounceTimer] = React.useState<NodeJS.Timeout | null>(null);
   const [genderFilter, setGenderFilter] = React.useState<string>("all");
   const [employmentTypeFilter, setEmploymentTypeFilter] = React.useState<
     EmploymentType | "all"
@@ -264,10 +294,14 @@ export function EmployeesWorkspace() {
   >("all");
   const [operationalReadinessFilter, setOperationalReadinessFilter] =
     React.useState<OperationalReadinessFilter | "all">("all");
+  const [filterDraft, setFilterDraft] =
+    React.useState<EmployeeFilterDraft>(DEFAULT_FILTER_DRAFT);
 
   const [editingEmployeeId, setEditingEmployeeId] = React.useState<
     string | null
   >(null);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] =
     React.useState<EmployeeFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
@@ -433,6 +467,50 @@ export function EmployeesWorkspace() {
     null;
 
   React.useEffect(() => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+
+    const timer = setTimeout(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 400);
+
+    setDebounceTimer(timer);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [searchInput]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setFilterDraft({
+      gender: genderFilter,
+      employmentType: employmentTypeFilter,
+      idType: idTypeFilter,
+      locality: localityFilter,
+      qualification: qualificationFilter,
+      jobRole: jobRoleFilter,
+      active: activeFilter,
+      operationalReadiness: operationalReadinessFilter,
+    });
+  }, [
+    activeFilter,
+    employmentTypeFilter,
+    genderFilter,
+    idTypeFilter,
+    isFilterOpen,
+    jobRoleFilter,
+    localityFilter,
+    operationalReadinessFilter,
+    qualificationFilter,
+  ]);
+
+  React.useEffect(() => {
     if (!isEditing) {
       return;
     }
@@ -448,6 +526,7 @@ export function EmployeesWorkspace() {
       setFormDirectorateId("");
       setFormSubDistrictId("");
       setFormVillageId("");
+      setIsFormOpen(false);
     }
   }, [editingEmployeeId, employees, isEditing]);
 
@@ -514,12 +593,50 @@ export function EmployeesWorkspace() {
     setFormDirectorateId("");
     setFormSubDistrictId("");
     setFormVillageId("");
+    setIsFormOpen(false);
   };
 
-  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleStartCreate = () => {
+    if (!canCreate) {
+      return;
+    }
+
+    setActionSuccess(null);
+    setEditingEmployeeId(null);
+    setFormState(DEFAULT_FORM_STATE);
+    setFormError(null);
+    setFormGovernorateId("");
+    setFormDirectorateId("");
+    setFormSubDistrictId("");
+    setFormVillageId("");
+    setIsFormOpen(true);
+  };
+
+  const clearFilters = () => {
+    setFilterDraft(DEFAULT_FILTER_DRAFT);
+    setGenderFilter("all");
+    setEmploymentTypeFilter("all");
+    setIdTypeFilter("all");
+    setLocalityFilter("all");
+    setQualificationFilter("all");
+    setJobRoleFilter("all");
+    setActiveFilter("all");
+    setOperationalReadinessFilter("all");
     setPage(1);
-    setSearch(searchInput.trim());
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    setGenderFilter(filterDraft.gender);
+    setEmploymentTypeFilter(filterDraft.employmentType);
+    setIdTypeFilter(filterDraft.idType);
+    setLocalityFilter(filterDraft.locality);
+    setQualificationFilter(filterDraft.qualification);
+    setJobRoleFilter(filterDraft.jobRole);
+    setActiveFilter(filterDraft.active);
+    setOperationalReadinessFilter(filterDraft.operationalReadiness);
+    setPage(1);
+    setIsFilterOpen(false);
   };
 
   const handleGovernorateChange = (value: string) => {
@@ -577,8 +694,8 @@ export function EmployeesWorkspace() {
     return true;
   };
 
-  const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
     setActionSuccess(null);
 
     if (!validateForm()) {
@@ -681,6 +798,7 @@ export function EmployeesWorkspace() {
     setFormError(null);
     setActionSuccess(null);
     setEditingEmployeeId(employee.id);
+
     const nextState = toFormState(employee);
     if (!nextState.genderId) {
       const mapped = genderOptions.find(
@@ -690,6 +808,7 @@ export function EmployeesWorkspace() {
         nextState.genderId = String(mapped.id);
       }
     }
+
     if (!nextState.qualificationId && employee.qualification) {
       const mapped = findLookupByText(
         qualificationOptions,
@@ -699,6 +818,7 @@ export function EmployeesWorkspace() {
         nextState.qualificationId = String(mapped.id);
       }
     }
+
     if (!nextState.jobRoleId && employee.jobTitle) {
       const mapped = findLookupByText(jobRoleOptions, employee.jobTitle);
       if (mapped) {
@@ -723,6 +843,7 @@ export function EmployeesWorkspace() {
     }
 
     setFormState(nextState);
+    setIsFormOpen(true);
   };
 
   const handleToggleActive = (employee: EmployeeListItem) => {
@@ -769,30 +890,469 @@ export function EmployeesWorkspace() {
     });
   };
 
+  const activeFiltersCount = React.useMemo(() => {
+    return [
+      genderFilter,
+      employmentTypeFilter,
+      idTypeFilter,
+      localityFilter,
+      qualificationFilter,
+      jobRoleFilter,
+      activeFilter,
+      operationalReadinessFilter,
+    ].filter((value) => value !== "all").length;
+  }, [
+    activeFilter,
+    employmentTypeFilter,
+    genderFilter,
+    idTypeFilter,
+    jobRoleFilter,
+    localityFilter,
+    operationalReadinessFilter,
+    qualificationFilter,
+  ]);
+
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[460px_1fr]">
-      <Card className="h-fit border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-primary" />
-            {isEditing ? "تعديل موظف" : "إنشاء موظف"}
-          </CardTitle>
+    <>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[260px] max-w-lg">
+            <SearchField
+              containerClassName="flex-1"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="??? ?????? ?? ????? ???????..."
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterTriggerButton
+              count={activeFiltersCount}
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+            />
+          </div>
+        </div>
+
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="????? ????????"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={clearFilters}
+                className="flex-1 gap-1.5"
+              >
+                <Trash2 className="h-4 w-4" />
+                ???
+              </Button>
+              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
+                ?????
+              </Button>
+            </div>
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectField
+              value={filterDraft.gender}
+              onChange={(event) => setFilterDraft((prev) => ({ ...prev, gender: event.target.value }))}
+              disabled={!canReadGenders || genderOptionsQuery.isLoading}
+            >
+              <option value="all">?? ???????</option>
+              {genderOptions.map((option) => {
+                const translated =
+                  option.code && isEmployeeGenderCode(option.code)
+                    ? translateEmployeeGender(option.code)
+                    : (option.nameAr ??
+                      option.name ??
+                      option.code ??
+                      String(option.id));
+
+                return (
+                  <option key={option.id} value={option.id}>
+                    {option.nameAr ?? translated}
+                  </option>
+                );
+              })}
+            </SelectField>
+
+            <SelectField
+              value={filterDraft.employmentType}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  employmentType: event.target.value as EmploymentType | "all",
+                }))
+              }
+            >
+              <option value="all">?? ???????</option>
+              <option value="PERMANENT">
+                {translateEmploymentType("PERMANENT")}
+              </option>
+              <option value="CONTRACT">
+                {translateEmploymentType("CONTRACT")}
+              </option>
+              <option value="VOLUNTEER">
+                {translateEmploymentType("VOLUNTEER")}
+              </option>
+            </SelectField>
+
+            <SelectField
+              value={filterDraft.idType}
+              onChange={(event) => setFilterDraft((prev) => ({ ...prev, idType: event.target.value }))}
+              disabled={!canReadIdTypes || idTypeOptionsQuery.isLoading}
+            >
+              <option value="all">?? ????? ??????</option>
+              {idTypeOptions.map((idType) => (
+                <option key={idType.id} value={idType.id}>
+                  {idType.nameAr}
+                </option>
+              ))}
+            </SelectField>
+
+            <SelectField
+              value={filterDraft.locality}
+              onChange={(event) => setFilterDraft((prev) => ({ ...prev, locality: event.target.value }))}
+              disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
+            >
+              <option value="all">?? ???????</option>
+              {localityOptions.map((locality) => (
+                <option key={locality.id} value={locality.id}>
+                  {formatLocalityHierarchyLabel(locality, geographyMaps)}
+                </option>
+              ))}
+            </SelectField>
+
+            <SelectField
+              value={filterDraft.qualification}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, qualification: event.target.value }))
+              }
+              disabled={!canReadQualifications || qualificationOptionsQuery.isLoading}
+            >
+              <option value="all">?? ????????</option>
+              {qualificationOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.nameAr ?? option.name ?? option.code ?? String(option.id)}
+                </option>
+              ))}
+            </SelectField>
+
+            <SelectField
+              value={filterDraft.jobRole}
+              onChange={(event) => setFilterDraft((prev) => ({ ...prev, jobRole: event.target.value }))}
+              disabled={!canReadJobRoles || jobRoleOptionsQuery.isLoading}
+            >
+              <option value="all">?? ????????</option>
+              {jobRoleOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.nameAr ?? option.name ?? option.code ?? String(option.id)}
+                </option>
+              ))}
+            </SelectField>
+
+            <SelectField
+              value={filterDraft.active}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  active: event.target.value as "all" | "active" | "inactive",
+                }))
+              }
+            >
+              <option value="all">?? ???????</option>
+              <option value="active">??? ???</option>
+              <option value="inactive">??? ??? ???</option>
+            </SelectField>
+
+            <SelectField
+              value={filterDraft.operationalReadiness}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  operationalReadiness: event.target.value as OperationalReadinessFilter | "all",
+                }))
+              }
+            >
+              <option value="all">?? ???????? ?????????</option>
+              <option value="READY">???? ????????</option>
+              <option value="PARTIAL">?????? ?????</option>
+              <option value="NOT_READY">??? ????</option>
+            </SelectField>
+          </div>
+        </FilterDrawer>
+
+<Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+        <CardHeader className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle>قائمة الموظفين</CardTitle>
+            <Badge variant="secondary">
+              الإجمالي: {pagination?.total ?? 0}
+            </Badge>
+          </div>
           <CardDescription>
-            {isEditing
-              ? "تعديل البيانات الأساسية والإدارية للموظف."
-              : "إضافة ملف موظف جديد ضمن نظام الموارد البشرية."}
+            إدارة الموظفين مع فلترة بالبحث والجنس ونوع التوظيف والمسمى والمؤهل
+            والموقع.
           </CardDescription>
         </CardHeader>
 
-        <CardContent>
-          {!canCreate && !isEditing ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك الصلاحية المطلوبة: <code>employees.create</code>.
+        <CardContent className="space-y-3">
+          {employeesQuery.isPending ? (
+            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+              جارٍ تحميل قائمة الموظفين...
             </div>
-          ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm}>
+          ) : null}
+
+          {employeesQuery.error ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              {employeesQuery.error instanceof Error
+                ? employeesQuery.error.message
+                : "فشل تحميل قائمة الموظفين"}
+            </div>
+          ) : null}
+
+          {!employeesQuery.isPending && employees.length === 0 ? (
+            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+              لا توجد سجلات مطابقة.
+            </div>
+          ) : null}
+
+          {employees.map((employee) => {
+            const readiness = resolveOperationalReadiness(employee);
+
+            return (
+              <div
+                key={employee.id}
+                className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <Badge
+                    variant={readiness.variant}
+                    className="order-2 md:order-none"
+                  >
+                    {readiness.label}
+                  </Badge>
+                  <div className="space-y-1">
+                    <p className="font-medium">{employee.fullName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      المسمى:{" "}
+                      {employee.jobRoleLookup?.nameAr ??
+                        employee.jobTitle ??
+                        "-"}{" "}
+                      | الرقم الوظيفي: {employee.jobNumber ?? "-"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      الرقم المالي: {employee.financialNumber ?? "-"} | الخبرة:{" "}
+                      {employee.experienceYears}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      المؤهل:{" "}
+                      {employee.qualificationLookup?.nameAr ??
+                        employee.qualification ??
+                        "-"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      الهوية: {employee.idNumber ?? "-"} | النوع:{" "}
+                      {employee.idType?.nameAr ?? "غير محدد"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      الموقع:{" "}
+                      {employee.locality
+                        ? formatLocalityHierarchyLabel(
+                            (geographyMaps.localityById.get(
+                              employee.locality.id,
+                            ) ?? employee.locality) as LocalityLabelInput,
+                            geographyMaps,
+                          )
+                        : "غير محدد"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      حساب المستخدم:{" "}
+                      {employee.userAccount
+                        ? `${employee.userAccount.email}${employee.userAccount.username ? ` (${employee.userAccount.username})` : ""}`
+                        : "غير مرتبط"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      الأدوار:{" "}
+                      {employee.userAccount &&
+                      employee.userAccount.userRoles.length > 0
+                        ? employee.userAccount.userRoles
+                            .filter((item) => item.role.isActive)
+                            .map((item) => translateRoleCode(item.role.code))
+                            .join("، ")
+                        : "لا يوجد"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      النطاق التشغيلي: إسناد تدريس{" "}
+                      {employee.operationalScope.activeTeachingAssignments} |
+                      إشراف{" "}
+                      {employee.operationalScope.activeSectionSupervisions}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge variant="outline">
+                      {employee.genderLookup?.nameAr ??
+                        translateEmployeeGender(employee.gender)}
+                    </Badge>
+                    <Badge variant="secondary">
+                      {employee.employmentType
+                        ? translateEmploymentType(employee.employmentType)
+                        : "غير محدد"}
+                    </Badge>
+                    <Badge
+                      variant={
+                        employee.systemAccessStatus === "GRANTED"
+                          ? "default"
+                          : "outline"
+                      }
+                    >
+                      {translateEmployeeSystemAccessStatus(
+                        employee.systemAccessStatus,
+                      )}
+                    </Badge>
+                    <Badge
+                      variant={employee.userAccount ? "default" : "outline"}
+                    >
+                      {employee.userAccount ? "لديه حساب" : "بدون حساب"}
+                    </Badge>
+                    <Badge variant={employee.isActive ? "default" : "outline"}>
+                      {employee.isActive ? "نشط" : "غير نشط"}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    asChild
+                    variant={employee.userAccount ? "secondary" : "default"}
+                    size="sm"
+                  >
+                    <Link
+                      href={`/app/users?q=${encodeURIComponent(
+                        employee.userAccount?.email ?? employee.fullName,
+                      )}`}
+                    >
+                      {employee.userAccount ? "إدارة الحساب" : "إنشاء/ربط حساب"}
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleStartEdit(employee)}
+                    disabled={!canUpdate || updateMutation.isPending}
+                  >
+                    <PencilLine className="h-3.5 w-3.5" />
+                    تعديل
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleToggleActive(employee)}
+                    disabled={!canUpdate || updateMutation.isPending}
+                  >
+                    {employee.isActive ? "تعطيل" : "تفعيل"}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleDelete(employee)}
+                    disabled={!canDelete || deleteMutation.isPending}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    حذف
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
+            <p className="text-xs text-muted-foreground">
+              صفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                disabled={
+                  !pagination ||
+                  pagination.page <= 1 ||
+                  employeesQuery.isFetching
+                }
+              >
+                السابق
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setPage((prev) =>
+                    pagination
+                      ? Math.min(prev + 1, pagination.totalPages)
+                      : prev,
+                  )
+                }
+                disabled={
+                  !pagination ||
+                  pagination.page >= pagination.totalPages ||
+                  employeesQuery.isFetching
+                }
+              >
+                التالي
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => void employeesQuery.refetch()}
+                disabled={employeesQuery.isFetching}
+              >
+                <RefreshCw
+                  className={`h-4 w-4 ${employeesQuery.isFetching ? "animate-spin" : ""}`}
+                />
+                تحديث
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      </div>
+
+      <Fab
+        icon={<Plus className="h-4 w-4" />}
+        label="?????"
+        ariaLabel="????? ????"
+        onClick={handleStartCreate}
+        disabled={!canCreate}
+      />
+
+      <BottomSheetForm
+        open={isFormOpen}
+        title={isEditing ? "????? ????" : "????? ????"}
+        onClose={resetForm}
+        onSubmit={() => handleSubmitForm()}
+        isSubmitting={isFormSubmitting}
+        submitLabel={isEditing ? "??? ?????????" : "????? ????"}
+        showFooter={false}
+      >
+        {!canCreate && !isEditing ? (
+          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+            ?? ???? ???????? ????????: <code>employees.create</code>.
+          </div>
+        ) : (
+<form className="space-y-3" onSubmit={handleSubmitForm}>
+              <p className="text-sm text-muted-foreground">
+                {isEditing
+                  ? "????? ???????? ???????? ????????? ??????."
+                  : "????? ??? ???? ???? ??? ???? ??????? ???????."}
+              </p>
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">
@@ -1401,424 +1961,8 @@ export function EmployeesWorkspace() {
                 ) : null}
               </div>
             </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>قائمة الموظفين</CardTitle>
-            <Badge variant="secondary">
-              الإجمالي: {pagination?.total ?? 0}
-            </Badge>
-          </div>
-          <CardDescription>
-            إدارة الموظفين مع فلترة بالبحث والجنس ونوع التوظيف والمسمى والمؤهل
-            والموقع.
-          </CardDescription>
-
-          <form
-            onSubmit={handleSearchSubmit}
-            className="grid gap-2 md:grid-cols-[1fr_150px_170px_170px_220px_170px_170px_130px_190px_auto]"
-          >
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث بالاسم أو الرقم الوظيفي..."
-                className="pr-8"
-              />
-            </div>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={genderFilter}
-              onChange={(event) => {
-                setPage(1);
-                setGenderFilter(event.target.value);
-              }}
-              disabled={!canReadGenders || genderOptionsQuery.isLoading}
-            >
-              <option value="all">كل الأجناس</option>
-              {genderOptions.map((option) => {
-                const translated =
-                  option.code && isEmployeeGenderCode(option.code)
-                    ? translateEmployeeGender(option.code)
-                    : (option.nameAr ??
-                      option.name ??
-                      option.code ??
-                      String(option.id));
-
-                return (
-                  <option key={option.id} value={option.id}>
-                    {option.nameAr ?? translated}
-                  </option>
-                );
-              })}
-            </select>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={employmentTypeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setEmploymentTypeFilter(
-                  event.target.value as EmploymentType | "all",
-                );
-              }}
-            >
-              <option value="all">كل الأنواع</option>
-              <option value="PERMANENT">
-                {translateEmploymentType("PERMANENT")}
-              </option>
-              <option value="CONTRACT">
-                {translateEmploymentType("CONTRACT")}
-              </option>
-              <option value="VOLUNTEER">
-                {translateEmploymentType("VOLUNTEER")}
-              </option>
-            </select>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={idTypeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setIdTypeFilter(event.target.value);
-              }}
-              disabled={!canReadIdTypes || idTypeOptionsQuery.isLoading}
-            >
-              <option value="all">كل أنواع الهوية</option>
-              {idTypeOptions.map((idType) => (
-                <option key={idType.id} value={idType.id}>
-                  {idType.nameAr}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={localityFilter}
-              onChange={(event) => {
-                setPage(1);
-                setLocalityFilter(event.target.value);
-              }}
-              disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
-            >
-              <option value="all">كل المحلات</option>
-              {localityOptions.map((locality) => (
-                <option key={locality.id} value={locality.id}>
-                  {formatLocalityHierarchyLabel(locality, geographyMaps)}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={qualificationFilter}
-              onChange={(event) => {
-                setPage(1);
-                setQualificationFilter(event.target.value);
-              }}
-              disabled={
-                !canReadQualifications || qualificationOptionsQuery.isLoading
-              }
-            >
-              <option value="all">كل المؤهلات</option>
-              {qualificationOptions.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.nameAr ??
-                    option.name ??
-                    option.code ??
-                    String(option.id)}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={jobRoleFilter}
-              onChange={(event) => {
-                setPage(1);
-                setJobRoleFilter(event.target.value);
-              }}
-              disabled={!canReadJobRoles || jobRoleOptionsQuery.isLoading}
-            >
-              <option value="all">كل المسميات</option>
-              {jobRoleOptions.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.nameAr ??
-                    option.name ??
-                    option.code ??
-                    String(option.id)}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={activeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setActiveFilter(
-                  event.target.value as "all" | "active" | "inactive",
-                );
-              }}
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">نشط فقط</option>
-              <option value="inactive">غير نشط فقط</option>
-            </select>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={operationalReadinessFilter}
-              onChange={(event) => {
-                setPage(1);
-                setOperationalReadinessFilter(
-                  event.target.value as OperationalReadinessFilter | "all",
-                );
-              }}
-            >
-              <option value="all">كل الجاهزية التشغيلية</option>
-              <option value="READY">جاهز تشغيليًا</option>
-              <option value="PARTIAL">جاهزية جزئية</option>
-              <option value="NOT_READY">غير جاهز</option>
-            </select>
-
-            <Button type="submit" variant="outline" className="gap-2">
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
-          </form>
-        </CardHeader>
-
-        <CardContent className="space-y-3">
-          {employeesQuery.isPending ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ تحميل قائمة الموظفين...
-            </div>
-          ) : null}
-
-          {employeesQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {employeesQuery.error instanceof Error
-                ? employeesQuery.error.message
-                : "فشل تحميل قائمة الموظفين"}
-            </div>
-          ) : null}
-
-          {!employeesQuery.isPending && employees.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              لا توجد سجلات مطابقة.
-            </div>
-          ) : null}
-
-          {employees.map((employee) => {
-            const readiness = resolveOperationalReadiness(employee);
-
-            return (
-              <div
-                key={employee.id}
-                className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <Badge
-                    variant={readiness.variant}
-                    className="order-2 md:order-none"
-                  >
-                    {readiness.label}
-                  </Badge>
-                  <div className="space-y-1">
-                    <p className="font-medium">{employee.fullName}</p>
-                    <p className="text-xs text-muted-foreground">
-                      المسمى:{" "}
-                      {employee.jobRoleLookup?.nameAr ??
-                        employee.jobTitle ??
-                        "-"}{" "}
-                      | الرقم الوظيفي: {employee.jobNumber ?? "-"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      الرقم المالي: {employee.financialNumber ?? "-"} | الخبرة:{" "}
-                      {employee.experienceYears}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      المؤهل:{" "}
-                      {employee.qualificationLookup?.nameAr ??
-                        employee.qualification ??
-                        "-"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      الهوية: {employee.idNumber ?? "-"} | النوع:{" "}
-                      {employee.idType?.nameAr ?? "غير محدد"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      الموقع:{" "}
-                      {employee.locality
-                        ? formatLocalityHierarchyLabel(
-                            (geographyMaps.localityById.get(
-                              employee.locality.id,
-                            ) ?? employee.locality) as LocalityLabelInput,
-                            geographyMaps,
-                          )
-                        : "غير محدد"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      حساب المستخدم:{" "}
-                      {employee.userAccount
-                        ? `${employee.userAccount.email}${employee.userAccount.username ? ` (${employee.userAccount.username})` : ""}`
-                        : "غير مرتبط"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      الأدوار:{" "}
-                      {employee.userAccount &&
-                      employee.userAccount.userRoles.length > 0
-                        ? employee.userAccount.userRoles
-                            .filter((item) => item.role.isActive)
-                            .map((item) => translateRoleCode(item.role.code))
-                            .join("، ")
-                        : "لا يوجد"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      النطاق التشغيلي: إسناد تدريس{" "}
-                      {employee.operationalScope.activeTeachingAssignments} |
-                      إشراف{" "}
-                      {employee.operationalScope.activeSectionSupervisions}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge variant="outline">
-                      {employee.genderLookup?.nameAr ??
-                        translateEmployeeGender(employee.gender)}
-                    </Badge>
-                    <Badge variant="secondary">
-                      {employee.employmentType
-                        ? translateEmploymentType(employee.employmentType)
-                        : "غير محدد"}
-                    </Badge>
-                    <Badge
-                      variant={
-                        employee.systemAccessStatus === "GRANTED"
-                          ? "default"
-                          : "outline"
-                      }
-                    >
-                      {translateEmployeeSystemAccessStatus(
-                        employee.systemAccessStatus,
-                      )}
-                    </Badge>
-                    <Badge
-                      variant={employee.userAccount ? "default" : "outline"}
-                    >
-                      {employee.userAccount ? "لديه حساب" : "بدون حساب"}
-                    </Badge>
-                    <Badge variant={employee.isActive ? "default" : "outline"}>
-                      {employee.isActive ? "نشط" : "غير نشط"}
-                    </Badge>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    asChild
-                    variant={employee.userAccount ? "secondary" : "default"}
-                    size="sm"
-                  >
-                    <Link
-                      href={`/app/users?q=${encodeURIComponent(
-                        employee.userAccount?.email ?? employee.fullName,
-                      )}`}
-                    >
-                      {employee.userAccount ? "إدارة الحساب" : "إنشاء/ربط حساب"}
-                    </Link>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => handleStartEdit(employee)}
-                    disabled={!canUpdate || updateMutation.isPending}
-                  >
-                    <PencilLine className="h-3.5 w-3.5" />
-                    تعديل
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleToggleActive(employee)}
-                    disabled={!canUpdate || updateMutation.isPending}
-                  >
-                    {employee.isActive ? "تعطيل" : "تفعيل"}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => handleDelete(employee)}
-                    disabled={!canDelete || deleteMutation.isPending}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    حذف
-                  </Button>
-                </div>
-              </div>
-            );
-          })}
-
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-            <p className="text-xs text-muted-foreground">
-              صفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={
-                  !pagination ||
-                  pagination.page <= 1 ||
-                  employeesQuery.isFetching
-                }
-              >
-                السابق
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPage((prev) =>
-                    pagination
-                      ? Math.min(prev + 1, pagination.totalPages)
-                      : prev,
-                  )
-                }
-                disabled={
-                  !pagination ||
-                  pagination.page >= pagination.totalPages ||
-                  employeesQuery.isFetching
-                }
-              >
-                التالي
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => void employeesQuery.refetch()}
-                disabled={employeesQuery.isFetching}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${employeesQuery.isFetching ? "animate-spin" : ""}`}
-                />
-                تحديث
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+        )}
+      </BottomSheetForm>
+    </>
   );
 }

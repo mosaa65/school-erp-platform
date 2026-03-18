@@ -3,15 +3,19 @@
 import * as React from "react";
 import {
   BookText,
+  Filter,
   LoaderCircle,
   PencilLine,
+  Plus,
   RefreshCw,
-  Search,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField } from "@/components/ui/select-field";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
   CardContent,
@@ -19,6 +23,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateEmployeeCourseMutation,
@@ -111,16 +118,28 @@ export function EmployeeCoursesWorkspace() {
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
+  const [debounceTimer, setDebounceTimer] = React.useState<NodeJS.Timeout | null>(null);
   const [employeeFilter, setEmployeeFilter] = React.useState("all");
-  const [fromDateInput, setFromDateInput] = React.useState("");
-  const [toDateInputValue, setToDateInputValue] = React.useState("");
   const [fromDateFilter, setFromDateFilter] = React.useState("");
   const [toDateFilter, setToDateFilter] = React.useState("");
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
     "all",
   );
+  const [filterDraft, setFilterDraft] = React.useState<{
+    employee: string;
+    fromDate: string;
+    toDate: string;
+    active: "all" | "active" | "inactive";
+  }>({
+    employee: "all",
+    fromDate: "",
+    toDate: "",
+    active: "all",
+  });
 
   const [editingCourseId, setEditingCourseId] = React.useState<string | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<CourseFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
 
@@ -151,6 +170,36 @@ export function EmployeeCoursesWorkspace() {
     null;
 
   React.useEffect(() => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+
+    const timer = setTimeout(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 400);
+
+    setDebounceTimer(timer);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [searchInput]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setFilterDraft({
+      employee: employeeFilter,
+      fromDate: fromDateFilter,
+      toDate: toDateFilter,
+      active: activeFilter,
+    });
+  }, [activeFilter, employeeFilter, fromDateFilter, isFilterOpen, toDateFilter]);
+
+  React.useEffect(() => {
     if (!isEditing) {
       return;
     }
@@ -160,6 +209,7 @@ export function EmployeeCoursesWorkspace() {
       setEditingCourseId(null);
       setFormState(DEFAULT_FORM_STATE);
       setFormError(null);
+      setIsFormOpen(false);
     }
   }, [courses, editingCourseId, isEditing]);
 
@@ -167,14 +217,18 @@ export function EmployeeCoursesWorkspace() {
     setEditingCourseId(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
+    setIsFormOpen(false);
   };
 
-  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPage(1);
-    setSearch(searchInput.trim());
-    setFromDateFilter(fromDateInput);
-    setToDateFilter(toDateInputValue);
+  const handleStartCreate = () => {
+    if (!canCreate) {
+      return;
+    }
+
+    setFormError(null);
+    setEditingCourseId(null);
+    setFormState(DEFAULT_FORM_STATE);
+    setIsFormOpen(true);
   };
 
   const validateForm = (): boolean => {
@@ -200,8 +254,8 @@ export function EmployeeCoursesWorkspace() {
     return true;
   };
 
-  const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
 
     if (!validateForm()) {
       return;
@@ -259,6 +313,7 @@ export function EmployeeCoursesWorkspace() {
     setFormError(null);
     setEditingCourseId(course.id);
     setFormState(toFormState(course));
+    setIsFormOpen(true);
   };
 
   const handleDelete = (course: EmployeeCourseListItem) => {
@@ -283,228 +338,84 @@ export function EmployeeCoursesWorkspace() {
   };
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
+  const activeFiltersCount = React.useMemo(() => {
+    const count = [
+      searchInput.trim() ? 1 : 0,
+      employeeFilter !== "all" ? 1 : 0,
+      fromDateFilter ? 1 : 0,
+      toDateFilter ? 1 : 0,
+      activeFilter !== "all" ? 1 : 0,
+    ].reduce((acc, value) => acc + value, 0);
+    return count;
+  }, [activeFilter, employeeFilter, fromDateFilter, searchInput, toDateFilter]);
+
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setEmployeeFilter("all");
+    setFromDateFilter("");
+    setToDateFilter("");
+    setActiveFilter("all");
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    setPage(1);
+    setEmployeeFilter(filterDraft.employee);
+    setFromDateFilter(filterDraft.fromDate);
+    setToDateFilter(filterDraft.toDate);
+    setActiveFilter(filterDraft.active);
+    setIsFilterOpen(false);
+  };
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[430px_1fr]">
-      <Card className="h-fit border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BookText className="h-5 w-5 text-primary" />
-            {isEditing ? "تعديل دورة موظف" : "إنشاء دورة موظف"}
-          </CardTitle>
-          <CardDescription>
-            {isEditing ? "تحديث بيانات الدورة التدريبية." : "إضافة دورة تدريبية جديدة للموظف."}
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent>
-          {!canCreate && !isEditing ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك الصلاحية المطلوبة: <code>employee-courses.create</code>.
-            </div>
-          ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="course-form">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.employeeId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
-                  }
-                  disabled={!canReadEmployees}
-                  data-testid="course-form-employee"
-                >
-                  <option value="">اختر الموظف</option>
-                  {(employeesQuery.data ?? []).map((employee) => (
-                    <option key={employee.id} value={employee.id}>
-                      {employee.fullName} ({employee.jobNumber ?? "غير متوفر"})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">اسم الدورة *</label>
-                <Input
-                  value={formState.courseName}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, courseName: event.target.value }))
-                  }
-                  placeholder="استراتيجيات التعلم النشط"
-                  required
-                  data-testid="course-form-name"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  جهة التدريب
-                </label>
-                <Input
-                  value={formState.courseProvider}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      courseProvider: event.target.value,
-                    }))
-                  }
-                  placeholder="وزارة التربية والتعليم"
-                  data-testid="course-form-provider"
-                />
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">تاريخ الدورة</label>
-                  <Input
-                    type="date"
-                    value={formState.courseDate}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, courseDate: event.target.value }))
-                    }
-                    data-testid="course-form-date"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    المدة (بالأيام)
-                  </label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={365}
-                    value={formState.durationDays}
-                    onChange={(event) =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        durationDays: event.target.value,
-                      }))
-                    }
-                    placeholder="5"
-                    data-testid="course-form-duration"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  رقم الشهادة
-                </label>
-                <Input
-                  value={formState.certificateNumber}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      certificateNumber: event.target.value,
-                    }))
-                  }
-                  placeholder="CERT-2026-889"
-                  data-testid="course-form-certificate"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
-                <Input
-                  value={formState.notes}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, notes: event.target.value }))
-                  }
-                  placeholder="مشاركة ممتازة ومشروع نهائي"
-                  data-testid="course-form-notes"
-                />
-              </div>
-
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشط</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                  data-testid="course-form-active"
-                />
-              </label>
-
-              {formError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {formError}
-                </div>
-              ) : null}
-
-              {mutationError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {mutationError}
-                </div>
-              ) : null}
-
-              {!canReadEmployees ? (
-                <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يتطلب هذا الجزء الصلاحية: <code>employees.read</code> لاختيار الموظف.
-                </div>
-              ) : null}
-
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  className="flex-1 gap-2"
-                  disabled={isFormSubmitting || (!canCreate && !isEditing) || !canReadEmployees}
-                  data-testid="course-form-submit"
-                >
-                  {isFormSubmitting ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <BookText className="h-4 w-4" />
-                  )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء دورة"}
-                </Button>
-                {isEditing ? (
-                  <Button type="button" variant="outline" onClick={resetForm}>
-                    إلغاء
-                  </Button>
-                ) : null}
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>دورات الموظفين</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+    <>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[260px] max-w-lg">
+            <SearchField
+              containerClassName="flex-1"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="بحث بالدورة أو الجهة أو الملاحظات..."
+            />
           </div>
-          <CardDescription>
-            إدارة الدورات التدريبية للموظفين مع الفلاتر الزمنية.
-          </CardDescription>
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterTriggerButton
+              count={activeFiltersCount}
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+            />
+          </div>
+        </div>
 
-          <form
-            onSubmit={handleSearchSubmit}
-            className="grid gap-2 md:grid-cols-[1fr_170px_160px_160px_130px_auto]"
-            data-testid="course-filters-form"
-          >
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث بالدورة أو الجهة أو الملاحظات..."
-                className="pr-8"
-                data-testid="course-filter-search"
-              />
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="فلاتر الدورات"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={clearFilters}
+                className="flex-1 gap-1.5"
+              >
+                <Trash2 className="h-4 w-4" />
+                مسح
+              </Button>
+              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
+                تطبيق
+              </Button>
             </div>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={employeeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setEmployeeFilter(event.target.value);
-              }}
-              data-testid="course-filter-employee"
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectField
+              value={filterDraft.employee}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, employee: event.target.value }))
+              }
             >
               <option value="all">كل الموظفين</option>
               {(employeesQuery.data ?? []).map((employee) => (
@@ -512,49 +423,52 @@ export function EmployeeCoursesWorkspace() {
                   {employee.jobNumber ?? employee.fullName}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
             <Input
               type="date"
-              value={fromDateInput}
-              onChange={(event) => setFromDateInput(event.target.value)}
-              data-testid="course-filter-from-date"
+              value={filterDraft.fromDate}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, fromDate: event.target.value }))
+              }
             />
 
             <Input
               type="date"
-              value={toDateInputValue}
-              onChange={(event) => setToDateInputValue(event.target.value)}
-              data-testid="course-filter-to-date"
+              value={filterDraft.toDate}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, toDate: event.target.value }))
+              }
             />
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={activeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setActiveFilter(event.target.value as "all" | "active" | "inactive");
-              }}
-              data-testid="course-filter-active"
+            <SelectField
+              value={filterDraft.active}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  active: event.target.value as "all" | "active" | "inactive",
+                }))
+              }
             >
               <option value="all">كل الحالات</option>
               <option value="active">النشطة فقط</option>
               <option value="inactive">غير النشطة فقط</option>
-            </select>
+            </SelectField>
+          </div>
+        </FilterDrawer>
 
-            <Button
-              type="submit"
-              variant="outline"
-              className="gap-2"
-              data-testid="course-filters-submit"
-            >
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
-          </form>
-        </CardHeader>
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+          <CardHeader className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>دورات الموظفين</CardTitle>
+              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+            </div>
+            <CardDescription>
+              إدارة الدورات التدريبية للموظفين مع الفلاتر الزمنية.
+            </CardDescription>
+          </CardHeader>
 
-        <CardContent className="space-y-3">
+          <CardContent className="space-y-3">
           {coursesQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
               جارٍ تحميل البيانات...
@@ -674,7 +588,196 @@ export function EmployeeCoursesWorkspace() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+
+      <Fab
+        icon={<Plus className="h-4 w-4" />}
+        label="إنشاء"
+        ariaLabel="إنشاء دورة"
+        onClick={handleStartCreate}
+        disabled={!canCreate}
+      />
+
+      <BottomSheetForm
+        open={isFormOpen}
+        title={isEditing ? "تعديل دورة موظف" : "إنشاء دورة موظف"}
+        onClose={resetForm}
+        onSubmit={() => handleSubmitForm()}
+        isSubmitting={isFormSubmitting}
+        submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء دورة"}
+        showFooter={false}
+      >
+        {!canCreate && !isEditing ? (
+          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+            لا تملك الصلاحية المطلوبة: <code>employee-courses.create</code>.
+          </div>
+        ) : (
+          <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="course-form">
+            <p className="text-sm text-muted-foreground">
+              {isEditing ? "تحديث بيانات الدورة التدريبية." : "إضافة دورة تدريبية جديدة للموظف."}
+            </p>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={formState.employeeId}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
+                }
+                disabled={!canReadEmployees}
+                data-testid="course-form-employee"
+              >
+                <option value="">اختر الموظف</option>
+                {(employeesQuery.data ?? []).map((employee) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.fullName} ({employee.jobNumber ?? "غير متوفر"})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">اسم الدورة *</label>
+              <Input
+                value={formState.courseName}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, courseName: event.target.value }))
+                }
+                placeholder="استراتيجيات التعلم النشط"
+                required
+                data-testid="course-form-name"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">جهة التدريب</label>
+              <Input
+                value={formState.courseProvider}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    courseProvider: event.target.value,
+                  }))
+                }
+                placeholder="وزارة التربية والتعليم"
+                data-testid="course-form-provider"
+              />
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">تاريخ الدورة</label>
+                <Input
+                  type="date"
+                  value={formState.courseDate}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, courseDate: event.target.value }))
+                  }
+                  data-testid="course-form-date"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  المدة (بالأيام)
+                </label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={365}
+                  value={formState.durationDays}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      durationDays: event.target.value,
+                    }))
+                  }
+                  placeholder="5"
+                  data-testid="course-form-duration"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">رقم الشهادة</label>
+              <Input
+                value={formState.certificateNumber}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    certificateNumber: event.target.value,
+                  }))
+                }
+                placeholder="CERT-2026-889"
+                data-testid="course-form-certificate"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
+              <Input
+                value={formState.notes}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, notes: event.target.value }))
+                }
+                placeholder="مشاركة ممتازة ومشروع نهائي"
+                data-testid="course-form-notes"
+              />
+            </div>
+
+            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+              <span>نشط</span>
+              <input
+                type="checkbox"
+                checked={formState.isActive}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                }
+                data-testid="course-form-active"
+              />
+            </label>
+
+            {formError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {formError}
+              </div>
+            ) : null}
+
+            {mutationError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {mutationError}
+              </div>
+            ) : null}
+
+            {!canReadEmployees ? (
+              <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+                يتطلب هذا الجزء الصلاحية: <code>employees.read</code> لاختيار الموظف.
+              </div>
+            ) : null}
+
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                className="flex-1 gap-2"
+                disabled={isFormSubmitting || (!canCreate && !isEditing) || !canReadEmployees}
+                data-testid="course-form-submit"
+              >
+                {isFormSubmitting ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <BookText className="h-4 w-4" />
+                )}
+                {isEditing ? "حفظ التعديلات" : "إنشاء دورة"}
+              </Button>
+              {isEditing ? (
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  إلغاء
+                </Button>
+              ) : null}
+            </div>
+          </form>
+        )}
+      </BottomSheetForm>
+    </>
   );
 }
 

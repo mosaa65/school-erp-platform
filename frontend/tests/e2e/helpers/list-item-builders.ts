@@ -132,11 +132,9 @@ export type GradingPolicyListItem = {
   gradeLevelId: string;
   subjectId: string;
   assessmentType: string;
-  maxExamScore: number;
-  maxHomeworkScore: number;
-  maxAttendanceScore: number;
-  maxActivityScore: number;
-  maxContributionScore: number;
+  academicTermId: string | null;
+  version: number;
+  totalMaxScore: number;
   passingScore: number;
   isDefault: boolean;
   status: string;
@@ -481,19 +479,17 @@ export function buildGradingPolicyListItem(
   overrides: Partial<Omit<GradingPolicyListItem, "academicYear" | "gradeLevel" | "subject">> = {},
 ): GradingPolicyListItem {
   return {
-    id: overrides.id ?? "policy-1",
-    academicYearId: overrides.academicYearId ?? year.id,
-    gradeLevelId: overrides.gradeLevelId ?? gradeLevel.id,
-    subjectId: overrides.subjectId ?? subject.id,
-    assessmentType: overrides.assessmentType ?? "MONTHLY",
-    maxExamScore: overrides.maxExamScore ?? 20,
-    maxHomeworkScore: overrides.maxHomeworkScore ?? 5,
-    maxAttendanceScore: overrides.maxAttendanceScore ?? 5,
-    maxActivityScore: overrides.maxActivityScore ?? 5,
-    maxContributionScore: overrides.maxContributionScore ?? 0,
-    passingScore: overrides.passingScore ?? 50,
-    isDefault: overrides.isDefault ?? true,
-    status: overrides.status ?? "DRAFT",
+      id: overrides.id ?? "policy-1",
+      academicYearId: overrides.academicYearId ?? year.id,
+      gradeLevelId: overrides.gradeLevelId ?? gradeLevel.id,
+      subjectId: overrides.subjectId ?? subject.id,
+      assessmentType: overrides.assessmentType ?? "MONTHLY",
+      academicTermId: overrides.academicTermId ?? null,
+      version: overrides.version ?? 1,
+      totalMaxScore: overrides.totalMaxScore ?? 100,
+      passingScore: overrides.passingScore ?? 50,
+      isDefault: overrides.isDefault ?? true,
+      status: overrides.status ?? "DRAFT",
     notes: overrides.notes ?? null,
     isActive: overrides.isActive ?? true,
     createdAt: overrides.createdAt ?? "2026-01-01T00:00:00.000Z",
@@ -739,23 +735,18 @@ export function buildCreatedGradingPolicyFromPayload(
     gradeLevels.find((item) => item.id === gradeLevelId) ?? fallbackGradeLevel;
   const subject = subjects.find((item) => item.id === subjectId) ?? fallbackSubject;
 
-  return buildGradingPolicyListItem(year, gradeLevel, subject, {
-    id: "policy-created",
-    academicYearId: asString(payload.academicYearId, year.id),
-    gradeLevelId: asString(payload.gradeLevelId, gradeLevel.id),
-    subjectId: asString(payload.subjectId, subject.id),
-    assessmentType: asString(payload.assessmentType, "MONTHLY"),
-    maxExamScore: typeof payload.maxExamScore === "number" ? payload.maxExamScore : 0,
-    maxHomeworkScore:
-      typeof payload.maxHomeworkScore === "number" ? payload.maxHomeworkScore : 0,
-    maxAttendanceScore:
-      typeof payload.maxAttendanceScore === "number" ? payload.maxAttendanceScore : 0,
-    maxActivityScore:
-      typeof payload.maxActivityScore === "number" ? payload.maxActivityScore : 0,
-    maxContributionScore:
-      typeof payload.maxContributionScore === "number" ? payload.maxContributionScore : 0,
-    passingScore: typeof payload.passingScore === "number" ? payload.passingScore : 0,
-    isDefault: payload.isDefault === undefined ? false : Boolean(payload.isDefault),
+    return buildGradingPolicyListItem(year, gradeLevel, subject, {
+      id: "policy-created",
+      academicYearId: asString(payload.academicYearId, year.id),
+      gradeLevelId: asString(payload.gradeLevelId, gradeLevel.id),
+      subjectId: asString(payload.subjectId, subject.id),
+      assessmentType: asString(payload.assessmentType, "MONTHLY"),
+      totalMaxScore:
+        typeof payload.totalMaxScore === "number" ? payload.totalMaxScore : 100,
+      academicTermId: asNullableString(payload.academicTermId),
+      version: typeof payload.version === "number" ? payload.version : 1,
+      passingScore: typeof payload.passingScore === "number" ? payload.passingScore : 0,
+      isDefault: payload.isDefault === undefined ? false : Boolean(payload.isDefault),
     status: asString(payload.status, "DRAFT"),
     notes: asNullableString(payload.notes),
     isActive: payload.isActive === undefined ? true : Boolean(payload.isActive),

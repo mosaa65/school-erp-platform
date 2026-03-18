@@ -4,7 +4,7 @@ services:
     container_name: school-erp-mysql
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: school_erp
+      MYSQL_DATABASE: school_erp_clean
       MYSQL_USER: school_user
       MYSQL_PASSWORD: school_password
       MYSQL_ROOT_PASSWORD: root_password

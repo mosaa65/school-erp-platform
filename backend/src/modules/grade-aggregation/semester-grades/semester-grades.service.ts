@@ -13,6 +13,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogsService } from '../../audit-logs/audit-logs.service';
+import { PolicyResolverService } from '../../evaluation-policies/grading-policies/policy-resolver.service';
 import { DataScopeService } from '../../teaching-assignments/data-scope/data-scope.service';
 import { CalculateSemesterGradesDto } from './dto/calculate-semester-grades.dto';
 import { CreateSemesterGradeDto } from './dto/create-semester-grade.dto';
@@ -120,6 +121,7 @@ export class SemesterGradesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLogsService: AuditLogsService,
+    private readonly policyResolver: PolicyResolverService,
     private readonly dataScopeService: DataScopeService,
   ) {}
 
@@ -500,6 +502,7 @@ export class SemesterGradesService {
       context.academicYearId,
       context.gradeLevelId,
       payload.subjectId,
+      payload.academicTermId,
     );
 
     const summary = {
@@ -1233,80 +1236,35 @@ export class SemesterGradesService {
     academicYearId: string,
     gradeLevelId: string,
     subjectId: string,
+    academicTermId?: string | null,
   ): Promise<number | undefined> {
-    const approvedPolicy = await this.prisma.gradingPolicy.findFirst({
-      where: {
+    try {
+      const policy = await this.policyResolver.resolvePolicy({
         academicYearId,
         gradeLevelId,
         subjectId,
         assessmentType: AssessmentType.FINAL,
-        status: GradingWorkflowStatus.APPROVED,
-        isActive: true,
-        deletedAt: null,
-      },
-      orderBy: [
-        {
-          isDefault: 'desc',
-        },
-        {
-          updatedAt: 'desc',
-        },
-      ],
-      select: {
-        id: true,
-        maxExamScore: true,
-      },
-    });
+        academicTermId,
+      });
 
-    const policy =
-      approvedPolicy ??
-      (await this.prisma.gradingPolicy.findFirst({
-        where: {
-          academicYearId,
-          gradeLevelId,
-          subjectId,
-          assessmentType: AssessmentType.FINAL,
-          isActive: true,
-          deletedAt: null,
-        },
-        orderBy: [
-          {
-            isDefault: 'desc',
-          },
-          {
-            updatedAt: 'desc',
-          },
-        ],
-        select: {
-          id: true,
-          maxExamScore: true,
-        },
-      }));
+      const componentTotal = policy.components.reduce((sum, component) => {
+        return sum + (this.decimalToNumber(component.maxScore) ?? 0);
+      }, 0);
 
-    if (!policy) {
-      return undefined;
+      if (componentTotal > 0) {
+        return componentTotal;
+      }
+
+      return this.decimalToNumber(policy.totalMaxScore) ?? 100;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        return undefined;
+      }
+
+      throw error;
     }
-
-    const componentSum = await this.prisma.gradingPolicyComponent.aggregate({
-      where: {
-        gradingPolicyId: policy.id,
-        deletedAt: null,
-        isActive: true,
-      },
-      _sum: {
-        maxScore: true,
-      },
-    });
-
-    const componentTotal =
-      this.decimalToNumber(componentSum._sum.maxScore) ?? 0;
-
-    if (componentTotal > 0) {
-      return componentTotal;
-    }
-
-    return this.decimalToNumber(policy.maxExamScore);
   }
+
 
   private computeSemesterTotal(
     semesterWorkTotal: number,

@@ -1,4 +1,5 @@
-﻿import type { LookupCatalogType } from "@/lib/api/client";
+﻿import { GraduationCap, Layers3, type LucideIcon } from "lucide-react";
+import type { LookupCatalogType } from "@/lib/api/client";
 
 export type LookupCatalogFieldType = "text" | "number" | "checkbox" | "select" | "color";
 
@@ -443,14 +444,20 @@ export type LookupCatalogGroup = {
   id: "system-01" | "system-04";
   label: string;
   description: string;
+  icon: LucideIcon;
+  iconClassName: string;
+  surfaceClassName: string;
   types: LookupCatalogType[];
 };
 
 export const LOOKUP_CATALOG_GROUPS: LookupCatalogGroup[] = [
   {
     id: "system-01",
-    label: "النظام 01 - البنية المشتركة",
+    label: "البنية المشتركة",
     description: "مرجعيات المؤسسة الأساسية المشتركة بين جميع الأنظمة.",
+    icon: Layers3,
+    iconClassName: "border-violet-500/20 bg-violet-500/10 text-violet-700 dark:text-violet-300",
+    surfaceClassName: "bg-gradient-to-l from-violet-500/10 via-transparent to-transparent",
     types: [
       "blood-types",
       "id-types",
@@ -478,8 +485,11 @@ export const LOOKUP_CATALOG_GROUPS: LookupCatalogGroup[] = [
   },
   {
     id: "system-04",
-    label: "النظام 04 - الطلاب",
+    label: "الطلاب",
     description: "مرجعيات مرتبطة مباشرة بتشغيل بيانات الطلاب.",
+    icon: GraduationCap,
+    iconClassName: "border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+    surfaceClassName: "bg-gradient-to-l from-sky-500/10 via-transparent to-transparent",
     types: ["enrollment-statuses", "orphan-statuses", "ability-levels", "activity-types"],
   },
 ];

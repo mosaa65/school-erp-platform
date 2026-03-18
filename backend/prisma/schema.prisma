@@ -197,6 +197,24 @@ enum AssessmentType {
   PROJECT
 }
 
+/// Lookup table for assessment types, allowing schools to define custom types.
+model AssessmentTypeLookup {
+  id          String    @id @default(cuid()) @db.VarChar(191)
+  code        String    @unique @db.VarChar(50)
+  name        String    @db.VarChar(120)
+  description String?   @db.VarChar(255)
+  category    String    @default("PERIOD") @db.VarChar(50) // PERIOD | EXAM | COMPONENT
+  isSystem    Boolean   @default(false) @map("is_system")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  gradingPolicies GradingPolicy[]
+  examPeriods     ExamPeriod[]
+
+  @@map("lookup_assessment_types")
+}
+
 enum GradingComponentCalculationMode {
   MANUAL
   AUTO_ATTENDANCE
@@ -1588,6 +1606,7 @@ model AcademicTerm {
   homeworks            Homework[]
   semesterGrades       SemesterGrade[]
   AnnualGradeTerm      AnnualGradeTerm[]
+  gradingPolicies      GradingPolicy[]
 
   @@unique([academicYearId, code])
   @@unique([academicYearId, sequence])
@@ -1687,6 +1706,7 @@ model Section {
   studentEnrollments          StudentEnrollment[]
   examAssessments             ExamAssessment[]
   homeworks                   Homework[]
+  gradingPolicies             GradingPolicy[]
 
   @@unique([gradeLevelId, code])
   @@index([gradeLevelId, deletedAt])
@@ -1873,6 +1893,7 @@ model Employee {
   violationsReported     EmployeeViolation[]             @relation("employee_violation_reported_by")
   performanceEvaluations EmployeePerformanceEvaluation[] @relation("employee_performance_employee")
   evaluationsConducted   EmployeePerformanceEvaluation[] @relation("employee_performance_evaluator")
+  gradingPolicies        GradingPolicy[]
 
   @@index([fullName, deletedAt], map: "emp_name_del_idx")
   @@index([genderId, deletedAt], map: "emp_gender_id_del_idx")
@@ -2491,30 +2512,35 @@ model ParentNotification {
 }
 
 model GradingPolicy {
-  id                   String                @id @default(cuid()) @db.VarChar(191)
-  academicYearId       String                @map("academic_year_id") @db.VarChar(191)
-  gradeLevelId         String                @map("grade_level_id") @db.VarChar(191)
-  subjectId            String                @map("subject_id") @db.VarChar(191)
-  assessmentType       AssessmentType        @default(MONTHLY) @map("assessment_type")
-  maxExamScore         Decimal               @default(20.00) @map("max_exam_score") @db.Decimal(6, 2)
-  maxHomeworkScore     Decimal               @default(5.00) @map("max_homework_score") @db.Decimal(6, 2)
-  maxAttendanceScore   Decimal               @default(5.00) @map("max_attendance_score") @db.Decimal(6, 2)
-  maxActivityScore     Decimal               @default(5.00) @map("max_activity_score") @db.Decimal(6, 2)
-  maxContributionScore Decimal               @default(0.00) @map("max_contribution_score") @db.Decimal(6, 2)
-  passingScore         Decimal               @default(50.00) @map("passing_score") @db.Decimal(6, 2)
-  isDefault            Boolean               @default(false) @map("is_default")
-  status               GradingWorkflowStatus @default(DRAFT)
-  notes                String?               @db.VarChar(255)
-  isActive             Boolean               @default(true) @map("is_active")
-  createdAt            DateTime              @default(now()) @map("created_at")
-  updatedAt            DateTime              @updatedAt @map("updated_at")
-  deletedAt            DateTime?             @map("deleted_at")
-  createdById          String?               @map("created_by") @db.VarChar(191)
-  updatedById          String?               @map("updated_by") @db.VarChar(191)
+  id                String                @id @default(cuid()) @db.VarChar(191)
+  academicYearId    String                @map("academic_year_id") @db.VarChar(191)
+  gradeLevelId      String                @map("grade_level_id") @db.VarChar(191)
+  subjectId         String                @map("subject_id") @db.VarChar(191)
+  assessmentType    AssessmentType        @default(MONTHLY) @map("assessment_type")
+  assessmentTypeLookupId String?        @map("assessment_type_lookup_id") @db.VarChar(191)
+  sectionId         String?               @map("section_id") @db.VarChar(191)
+  academicTermId    String?               @map("academic_term_id") @db.VarChar(191)
+  teacherEmployeeId String?               @map("teacher_employee_id") @db.VarChar(191)
+  version           Int                   @default(1)
+  totalMaxScore     Decimal               @default(100.00) @map("total_max_score") @db.Decimal(7, 2)
+  passingScore      Decimal               @default(50.00) @map("passing_score") @db.Decimal(6, 2)
+  isDefault         Boolean               @default(false) @map("is_default")
+  status            GradingWorkflowStatus @default(DRAFT)
+  notes             String?               @db.VarChar(255)
+  isActive          Boolean               @default(true) @map("is_active")
+  createdAt         DateTime              @default(now()) @map("created_at")
+  updatedAt         DateTime              @updatedAt @map("updated_at")
+  deletedAt         DateTime?             @map("deleted_at")
+  createdById       String?               @map("created_by") @db.VarChar(191)
+  updatedById       String?               @map("updated_by") @db.VarChar(191)
 
-  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
-  gradeLevel   GradeLevel   @relation(fields: [gradeLevelId], references: [id], onDelete: Restrict)
-  subject      Subject      @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  academicYear    AcademicYear  @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  gradeLevel      GradeLevel    @relation(fields: [gradeLevelId], references: [id], onDelete: Restrict)
+  subject         Subject       @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  section         Section?      @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  academicTerm    AcademicTerm? @relation(fields: [academicTermId], references: [id], onDelete: Restrict)
+  teacherEmployee Employee?     @relation(fields: [teacherEmployeeId], references: [id], onDelete: Restrict)
+  assessmentTypeLookup AssessmentTypeLookup? @relation(fields: [assessmentTypeLookupId], references: [id])
 
   createdBy User? @relation("grading_policy_created_by", fields: [createdById], references: [id], onDelete: SetNull)
   updatedBy User? @relation("grading_policy_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
@@ -2522,7 +2548,7 @@ model GradingPolicy {
   components    GradingPolicyComponent[]
   monthlyGrades MonthlyGrade[]
 
-  @@unique([academicYearId, gradeLevelId, subjectId, assessmentType], map: "grp_year_grade_subject_type_uq")
+  @@unique([academicYearId, gradeLevelId, subjectId, assessmentType, sectionId, academicTermId, teacherEmployeeId, version], name: "grp_scope_uq", map: "grp_scope_uq")
   @@index([assessmentType, deletedAt], map: "grp_type_del_idx")
   @@index([status, deletedAt], map: "grp_status_del_idx")
   @@index([isDefault, deletedAt], map: "grp_default_del_idx")
@@ -2540,6 +2566,9 @@ model GradingPolicyComponent {
   calculationMode   GradingComponentCalculationMode @default(MANUAL) @map("calculation_mode")
   includeInMonthly  Boolean                         @default(true) @map("include_in_monthly")
   includeInSemester Boolean                         @default(true) @map("include_in_semester")
+  weight            Decimal?                        @db.Decimal(5, 2)
+  autoSourceType    String?                         @map("auto_source_type") @db.VarChar(50)
+  isRequired        Boolean                         @default(true) @map("is_required")
   sortOrder         Int                             @default(1) @map("sort_order")
   isActive          Boolean                         @default(true) @map("is_active")
   createdAt         DateTime                        @default(now()) @map("created_at")
@@ -2568,6 +2597,7 @@ model ExamPeriod {
   academicTermId String                @map("academic_term_id") @db.VarChar(191)
   name           String                @db.VarChar(120)
   assessmentType AssessmentType        @default(MONTHLY) @map("assessment_type")
+  assessmentTypeLookupId String?       @map("assessment_type_lookup_id") @db.VarChar(191)
   startDate      DateTime?             @map("start_date")
   endDate        DateTime?             @map("end_date")
   status         GradingWorkflowStatus @default(DRAFT)
@@ -2583,6 +2613,7 @@ model ExamPeriod {
 
   academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
   academicTerm AcademicTerm @relation(fields: [academicTermId], references: [id], onDelete: Restrict)
+  assessmentTypeLookup AssessmentTypeLookup? @relation(fields: [assessmentTypeLookupId], references: [id])
   lockedByUser User?        @relation("exam_period_locked_by", fields: [lockedByUserId], references: [id], onDelete: SetNull)
   createdBy    User?        @relation("exam_period_created_by", fields: [createdById], references: [id], onDelete: SetNull)
   updatedBy    User?        @relation("exam_period_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
@@ -2767,12 +2798,12 @@ model MonthlyGrade {
   academicTermId        String                @map("academic_term_id") @db.VarChar(191)
   academicYearId        String                @map("academic_year_id") @db.VarChar(191)
   gradingPolicyId       String                @map("grading_policy_id") @db.VarChar(191)
-  attendanceScore       Decimal               @default(0.00) @map("attendance_score") @db.Decimal(6, 2)
-  homeworkScore         Decimal               @default(0.00) @map("homework_score") @db.Decimal(6, 2)
-  activityScore         Decimal               @default(0.00) @map("activity_score") @db.Decimal(6, 2)
-  contributionScore     Decimal               @default(0.00) @map("contribution_score") @db.Decimal(6, 2)
-  customComponentsScore Decimal               @default(0.00) @map("custom_components_score") @db.Decimal(6, 2)
-  examScore             Decimal               @default(0.00) @map("exam_score") @db.Decimal(6, 2)
+  attendanceScore       Decimal?              @default(0.00) @map("attendance_score") @db.Decimal(6, 2)
+  homeworkScore         Decimal?              @default(0.00) @map("homework_score") @db.Decimal(6, 2)
+  activityScore         Decimal?              @default(0.00) @map("activity_score") @db.Decimal(6, 2)
+  contributionScore     Decimal?              @default(0.00) @map("contribution_score") @db.Decimal(6, 2)
+  customComponentsScore Decimal?              @default(0.00) @map("custom_components_score") @db.Decimal(6, 2)
+  examScore             Decimal?              @default(0.00) @map("exam_score") @db.Decimal(6, 2)
   monthlyTotal          Decimal               @default(0.00) @map("monthly_total") @db.Decimal(7, 2)
   status                GradingWorkflowStatus @default(DRAFT)
   isLocked              Boolean               @default(false) @map("is_locked")
@@ -2989,8 +3020,8 @@ model AnnualGrade {
   studentEnrollmentId String                @map("student_enrollment_id") @db.VarChar(191)
   subjectId           String                @map("subject_id") @db.VarChar(191)
   academicYearId      String                @map("academic_year_id") @db.VarChar(191)
-  semester1Total      Decimal               @default(0.00) @map("semester1_total") @db.Decimal(7, 2)
-  semester2Total      Decimal               @default(0.00) @map("semester2_total") @db.Decimal(7, 2)
+  semester1Total      Decimal?              @map("semester1_total") @db.Decimal(7, 2)
+  semester2Total      Decimal?              @map("semester2_total") @db.Decimal(7, 2)
   annualTotal         Decimal               @default(0.00) @map("annual_total") @db.Decimal(8, 2)
   annualPercentage    Decimal?              @map("annual_percentage") @db.Decimal(5, 2)
   finalStatusId       String                @map("final_status_id") @db.VarChar(191)

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { BarChart3, RefreshCw, Search } from "lucide-react";
+import { BarChart3, Filter, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,6 +12,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { SelectField } from "@/components/ui/select-field";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { useEmployeeOptionsQuery } from "@/features/hr-reports/hooks/use-employee-options-query";
 import { useHrSummaryReportQuery } from "@/features/hr-reports/hooks/use-hr-summary-report-query";
 import type {
@@ -54,6 +57,7 @@ function toDateEndIso(value: string): string | undefined {
 export function HrReportsWorkspace() {
   const [filters, setFilters] = React.useState<FiltersState>(DEFAULT_FILTERS);
   const [appliedFilters, setAppliedFilters] = React.useState<FiltersState>(DEFAULT_FILTERS);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
 
   const employeesQuery = useEmployeeOptionsQuery();
   const reportQuery = useHrSummaryReportQuery({
@@ -63,9 +67,100 @@ export function HrReportsWorkspace() {
   });
 
   const report = reportQuery.data;
+  const activeFiltersCount = React.useMemo(() => {
+    const count = [
+      appliedFilters.employeeId ? 1 : 0,
+      appliedFilters.fromDate ? 1 : 0,
+      appliedFilters.toDate ? 1 : 0,
+    ].reduce((acc, value) => acc + value, 0);
+    return count;
+  }, [appliedFilters.employeeId, appliedFilters.fromDate, appliedFilters.toDate]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setFilters(appliedFilters);
+  }, [appliedFilters, isFilterOpen]);
+
+  const clearFilters = () => {
+    setFilters(DEFAULT_FILTERS);
+    setAppliedFilters(DEFAULT_FILTERS);
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    setAppliedFilters(filters);
+    setIsFilterOpen(false);
+  };
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <FilterTriggerButton
+            count={activeFiltersCount}
+            onClick={() => setIsFilterOpen((prev) => !prev)}
+          />
+        </div>
+      </div>
+
+      <FilterDrawer
+        open={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        title="فلاتر التقرير"
+        actionButtons={
+          <div className="flex w-full gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={clearFilters}
+              className="flex-1 gap-1.5"
+            >
+              مسح
+            </Button>
+            <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
+              تطبيق
+            </Button>
+          </div>
+        }
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
+          <SelectField
+            value={filters.employeeId}
+            onChange={(event) =>
+              setFilters((prev) => ({ ...prev, employeeId: event.target.value }))
+            }
+            data-testid="hr-report-filter-employee"
+          >
+            <option value="">كل الموظفين</option>
+            {(employeesQuery.data ?? []).map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.fullName}
+              </option>
+            ))}
+          </SelectField>
+
+          <Input
+            type="date"
+            value={filters.fromDate}
+            onChange={(event) =>
+              setFilters((prev) => ({ ...prev, fromDate: event.target.value }))
+            }
+            data-testid="hr-report-filter-from-date"
+          />
+          <Input
+            type="date"
+            value={filters.toDate}
+            onChange={(event) =>
+              setFilters((prev) => ({ ...prev, toDate: event.target.value }))
+            }
+            data-testid="hr-report-filter-to-date"
+          />
+        </div>
+      </FilterDrawer>
+
       <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
           <CardTitle className="flex items-center gap-2">
@@ -75,70 +170,6 @@ export function HrReportsWorkspace() {
           <CardDescription>
             تقرير موحد للحضور والمخالفات والعبء الوظيفي والتقييمات.
           </CardDescription>
-          <form
-            className="grid gap-2 md:grid-cols-[220px_170px_170px_auto_auto]"
-            onSubmit={(event) => {
-              event.preventDefault();
-              setAppliedFilters(filters);
-            }}
-            data-testid="hr-report-filters-form"
-          >
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={filters.employeeId}
-              onChange={(event) =>
-                setFilters((prev) => ({ ...prev, employeeId: event.target.value }))
-              }
-              data-testid="hr-report-filter-employee"
-            >
-              <option value="">كل الموظفين</option>
-              {(employeesQuery.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.fullName}
-                </option>
-              ))}
-            </select>
-
-            <Input
-              type="date"
-              value={filters.fromDate}
-              onChange={(event) =>
-                setFilters((prev) => ({ ...prev, fromDate: event.target.value }))
-              }
-              data-testid="hr-report-filter-from-date"
-            />
-            <Input
-              type="date"
-              value={filters.toDate}
-              onChange={(event) =>
-                setFilters((prev) => ({ ...prev, toDate: event.target.value }))
-              }
-              data-testid="hr-report-filter-to-date"
-            />
-
-            <Button
-              type="submit"
-              variant="outline"
-              className="gap-2"
-              data-testid="hr-report-filters-submit"
-            >
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
-
-            <Button
-              type="button"
-              variant="ghost"
-              className="gap-2"
-              onClick={() => {
-                setFilters(DEFAULT_FILTERS);
-                setAppliedFilters(DEFAULT_FILTERS);
-              }}
-              data-testid="hr-report-filters-clear"
-            >
-              مسح
-            </Button>
-          </form>
         </CardHeader>
       </Card>
 

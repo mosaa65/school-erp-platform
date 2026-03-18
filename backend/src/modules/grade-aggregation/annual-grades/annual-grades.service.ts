@@ -13,6 +13,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogsService } from '../../audit-logs/audit-logs.service';
+import { PolicyResolverService } from '../../evaluation-policies/grading-policies/policy-resolver.service';
 import { DataScopeService } from '../../teaching-assignments/data-scope/data-scope.service';
 import { CreateAnnualGradeDto } from './dto/create-annual-grade.dto';
 import { ListAnnualGradesDto } from './dto/list-annual-grades.dto';
@@ -157,6 +158,7 @@ export class AnnualGradesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLogsService: AuditLogsService,
+    private readonly policyResolver: PolicyResolverService,
     private readonly dataScopeService: DataScopeService,
   ) {}
 
@@ -204,6 +206,7 @@ export class AnnualGradesService {
         context.academicYearId,
         context.gradeLevelId,
         payload.subjectId,
+        context.sectionId,
         resolvedTotals.annualTotal,
       ));
 
@@ -480,6 +483,7 @@ export class AnnualGradesService {
         existing.academicYearId,
         context.gradeLevelId,
         existing.subjectId,
+        context.sectionId,
         resolvedTotals.annualTotal,
       ));
 
@@ -816,78 +820,35 @@ export class AnnualGradesService {
     academicYearId: string,
     gradeLevelId: string,
     subjectId: string,
+    sectionId: string,
     annualTotal: number,
   ): Promise<number | null> {
-    const approvedPolicy = await this.prisma.gradingPolicy.findFirst({
-      where: {
+    let policy;
+    try {
+      policy = await this.policyResolver.resolvePolicy({
         academicYearId,
         gradeLevelId,
         subjectId,
         assessmentType: AssessmentType.MONTHLY,
-        status: GradingWorkflowStatus.APPROVED,
-        isActive: true,
-        deletedAt: null,
-      },
-      orderBy: [{ isDefault: 'desc' }, { updatedAt: 'desc' }],
-      select: {
-        id: true,
-        maxExamScore: true,
-        maxHomeworkScore: true,
-        maxAttendanceScore: true,
-        maxActivityScore: true,
-        maxContributionScore: true,
-      },
-    });
+        sectionId,
+      });
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        return null;
+      }
 
-    const policy =
-      approvedPolicy ??
-      (await this.prisma.gradingPolicy.findFirst({
-        where: {
-          academicYearId,
-          gradeLevelId,
-          subjectId,
-          assessmentType: AssessmentType.MONTHLY,
-          isActive: true,
-          deletedAt: null,
-        },
-        orderBy: [{ isDefault: 'desc' }, { updatedAt: 'desc' }],
-        select: {
-          id: true,
-          maxExamScore: true,
-          maxHomeworkScore: true,
-          maxAttendanceScore: true,
-          maxActivityScore: true,
-          maxContributionScore: true,
-        },
-      }));
-
-    if (!policy) {
-      return null;
+      throw error;
     }
 
-    const customComponents = await this.prisma.gradingPolicyComponent.aggregate(
-      {
-        where: {
-          gradingPolicyId: policy.id,
-          includeInSemester: true,
-          deletedAt: null,
-          isActive: true,
-        },
-        _sum: {
-          maxScore: true,
-        },
-      },
-    );
-
-    const componentTotal =
-      this.decimalToNumber(customComponents._sum.maxScore) ?? 0;
-    const legacyTotal =
-      (this.decimalToNumber(policy.maxExamScore) ?? 0) +
-      (this.decimalToNumber(policy.maxHomeworkScore) ?? 0) +
-      (this.decimalToNumber(policy.maxAttendanceScore) ?? 0) +
-      (this.decimalToNumber(policy.maxActivityScore) ?? 0) +
-      (this.decimalToNumber(policy.maxContributionScore) ?? 0);
-    const oneSemesterMax = componentTotal > 0 ? componentTotal : legacyTotal;
+    const componentTotal = policy.components
+      .filter((component) => component.includeInSemester)
+      .reduce((sum, component) => {
+        return sum + (this.decimalToNumber(component.maxScore) ?? 0);
+      }, 0);
+    const oneSemesterMax =
+      componentTotal > 0
+        ? componentTotal
+        : (this.decimalToNumber(policy.totalMaxScore) ?? 100);
 
     const termCount = await this.resolveTermCount(academicYearId);
     if (termCount === 0) {
@@ -901,6 +862,7 @@ export class AnnualGradesService {
 
     return this.round2((annualTotal / annualMax) * 100);
   }
+
 
   private computeAnnualTotal(semester1Total: number, semester2Total: number) {
     return this.round2(semester1Total + semester2Total);

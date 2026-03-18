@@ -15,6 +15,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogsService } from '../../audit-logs/audit-logs.service';
+import { PolicyResolverService } from '../../evaluation-policies/grading-policies/policy-resolver.service';
 import { CalculateAnnualResultsDto } from './dto/calculate-annual-results.dto';
 import { CreateAnnualResultDto } from './dto/create-annual-result.dto';
 import { ListAnnualResultsDto } from './dto/list-annual-results.dto';
@@ -129,6 +130,7 @@ export class AnnualResultsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLogsService: AuditLogsService,
+    private readonly policyResolver: PolicyResolverService,
   ) {}
 
   async create(payload: CreateAnnualResultDto, actorUserId: string) {
@@ -692,6 +694,7 @@ export class AnnualResultsService {
       payload.academicYearId,
       context.gradeLevelId,
       subjectIds,
+      context.sectionId,
       termCount,
     );
 
@@ -1372,109 +1375,55 @@ export class AnnualResultsService {
     academicYearId: string,
     gradeLevelId: string,
     subjectIds: string[],
+    sectionId: string,
     termCount: number,
   ): Promise<Map<string, { passingScore: number; maxAnnual: number }>> {
     if (subjectIds.length === 0) {
       return new Map();
     }
 
-    const policies = await this.prisma.gradingPolicy.findMany({
-      where: {
-        academicYearId,
-        gradeLevelId,
-        subjectId: {
-          in: subjectIds,
-        },
-        assessmentType: AssessmentType.MONTHLY,
-        deletedAt: null,
-        isActive: true,
-      },
-      select: {
-        id: true,
-        subjectId: true,
-        isDefault: true,
-        status: true,
-        updatedAt: true,
-        maxExamScore: true,
-        maxHomeworkScore: true,
-        maxAttendanceScore: true,
-        maxActivityScore: true,
-        maxContributionScore: true,
-        passingScore: true,
-      },
-    });
-
-    const pickedBySubject = new Map<string, (typeof policies)[number]>();
-    for (const policy of policies) {
-      const current = pickedBySubject.get(policy.subjectId);
-      if (!current) {
-        pickedBySubject.set(policy.subjectId, policy);
-        continue;
-      }
-
-      const currentScore =
-        (current.status === GradingWorkflowStatus.APPROVED ? 4 : 0) +
-        (current.isDefault ? 2 : 0);
-      const candidateScore =
-        (policy.status === GradingWorkflowStatus.APPROVED ? 4 : 0) +
-        (policy.isDefault ? 2 : 0);
-
-      if (
-        candidateScore > currentScore ||
-        (candidateScore === currentScore &&
-          policy.updatedAt > current.updatedAt)
-      ) {
-        pickedBySubject.set(policy.subjectId, policy);
-      }
-    }
-
-    const pickedPolicies = Array.from(pickedBySubject.values());
-    const policyIds = pickedPolicies.map((policy) => policy.id);
-    const componentSums = await this.prisma.gradingPolicyComponent.groupBy({
-      by: ['gradingPolicyId'],
-      where: {
-        gradingPolicyId: {
-          in: policyIds,
-        },
-        includeInSemester: true,
-        deletedAt: null,
-        isActive: true,
-      },
-      _sum: {
-        maxScore: true,
-      },
-    });
-
-    const componentSumByPolicyId = new Map(
-      componentSums.map((row) => [
-        row.gradingPolicyId,
-        this.decimalToNumber(row._sum.maxScore) ?? 0,
-      ]),
-    );
-
     const result = new Map<
       string,
       { passingScore: number; maxAnnual: number }
     >();
-    for (const policy of pickedPolicies) {
-      const componentTotal = componentSumByPolicyId.get(policy.id) ?? 0;
-      const legacyTotal =
-        (this.decimalToNumber(policy.maxExamScore) ?? 0) +
-        (this.decimalToNumber(policy.maxHomeworkScore) ?? 0) +
-        (this.decimalToNumber(policy.maxAttendanceScore) ?? 0) +
-        (this.decimalToNumber(policy.maxActivityScore) ?? 0) +
-        (this.decimalToNumber(policy.maxContributionScore) ?? 0);
-      const oneSemesterMax = componentTotal > 0 ? componentTotal : legacyTotal;
 
-      result.set(policy.subjectId, {
-        passingScore: this.decimalToNumber(policy.passingScore) ?? 0,
-        maxAnnual:
-          termCount > 0 ? this.round2(oneSemesterMax * termCount) : 0,
-      });
+    for (const subjectId of subjectIds) {
+      try {
+        const policy = await this.policyResolver.resolvePolicy({
+          academicYearId,
+          gradeLevelId,
+          subjectId,
+          assessmentType: AssessmentType.MONTHLY,
+          sectionId,
+        });
+
+        const componentTotal = policy.components
+          .filter((component) => component.includeInSemester)
+          .reduce((sum, component) => {
+            return sum + (this.decimalToNumber(component.maxScore) ?? 0);
+          }, 0);
+        const oneSemesterMax =
+          componentTotal > 0
+            ? componentTotal
+            : (this.decimalToNumber(policy.totalMaxScore) ?? 100);
+
+        result.set(subjectId, {
+          passingScore: this.decimalToNumber(policy.passingScore) ?? 0,
+          maxAnnual:
+            termCount > 0 ? this.round2(oneSemesterMax * termCount) : 0,
+        });
+      } catch (error) {
+        if (error instanceof NotFoundException) {
+          continue;
+        }
+
+        throw error;
+      }
     }
 
     return result;
   }
+
 
   private sortAnnualRankingRows(
     rows: Array<{

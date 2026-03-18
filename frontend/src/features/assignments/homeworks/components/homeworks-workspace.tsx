@@ -3,16 +3,20 @@
 import * as React from "react";
 import {
   ClipboardList,
+  Filter,
   LoaderCircle,
   PencilLine,
+  Plus,
   RefreshCw,
-  Search,
   Trash2,
   UsersRound,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField } from "@/components/ui/select-field";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
   CardContent,
@@ -20,6 +24,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateHomeworkMutation,
@@ -184,6 +191,7 @@ export function HomeworksWorkspace() {
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
+  const [debounceTimer, setDebounceTimer] = React.useState<NodeJS.Timeout | null>(null);
   const [academicYearFilter, setAcademicYearFilter] = React.useState("all");
   const [academicTermFilter, setAcademicTermFilter] = React.useState("all");
   const [sectionFilter, setSectionFilter] = React.useState("all");
@@ -192,8 +200,25 @@ export function HomeworksWorkspace() {
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
     "all",
   );
+  const [filterDraft, setFilterDraft] = React.useState<{
+    year: string;
+    term: string;
+    section: string;
+    subject: string;
+    homeworkType: string;
+    active: "all" | "active" | "inactive";
+  }>({
+    year: "all",
+    term: "all",
+    section: "all",
+    subject: "all",
+    homeworkType: "all",
+    active: "all",
+  });
 
   const [editingHomeworkId, setEditingHomeworkId] = React.useState<string | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<HomeworkFormState>(
     createDefaultFormState,
   );
@@ -215,6 +240,10 @@ export function HomeworksWorkspace() {
   const academicYearsQuery = useAcademicYearOptionsQuery();
   const academicTermsQuery = useAcademicTermOptionsQuery(
     formState.academicYearId || (academicYearFilter === "all" ? undefined : academicYearFilter),
+  );
+  const draftYearForTerms = isFilterOpen ? filterDraft.year : academicYearFilter;
+  const filterTermOptionsQuery = useAcademicTermOptionsQuery(
+    draftYearForTerms === "all" ? undefined : draftYearForTerms,
   );
   const sectionsQuery = useSectionOptionsQuery();
   const subjectsQuery = useSubjectOptionsQuery();
@@ -246,20 +275,61 @@ export function HomeworksWorkspace() {
       setFormState(createDefaultFormState());
       setFormError(null);
       setActionInfo(null);
+      setIsFormOpen(false);
     }
   }, [editingHomeworkId, homeworks, isEditing]);
 
-  const resetForm = () => {
+  React.useEffect(() => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+
+    const timer = setTimeout(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 400);
+
+    setDebounceTimer(timer);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [searchInput]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setFilterDraft({
+      year: academicYearFilter,
+      term: academicTermFilter,
+      section: sectionFilter,
+      subject: subjectFilter,
+      homeworkType: homeworkTypeFilter,
+      active: activeFilter,
+    });
+  }, [
+    academicTermFilter,
+    academicYearFilter,
+    activeFilter,
+    homeworkTypeFilter,
+    isFilterOpen,
+    sectionFilter,
+    subjectFilter,
+  ]);
+
+  const resetFormState = () => {
     setEditingHomeworkId(null);
     setFormState(createDefaultFormState());
     setFormError(null);
     setActionInfo(null);
   };
 
-  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPage(1);
-    setSearch(searchInput.trim());
+  const resetForm = () => {
+    resetFormState();
+    setIsFormOpen(false);
+    setActionInfo(null);
   };
 
   const validateForm = (): boolean => {
@@ -351,7 +421,7 @@ export function HomeworksWorkspace() {
         },
         {
           onSuccess: () => {
-            resetForm();
+            resetFormState();
             setActionInfo("تم تحديث الواجب بنجاح.");
           },
         },
@@ -371,12 +441,24 @@ export function HomeworksWorkspace() {
       },
       {
         onSuccess: () => {
-          resetForm();
+          resetFormState();
           setPage(1);
           setActionInfo("تم إنشاء الواجب بنجاح.");
         },
       },
     );
+  };
+
+  const handleStartCreate = () => {
+    if (!canCreate) {
+      return;
+    }
+
+    setFormError(null);
+    setActionInfo(null);
+    setEditingHomeworkId(null);
+    setFormState(createDefaultFormState());
+    setIsFormOpen(true);
   };
 
   const handleStartEdit = (item: HomeworkListItem) => {
@@ -387,6 +469,7 @@ export function HomeworksWorkspace() {
     setActionInfo(null);
     setEditingHomeworkId(item.id);
     setFormState(toFormState(item));
+    setIsFormOpen(true);
   };
 
   const handleToggleActive = (item: HomeworkListItem) => {
@@ -447,305 +530,104 @@ export function HomeworksWorkspace() {
     canReadSubjects &&
     canReadHomeworkTypes;
 
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setAcademicYearFilter("all");
+    setAcademicTermFilter("all");
+    setSectionFilter("all");
+    setSubjectFilter("all");
+    setHomeworkTypeFilter("all");
+    setActiveFilter("all");
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    setPage(1);
+    setAcademicYearFilter(filterDraft.year);
+    setAcademicTermFilter(filterDraft.term);
+    setSectionFilter(filterDraft.section);
+    setSubjectFilter(filterDraft.subject);
+    setHomeworkTypeFilter(filterDraft.homeworkType);
+    setActiveFilter(filterDraft.active);
+    setIsFilterOpen(false);
+  };
+
+  const activeFiltersCount = React.useMemo(() => {
+    const count = [
+      searchInput.trim() ? 1 : 0,
+      academicYearFilter !== "all" ? 1 : 0,
+      academicTermFilter !== "all" ? 1 : 0,
+      sectionFilter !== "all" ? 1 : 0,
+      subjectFilter !== "all" ? 1 : 0,
+      homeworkTypeFilter !== "all" ? 1 : 0,
+      activeFilter !== "all" ? 1 : 0,
+    ].reduce((acc, value) => acc + value, 0);
+    return count;
+  }, [
+    academicTermFilter,
+    academicYearFilter,
+    activeFilter,
+    homeworkTypeFilter,
+    searchInput,
+    sectionFilter,
+    subjectFilter,
+  ]);
+
   return (
-    <div className="grid gap-4 xl:grid-cols-[450px_1fr]">
-      <Card className="h-fit border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ClipboardList className="h-5 w-5 text-primary" />
-            {isEditing ? "تعديل واجب" : "إنشاء واجب"}
-          </CardTitle>
-          <CardDescription>إدارة واجبات الطلاب على مستوى الفصل والشعبة.</CardDescription>
-        </CardHeader>
-
-        <CardContent>
-          {!canCreate && !isEditing ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك الصلاحية المطلوبة: <code>homeworks.create</code>.
-            </div>
-          ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm}>
-              <div className="grid gap-3 md:grid-cols-2">
-                <select
-                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.academicYearId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      academicYearId: event.target.value,
-                      academicTermId: "",
-                    }))
-                  }
-                  disabled={!canReadAcademicYears}
-                >
-                  <option value="">اختر السنة</option>
-                  {(academicYearsQuery.data ?? []).map((year) => (
-                    <option key={year.id} value={year.id}>
-                      {formatNameCodeLabel(year.name, year.code)}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.academicTermId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, academicTermId: event.target.value }))
-                  }
-                  disabled={!canReadAcademicTerms}
-                >
-                  <option value="">اختر الفصل</option>
-                  {(academicTermsQuery.data ?? []).map((term) => (
-                    <option key={term.id} value={term.id}>
-                      {formatNameCodeLabel(term.name, term.code)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <select
-                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.sectionId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, sectionId: event.target.value }))
-                  }
-                  disabled={!canReadSections}
-                >
-                  <option value="">اختر الشعبة</option>
-                  {(sectionsQuery.data ?? []).map((section) => (
-                    <option key={section.id} value={section.id}>
-                      {formatSectionWithGradeLabel(section)}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.subjectId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, subjectId: event.target.value }))
-                  }
-                  disabled={!canReadSubjects}
-                >
-                  <option value="">اختر المادة</option>
-                  {(subjectsQuery.data ?? []).map((subject) => (
-                    <option key={subject.id} value={subject.id}>
-                      {formatNameCodeLabel(subject.name, subject.code)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                ملاحظة: الشعبة مرتبطة بالصف، أما القاعة/مكان الحصة فيتم ضبطه من شاشة{" "}
-                <code>الجدول الدراسي</code> عبر حقل القاعة.
-              </p>
-
-              <select
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                value={formState.homeworkTypeId}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, homeworkTypeId: event.target.value }))
-                }
-                disabled={!canReadHomeworkTypes}
-              >
-                <option value="">اختر نوع الواجب</option>
-                {(homeworkTypesQuery.data ?? []).map((typeItem) => (
-                  <option key={typeItem.id} value={typeItem.id}>
-                    {formatNameCodeLabel(typeItem.name, typeItem.code)}
-                  </option>
-                ))}
-              </select>
-
-              <Input
-                value={formState.title}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, title: event.target.value }))
-                }
-                placeholder="عنوان الواجب"
-                required
-              />
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <Input
-                  type="date"
-                  value={formState.homeworkDate}
-                  onChange={(event) =>
-                    setFormState((prev) => {
-                      const nextHomeworkDate = event.target.value;
-
-                      if (!nextHomeworkDate) {
-                        return {
-                          ...prev,
-                          homeworkDate: "",
-                        };
-                      }
-
-                      const autoAdjustDueDate = shouldAutoAdjustDueDate(
-                        prev.homeworkDate,
-                        prev.dueDate,
-                      );
-
-                      return {
-                        ...prev,
-                        homeworkDate: nextHomeworkDate,
-                        dueDate: autoAdjustDueDate
-                          ? addDaysToDateInput(
-                              nextHomeworkDate,
-                              DEFAULT_DUE_DATE_OFFSET_DAYS,
-                            )
-                          : prev.dueDate,
-                      };
-                    })
-                  }
-                  required
-                />
-                <Input
-                  type="date"
-                  value={formState.dueDate}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, dueDate: event.target.value }))
-                  }
-                />
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <Input
-                  type="number"
-                  min={0.01}
-                  step={0.01}
-                  value={formState.maxScore}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, maxScore: event.target.value }))
-                  }
-                />
-                <Input
-                  value={formState.notes}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, notes: event.target.value }))
-                  }
-                  placeholder="ملاحظات"
-                />
-              </div>
-
-              <Input
-                value={formState.content}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, content: event.target.value }))
-                }
-                placeholder="المحتوى"
-              />
-
-              <div className="grid gap-2 md:grid-cols-2">
-                {!isEditing ? (
-                  <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                    <span>تعبئة الطلاب تلقائيًا</span>
-                    <input
-                      type="checkbox"
-                      checked={formState.autoPopulateStudents}
-                      onChange={(event) =>
-                        setFormState((prev) => ({
-                          ...prev,
-                          autoPopulateStudents: event.target.checked,
-                        }))
-                      }
-                    />
-                  </label>
-                ) : (
-                  <div className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                    بعد التعديل استخدم إجراء <code>تعبئة الطلاب</code>.
-                  </div>
-                )}
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>نشط</span>
-                  <input
-                    type="checkbox"
-                    checked={formState.isActive}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                    }
-                  />
-                </label>
-              </div>
-
-              {formError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {formError}
-                </div>
-              ) : null}
-              {mutationError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {mutationError}
-                </div>
-              ) : null}
-              {actionInfo ? (
-                <div className="rounded-md border border-primary/30 bg-primary/10 p-2 text-xs text-primary">
-                  {actionInfo}
-                </div>
-              ) : null}
-              {!hasDependenciesReadPermissions ? (
-                <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يتطلب هذا الجزء صلاحيات قراءة المراجع (السنة/الفصل/الشعبة/المادة/نوع الواجب).
-                </div>
-              ) : null}
-
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  className="flex-1 gap-2"
-                  disabled={
-                    isFormSubmitting ||
-                    (!canCreate && !isEditing) ||
-                    !hasDependenciesReadPermissions
-                  }
-                >
-                  {isFormSubmitting ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <ClipboardList className="h-4 w-4" />
-                  )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء واجب"}
-                </Button>
-                {isEditing ? (
-                  <Button type="button" variant="outline" onClick={resetForm}>
-                    إلغاء
-                  </Button>
-                ) : null}
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>الواجبات</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+    <>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[260px] max-w-lg">
+            <SearchField
+              containerClassName="flex-1"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="بحث..."
+            />
           </div>
-          <CardDescription>قائمة الواجبات مع عمليات التحديث والتعبئة والحذف.</CardDescription>
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterTriggerButton
+              count={activeFiltersCount}
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+            />
+          </div>
+        </div>
 
-          <form
-            onSubmit={handleSearchSubmit}
-            className="grid gap-2 md:grid-cols-[1fr_130px_130px_130px_130px_130px_120px_auto]"
-          >
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث..."
-                className="pr-8"
-              />
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="فلاتر الواجبات"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={clearFilters}
+                className="flex-1 gap-1.5"
+              >
+                <Trash2 className="h-4 w-4" />
+                مسح
+              </Button>
+              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
+                تطبيق
+              </Button>
             </div>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={academicYearFilter}
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectField
+              value={filterDraft.year}
               onChange={(event) => {
-                setPage(1);
-                setAcademicYearFilter(event.target.value);
-                setAcademicTermFilter("all");
+                const nextYear = event.target.value;
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  year: nextYear,
+                  term: nextYear === "all" ? "all" : prev.term,
+                }));
               }}
+              disabled={!canReadAcademicYears}
             >
               <option value="all">كل السنوات</option>
               {(academicYearsQuery.data ?? []).map((year) => (
@@ -753,29 +635,29 @@ export function HomeworksWorkspace() {
                   {formatNameCodeLabel(year.name, year.code)}
                 </option>
               ))}
-            </select>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={academicTermFilter}
-              onChange={(event) => {
-                setPage(1);
-                setAcademicTermFilter(event.target.value);
-              }}
+            </SelectField>
+
+            <SelectField
+              value={filterDraft.term}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, term: event.target.value }))
+              }
+              disabled={!canReadAcademicTerms}
             >
               <option value="all">كل الفصول</option>
-              {(academicTermsQuery.data ?? []).map((term) => (
+              {(filterTermOptionsQuery.data ?? []).map((term) => (
                 <option key={term.id} value={term.id}>
                   {formatNameCodeLabel(term.name, term.code)}
                 </option>
               ))}
-            </select>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={sectionFilter}
-              onChange={(event) => {
-                setPage(1);
-                setSectionFilter(event.target.value);
-              }}
+            </SelectField>
+
+            <SelectField
+              value={filterDraft.section}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, section: event.target.value }))
+              }
+              disabled={!canReadSections}
             >
               <option value="all">كل الشعب</option>
               {(sectionsQuery.data ?? []).map((section) => (
@@ -783,14 +665,14 @@ export function HomeworksWorkspace() {
                   {formatSectionWithGradeLabel(section)}
                 </option>
               ))}
-            </select>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={subjectFilter}
-              onChange={(event) => {
-                setPage(1);
-                setSubjectFilter(event.target.value);
-              }}
+            </SelectField>
+
+            <SelectField
+              value={filterDraft.subject}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, subject: event.target.value }))
+              }
+              disabled={!canReadSubjects}
             >
               <option value="all">كل المواد</option>
               {(subjectsQuery.data ?? []).map((subject) => (
@@ -798,14 +680,14 @@ export function HomeworksWorkspace() {
                   {formatNameCodeLabel(subject.name, subject.code)}
                 </option>
               ))}
-            </select>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={homeworkTypeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setHomeworkTypeFilter(event.target.value);
-              }}
+            </SelectField>
+
+            <SelectField
+              value={filterDraft.homeworkType}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, homeworkType: event.target.value }))
+              }
+              disabled={!canReadHomeworkTypes}
             >
               <option value="all">كل الأنواع</option>
               {(homeworkTypesQuery.data ?? []).map((typeItem) => (
@@ -813,24 +695,32 @@ export function HomeworksWorkspace() {
                   {formatNameCodeLabel(typeItem.name, typeItem.code)}
                 </option>
               ))}
-            </select>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={activeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setActiveFilter(event.target.value as "all" | "active" | "inactive");
-              }}
+            </SelectField>
+
+            <SelectField
+              value={filterDraft.active}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  active: event.target.value as "all" | "active" | "inactive",
+                }))
+              }
             >
               <option value="all">الكل</option>
               <option value="active">نشط</option>
               <option value="inactive">غير نشط</option>
-            </select>
-            <Button type="submit" variant="outline" className="gap-2">
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
-          </form>
+            </SelectField>
+          </div>
+        </FilterDrawer>
+
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+        <CardHeader className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle>الواجبات</CardTitle>
+            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+          </div>
+          <CardDescription>قائمة الواجبات مع عمليات التحديث والتعبئة والحذف.</CardDescription>
+
         </CardHeader>
 
         <CardContent className="space-y-3">
@@ -965,7 +855,284 @@ export function HomeworksWorkspace() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+
+      <Fab
+        icon={<Plus className="h-4 w-4" />}
+        label="إنشاء"
+        ariaLabel="إنشاء واجب"
+        onClick={handleStartCreate}
+        disabled={!canCreate}
+      />
+
+      <BottomSheetForm
+        open={isFormOpen}
+        title={isEditing ? "تعديل واجب" : "إنشاء واجب"}
+        onClose={resetForm}
+        onSubmit={() => undefined}
+        isSubmitting={isFormSubmitting}
+        submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء واجب"}
+        showFooter={false}
+      >
+        {!canCreate && !isEditing ? (
+          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+            لا تملك الصلاحية المطلوبة: <code>homeworks.create</code>.
+          </div>
+        ) : (
+          <form className="space-y-3" onSubmit={handleSubmitForm}>
+            <CardDescription>إدارة واجبات الطلاب على مستوى الفصل والشعبة.</CardDescription>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <select
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                value={formState.academicYearId}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    academicYearId: event.target.value,
+                    academicTermId: "",
+                  }))
+                }
+                disabled={!canReadAcademicYears}
+              >
+                <option value="">اختر السنة</option>
+                {(academicYearsQuery.data ?? []).map((year) => (
+                  <option key={year.id} value={year.id}>
+                    {formatNameCodeLabel(year.name, year.code)}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                value={formState.academicTermId}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, academicTermId: event.target.value }))
+                }
+                disabled={!canReadAcademicTerms}
+              >
+                <option value="">اختر الفصل</option>
+                {(academicTermsQuery.data ?? []).map((term) => (
+                  <option key={term.id} value={term.id}>
+                    {formatNameCodeLabel(term.name, term.code)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <select
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                value={formState.sectionId}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, sectionId: event.target.value }))
+                }
+                disabled={!canReadSections}
+              >
+                <option value="">اختر الشعبة</option>
+                {(sectionsQuery.data ?? []).map((section) => (
+                  <option key={section.id} value={section.id}>
+                    {formatSectionWithGradeLabel(section)}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                value={formState.subjectId}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, subjectId: event.target.value }))
+                }
+                disabled={!canReadSubjects}
+              >
+                <option value="">اختر المادة</option>
+                {(subjectsQuery.data ?? []).map((subject) => (
+                  <option key={subject.id} value={subject.id}>
+                    {formatNameCodeLabel(subject.name, subject.code)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              ملاحظة: الشعبة مرتبطة بالصف، أما القاعة/مكان الحصة فيتم ضبطه من شاشة{" "}
+              <code>الجدول الدراسي</code> عبر حقل القاعة.
+            </p>
+
+            <select
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              value={formState.homeworkTypeId}
+              onChange={(event) =>
+                setFormState((prev) => ({ ...prev, homeworkTypeId: event.target.value }))
+              }
+              disabled={!canReadHomeworkTypes}
+            >
+              <option value="">اختر نوع الواجب</option>
+              {(homeworkTypesQuery.data ?? []).map((typeItem) => (
+                <option key={typeItem.id} value={typeItem.id}>
+                  {formatNameCodeLabel(typeItem.name, typeItem.code)}
+                </option>
+              ))}
+            </select>
+
+            <Input
+              value={formState.title}
+              onChange={(event) =>
+                setFormState((prev) => ({ ...prev, title: event.target.value }))
+              }
+              placeholder="عنوان الواجب"
+              required
+            />
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <Input
+                type="date"
+                value={formState.homeworkDate}
+                onChange={(event) =>
+                  setFormState((prev) => {
+                    const nextHomeworkDate = event.target.value;
+
+                    if (!nextHomeworkDate) {
+                      return {
+                        ...prev,
+                        homeworkDate: "",
+                      };
+                    }
+
+                    const autoAdjustDueDate = shouldAutoAdjustDueDate(
+                      prev.homeworkDate,
+                      prev.dueDate,
+                    );
+
+                    return {
+                      ...prev,
+                      homeworkDate: nextHomeworkDate,
+                      dueDate: autoAdjustDueDate
+                        ? addDaysToDateInput(
+                            nextHomeworkDate,
+                            DEFAULT_DUE_DATE_OFFSET_DAYS,
+                          )
+                        : prev.dueDate,
+                    };
+                  })
+                }
+                required
+              />
+              <Input
+                type="date"
+                value={formState.dueDate}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, dueDate: event.target.value }))
+                }
+              />
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <Input
+                type="number"
+                min={0.01}
+                step={0.01}
+                value={formState.maxScore}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, maxScore: event.target.value }))
+                }
+              />
+              <Input
+                value={formState.notes}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, notes: event.target.value }))
+                }
+                placeholder="ملاحظات"
+              />
+            </div>
+
+            <Input
+              value={formState.content}
+              onChange={(event) =>
+                setFormState((prev) => ({ ...prev, content: event.target.value }))
+              }
+              placeholder="المحتوى"
+            />
+
+            <div className="grid gap-2 md:grid-cols-2">
+              {!isEditing ? (
+                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                  <span>تعبئة الطلاب تلقائيًا</span>
+                  <input
+                    type="checkbox"
+                    checked={formState.autoPopulateStudents}
+                    onChange={(event) =>
+                      setFormState((prev) => ({
+                        ...prev,
+                        autoPopulateStudents: event.target.checked,
+                      }))
+                    }
+                  />
+                </label>
+              ) : (
+                <div className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                  بعد التعديل استخدم إجراء <code>تعبئة الطلاب</code>.
+                </div>
+              )}
+              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                <span>نشط</span>
+                <input
+                  type="checkbox"
+                  checked={formState.isActive}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                  }
+                />
+              </label>
+            </div>
+
+            {formError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {formError}
+              </div>
+            ) : null}
+            {mutationError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {mutationError}
+              </div>
+            ) : null}
+            {actionInfo ? (
+              <div className="rounded-md border border-primary/30 bg-primary/10 p-2 text-xs text-primary">
+                {actionInfo}
+              </div>
+            ) : null}
+            {!hasDependenciesReadPermissions ? (
+              <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+                يتطلب هذا الجزء صلاحيات قراءة المراجع (السنة/الفصل/الشعبة/المادة/نوع الواجب).
+              </div>
+            ) : null}
+
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                className="flex-1 gap-2"
+                disabled={
+                  isFormSubmitting ||
+                  (!canCreate && !isEditing) ||
+                  !hasDependenciesReadPermissions
+                }
+              >
+                {isFormSubmitting ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ClipboardList className="h-4 w-4" />
+                )}
+                {isEditing ? "حفظ التعديلات" : "إنشاء واجب"}
+              </Button>
+              {isEditing ? (
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  إلغاء
+                </Button>
+              ) : null}
+            </div>
+          </form>
+        )}
+      </BottomSheetForm>
+    </>
   );
 }
 

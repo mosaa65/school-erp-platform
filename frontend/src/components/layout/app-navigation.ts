@@ -28,12 +28,15 @@ export type AppNavItem = {
   label: string;
   icon: LucideIcon;
   requiredPermission?: string;
+  iconClassName?: string;
 };
 
 export type AppNavGroup = {
   id: string;
   label: string;
   icon: LucideIcon;
+  iconClassName?: string;
+  surfaceClassName?: string;
   items: AppNavItem[];
 };
 
@@ -42,6 +45,8 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
     id: "overview",
     label: "عام",
     icon: Gauge,
+    iconClassName: "border-slate-500/20 bg-slate-500/10 text-slate-700 dark:text-slate-300",
+    surfaceClassName: "bg-gradient-to-l from-slate-500/10 via-transparent to-transparent",
     items: [
       {
         href: "/app",
@@ -52,8 +57,10 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
   },
   {
     id: "system-01-shared",
-    label: "النظام 01 - البنية المشتركة",
+    label: "البنية المشتركة",
     icon: ShieldCheck,
+    iconClassName: "border-violet-500/20 bg-violet-500/10 text-violet-700 dark:text-violet-300",
+    surfaceClassName: "bg-gradient-to-l from-violet-500/10 via-transparent to-transparent",
     items: [
       {
         href: "/app/users",
@@ -114,13 +121,16 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         label: "قاموس كل المرجعيات",
         icon: Layers3,
         requiredPermission: "lookup-catalog.read",
+        iconClassName: "border-fuchsia-500/20 bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-300",
       },
     ],
   },
   {
     id: "system-02-academic-core",
-    label: "النظام 02 - النواة الأكاديمية",
+    label: "النواة الأكاديمية",
     icon: CalendarDays,
+    iconClassName: "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+    surfaceClassName: "bg-gradient-to-l from-emerald-500/10 via-transparent to-transparent",
     items: [
       {
         href: "/app/academic-years",
@@ -180,8 +190,10 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
   },
   {
     id: "system-03-hr",
-    label: "النظام 03 - الموارد البشرية",
+    label: "الموارد البشرية",
     icon: Users,
+    iconClassName: "border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+    surfaceClassName: "bg-gradient-to-l from-sky-500/10 via-transparent to-transparent",
     items: [
       {
         href: "/app/employees",
@@ -253,8 +265,10 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
   },
   {
     id: "system-04-students",
-    label: "النظام 04 - الطلاب",
+    label: "الطلاب",
     icon: GraduationCap,
+    iconClassName: "border-indigo-500/20 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300",
+    surfaceClassName: "bg-gradient-to-l from-indigo-500/10 via-transparent to-transparent",
     items: [
       {
         href: "/app/students",
@@ -319,9 +333,11 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
     ],
   },
   {
-    id: "system-05-teaching-grades",
-    label: "النظام 05 - التعليم والدرجات",
+    id: "system-05-grades-config",
+    label: "التعليم والدرجات - الإعدادات",
     icon: Medal,
+    iconClassName: "border-orange-500/20 bg-orange-500/10 text-orange-700 dark:text-orange-300",
+    surfaceClassName: "bg-gradient-to-l from-orange-500/10 via-transparent to-transparent",
     items: [
       {
         href: "/app/lookup-grade-descriptions",
@@ -347,6 +363,15 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         icon: Medal,
         requiredPermission: "grading-outcome-rules.read",
       },
+    ],
+  },
+  {
+    id: "system-05-grades-policies",
+    label: "سياسات التقييم",
+    icon: Medal,
+    iconClassName: "border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300",
+    surfaceClassName: "bg-gradient-to-l from-rose-500/10 via-transparent to-transparent",
+    items: [
       {
         href: "/app/grading-policies",
         label: "سياسات التقييم والدرجات",
@@ -359,6 +384,15 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         icon: Medal,
         requiredPermission: "grading-policy-components.read",
       },
+    ],
+  },
+  {
+    id: "system-05-grades-homeworks",
+    label: "الواجبات",
+    icon: BookOpenText,
+    iconClassName: "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+    surfaceClassName: "bg-gradient-to-l from-amber-500/10 via-transparent to-transparent",
+    items: [
       {
         href: "/app/homework-types",
         label: "أنواع الواجبات",
@@ -366,16 +400,25 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         requiredPermission: "homework-types.read",
       },
       {
-        href: "/app/exam-periods",
-        label: "الفترات الاختبارية",
-        icon: CalendarClock,
-        requiredPermission: "exam-periods.read",
-      },
-      {
         href: "/app/homeworks",
         label: "الواجبات",
         icon: ClipboardList,
         requiredPermission: "homeworks.read",
+      },
+    ],
+  },
+  {
+    id: "system-05-grades-exams",
+    label: "الاختبارات",
+    icon: ClipboardList,
+    iconClassName: "border-cyan-500/20 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300",
+    surfaceClassName: "bg-gradient-to-l from-cyan-500/10 via-transparent to-transparent",
+    items: [
+      {
+        href: "/app/exam-periods",
+        label: "الفترات الاختبارية",
+        icon: CalendarClock,
+        requiredPermission: "exam-periods.read",
       },
       {
         href: "/app/exam-assessments",
@@ -383,6 +426,15 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         icon: ClipboardList,
         requiredPermission: "exam-assessments.read",
       },
+    ],
+  },
+  {
+    id: "system-05-grades-student-work",
+    label: "درجات الطلاب",
+    icon: ClipboardCheck,
+    iconClassName: "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+    surfaceClassName: "bg-gradient-to-l from-emerald-500/10 via-transparent to-transparent",
+    items: [
       {
         href: "/app/student-homeworks",
         label: "واجبات الطلاب",
@@ -395,6 +447,15 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         icon: ClipboardCheck,
         requiredPermission: "student-exam-scores.read",
       },
+    ],
+  },
+  {
+    id: "system-05-grades-aggregation",
+    label: "التجميع والنتائج",
+    icon: Medal,
+    iconClassName: "border-fuchsia-500/20 bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-300",
+    surfaceClassName: "bg-gradient-to-l from-fuchsia-500/10 via-transparent to-transparent",
+    items: [
       {
         href: "/app/monthly-grades",
         label: "الدرجات الشهرية",
@@ -403,7 +464,7 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
       },
       {
         href: "/app/monthly-custom-component-scores",
-        label: "مكوّنات التقييم الشهري",
+        label: "مكوّنات شهرية إضافية (درجات فعلية)",
         icon: Medal,
         requiredPermission: "monthly-custom-component-scores.read",
       },
@@ -425,6 +486,15 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         icon: Medal,
         requiredPermission: "annual-results.read",
       },
+    ],
+  },
+  {
+    id: "system-05-grades-reports",
+    label: "تقارير الدرجات",
+    icon: ScrollText,
+    iconClassName: "border-slate-500/20 bg-slate-500/10 text-slate-700 dark:text-slate-300",
+    surfaceClassName: "bg-gradient-to-l from-slate-500/10 via-transparent to-transparent",
+    items: [
       {
         href: "/app/grading-reports",
         label: "تقارير الدرجات",

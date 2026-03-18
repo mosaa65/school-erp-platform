@@ -1619,13 +1619,12 @@ export type GradingPolicyListItem = {
   gradeLevelId: string;
   subjectId: string;
   assessmentType: AssessmentType;
-  maxExamScore: number;
-  maxHomeworkScore: number;
-  maxAttendanceScore: number;
-  maxActivityScore: number;
-  maxContributionScore: number;
-  passingScore: number;
+  sectionId: string | null;
+  academicTermId: string | null;
+  teacherEmployeeId: string | null;
+  version: number;
   totalMaxScore: number;
+  passingScore: number;
   isDefault: boolean;
   status: GradingWorkflowStatus;
   notes: string | null;
@@ -1684,6 +1683,10 @@ export type GradingPolicyComponentListItem = {
     gradeLevelId: string;
     subjectId: string;
     assessmentType: AssessmentType;
+    sectionId: string | null;
+    academicTermId: string | null;
+    teacherEmployeeId: string | null;
+    version: number;
     status: GradingWorkflowStatus;
     isActive: boolean;
   };
@@ -1811,11 +1814,9 @@ export type MonthlyGradeListItem = {
     id: string;
     assessmentType: AssessmentType;
     status: GradingWorkflowStatus;
-    maxExamScore: number;
-    maxHomeworkScore: number;
-    maxAttendanceScore: number;
-    maxActivityScore: number;
-    maxContributionScore: number;
+    totalMaxScore: number;
+    passingScore: number;
+    components: GradingPolicyComponentListItem[];
     isActive: boolean;
   };
   createdBy: {
@@ -3610,15 +3611,11 @@ export type CreateMonthlyGradePayload = {
   studentEnrollmentId: string;
   subjectId: string;
   academicMonthId: string;
-  activityScore?: number;
-  contributionScore?: number;
   notes?: string;
   isActive?: boolean;
 };
 
 export type UpdateMonthlyGradePayload = {
-  activityScore?: number;
-  contributionScore?: number;
   status?: GradingWorkflowStatus;
   notes?: string;
   isActive?: boolean;
@@ -3628,7 +3625,6 @@ export type CalculateMonthlyGradesPayload = {
   academicMonthId: string;
   sectionId: string;
   subjectId: string;
-  overwriteManual?: boolean;
 };
 
 export type CalculateMonthlyGradesResponse = {
@@ -3714,11 +3710,10 @@ export type CreateGradingPolicyPayload = {
   gradeLevelId: string;
   subjectId: string;
   assessmentType: AssessmentType;
-  maxExamScore?: number;
-  maxHomeworkScore?: number;
-  maxAttendanceScore?: number;
-  maxActivityScore?: number;
-  maxContributionScore?: number;
+  totalMaxScore?: number;
+  sectionId?: string;
+  academicTermId?: string;
+  teacherEmployeeId?: string;
   passingScore?: number;
   isDefault?: boolean;
   status?: GradingWorkflowStatus;
@@ -3731,11 +3726,10 @@ export type UpdateGradingPolicyPayload = {
   gradeLevelId?: string;
   subjectId?: string;
   assessmentType?: AssessmentType;
-  maxExamScore?: number;
-  maxHomeworkScore?: number;
-  maxAttendanceScore?: number;
-  maxActivityScore?: number;
-  maxContributionScore?: number;
+  totalMaxScore?: number;
+  sectionId?: string;
+  academicTermId?: string;
+  teacherEmployeeId?: string;
   passingScore?: number;
   isDefault?: boolean;
   status?: GradingWorkflowStatus;
@@ -4246,6 +4240,7 @@ export const apiClient = {
     limit?: number;
     search?: string;
     isActive?: boolean;
+    deletedOnly?: boolean;
   }) =>
     request<PaginatedResponse<UserListItem>>(
       `/users${buildQueryString({
@@ -4253,6 +4248,7 @@ export const apiClient = {
         limit: query?.limit,
         search: query?.search,
         isActive: query?.isActive,
+        deletedOnly: query?.deletedOnly,
       })}`,
       "GET",
       {
@@ -4423,6 +4419,7 @@ export const apiClient = {
     search?: string;
     tickerType?: ReminderTickerType;
     isActive?: boolean;
+    deletedOnly?: boolean;
   }) =>
     request<PaginatedResponse<ReminderTickerListItem>>(
       `/reminders-ticker${buildQueryString({
@@ -4431,6 +4428,7 @@ export const apiClient = {
         search: query?.search,
         tickerType: query?.tickerType,
         isActive: query?.isActive,
+        deletedOnly: query?.deletedOnly,
       })}`,
       "GET",
       {
@@ -4589,6 +4587,7 @@ export const apiClient = {
     limit?: number;
     search?: string;
     isActive?: boolean;
+    deletedOnly?: boolean;
   }) =>
     request<PaginatedResponse<LookupBloodTypeListItem>>(
       `/lookup/blood-types${buildQueryString({
@@ -4596,6 +4595,7 @@ export const apiClient = {
         limit: query?.limit,
         search: query?.search,
         isActive: query?.isActive,
+        deletedOnly: query?.deletedOnly,
       })}`,
       "GET",
       {
@@ -4632,6 +4632,7 @@ export const apiClient = {
     limit?: number;
     search?: string;
     isActive?: boolean;
+    deletedOnly?: boolean;
   }) =>
     request<PaginatedResponse<LookupIdTypeListItem>>(
       `/lookup/id-types${buildQueryString({
@@ -4639,6 +4640,7 @@ export const apiClient = {
         limit: query?.limit,
         search: query?.search,
         isActive: query?.isActive,
+        deletedOnly: query?.deletedOnly,
       })}`,
       "GET",
       {
@@ -4675,6 +4677,7 @@ export const apiClient = {
     limit?: number;
     search?: string;
     isActive?: boolean;
+    deletedOnly?: boolean;
   }) =>
     request<PaginatedResponse<LookupOwnershipTypeListItem>>(
       `/lookup/ownership-types${buildQueryString({
@@ -4682,6 +4685,7 @@ export const apiClient = {
         limit: query?.limit,
         search: query?.search,
         isActive: query?.isActive,
+        deletedOnly: query?.deletedOnly,
       })}`,
       "GET",
       {
@@ -4718,6 +4722,7 @@ export const apiClient = {
     limit?: number;
     search?: string;
     isActive?: boolean;
+    deletedOnly?: boolean;
   }) =>
     request<PaginatedResponse<LookupPeriodListItem>>(
       `/lookup/periods${buildQueryString({
@@ -4725,6 +4730,7 @@ export const apiClient = {
         limit: query?.limit,
         search: query?.search,
         isActive: query?.isActive,
+        deletedOnly: query?.deletedOnly,
       })}`,
       "GET",
       {
@@ -4761,6 +4767,7 @@ export const apiClient = {
     limit?: number;
     search?: string;
     isActive?: boolean;
+    deletedOnly?: boolean;
   }) =>
     request<PaginatedResponse<LookupEnrollmentStatusListItem>>(
       `/lookup/enrollment-statuses${buildQueryString({
@@ -4768,6 +4775,7 @@ export const apiClient = {
         limit: query?.limit,
         search: query?.search,
         isActive: query?.isActive,
+        deletedOnly: query?.deletedOnly,
       })}`,
       "GET",
       {
@@ -4810,6 +4818,7 @@ export const apiClient = {
     limit?: number;
     search?: string;
     isActive?: boolean;
+    deletedOnly?: boolean;
   }) =>
     request<PaginatedResponse<LookupOrphanStatusListItem>>(
       `/lookup/orphan-statuses${buildQueryString({
@@ -4817,6 +4826,7 @@ export const apiClient = {
         limit: query?.limit,
         search: query?.search,
         isActive: query?.isActive,
+        deletedOnly: query?.deletedOnly,
       })}`,
       "GET",
       {
@@ -4853,6 +4863,7 @@ export const apiClient = {
     limit?: number;
     search?: string;
     isActive?: boolean;
+    deletedOnly?: boolean;
   }) =>
     request<PaginatedResponse<LookupAbilityLevelListItem>>(
       `/lookup/ability-levels${buildQueryString({
@@ -4860,6 +4871,7 @@ export const apiClient = {
         limit: query?.limit,
         search: query?.search,
         isActive: query?.isActive,
+        deletedOnly: query?.deletedOnly,
       })}`,
       "GET",
       {
@@ -4896,6 +4908,7 @@ export const apiClient = {
     limit?: number;
     search?: string;
     isActive?: boolean;
+    deletedOnly?: boolean;
   }) =>
     request<PaginatedResponse<LookupActivityTypeListItem>>(
       `/lookup/activity-types${buildQueryString({
@@ -4903,6 +4916,7 @@ export const apiClient = {
         limit: query?.limit,
         search: query?.search,
         isActive: query?.isActive,
+        deletedOnly: query?.deletedOnly,
       })}`,
       "GET",
       {
@@ -4939,6 +4953,7 @@ export const apiClient = {
     limit?: number;
     search?: string;
     isActive?: boolean;
+    deletedOnly?: boolean;
   }) =>
     request<PaginatedResponse<LookupGradeDescriptionListItem>>(
       `/lookup/grade-descriptions${buildQueryString({
@@ -4946,6 +4961,7 @@ export const apiClient = {
         limit: query?.limit,
         search: query?.search,
         isActive: query?.isActive,
+        deletedOnly: query?.deletedOnly,
       })}`,
       "GET",
       {
@@ -4990,6 +5006,7 @@ export const apiClient = {
       limit?: number;
       search?: string;
       isActive?: boolean;
+      deletedOnly?: boolean;
     },
   ) =>
     request<PaginatedResponse<LookupCatalogListItem>>(
@@ -4998,6 +5015,7 @@ export const apiClient = {
         limit: query?.limit,
         search: query?.search,
         isActive: query?.isActive,
+        deletedOnly: query?.deletedOnly,
       })}`,
       "GET",
       {
@@ -5039,6 +5057,7 @@ export const apiClient = {
     search?: string;
     ownershipTypeId?: number;
     isActive?: boolean;
+    deletedOnly?: boolean;
   }) =>
     request<PaginatedResponse<SchoolProfileListItem>>(
       `/school-profiles${buildQueryString({
@@ -5047,6 +5066,7 @@ export const apiClient = {
         search: query?.search,
         ownershipTypeId: query?.ownershipTypeId,
         isActive: query?.isActive,
+        deletedOnly: query?.deletedOnly,
       })}`,
       "GET",
       {
@@ -5258,6 +5278,9 @@ export const apiClient = {
     academicYearId?: string;
     gradeLevelId?: string;
     subjectId?: string;
+    sectionId?: string;
+    academicTermId?: string;
+    teacherEmployeeId?: string;
     assessmentType?: AssessmentType;
     status?: GradingWorkflowStatus;
     isDefault?: boolean;
@@ -5268,12 +5291,15 @@ export const apiClient = {
         page: query?.page,
         limit: query?.limit,
         search: query?.search,
-        academicYearId: query?.academicYearId,
-        gradeLevelId: query?.gradeLevelId,
-        subjectId: query?.subjectId,
-        assessmentType: query?.assessmentType,
-        status: query?.status,
-        isDefault: query?.isDefault,
+          academicYearId: query?.academicYearId,
+          gradeLevelId: query?.gradeLevelId,
+          subjectId: query?.subjectId,
+          sectionId: query?.sectionId,
+          academicTermId: query?.academicTermId,
+          teacherEmployeeId: query?.teacherEmployeeId,
+          assessmentType: query?.assessmentType,
+          status: query?.status,
+          isDefault: query?.isDefault,
         isActive: query?.isActive,
       })}`,
       "GET",

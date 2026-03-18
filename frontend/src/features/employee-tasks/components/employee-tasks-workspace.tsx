@@ -2,16 +2,20 @@
 
 import * as React from "react";
 import {
+  Filter,
   ClipboardList,
   LoaderCircle,
   PencilLine,
+  Plus,
   RefreshCw,
-  Search,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField } from "@/components/ui/select-field";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
   CardContent,
@@ -19,6 +23,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useAcademicYearOptionsQuery } from "@/features/employee-tasks/hooks/use-academic-year-options-query";
 import { useEmployeeOptionsQuery } from "@/features/employee-tasks/hooks/use-employee-options-query";
@@ -129,14 +136,28 @@ export function EmployeeTasksWorkspace() {
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
+  const [debounceTimer, setDebounceTimer] = React.useState<NodeJS.Timeout | null>(null);
   const [employeeFilter, setEmployeeFilter] = React.useState("all");
   const [academicYearFilter, setAcademicYearFilter] = React.useState("all");
   const [dayFilter, setDayFilter] = React.useState<TimetableDay | "all">("all");
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
     "all",
   );
+  const [filterDraft, setFilterDraft] = React.useState<{
+    employee: string;
+    academicYear: string;
+    day: TimetableDay | "all";
+    active: "all" | "active" | "inactive";
+  }>({
+    employee: "all",
+    academicYear: "all",
+    day: "all",
+    active: "all",
+  });
 
   const [editingTaskId, setEditingTaskId] = React.useState<string | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<EmployeeTaskFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
 
@@ -168,6 +189,36 @@ export function EmployeeTasksWorkspace() {
     null;
 
   React.useEffect(() => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+
+    const timer = setTimeout(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 400);
+
+    setDebounceTimer(timer);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [searchInput]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setFilterDraft({
+      employee: employeeFilter,
+      academicYear: academicYearFilter,
+      day: dayFilter,
+      active: activeFilter,
+    });
+  }, [academicYearFilter, activeFilter, dayFilter, employeeFilter, isFilterOpen]);
+
+  React.useEffect(() => {
     if (!isEditing) {
       return;
     }
@@ -177,6 +228,7 @@ export function EmployeeTasksWorkspace() {
       setEditingTaskId(null);
       setFormState(DEFAULT_FORM_STATE);
       setFormError(null);
+      setIsFormOpen(false);
     }
   }, [tasks, editingTaskId, isEditing]);
 
@@ -184,12 +236,18 @@ export function EmployeeTasksWorkspace() {
     setEditingTaskId(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
+    setIsFormOpen(false);
   };
 
-  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPage(1);
-    setSearch(searchInput.trim());
+  const handleStartCreate = () => {
+    if (!canCreate) {
+      return;
+    }
+
+    setFormError(null);
+    setEditingTaskId(null);
+    setFormState(DEFAULT_FORM_STATE);
+    setIsFormOpen(true);
   };
 
   const validateForm = (): boolean => {
@@ -207,8 +265,8 @@ export function EmployeeTasksWorkspace() {
     return true;
   };
 
-  const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
 
     if (!validateForm()) {
       return;
@@ -267,6 +325,7 @@ export function EmployeeTasksWorkspace() {
     setFormError(null);
     setEditingTaskId(task.id);
     setFormState(toFormState(task));
+    setIsFormOpen(true);
   };
 
   const handleDelete = (task: EmployeeTaskListItem) => {
@@ -290,231 +349,84 @@ export function EmployeeTasksWorkspace() {
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
   const hasDependenciesReadPermissions = canReadEmployees && canReadAcademicYears;
+  const activeFiltersCount = React.useMemo(() => {
+    const count = [
+      searchInput.trim() ? 1 : 0,
+      employeeFilter !== "all" ? 1 : 0,
+      academicYearFilter !== "all" ? 1 : 0,
+      dayFilter !== "all" ? 1 : 0,
+      activeFilter !== "all" ? 1 : 0,
+    ].reduce((acc, value) => acc + value, 0);
+    return count;
+  }, [academicYearFilter, activeFilter, dayFilter, employeeFilter, searchInput]);
+
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setEmployeeFilter("all");
+    setAcademicYearFilter("all");
+    setDayFilter("all");
+    setActiveFilter("all");
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    setPage(1);
+    setEmployeeFilter(filterDraft.employee);
+    setAcademicYearFilter(filterDraft.academicYear);
+    setDayFilter(filterDraft.day);
+    setActiveFilter(filterDraft.active);
+    setIsFilterOpen(false);
+  };
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[420px_1fr]">
-      <Card className="h-fit border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ClipboardList className="h-5 w-5 text-primary" />
-            {isEditing ? "تعديل مهمة موظف" : "إنشاء مهمة موظف"}
-          </CardTitle>
-          <CardDescription>
-            {isEditing ? "تحديث المهمة." : "إضافة مهمة جديدة مرتبطة بموظف."}
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent>
-          {!canCreate && !isEditing ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك الصلاحية المطلوبة: <code>employee-tasks.create</code>.
-            </div>
-          ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="task-form">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.employeeId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
-                  }
-                  disabled={!canReadEmployees}
-                  data-testid="task-form-employee"
-                >
-                  <option value="">اختر الموظف</option>
-                  {(employeesQuery.data ?? []).map((employee) => (
-                    <option key={employee.id} value={employee.id}>
-                      {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">اسم المهمة *</label>
-                <Input
-                  value={formState.taskName}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, taskName: event.target.value }))
-                  }
-                  placeholder="إشراف صباحي"
-                  required
-                  data-testid="task-form-name"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  السنة الأكاديمية
-                </label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.academicYearId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      academicYearId: event.target.value,
-                    }))
-                  }
-                  disabled={!canReadAcademicYears}
-                  data-testid="task-form-year"
-                >
-                  <option value="">غير مرتبطة</option>
-                  {(academicYearsQuery.data ?? []).map((year) => (
-                    <option key={year.id} value={year.id}>
-                      {year.name} ({year.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">اليوم</label>
-                  <select
-                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    value={formState.dayOfWeek}
-                    onChange={(event) =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        dayOfWeek: event.target.value as TimetableDay | "",
-                      }))
-                    }
-                    data-testid="task-form-day"
-                  >
-                    <option value="">غير محدد</option>
-                    {DAY_OPTIONS.map((day) => (
-                      <option key={day} value={day}>
-                        {translateTimetableDay(day)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    تاريخ الإسناد
-                  </label>
-                  <Input
-                    type="date"
-                    value={formState.assignmentDate}
-                    onChange={(event) =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        assignmentDate: event.target.value,
-                      }))
-                    }
-                    data-testid="task-form-date"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
-                <Input
-                  value={formState.notes}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, notes: event.target.value }))
-                  }
-                  placeholder="مناوبة البوابة قبل الحصة الأولى"
-                  data-testid="task-form-notes"
-                />
-              </div>
-
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشط</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                  data-testid="task-form-active"
-                />
-              </label>
-
-              {formError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {formError}
-                </div>
-              ) : null}
-
-              {mutationError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {mutationError}
-                </div>
-              ) : null}
-
-              {!hasDependenciesReadPermissions ? (
-                <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يتطلب هذا الجزء صلاحيات القراءة: <code>employees.read</code> و{" "}
-                  <code>academic-years.read</code>.
-                </div>
-              ) : null}
-
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  className="flex-1 gap-2"
-                  disabled={
-                    isFormSubmitting ||
-                    (!canCreate && !isEditing) ||
-                    !hasDependenciesReadPermissions
-                  }
-                  data-testid="task-form-submit"
-                >
-                  {isFormSubmitting ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <ClipboardList className="h-4 w-4" />
-                  )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء مهمة"}
-                </Button>
-                {isEditing ? (
-                  <Button type="button" variant="outline" onClick={resetForm}>
-                    إلغاء
-                  </Button>
-                ) : null}
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>مهام الموظفين</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+    <>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[260px] max-w-lg">
+            <SearchField
+              containerClassName="flex-1"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="بحث بالموظف أو اسم المهمة..."
+            />
           </div>
-          <CardDescription>
-            إدارة المهام التشغيلية للموظفين مع ربط اختياري بالسنة الأكاديمية.
-          </CardDescription>
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterTriggerButton
+              count={activeFiltersCount}
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+            />
+          </div>
+        </div>
 
-          <form
-            onSubmit={handleSearchSubmit}
-            className="grid gap-2 md:grid-cols-[1fr_170px_170px_160px_130px_auto]"
-            data-testid="task-filters-form"
-          >
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث بالموظف أو اسم المهمة..."
-                className="pr-8"
-                data-testid="task-filter-search"
-              />
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="فلاتر المهام"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={clearFilters}
+                className="flex-1 gap-1.5"
+              >
+                <Trash2 className="h-4 w-4" />
+                مسح
+              </Button>
+              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
+                تطبيق
+              </Button>
             </div>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={employeeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setEmployeeFilter(event.target.value);
-              }}
-              data-testid="task-filter-employee"
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectField
+              value={filterDraft.employee}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, employee: event.target.value }))
+              }
             >
               <option value="all">كل الموظفين</option>
               {(employeesQuery.data ?? []).map((employee) => (
@@ -522,16 +434,13 @@ export function EmployeeTasksWorkspace() {
                   {employee.jobNumber ?? employee.fullName}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={academicYearFilter}
-              onChange={(event) => {
-                setPage(1);
-                setAcademicYearFilter(event.target.value);
-              }}
-              data-testid="task-filter-year"
+            <SelectField
+              value={filterDraft.academicYear}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, academicYear: event.target.value }))
+              }
             >
               <option value="all">كل السنوات</option>
               {(academicYearsQuery.data ?? []).map((year) => (
@@ -539,16 +448,16 @@ export function EmployeeTasksWorkspace() {
                   {year.code}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={dayFilter}
-              onChange={(event) => {
-                setPage(1);
-                setDayFilter(event.target.value as TimetableDay | "all");
-              }}
-              data-testid="task-filter-day"
+            <SelectField
+              value={filterDraft.day}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  day: event.target.value as TimetableDay | "all",
+                }))
+              }
             >
               <option value="all">كل الأيام</option>
               {DAY_OPTIONS.map((day) => (
@@ -556,30 +465,36 @@ export function EmployeeTasksWorkspace() {
                   {translateTimetableDay(day)}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={activeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setActiveFilter(event.target.value as "all" | "active" | "inactive");
-              }}
-              data-testid="task-filter-active"
+            <SelectField
+              value={filterDraft.active}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  active: event.target.value as "all" | "active" | "inactive",
+                }))
+              }
             >
               <option value="all">كل الحالات</option>
               <option value="active">النشطة فقط</option>
               <option value="inactive">غير النشطة فقط</option>
-            </select>
+            </SelectField>
+          </div>
+        </FilterDrawer>
 
-            <Button type="submit" variant="outline" className="gap-2">
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
-          </form>
-        </CardHeader>
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+          <CardHeader className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>مهام الموظفين</CardTitle>
+              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+            </div>
+            <CardDescription>
+              إدارة المهام التشغيلية للموظفين مع ربط اختياري بالسنة الأكاديمية.
+            </CardDescription>
+          </CardHeader>
 
-        <CardContent className="space-y-3">
+          <CardContent className="space-y-3">
           {tasksQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
               جارٍ تحميل البيانات...
@@ -705,9 +620,205 @@ export function EmployeeTasksWorkspace() {
               </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Fab
+        icon={<Plus className="h-4 w-4" />}
+        label="إنشاء"
+        ariaLabel="إنشاء مهمة موظف"
+        onClick={handleStartCreate}
+        disabled={!canCreate}
+      />
+
+      <BottomSheetForm
+        open={isFormOpen}
+        title={isEditing ? "تعديل مهمة موظف" : "إنشاء مهمة موظف"}
+        onClose={resetForm}
+        onSubmit={() => handleSubmitForm()}
+        isSubmitting={isFormSubmitting}
+        submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء مهمة"}
+        showFooter={false}
+      >
+        {!canCreate && !isEditing ? (
+          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+            لا تملك الصلاحية المطلوبة: <code>employee-tasks.create</code>.
+          </div>
+        ) : (
+          <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="task-form">
+            <p className="text-sm text-muted-foreground">
+              {isEditing ? "تحديث المهمة." : "إضافة مهمة جديدة مرتبطة بموظف."}
+            </p>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={formState.employeeId}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
+                }
+                disabled={!canReadEmployees}
+                data-testid="task-form-employee"
+              >
+                <option value="">اختر الموظف</option>
+                {(employeesQuery.data ?? []).map((employee) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">اسم المهمة *</label>
+              <Input
+                value={formState.taskName}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, taskName: event.target.value }))
+                }
+                placeholder="إشراف صباحي"
+                required
+                data-testid="task-form-name"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                السنة الأكاديمية
+              </label>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={formState.academicYearId}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    academicYearId: event.target.value,
+                  }))
+                }
+                disabled={!canReadAcademicYears}
+                data-testid="task-form-year"
+              >
+                <option value="">غير مرتبطة</option>
+                {(academicYearsQuery.data ?? []).map((year) => (
+                  <option key={year.id} value={year.id}>
+                    {year.name} ({year.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">اليوم</label>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={formState.dayOfWeek}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      dayOfWeek: event.target.value as TimetableDay | "",
+                    }))
+                  }
+                  data-testid="task-form-day"
+                >
+                  <option value="">غير محدد</option>
+                  {DAY_OPTIONS.map((day) => (
+                    <option key={day} value={day}>
+                      {translateTimetableDay(day)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  تاريخ الإسناد
+                </label>
+                <Input
+                  type="date"
+                  value={formState.assignmentDate}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      assignmentDate: event.target.value,
+                    }))
+                  }
+                  data-testid="task-form-date"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
+              <Input
+                value={formState.notes}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, notes: event.target.value }))
+                }
+                placeholder="مناوبة البوابة قبل الحصة الأولى"
+                data-testid="task-form-notes"
+              />
+            </div>
+
+            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+              <span>نشط</span>
+              <input
+                type="checkbox"
+                checked={formState.isActive}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                }
+                data-testid="task-form-active"
+              />
+            </label>
+
+            {formError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {formError}
+              </div>
+            ) : null}
+
+            {mutationError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {mutationError}
+              </div>
+            ) : null}
+
+            {!hasDependenciesReadPermissions ? (
+              <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+                يتطلب هذا الجزء صلاحيات القراءة: <code>employees.read</code> و{" "}
+                <code>academic-years.read</code>.
+              </div>
+            ) : null}
+
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                className="flex-1 gap-2"
+                disabled={
+                  isFormSubmitting ||
+                  (!canCreate && !isEditing) ||
+                  !hasDependenciesReadPermissions
+                }
+                data-testid="task-form-submit"
+              >
+                {isFormSubmitting ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ClipboardList className="h-4 w-4" />
+                )}
+                {isEditing ? "حفظ التعديلات" : "إنشاء مهمة"}
+              </Button>
+              {isEditing ? (
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  إلغاء
+                </Button>
+              ) : null}
+            </div>
+          </form>
+        )}
+      </BottomSheetForm>
+    </>
   );
 }
 

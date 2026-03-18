@@ -2,16 +2,20 @@
 
 import * as React from "react";
 import {
+  Filter,
   LoaderCircle,
   Medal,
   PencilLine,
+  Plus,
   RefreshCw,
-  Search,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField } from "@/components/ui/select-field";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
   CardContent,
@@ -19,6 +23,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useAcademicYearOptionsQuery } from "@/features/employee-performance-evaluations/hooks/use-academic-year-options-query";
 import { useEmployeeOptionsQuery } from "@/features/employee-performance-evaluations/hooks/use-employee-options-query";
@@ -147,6 +153,7 @@ export function EmployeePerformanceEvaluationsWorkspace() {
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
+  const [debounceTimer, setDebounceTimer] = React.useState<NodeJS.Timeout | null>(null);
   const [employeeFilter, setEmployeeFilter] = React.useState("all");
   const [academicYearFilter, setAcademicYearFilter] = React.useState("all");
   const [ratingFilter, setRatingFilter] = React.useState<PerformanceRatingLevel | "all">(
@@ -156,10 +163,25 @@ export function EmployeePerformanceEvaluationsWorkspace() {
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
     "all",
   );
+  const [filterDraft, setFilterDraft] = React.useState<{
+    employee: string;
+    academicYear: string;
+    rating: PerformanceRatingLevel | "all";
+    evaluator: string;
+    active: "all" | "active" | "inactive";
+  }>({
+    employee: "all",
+    academicYear: "all",
+    rating: "all",
+    evaluator: "all",
+    active: "all",
+  });
 
   const [editingEvaluationId, setEditingEvaluationId] = React.useState<string | null>(
     null,
   );
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<EvaluationFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
 
@@ -203,183 +225,309 @@ export function EmployeePerformanceEvaluationsWorkspace() {
     formState.ratingLevel !== computedRating;
 
   React.useEffect(() => {
-    if (!isEditing) {
-      return;
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
     }
 
-    const stillExists = evaluations.some((item) => item.id === editingEvaluationId);
-    if (!stillExists) {
-      setEditingEvaluationId(null);
-      setFormState(DEFAULT_FORM_STATE);
-      setFormError(null);
-    }
-  }, [editingEvaluationId, evaluations, isEditing]);
+    const timer = setTimeout(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 400);
 
-  const resetForm = () => {
-    setEditingEvaluationId(null);
-    setFormState(DEFAULT_FORM_STATE);
-    setFormError(null);
-  };
+    setDebounceTimer(timer);
 
-  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPage(1);
-    setSearch(searchInput.trim());
-  };
+    return (
+    <>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[260px] max-w-lg">
+            <SearchField
+              containerClassName="flex-1"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="??? ??????? ?? ???? ???????..."
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+            >
+              <Filter className="h-4 w-4" />
+              ?????
+              {activeFiltersCount > 0 ? (
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
+                  {activeFiltersCount}
+                </span>
+              ) : null}
+            </Button>
+          </div>
+        </div>
 
-  const handleResetFilters = () => {
-    setPage(1);
-    setSearchInput("");
-    setSearch("");
-    setEmployeeFilter("all");
-    setAcademicYearFilter("all");
-    setRatingFilter("all");
-    setEvaluatorFilter("all");
-    setActiveFilter("all");
-  };
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="????? ?????????"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={clearFilters}
+                className="flex-1 gap-1.5"
+              >
+                <Trash2 className="h-4 w-4" />
+                ???
+              </Button>
+              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
+                ?????
+              </Button>
+            </div>
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectField
+              value={filterDraft.employee}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, employee: event.target.value }))
+              }
+            >
+              <option value="all">?? ????????</option>
+              {(employeesQuery.data ?? []).map((employee) => (
+                <option key={employee.id} value={employee.id}>
+                  {employee.jobNumber ?? employee.fullName}
+                </option>
+              ))}
+            </SelectField>
 
-  const validateForm = (): boolean => {
-    if (!formState.employeeId) {
-      setFormError("الموظف مطلوب.");
-      return false;
-    }
+            <SelectField
+              value={filterDraft.academicYear}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, academicYear: event.target.value }))
+              }
+            >
+              <option value="all">?? ???????</option>
+              {(academicYearsQuery.data ?? []).map((year) => (
+                <option key={year.id} value={year.id}>
+                  {year.code}
+                </option>
+              ))}
+            </SelectField>
 
-    if (!formState.academicYearId) {
-      setFormError("السنة الأكاديمية مطلوبة.");
-      return false;
-    }
+            <SelectField
+              value={filterDraft.rating}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  rating: event.target.value as PerformanceRatingLevel | "all",
+                }))
+              }
+            >
+              <option value="all">?? ?????????</option>
+              {RATING_OPTIONS.map((rating) => (
+                <option key={rating} value={rating}>
+                  {translatePerformanceRatingLevel(rating)}
+                </option>
+              ))}
+            </SelectField>
 
-    if (!formState.evaluationDate) {
-      setFormError("تاريخ التقييم مطلوب.");
-      return false;
-    }
+            <SelectField
+              value={filterDraft.evaluator}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, evaluator: event.target.value }))
+              }
+            >
+              <option value="all">?? ?????????</option>
+              {(employeesQuery.data ?? []).map((employee) => (
+                <option key={employee.id} value={employee.id}>
+                  {employee.jobNumber ?? employee.fullName}
+                </option>
+              ))}
+            </SelectField>
 
-    const score = Number(formState.score);
-    if (!Number.isInteger(score) || score < 0 || score > 100) {
-      setFormError("الدرجة يجب أن تكون رقمًا صحيحًا بين 0 و100.");
-      return false;
-    }
+            <SelectField
+              value={filterDraft.active}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  active: event.target.value as "all" | "active" | "inactive",
+                }))
+              }
+            >
+              <option value="all">?? ???????</option>
+              <option value="active">?????? ???</option>
+              <option value="inactive">??? ?????? ???</option>
+            </SelectField>
+          </div>
+        </FilterDrawer>
 
-    if (hasRatingMismatch && computedRating) {
-      setFormError(
-        `مستوى التقييم لا يطابق الدرجة. المتوقع: ${translatePerformanceRatingLevel(computedRating)}.`,
-      );
-      return false;
-    }
-
-    setFormError(null);
-    return true;
-  };
-
-  const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
-    const payload = {
-      employeeId: formState.employeeId,
-      academicYearId: formState.academicYearId,
-      evaluationDate: toDateIso(formState.evaluationDate),
-      score: Number(formState.score),
-      ratingLevel: formState.ratingLevel || undefined,
-      evaluatorEmployeeId: formState.evaluatorEmployeeId || undefined,
-      strengths: toOptionalString(formState.strengths),
-      weaknesses: toOptionalString(formState.weaknesses),
-      recommendations: toOptionalString(formState.recommendations),
-      isActive: formState.isActive,
-    };
-
-    if (isEditing && editingEvaluationId) {
-      if (!canUpdate) {
-        setFormError("لا تملك الصلاحية المطلوبة: employee-performance-evaluations.update.");
-        return;
-      }
-
-      updateMutation.mutate(
-        {
-          evaluationId: editingEvaluationId,
-          payload,
-        },
-        {
-          onSuccess: () => {
-            resetForm();
-          },
-        },
-      );
-      return;
-    }
-
-    if (!canCreate) {
-      setFormError("لا تملك الصلاحية المطلوبة: employee-performance-evaluations.create.");
-      return;
-    }
-
-    createMutation.mutate(payload, {
-      onSuccess: () => {
-        resetForm();
-        setPage(1);
-      },
-    });
-  };
-
-  const handleStartEdit = (evaluation: EmployeePerformanceEvaluationListItem) => {
-    if (!canUpdate) {
-      return;
-    }
-
-    setFormError(null);
-    setEditingEvaluationId(evaluation.id);
-    setFormState(toFormState(evaluation));
-  };
-
-  const handleDelete = (evaluation: EmployeePerformanceEvaluationListItem) => {
-    if (!canDelete) {
-      return;
-    }
-
-    const confirmed = window.confirm(
-      `تأكيد حذف تقييم ${evaluation.employee.fullName} للسنة ${evaluation.academicYear.code}؟`,
-    );
-    if (!confirmed) {
-      return;
-    }
-
-    deleteMutation.mutate(evaluation.id, {
-      onSuccess: () => {
-        if (editingEvaluationId === evaluation.id) {
-          resetForm();
-        }
-      },
-    });
-  };
-
-  const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
-  const hasDependenciesReadPermissions = canReadEmployees && canReadAcademicYears;
-
-  return (
-    <div className="grid gap-4 xl:grid-cols-[430px_1fr]">
-      <Card className="h-fit border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Medal className="h-5 w-5 text-primary" />
-            {isEditing ? "تعديل تقييم أداء" : "إنشاء تقييم أداء"}
-          </CardTitle>
+<Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+        <CardHeader className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle>تقييمات الأداء</CardTitle>
+            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+          </div>
           <CardDescription>
-            {isEditing
-              ? "تحديث تقييم الأداء للموظف."
-              : "إضافة تقييم أداء جديد للموظف."}
+            إدارة تقييمات أداء الموظفين حسب السنة والتقدير والمقيّم.
           </CardDescription>
         </CardHeader>
 
-        <CardContent>
-          {!canCreate && !isEditing ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك الصلاحية المطلوبة: <code>employee-performance-evaluations.create</code>.
+        <CardContent className="space-y-3">
+          {evaluationsQuery.isPending ? (
+            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+              جارٍ تحميل البيانات...
             </div>
-          ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm}>
+          ) : null}
+
+          {evaluationsQuery.error ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              {evaluationsQuery.error instanceof Error
+                ? evaluationsQuery.error.message
+                : "تعذّر تحميل البيانات."}
+            </div>
+          ) : null}
+
+          {!evaluationsQuery.isPending && evaluations.length === 0 ? (
+            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+              لا توجد نتائج مطابقة.
+            </div>
+          ) : null}
+
+          {evaluations.map((evaluation) => (
+            <div
+              key={evaluation.id}
+              data-testid="evaluation-card"
+              className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="space-y-1">
+                  <p className="font-medium">{evaluation.employee.fullName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    السنة: {evaluation.academicYear.name} ({evaluation.academicYear.code}) | التاريخ:{" "}
+                    {formatDate(evaluation.evaluationDate)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    المقيّم: {evaluation.evaluator?.fullName ?? "غير محدد"}
+                  </p>
+                  {evaluation.recommendations ? (
+                    <p className="text-xs text-muted-foreground">
+                      التوصيات: {evaluation.recommendations}
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Badge variant="secondary">الدرجة: {evaluation.score}</Badge>
+                  <Badge variant="outline">
+                    {translatePerformanceRatingLevel(evaluation.ratingLevel)}
+                  </Badge>
+                  <Badge variant={evaluation.isActive ? "default" : "outline"}>
+                    {evaluation.isActive ? "نشط" : "غير نشط"}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => handleStartEdit(evaluation)}
+                  disabled={!canUpdate || updateMutation.isPending}
+                >
+                  <PencilLine className="h-3.5 w-3.5" />
+                  تعديل
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => handleDelete(evaluation)}
+                  disabled={!canDelete || deleteMutation.isPending}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  حذف
+                </Button>
+              </div>
+            </div>
+          ))}
+
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
+            <p className="text-xs text-muted-foreground">
+              الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                disabled={!pagination || pagination.page <= 1 || evaluationsQuery.isFetching}
+              >
+                السابق
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setPage((prev) =>
+                    pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
+                  )
+                }
+                disabled={
+                  !pagination ||
+                  pagination.page >= pagination.totalPages ||
+                  evaluationsQuery.isFetching
+                }
+              >
+                التالي
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => void evaluationsQuery.refetch()}
+                disabled={evaluationsQuery.isFetching}
+              >
+                <RefreshCw
+                  className={`h-4 w-4 ${evaluationsQuery.isFetching ? "animate-spin" : ""}`}
+                />
+                تحديث
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      </div>
+
+      <Fab
+        icon={<Plus className="h-4 w-4" />}
+        label="?????"
+        ariaLabel="????? ????? ????"
+        onClick={handleStartCreate}
+        disabled={!canCreate}
+      />
+
+      <BottomSheetForm
+        open={isFormOpen}
+        title={isEditing ? "????? ????? ????" : "????? ????? ????"}
+        onClose={resetForm}
+        onSubmit={() => handleSubmitForm()}
+        isSubmitting={isFormSubmitting}
+        submitLabel={isEditing ? "??? ?????????" : "????? ?????"}
+        showFooter={false}
+      >
+        {!canCreate && !isEditing ? (
+          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+            ?? ???? ???????? ????????: <code>employee-performance-evaluations.create</code>.
+          </div>
+        ) : (
+<form className="space-y-3" onSubmit={handleSubmitForm}>
+              <p className="text-sm text-muted-foreground">
+                {isEditing
+                  ? "????? ????? ??????."
+                  : "????? ????? ???? ???? ??????."}
+              </p>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
                 <select
@@ -619,253 +767,9 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                 ) : null}
               </div>
             </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>تقييمات الأداء</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
-          </div>
-          <CardDescription>
-            إدارة تقييمات أداء الموظفين حسب السنة والتقدير والمقيّم.
-          </CardDescription>
-
-          <form
-            onSubmit={handleSearchSubmit}
-            data-testid="evaluation-filters-form"
-            className="grid gap-2 md:grid-cols-[1fr_170px_160px_160px_170px_130px_auto]"
-          >
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث بالموظف أو الملاحظات..."
-                className="pr-8"
-              />
-            </div>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={employeeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setEmployeeFilter(event.target.value);
-              }}
-            >
-              <option value="all">كل الموظفين</option>
-              {(employeesQuery.data ?? []).map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.jobNumber ?? employee.fullName}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={academicYearFilter}
-              onChange={(event) => {
-                setPage(1);
-                setAcademicYearFilter(event.target.value);
-              }}
-            >
-              <option value="all">كل السنوات</option>
-              {(academicYearsQuery.data ?? []).map((year) => (
-                <option key={year.id} value={year.id}>
-                  {year.code}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={ratingFilter}
-              onChange={(event) => {
-                setPage(1);
-                setRatingFilter(event.target.value as PerformanceRatingLevel | "all");
-              }}
-            >
-              <option value="all">كل التقييمات</option>
-              {RATING_OPTIONS.map((rating) => (
-                <option key={rating} value={rating}>
-                  {translatePerformanceRatingLevel(rating)}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={evaluatorFilter}
-              onChange={(event) => {
-                setPage(1);
-                setEvaluatorFilter(event.target.value);
-              }}
-            >
-              <option value="all">كل المقيمين</option>
-              {(employeesQuery.data ?? []).map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.jobNumber ?? employee.fullName}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={activeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setActiveFilter(event.target.value as "all" | "active" | "inactive");
-              }}
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </select>
-
-            <Button type="submit" variant="outline" className="gap-2">
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={handleResetFilters}
-              disabled={evaluationsQuery.isFetching}
-            >
-              إعادة ضبط
-            </Button>
-          </form>
-        </CardHeader>
-
-        <CardContent className="space-y-3">
-          {evaluationsQuery.isPending ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ تحميل البيانات...
-            </div>
-          ) : null}
-
-          {evaluationsQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {evaluationsQuery.error instanceof Error
-                ? evaluationsQuery.error.message
-                : "تعذّر تحميل البيانات."}
-            </div>
-          ) : null}
-
-          {!evaluationsQuery.isPending && evaluations.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              لا توجد نتائج مطابقة.
-            </div>
-          ) : null}
-
-          {evaluations.map((evaluation) => (
-            <div
-              key={evaluation.id}
-              data-testid="evaluation-card"
-              className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <p className="font-medium">{evaluation.employee.fullName}</p>
-                  <p className="text-xs text-muted-foreground">
-                    السنة: {evaluation.academicYear.name} ({evaluation.academicYear.code}) | التاريخ:{" "}
-                    {formatDate(evaluation.evaluationDate)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    المقيّم: {evaluation.evaluator?.fullName ?? "غير محدد"}
-                  </p>
-                  {evaluation.recommendations ? (
-                    <p className="text-xs text-muted-foreground">
-                      التوصيات: {evaluation.recommendations}
-                    </p>
-                  ) : null}
-                </div>
-
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant="secondary">الدرجة: {evaluation.score}</Badge>
-                  <Badge variant="outline">
-                    {translatePerformanceRatingLevel(evaluation.ratingLevel)}
-                  </Badge>
-                  <Badge variant={evaluation.isActive ? "default" : "outline"}>
-                    {evaluation.isActive ? "نشط" : "غير نشط"}
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleStartEdit(evaluation)}
-                  disabled={!canUpdate || updateMutation.isPending}
-                >
-                  <PencilLine className="h-3.5 w-3.5" />
-                  تعديل
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleDelete(evaluation)}
-                  disabled={!canDelete || deleteMutation.isPending}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  حذف
-                </Button>
-              </div>
-            </div>
-          ))}
-
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-            <p className="text-xs text-muted-foreground">
-              الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={!pagination || pagination.page <= 1 || evaluationsQuery.isFetching}
-              >
-                السابق
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPage((prev) =>
-                    pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                  )
-                }
-                disabled={
-                  !pagination ||
-                  pagination.page >= pagination.totalPages ||
-                  evaluationsQuery.isFetching
-                }
-              >
-                التالي
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => void evaluationsQuery.refetch()}
-                disabled={evaluationsQuery.isFetching}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${evaluationsQuery.isFetching ? "animate-spin" : ""}`}
-                />
-                تحديث
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+        )}
+      </BottomSheetForm>
+    </>
   );
 }
 
