@@ -26,17 +26,20 @@ WHERE `total_max_score` IS NULL;
 ALTER TABLE `grading_policies`
   MODIFY `total_max_score` DECIMAL(7, 2) NOT NULL DEFAULT 100.00;
 
+ALTER TABLE `grading_policies`
+  ADD INDEX `grp_academic_year_idx` (`academic_year_id`);
+
 DROP INDEX `grp_year_grade_subject_type_uq` ON `grading_policies`;
 
 CREATE UNIQUE INDEX `grp_scope_uq`
   ON `grading_policies`(
-    `academic_year_id`,
-    `grade_level_id`,
-    `subject_id`,
+    `academic_year_id`(64),
+    `grade_level_id`(64),
+    `subject_id`(64),
     `assessment_type`,
-    `section_id`,
-    `academic_term_id`,
-    `teacher_employee_id`,
+    `section_id`(64),
+    `academic_term_id`(64),
+    `teacher_employee_id`(64),
     `version`
   );
 
