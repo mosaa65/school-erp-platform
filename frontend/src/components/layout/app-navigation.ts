@@ -7,6 +7,7 @@
   CalendarClock,
   CalendarDays,
   CalendarRange,
+  Coins,
   ClipboardCheck,
   ClipboardList,
   Gauge,
@@ -501,6 +502,22 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         label: "تقارير الدرجات",
         icon: ScrollText,
         requiredPermission: "grading-reports.read",
+      },
+    ],
+  },
+  {
+    id: "system-07-finance",
+    label: "المالية",
+    icon: Coins,
+    iconClassName: "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+    surfaceClassName: "bg-gradient-to-l from-emerald-500/10 via-transparent to-transparent",
+    items: [
+      {
+        href: "/app/finance",
+        label: "النظام المالي",
+        icon: Coins,
+        iconClassName:
+          "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
       },
     ],
   },

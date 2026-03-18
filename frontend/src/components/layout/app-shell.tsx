@@ -151,6 +151,23 @@ function resolveGroupTheme(groupId?: string): GroupTheme {
           "--app-accent-ring": "rgba(217, 70, 239, 0.32)",
         } as React.CSSProperties,
       };
+    case "system-07-finance":
+      return {
+        panelClassName: "border-emerald-500/20 bg-background/55",
+        activeGlowClassName: "from-emerald-500/18 via-emerald-500/7 to-transparent",
+        headerClassName:
+          "border-b-emerald-500/25 bg-gradient-to-l from-emerald-500/18 via-background/95 to-background/88 md:from-emerald-500/12 md:via-background/92",
+        headerIconClassName:
+          "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+        headerBadgeClassName:
+          "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+        accentVars: {
+          "--app-accent-color": "rgb(16 185 129)",
+          "--app-accent-soft": "rgba(16, 185, 129, 0.12)",
+          "--app-accent-strong": "rgba(16, 185, 129, 0.22)",
+          "--app-accent-ring": "rgba(16, 185, 129, 0.3)",
+        } as React.CSSProperties,
+      };
     default:
       return {
         panelClassName: "border-slate-500/20 bg-background/55",
@@ -236,6 +253,16 @@ function resolveNavItemIconClassName(
 
   if (href.includes("students") || href.includes("student-")) {
     return "border-indigo-500/20 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300";
+  }
+
+  if (
+    href.includes("finance") ||
+    href.includes("payment") ||
+    href.includes("invoice") ||
+    href.includes("payroll") ||
+    href.includes("fee")
+  ) {
+    return "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
   }
 
   if (
