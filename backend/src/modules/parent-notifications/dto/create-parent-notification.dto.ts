@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+﻿import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDateString,
@@ -20,11 +20,17 @@ export class CreateParentNotificationDto {
   @IsString()
   studentId!: string;
 
-  @ApiProperty({ enum: ParentNotificationType, example: ParentNotificationType.NEGATIVE })
+  @ApiProperty({
+    enum: ParentNotificationType,
+    example: ParentNotificationType.NEGATIVE,
+  })
   @IsEnum(ParentNotificationType)
   notificationType!: ParentNotificationType;
 
-  @ApiPropertyOptional({ example: 1, description: 'معرّف صفة ولي الأمر من lookup_relationship_types' })
+  @ApiPropertyOptional({
+    example: 1,
+    description: 'معرّف صفة ولي الأمر من lookup_relationship_types',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -43,13 +49,18 @@ export class CreateParentNotificationDto {
   @MaxLength(1000)
   behaviorDescription?: string;
 
-  @ApiPropertyOptional({ example: 'يرجى مراجعة إدارة المدرسة خلال هذا الأسبوع.' })
+  @ApiPropertyOptional({
+    example: 'يرجى مراجعة إدارة المدرسة خلال هذا الأسبوع.',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(1000)
   requiredAction?: string;
 
-  @ApiPropertyOptional({ enum: ParentNotificationSendMethod, example: ParentNotificationSendMethod.PAPER })
+  @ApiPropertyOptional({
+    enum: ParentNotificationSendMethod,
+    example: ParentNotificationSendMethod.PAPER,
+  })
   @IsOptional()
   @IsEnum(ParentNotificationSendMethod)
   sendMethod?: ParentNotificationSendMethod;
@@ -71,7 +82,9 @@ export class CreateParentNotificationDto {
   @IsDateString()
   sentDate?: string;
 
-  @ApiPropertyOptional({ example: 'تم الاتفاق مع ولي الأمر على خطة متابعة أسبوعية.' })
+  @ApiPropertyOptional({
+    example: 'تم الاتفاق مع ولي الأمر على خطة متابعة أسبوعية.',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(1000)
@@ -83,3 +96,4 @@ export class CreateParentNotificationDto {
   @IsBoolean()
   isActive?: boolean;
 }
+

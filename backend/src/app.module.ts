@@ -33,12 +33,14 @@ import { LookupActivityTypesModule } from './modules/lookup-activity-types/looku
 import { LookupGradeDescriptionsModule } from './modules/lookup-grade-descriptions/lookup-grade-descriptions.module';
 import { LookupOwnershipTypesModule } from './modules/lookup-ownership-types/lookup-ownership-types.module';
 import { LookupPeriodsModule } from './modules/lookup-periods/lookup-periods.module';
+import { TalentsModule } from './modules/talents/talents.module';
 import { PermissionsModule } from './modules/permissions/permissions.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { SectionsModule } from './modules/sections/sections.module';
 import { StudentEnrollmentsModule } from './modules/student-enrollments/student-enrollments.module';
 import { StudentGuardiansModule } from './modules/student-guardians/student-guardians.module';
 import { StudentProblemsModule } from './modules/student-problems/student-problems.module';
+import { HealthVisitsModule } from './modules/health-visits/health-visits.module';
 import { StudentSiblingsModule } from './modules/student-siblings/student-siblings.module';
 import { StudentsModule } from './modules/students/students.module';
 import { StudentAttendanceModule } from './modules/student-attendance/student-attendance.module';
@@ -48,9 +50,18 @@ import { SubjectsModule } from './modules/subjects/subjects.module';
 import { TimetableEntriesModule } from './modules/timetable-entries/timetable-entries.module';
 import { TeachingAssignmentsModule } from './modules/teaching-assignments/teaching-assignments.module';
 import { TermSubjectOfferingsModule } from './modules/term-subject-offerings/term-subject-offerings.module';
-import { TalentsModule } from './modules/talents/talents.module';
-import { RemindersTickerModule } from './modules/reminders-ticker/reminders-ticker.module';
+import { LookupBloodTypesModule } from './modules/lookup-blood-types/lookup-blood-types.module';
+import { LookupEnrollmentStatusesModule } from './modules/lookup-enrollment-statuses/lookup-enrollment-statuses.module';
+import { LookupCatalogModule } from './modules/lookup-catalog/lookup-catalog.module';
+import { LookupIdTypesModule } from './modules/lookup-id-types/lookup-id-types.module';
+import { LookupOrphanStatusesModule } from './modules/lookup-orphan-statuses/lookup-orphan-statuses.module';
+import { LookupAbilityLevelsModule } from './modules/lookup-ability-levels/lookup-ability-levels.module';
+import { LookupActivityTypesModule } from './modules/lookup-activity-types/lookup-activity-types.module';
+import { LookupGradeDescriptionsModule } from './modules/lookup-grade-descriptions/lookup-grade-descriptions.module';
+import { LookupOwnershipTypesModule } from './modules/lookup-ownership-types/lookup-ownership-types.module';
+import { LookupPeriodsModule } from './modules/lookup-periods/lookup-periods.module';
 import { SystemSettingsModule } from './modules/system-settings/system-settings.module';
+import { RemindersTickerModule } from './modules/reminders-ticker/reminders-ticker.module';
 import { UserPermissionsModule } from './modules/user-permissions/user-permissions.module';
 import { UsersModule } from './modules/users/users.module';
 import { GuardiansModule } from './modules/guardians/guardians.module';
@@ -83,6 +94,7 @@ import { PrismaModule } from './prisma/prisma.module';
     StudentTalentsModule,
     StudentSiblingsModule,
     StudentProblemsModule,
+    HealthVisitsModule,
     ParentNotificationsModule,
     EvaluationPoliciesModule,
     ExamsModule,

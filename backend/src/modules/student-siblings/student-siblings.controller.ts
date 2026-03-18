@@ -1,4 +1,4 @@
-import {
+﻿import {
   Body,
   Controller,
   Delete,
@@ -31,7 +31,9 @@ import { StudentSiblingsService } from './student-siblings.service';
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('student-siblings')
 export class StudentSiblingsController {
-  constructor(private readonly studentSiblingsService: StudentSiblingsService) {}
+  constructor(
+    private readonly studentSiblingsService: StudentSiblingsService,
+  ) {}
 
   @Post()
   @RequirePermissions('student-siblings.create')
@@ -51,7 +53,11 @@ export class StudentSiblingsController {
   @ApiQuery({ name: 'search', required: false, type: String })
   @ApiQuery({ name: 'studentId', required: false, type: String })
   @ApiQuery({ name: 'siblingId', required: false, type: String })
-  @ApiQuery({ name: 'relationship', required: false, enum: StudentSiblingRelationship })
+  @ApiQuery({
+    name: 'relationship',
+    required: false,
+    enum: StudentSiblingRelationship,
+  })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
   findAll(@Query() query: ListStudentSiblingsDto) {
     return this.studentSiblingsService.findAll(query);
@@ -82,3 +88,4 @@ export class StudentSiblingsController {
     return this.studentSiblingsService.remove(id, user.userId);
   }
 }
+

@@ -198,6 +198,10 @@
   'student-problems.read',
   'student-problems.update',
   'student-problems.delete',
+  'health-visits.create',
+  'health-visits.read',
+  'health-visits.update',
+  'health-visits.delete',
   'parent-notifications.create',
   'parent-notifications.read',
   'parent-notifications.update',
@@ -362,3 +366,4 @@
 ];
 
 export { DEFAULT_PERMISSION_CODES };
+

@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
@@ -177,8 +177,7 @@ export class StudentsService {
           birthDate: payload.birthDate,
           bloodTypeId:
             payload.bloodTypeId === null ? null : payload.bloodTypeId,
-          localityId:
-            payload.localityId === null ? null : payload.localityId,
+          localityId: payload.localityId === null ? null : payload.localityId,
           healthStatus: healthStatus.healthStatus,
           healthStatusId: healthStatus.healthStatusId,
           healthNotes: payload.healthNotes,
@@ -377,8 +376,7 @@ export class StudentsService {
           birthDate: payload.birthDate,
           bloodTypeId:
             payload.bloodTypeId === null ? null : payload.bloodTypeId,
-          localityId:
-            payload.localityId === null ? null : payload.localityId,
+          localityId: payload.localityId === null ? null : payload.localityId,
           healthStatus: healthStatus.healthStatus,
           healthStatusId: healthStatus.healthStatusId,
           healthNotes: payload.healthNotes,
@@ -895,3 +893,4 @@ export class StudentsService {
     return 'Unknown error';
   }
 }
+

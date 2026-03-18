@@ -1,4 +1,4 @@
-import { appConfig } from "@/lib/env";
+﻿﻿import { appConfig } from "@/lib/env";
 import type { AuthSession } from "@/features/auth/types/auth-session";
 import { getAccessTokenFromStorage } from "@/lib/auth/session";
 
@@ -1307,6 +1307,79 @@ export type ParentNotificationListItem = {
   } | null;
 };
 
+export type HealthVisitListItem = {
+  id: string;
+  visitDate: string;
+  student: {
+    id: string;
+    admissionNo: string | null;
+    fullName: string;
+  };
+  nurse: {
+    id: string;
+    fullName: string;
+    jobTitle: string | null;
+  } | null;
+  healthStatus: {
+    id: number;
+    code: string;
+    nameAr: string;
+    requiresDetails: boolean;
+  } | null;
+  notes: string | null;
+  followUpRequired: boolean;
+  followUpNotes: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: {
+    id: string;
+    email: string;
+  } | null;
+  updatedBy: {
+    id: string;
+    email: string;
+  } | null;
+};
+
+export type HealthVisitStatusBreakdownItem = {
+  id: number;
+  code: string;
+  nameAr: string;
+  requiresDetails: boolean;
+  count: number;
+};
+
+export type HealthVisitsSummary = {
+  totalVisits: number;
+  uniqueStudents: number;
+  statusBreakdown: HealthVisitStatusBreakdownItem[];
+  latestVisit: HealthVisitListItem | null;
+  lastUpdatedAt: string;
+};
+
+export type CreateHealthVisitPayload = {
+  studentId: string;
+  nurseId?: string;
+  healthStatusId: number;
+  visitDate: string;
+  notes?: string;
+  followUpRequired?: boolean;
+  followUpNotes?: string;
+  isActive?: boolean;
+};
+
+export type UpdateHealthVisitPayload = {
+  studentId?: string;
+  nurseId?: string;
+  healthStatusId?: number;
+  visitDate?: string;
+  notes?: string;
+  followUpRequired?: boolean;
+  followUpNotes?: string;
+  isActive?: boolean;
+};
+
 export type HomeworkTypeListItem = {
   id: string;
   code: string;
@@ -1653,6 +1726,20 @@ export type GradingPolicyListItem = {
     category: SubjectCategory;
     isActive: boolean;
   };
+  components: Array<{
+    id: string;
+    gradingPolicyId: string;
+    code: string;
+    name: string;
+    maxScore: number;
+    calculationMode: GradingComponentCalculationMode;
+    includeInMonthly: boolean;
+    includeInSemester: boolean;
+    sortOrder: number;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+  }>;
   components: GradingPolicyComponentListItem[];
   createdBy: {
     id: string;
@@ -6299,6 +6386,59 @@ export const apiClient = {
         withAuth: true,
       },
     ),
+  listHealthVisits: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    studentId?: string;
+    nurseId?: string;
+    healthStatusId?: number;
+    fromDate?: string;
+    toDate?: string;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<HealthVisitListItem>>(
+      `/health/visits${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        studentId: query?.studentId,
+        nurseId: query?.nurseId,
+        healthStatusId: query?.healthStatusId,
+        fromDate: query?.fromDate,
+        toDate: query?.toDate,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  getHealthVisit: (visitId: string) =>
+    request<HealthVisitListItem>(`/health/visits/${visitId}`, "GET", {
+      withAuth: true,
+    }),
+  createHealthVisit: (payload: CreateHealthVisitPayload) =>
+    request<HealthVisitListItem>("/health/visits", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateHealthVisit: (
+    visitId: string,
+    payload: UpdateHealthVisitPayload,
+  ) =>
+    request<HealthVisitListItem>(`/health/visits/${visitId}`, "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  deleteHealthVisit: (visitId: string) =>
+    request<DeleteEntityResponse>(`/health/visits/${visitId}`, "DELETE", {
+      withAuth: true,
+    }),
+  getHealthVisitsSummary: () =>
+    request<HealthVisitsSummary>("/health/summary", "GET", {
+      withAuth: true,
+    }),
   listExamPeriods: (query?: {
     page?: number;
     limit?: number;
@@ -7441,3 +7581,4 @@ export const apiClient = {
       withAuth: true,
     }),
 };
+

@@ -18,6 +18,7 @@
   ScrollText,
   Settings2,
   ShieldCheck,
+  HeartPulse,
   Sparkles,
   Users,
   type LucideIcon,
@@ -503,8 +504,24 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
       },
     ],
   },
+  {
+    id: "system-19-health",
+    label: "النظام 19 - الصحة المدرسية",
+    icon: HeartPulse,
+    items: [
+      {
+        href: "/app/health",
+        label: "نظام الصحة",
+        icon: HeartPulse,
+        requiredPermission: "health-visits.read",
+      },
+    ],
+  },
 ];
 
-export const APP_NAV_ITEMS: AppNavItem[] = APP_NAV_GROUPS.flatMap((group) => group.items);
+export const APP_NAV_ITEMS: AppNavItem[] = APP_NAV_GROUPS.flatMap(
+  (group) => group.items,
+);
+
 
 

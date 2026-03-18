@@ -1,4 +1,4 @@
-import { hash } from 'bcrypt';
+﻿import { hash } from 'bcrypt';
 import type { PrismaClient } from '@prisma/client';
 
 type SeedPermission = {
@@ -78,6 +78,7 @@ const CLASS_SUPERVISOR_EXTRA_READ_RESOURCES = new Set([
   'student-siblings',
   'student-problems',
   'parent-notifications',
+  'health-visits',
 ]);
 
 const CLASS_SUPERVISOR_EXTRA_WRITE_RESOURCES = new Set([
@@ -147,6 +148,7 @@ const EMPLOYEE_READ_RESOURCES = new Set([
   'hr-reports',
   'reminders-ticker',
   'system-settings',
+  'health-visits',
   'lookup-blood-types',
   'lookup-id-types',
   'lookup-enrollment-statuses',
@@ -249,6 +251,14 @@ const ROLE_DEFINITIONS: RoleSeedDefinition[] = [
     description: 'وصول تشغيلي محدود للعرض وبعض الأعمال اليومية.',
     isSystem: false,
     includePermission: (params) => {
+      if (params.resource === 'health-visits') {
+        if (params.action === 'delete') {
+          return false;
+        }
+
+        return ['read', 'create', 'update'].includes(params.action);
+      }
+
       if (isReadPermission(params.code, params.action)) {
         return EMPLOYEE_READ_RESOURCES.has(params.resource);
       }
@@ -423,3 +433,4 @@ export async function seedSuperAdmin(
     password: adminPassword,
   };
 }
+

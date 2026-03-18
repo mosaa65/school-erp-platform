@@ -139,11 +139,6 @@ npm run test:e2e
 
 E2E tests require running MySQL and applied migrations.
 
-## API Docs
-
-- Swagger UI: `http://localhost:3000/api/docs`
-- Health endpoint: `GET /health`
-
 ## Recent Changes (Operational Notes)
 
 - **Flexible Academic Terms**: النتائج/الدرجات السنوية لم تعد تفترض فصلين فقط. يتم احتساب النسبة السنوية حسب عدد الفصول النشطة في السنة الدراسية.

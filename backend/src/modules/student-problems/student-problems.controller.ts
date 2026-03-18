@@ -1,4 +1,4 @@
-import {
+﻿import {
   Body,
   Controller,
   Delete,
@@ -30,7 +30,9 @@ import { StudentProblemsService } from './student-problems.service';
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('student-problems')
 export class StudentProblemsController {
-  constructor(private readonly studentProblemsService: StudentProblemsService) {}
+  constructor(
+    private readonly studentProblemsService: StudentProblemsService,
+  ) {}
 
   @Post()
   @RequirePermissions('student-problems.create')
@@ -83,3 +85,4 @@ export class StudentProblemsController {
     return this.studentProblemsService.remove(id, user.userId);
   }
 }
+

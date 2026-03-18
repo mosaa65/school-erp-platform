@@ -368,6 +368,8 @@ model User {
   maritalStatusesUpdated              LookupMaritalStatus[]           @relation("lookup_marital_status_updated_by")
   healthStatusesCreated               LookupHealthStatus[]            @relation("lookup_health_status_created_by")
   healthStatusesUpdated               LookupHealthStatus[]            @relation("lookup_health_status_updated_by")
+  healthVisitsCreated                StudentHealthVisit[]            @relation("health_visit_created_by")
+  healthVisitsUpdated                StudentHealthVisit[]            @relation("health_visit_updated_by")
   relationshipTypesCreated            LookupRelationshipType[]        @relation("lookup_relationship_type_created_by")
   relationshipTypesUpdated            LookupRelationshipType[]        @relation("lookup_relationship_type_updated_by")
   lookupTalentsCreated                LookupTalent[]                  @relation("lookup_talent_created_by")
@@ -1056,6 +1058,7 @@ model LookupHealthStatus {
   updatedBy User? @relation("lookup_health_status_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
 
   studentsByHealthStatus Student[] @relation("student_health_status_lookup")
+  healthVisits StudentHealthVisit[] @relation("health_visit_status")
 
   @@index([requiresDetails, deletedAt], map: "lhs_details_del_idx")
   @@index([isActive, deletedAt], map: "lhs_active_del_idx")
@@ -1078,8 +1081,8 @@ model LookupRelationshipType {
   createdBy User? @relation("lookup_relationship_type_created_by", fields: [createdById], references: [id], onDelete: SetNull)
   updatedBy User? @relation("lookup_relationship_type_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
 
-  studentGuardianRelations StudentGuardian[]    @relation("student_guardian_relationship_lookup")
-  parentNotificationTitles ParentNotification[] @relation("parent_notification_guardian_title_lookup")
+  studentGuardianRelations   StudentGuardian[]   @relation("student_guardian_relationship_lookup")
+  parentNotificationTitles   ParentNotification[] @relation("parent_notification_guardian_title_lookup")
 
   @@index([gender, deletedAt], map: "lrt_gender_del_idx")
   @@index([isActive, deletedAt], map: "lrt_active_del_idx")
@@ -1884,6 +1887,7 @@ model Employee {
   locality            Locality?            @relation(fields: [localityId], references: [id], onDelete: SetNull)
 
   tasks                  EmployeeTask[]
+  healthVisits           StudentHealthVisit[] @relation("employee_health_visits")
   teachingAssignments    EmployeeTeachingAssignment[]
   sectionSupervisions    EmployeeSectionSupervision[]
   attendanceRecords      EmployeeAttendance[]
@@ -2198,6 +2202,7 @@ model Student {
   genderLookup       LookupGender?       @relation("student_gender_lookup", fields: [genderId], references: [id], onDelete: SetNull)
   orphanStatusLookup LookupOrphanStatus? @relation("student_orphan_status_lookup", fields: [orphanStatusId], references: [id], onDelete: SetNull)
   healthStatusLookup LookupHealthStatus? @relation("student_health_status_lookup", fields: [healthStatusId], references: [id], onDelete: SetNull)
+  healthVisits       StudentHealthVisit[] @relation("student_health_visit_student")
 
   guardians           StudentGuardian[]
   enrollments         StudentEnrollment[]
@@ -2218,6 +2223,35 @@ model Student {
   @@index([orphanStatusId, deletedAt], map: "stu_orphan_id_del_idx")
   @@index([deletedAt], map: "stu_deleted_at_idx")
   @@map("students")
+}
+
+model StudentHealthVisit {
+  id              String               @id @default(cuid()) @db.VarChar(191)
+  studentId       String               @map("student_id") @db.VarChar(191)
+  nurseId         String?              @map("nurse_id") @db.VarChar(191)
+  healthStatusId  Int?                 @map("health_status_id")
+  visitDate       DateTime             @map("visit_date")
+  notes           String?              @db.VarChar(1000)
+  followUpRequired Boolean              @default(false) @map("follow_up_required")
+  followUpNotes   String?              @map("follow_up_notes") @db.VarChar(1000)
+  isActive        Boolean              @default(true) @map("is_active")
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+  deletedAt       DateTime?            @map("deleted_at")
+  createdById     String?              @map("created_by") @db.VarChar(191)
+  updatedById     String?              @map("updated_by") @db.VarChar(191)
+
+  student      Student             @relation("student_health_visit_student", fields: [studentId], references: [id], onDelete: Cascade)
+  nurse        Employee?           @relation("employee_health_visits", fields: [nurseId], references: [id], onDelete: SetNull)
+  healthStatus LookupHealthStatus? @relation("health_visit_status", fields: [healthStatusId], references: [id], onDelete: SetNull)
+  createdBy    User?               @relation("health_visit_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy    User?               @relation("health_visit_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([studentId, visitDate], map: "shv_student_visit_date_idx")
+  @@index([healthStatusId], map: "shv_health_status_idx")
+  @@index([nurseId], map: "shv_nurse_idx")
+  @@index([deletedAt], map: "shv_deleted_at_idx")
+  @@map("student_health_visits")
 }
 
 model Guardian {
@@ -2582,7 +2616,7 @@ model GradingPolicyComponent {
   createdBy User? @relation("grading_policy_component_created_by", fields: [createdById], references: [id], onDelete: SetNull)
   updatedBy User? @relation("grading_policy_component_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
 
-  monthlyCustomScores   MonthlyCustomComponentScore[]
+  monthlyCustomScores MonthlyCustomComponentScore[]
   periodGradeComponents PeriodGradeComponent[]
 
   @@unique([gradingPolicyId, code], map: "gpc_policy_code_uq")
