@@ -3,7 +3,6 @@
 import * as React from "react";
 import {
   Cable,
-  Filter,
   LoaderCircle,
   PencilLine,
   Plus,

@@ -3,19 +3,14 @@
 import * as React from "react";
 import {
   ClipboardCheck,
-  Filter,
   LoaderCircle,
   PencilLine,
-  Plus,
   RefreshCw,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SearchField } from "@/components/ui/search-field";
-import { SelectField } from "@/components/ui/select-field";
-import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
   CardContent,
@@ -23,8 +18,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateStudentHomeworkMutation,
@@ -34,7 +27,6 @@ import {
 import { useStudentHomeworksQuery } from "@/features/assignments/student-homeworks/hooks/use-student-homeworks-query";
 import { useHomeworkOptionsQuery } from "@/features/assignments/student-homeworks/hooks/use-homework-options-query";
 import { useStudentEnrollmentOptionsQuery } from "@/features/assignments/student-homeworks/hooks/use-student-enrollment-options-query";
-import { useStudentOptionsQuery } from "@/features/assignments/student-homeworks/hooks/use-student-options-query";
 import type { StudentHomeworkListItem } from "@/lib/api/client";
 import {
   formatNameCodeLabel,
@@ -139,21 +131,17 @@ export function StudentHomeworksWorkspace() {
   const canReadStudents = hasPermission("students.read");
 
   const [page, setPage] = React.useState(1);
-  const [searchInput, setSearchInput] = React.useState("");
+  const [searchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
   const [debounceTimer, setDebounceTimer] = React.useState<NodeJS.Timeout | null>(null);
-  const [homeworkFilter, setHomeworkFilter] = React.useState("all");
-  const [enrollmentFilter, setEnrollmentFilter] = React.useState("all");
-  const [studentFilter, setStudentFilter] = React.useState("all");
-  const [completedFilter, setCompletedFilter] = React.useState<"all" | "completed" | "pending">(
-    "all",
-  );
-  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
-    "all",
-  );
-  const [fromSubmittedAtFilter, setFromSubmittedAtFilter] = React.useState("");
-  const [toSubmittedAtFilter, setToSubmittedAtFilter] = React.useState("");
-  const [filterDraft, setFilterDraft] = React.useState<{
+  const [homeworkFilter] = React.useState("all");
+  const [enrollmentFilter] = React.useState("all");
+  const [studentFilter] = React.useState("all");
+  const [completedFilter] = React.useState<"all" | "completed" | "pending">("all");
+  const [activeFilter] = React.useState<"all" | "active" | "inactive">("all");
+  const [fromSubmittedAtFilter] = React.useState("");
+  const [toSubmittedAtFilter] = React.useState("");
+  const [, setFilterDraft] = React.useState<{
     homework: string;
     enrollment: string;
     student: string;
@@ -174,8 +162,8 @@ export function StudentHomeworksWorkspace() {
   const [editingStudentHomeworkId, setEditingStudentHomeworkId] = React.useState<string | null>(
     null,
   );
-  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
-  const [isFormOpen, setIsFormOpen] = React.useState(false);
+  const [isFilterOpen] = React.useState(false);
+  const [, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<StudentHomeworkFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
@@ -197,7 +185,6 @@ export function StudentHomeworksWorkspace() {
 
   const homeworksQuery = useHomeworkOptionsQuery();
   const enrollmentsQuery = useStudentEnrollmentOptionsQuery();
-  const studentsQuery = useStudentOptionsQuery();
 
   const createMutation = useCreateStudentHomeworkMutation();
   const updateMutation = useUpdateStudentHomeworkMutation();
@@ -226,15 +213,6 @@ export function StudentHomeworksWorkspace() {
         item.academicYearId === selectedHomeworkForForm.academicYearId,
     );
   }, [enrollmentsQuery.data, selectedHomeworkForForm]);
-
-  const filteredEnrollmentOptions = React.useMemo(() => {
-    const all = enrollmentsQuery.data ?? [];
-    const selectedStudent = isFilterOpen ? filterDraft.student : studentFilter;
-
-    return all.filter((item) =>
-      selectedStudent === "all" ? true : item.studentId === selectedStudent,
-    );
-  }, [enrollmentsQuery.data, filterDraft.student, isFilterOpen, studentFilter]);
 
   const mutationError =
     (createMutation.error as Error | null)?.message ??
@@ -406,18 +384,6 @@ export function StudentHomeworksWorkspace() {
     });
   };
 
-  const handleStartCreate = () => {
-    if (!canCreate) {
-      return;
-    }
-
-    setFormError(null);
-    setActionSuccess(null);
-    setEditingStudentHomeworkId(null);
-    setFormState(DEFAULT_FORM_STATE);
-    setIsFormOpen(true);
-  };
-
   const handleStartEdit = (item: StudentHomeworkListItem) => {
     if (!canUpdate) {
       return;
@@ -479,55 +445,6 @@ export function StudentHomeworksWorkspace() {
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
   const hasDependenciesReadPermissions =
     canReadHomeworks && canReadEnrollments && canReadStudents;
-
-  const clearFilters = () => {
-    setPage(1);
-    setSearchInput("");
-    setSearch("");
-    setHomeworkFilter("all");
-    setEnrollmentFilter("all");
-    setStudentFilter("all");
-    setCompletedFilter("all");
-    setActiveFilter("all");
-    setFromSubmittedAtFilter("");
-    setToSubmittedAtFilter("");
-    setIsFilterOpen(false);
-  };
-
-  const applyFilters = () => {
-    setPage(1);
-    setHomeworkFilter(filterDraft.homework);
-    setEnrollmentFilter(filterDraft.enrollment);
-    setStudentFilter(filterDraft.student);
-    setCompletedFilter(filterDraft.completed);
-    setActiveFilter(filterDraft.active);
-    setFromSubmittedAtFilter(filterDraft.fromSubmittedAt);
-    setToSubmittedAtFilter(filterDraft.toSubmittedAt);
-    setIsFilterOpen(false);
-  };
-
-  const activeFiltersCount = React.useMemo(() => {
-    const count = [
-      searchInput.trim() ? 1 : 0,
-      homeworkFilter !== "all" ? 1 : 0,
-      enrollmentFilter !== "all" ? 1 : 0,
-      studentFilter !== "all" ? 1 : 0,
-      completedFilter !== "all" ? 1 : 0,
-      activeFilter !== "all" ? 1 : 0,
-      fromSubmittedAtFilter ? 1 : 0,
-      toSubmittedAtFilter ? 1 : 0,
-    ].reduce((acc, value) => acc + value, 0);
-    return count;
-  }, [
-    activeFilter,
-    completedFilter,
-    enrollmentFilter,
-    fromSubmittedAtFilter,
-    homeworkFilter,
-    searchInput,
-    studentFilter,
-    toSubmittedAtFilter,
-  ]);
 
   return (
     <div className="grid gap-4 xl:grid-cols-[440px_1fr]">

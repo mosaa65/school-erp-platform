@@ -4,7 +4,6 @@ import * as React from "react";
 import {
   Eye,
   EyeOff,
-  Filter,
   LoaderCircle,
   PencilLine,
   RefreshCw,
@@ -89,18 +88,19 @@ function formatSettingValueForInput(valueType: SettingValueType, value: unknown)
   }
 }
 
-function getValueTypeLabel(valueType: SettingValueType): string {
-  if (valueType === "STRING") {
-    return "نصي";
-  }
-  if (valueType === "NUMBER") {
-    return "رقمي";
-  }
-  if (valueType === "BOOLEAN") {
-    return "منطقي";
+function formatSettingValueForDisplay(
+  valueType: SettingValueType,
+  value: unknown,
+): string {
+  if (valueType === "JSON") {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value ?? "");
+    }
   }
 
-  return "JSON";
+  return formatSettingValueForInput(valueType, value);
 }
 
 function parseValueByType(
@@ -146,22 +146,6 @@ function parseValueByType(
     return { valid: true, value: JSON.parse(raw) as unknown };
   } catch {
     return { valid: false, error: "صيغة JSON غير صالحة." };
-  }
-}
-
-function valuePreview(value: unknown): string {
-  if (typeof value === "string") {
-    return value;
-  }
-
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return String(value);
   }
 }
 
@@ -284,11 +268,6 @@ export function GlobalSettingsManagementWorkspace() {
     setEditingSettingId(null);
     setFormState(DEFAULT_FORM_STATE);
     setIsFormOpen(true);
-  };
-
-  const handleVisibilityFilterChange = (value: "all" | "public" | "private") => {
-    setPage(1);
-    setVisibilityFilter(value);
   };
 
   const handleStartEdit = (setting: GlobalSettingListItem) => {

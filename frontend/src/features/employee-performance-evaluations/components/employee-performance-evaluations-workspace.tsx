@@ -236,7 +236,215 @@ export function EmployeePerformanceEvaluationsWorkspace() {
 
     setDebounceTimer(timer);
 
-    return (
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [searchInput]);
+
+  React.useEffect(() => {
+    if (!isEditing) {
+      return;
+    }
+
+    const stillExists = evaluations.some((item) => item.id === editingEvaluationId);
+    if (!stillExists) {
+      setEditingEvaluationId(null);
+      setFormState(DEFAULT_FORM_STATE);
+      setFormError(null);
+      setIsFormOpen(false);
+    }
+  }, [editingEvaluationId, evaluations, isEditing]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setFilterDraft({
+      employee: employeeFilter,
+      academicYear: academicYearFilter,
+      rating: ratingFilter,
+      evaluator: evaluatorFilter,
+      active: activeFilter,
+    });
+  }, [
+    academicYearFilter,
+    activeFilter,
+    employeeFilter,
+    evaluatorFilter,
+    isFilterOpen,
+    ratingFilter,
+  ]);
+
+  const resetForm = () => {
+    setEditingEvaluationId(null);
+    setFormState(DEFAULT_FORM_STATE);
+    setFormError(null);
+    setIsFormOpen(false);
+  };
+
+  const handleStartCreate = () => {
+    if (!canCreate) {
+      return;
+    }
+
+    setFormError(null);
+    setEditingEvaluationId(null);
+    setFormState(DEFAULT_FORM_STATE);
+    setIsFormOpen(true);
+  };
+
+  const validateForm = (): boolean => {
+    if (!formState.employeeId || !formState.academicYearId || !formState.evaluationDate) {
+      setFormError("الموظف والسنة الأكاديمية وتاريخ التقييم حقول مطلوبة.");
+      return false;
+    }
+
+    if (!isScoreValid) {
+      setFormError("الدرجة يجب أن تكون رقمًا صحيحًا بين 0 و100.");
+      return false;
+    }
+
+    if (hasRatingMismatch) {
+      setFormError("مستوى التقييم لا يطابق الدرجة الحالية.");
+      return false;
+    }
+
+    setFormError(null);
+    return true;
+  };
+
+  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
+    const payload = {
+      employeeId: formState.employeeId,
+      academicYearId: formState.academicYearId,
+      evaluationDate: toDateIso(formState.evaluationDate),
+      score: scoreNumber,
+      ratingLevel: formState.ratingLevel || computedRating || undefined,
+      evaluatorEmployeeId: toOptionalString(formState.evaluatorEmployeeId),
+      strengths: toOptionalString(formState.strengths),
+      weaknesses: toOptionalString(formState.weaknesses),
+      recommendations: toOptionalString(formState.recommendations),
+      isActive: formState.isActive,
+    };
+
+    if (isEditing && editingEvaluationId) {
+      if (!canUpdate) {
+        setFormError("لا تملك الصلاحية المطلوبة: employee-performance-evaluations.update.");
+        return;
+      }
+
+      updateMutation.mutate(
+        {
+          evaluationId: editingEvaluationId,
+          payload,
+        },
+        {
+          onSuccess: () => {
+            resetForm();
+          },
+        },
+      );
+      return;
+    }
+
+    if (!canCreate) {
+      setFormError("لا تملك الصلاحية المطلوبة: employee-performance-evaluations.create.");
+      return;
+    }
+
+    createMutation.mutate(payload, {
+      onSuccess: () => {
+        resetForm();
+        setPage(1);
+      },
+    });
+  };
+
+  const handleStartEdit = (evaluation: EmployeePerformanceEvaluationListItem) => {
+    if (!canUpdate) {
+      return;
+    }
+
+    setFormError(null);
+    setEditingEvaluationId(evaluation.id);
+    setFormState(toFormState(evaluation));
+    setIsFormOpen(true);
+  };
+
+  const handleDelete = (evaluation: EmployeePerformanceEvaluationListItem) => {
+    if (!canDelete) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `تأكيد حذف تقييم ${evaluation.employee.fullName} بتاريخ ${formatDate(
+        evaluation.evaluationDate,
+      )}؟`,
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    deleteMutation.mutate(evaluation.id, {
+      onSuccess: () => {
+        if (editingEvaluationId === evaluation.id) {
+          resetForm();
+        }
+      },
+    });
+  };
+
+  const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
+  const hasDependenciesReadPermissions = canReadEmployees && canReadAcademicYears;
+
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setEmployeeFilter("all");
+    setAcademicYearFilter("all");
+    setRatingFilter("all");
+    setEvaluatorFilter("all");
+    setActiveFilter("all");
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    setPage(1);
+    setEmployeeFilter(filterDraft.employee);
+    setAcademicYearFilter(filterDraft.academicYear);
+    setRatingFilter(filterDraft.rating);
+    setEvaluatorFilter(filterDraft.evaluator);
+    setActiveFilter(filterDraft.active);
+    setIsFilterOpen(false);
+  };
+
+  const activeFiltersCount = React.useMemo(() => {
+    return [
+      searchInput.trim() ? 1 : 0,
+      employeeFilter !== "all" ? 1 : 0,
+      academicYearFilter !== "all" ? 1 : 0,
+      ratingFilter !== "all" ? 1 : 0,
+      evaluatorFilter !== "all" ? 1 : 0,
+      activeFilter !== "all" ? 1 : 0,
+    ].reduce((acc, value) => acc + value, 0);
+  }, [
+    academicYearFilter,
+    activeFilter,
+    employeeFilter,
+    evaluatorFilter,
+    ratingFilter,
+    searchInput,
+  ]);
+
+  return (
     <>
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">

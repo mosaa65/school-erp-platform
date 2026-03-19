@@ -3,7 +3,6 @@
 import * as React from "react";
 import {
   BadgeCheck,
-  Filter,
   LoaderCircle,
   PencilLine,
   Plus,

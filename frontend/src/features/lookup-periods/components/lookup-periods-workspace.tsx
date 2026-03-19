@@ -3,7 +3,6 @@
 import * as React from "react";
 import {
   Clock3,
-  Filter,
   LoaderCircle,
   PencilLine,
   Plus,

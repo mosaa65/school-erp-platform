@@ -3,7 +3,7 @@ import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type SelectFieldProps = React.ComponentProps<"select"> & {
-  icon?: React.ReactElement;
+  icon?: React.ReactElement<{ className?: string }>;
   containerClassName?: string;
 };
 

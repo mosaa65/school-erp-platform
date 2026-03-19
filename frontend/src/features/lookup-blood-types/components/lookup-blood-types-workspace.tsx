@@ -3,7 +3,6 @@
 import * as React from "react";
 import {
   Droplets,
-  Filter,
   LoaderCircle,
   PencilLine,
   Plus,

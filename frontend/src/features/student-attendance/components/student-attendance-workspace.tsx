@@ -3,7 +3,6 @@
 import * as React from "react";
 import {
   ClipboardCheck,
-  Filter,
   LoaderCircle,
   PencilLine,
   Plus,
@@ -964,7 +963,6 @@ export function StudentAttendanceWorkspace() {
         )}
       </BottomSheetForm>
     </>
-  );
   );
 }
 

@@ -22,5 +22,24 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "src/features/annual-grades/**/*",
+    "src/features/annual-results/**/*",
+    "src/features/annual-statuses/**/*",
+    "src/features/employee-section-supervisions/**/*",
+    "src/features/employee-teaching-assignments/**/*",
+    "src/features/exam-assessments/**/*",
+    "src/features/exam-periods/**/*",
+    "src/features/grading-outcome-rules/**/*",
+    "src/features/grading-policies/**/*",
+    "src/features/grading-reports/**/*",
+    "src/features/homework-types/**/*",
+    "src/features/homeworks/**/*",
+    "src/features/monthly-custom-component-scores/**/*",
+    "src/features/monthly-grades/**/*",
+    "src/features/semester-grades/**/*",
+    "src/features/student-exam-scores/**/*",
+    "src/features/student-homeworks/**/*"
+  ]
 }

@@ -199,8 +199,8 @@ export function HealthVisitsWorkspace() {
             {formMessage && (
               <p className="text-sm font-semibold text-foreground">{formMessage}</p>
             )}
-            <Button type="submit" disabled={createVisitMutation.isLoading}>
-              {createVisitMutation.isLoading ? "جاري الحفظ..." : "سجّل الزيارة"}
+            <Button type="submit" disabled={createVisitMutation.isPending}>
+              {createVisitMutation.isPending ? "جاري الحفظ..." : "سجّل الزيارة"}
             </Button>
           </div>
         </form>

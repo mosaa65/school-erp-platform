@@ -3,7 +3,6 @@
 import * as React from "react";
 import {
   AlertTriangle,
-  Filter,
   LoaderCircle,
   PencilLine,
   Plus,
@@ -215,7 +214,227 @@ export function EmployeeViolationsWorkspace() {
 
     setDebounceTimer(timer);
 
-    return (
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [searchInput]);
+
+  React.useEffect(() => {
+    if (!isEditing) {
+      return;
+    }
+
+    const stillExists = violations.some((item) => item.id === editingViolationId);
+    if (!stillExists) {
+      setEditingViolationId(null);
+      setFormState(DEFAULT_FORM_STATE);
+      setFormError(null);
+      setIsFormOpen(false);
+    }
+  }, [editingViolationId, isEditing, violations]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setFilterDraft({
+      employee: employeeFilter,
+      reporter: reporterFilter,
+      severity: severityFilter,
+      fromDate: fromDateFilter,
+      toDate: toDateFilter,
+      active: activeFilter,
+    });
+    setFiltersError(null);
+  }, [
+    activeFilter,
+    employeeFilter,
+    fromDateFilter,
+    isFilterOpen,
+    reporterFilter,
+    severityFilter,
+    toDateFilter,
+  ]);
+
+  const resetForm = () => {
+    setEditingViolationId(null);
+    setFormState(DEFAULT_FORM_STATE);
+    setFormError(null);
+    setIsFormOpen(false);
+  };
+
+  const handleStartCreate = () => {
+    if (!canCreate) {
+      return;
+    }
+
+    setFormError(null);
+    setEditingViolationId(null);
+    setFormState(DEFAULT_FORM_STATE);
+    setIsFormOpen(true);
+  };
+
+  const validateForm = (): boolean => {
+    if (!formState.employeeId || !formState.violationDate) {
+      setFormError("الموظف وتاريخ المخالفة حقول مطلوبة.");
+      return false;
+    }
+
+    if (!formState.violationAspect.trim() || !formState.violationText.trim()) {
+      setFormError("البند والنص التفصيلي للمخالفة حقول مطلوبة.");
+      return false;
+    }
+
+    setFormError(null);
+    return true;
+  };
+
+  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
+    const payload = {
+      employeeId: formState.employeeId,
+      violationDate: toDateIso(formState.violationDate),
+      violationAspect: formState.violationAspect.trim(),
+      violationText: formState.violationText.trim(),
+      actionTaken: toOptionalString(formState.actionTaken),
+      severity: formState.severity,
+      hasWarning: formState.hasWarning,
+      hasMinutes: formState.hasMinutes,
+      reportedByEmployeeId: toOptionalString(formState.reportedByEmployeeId),
+      isActive: formState.isActive,
+    };
+
+    if (isEditing && editingViolationId) {
+      if (!canUpdate) {
+        setFormError("لا تملك الصلاحية المطلوبة: employee-violations.update.");
+        return;
+      }
+
+      updateMutation.mutate(
+        {
+          violationId: editingViolationId,
+          payload,
+        },
+        {
+          onSuccess: () => {
+            resetForm();
+          },
+        },
+      );
+      return;
+    }
+
+    if (!canCreate) {
+      setFormError("لا تملك الصلاحية المطلوبة: employee-violations.create.");
+      return;
+    }
+
+    createMutation.mutate(payload, {
+      onSuccess: () => {
+        resetForm();
+        setPage(1);
+      },
+    });
+  };
+
+  const handleStartEdit = (violation: EmployeeViolationListItem) => {
+    if (!canUpdate) {
+      return;
+    }
+
+    setFormError(null);
+    setEditingViolationId(violation.id);
+    setFormState(toFormState(violation));
+    setIsFormOpen(true);
+  };
+
+  const handleDelete = (violation: EmployeeViolationListItem) => {
+    if (!canDelete) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `تأكيد حذف مخالفة ${violation.employee.fullName} بتاريخ ${formatDate(
+        violation.violationDate,
+      )}؟`,
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    deleteMutation.mutate(violation.id, {
+      onSuccess: () => {
+        if (editingViolationId === violation.id) {
+          resetForm();
+        }
+      },
+    });
+  };
+
+  const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
+
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setEmployeeFilter("all");
+    setReporterFilter("all");
+    setSeverityFilter("all");
+    setFromDateFilter("");
+    setToDateFilter("");
+    setActiveFilter("all");
+    setFiltersError(null);
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    if (
+      filterDraft.fromDate &&
+      filterDraft.toDate &&
+      filterDraft.toDate.localeCompare(filterDraft.fromDate) < 0
+    ) {
+      setFiltersError("تاريخ النهاية يجب أن يكون في نفس يوم البداية أو بعده.");
+      return;
+    }
+
+    setPage(1);
+    setEmployeeFilter(filterDraft.employee);
+    setReporterFilter(filterDraft.reporter);
+    setSeverityFilter(filterDraft.severity);
+    setFromDateFilter(filterDraft.fromDate);
+    setToDateFilter(filterDraft.toDate);
+    setActiveFilter(filterDraft.active);
+    setFiltersError(null);
+    setIsFilterOpen(false);
+  };
+
+  const activeFiltersCount = React.useMemo(() => {
+    return [
+      searchInput.trim() ? 1 : 0,
+      employeeFilter !== "all" ? 1 : 0,
+      reporterFilter !== "all" ? 1 : 0,
+      severityFilter !== "all" ? 1 : 0,
+      fromDateFilter ? 1 : 0,
+      toDateFilter ? 1 : 0,
+      activeFilter !== "all" ? 1 : 0,
+    ].reduce((acc, value) => acc + value, 0);
+  }, [
+    activeFilter,
+    employeeFilter,
+    fromDateFilter,
+    reporterFilter,
+    searchInput,
+    severityFilter,
+    toDateFilter,
+  ]);
+
+  return (
     <>
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">

@@ -1726,20 +1726,6 @@ export type GradingPolicyListItem = {
     category: SubjectCategory;
     isActive: boolean;
   };
-  components: Array<{
-    id: string;
-    gradingPolicyId: string;
-    code: string;
-    name: string;
-    maxScore: number;
-    calculationMode: GradingComponentCalculationMode;
-    includeInMonthly: boolean;
-    includeInSemester: boolean;
-    sortOrder: number;
-    isActive: boolean;
-    createdAt: string;
-    updatedAt: string;
-  }>;
   components: GradingPolicyComponentListItem[];
   createdBy: {
     id: string;

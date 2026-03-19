@@ -3,7 +3,6 @@
 import * as React from "react";
 import {
   BookOpenText,
-  Filter,
   LoaderCircle,
   PencilLine,
   Plus,

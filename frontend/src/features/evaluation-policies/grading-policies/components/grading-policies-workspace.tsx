@@ -5,7 +5,6 @@ import {
   BookOpen,
   CalendarDays,
   CheckCircle2,
-  Filter,
   Layers,
   LoaderCircle,
   Medal,

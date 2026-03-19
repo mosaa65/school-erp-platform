@@ -3,7 +3,6 @@
 import * as React from "react";
 import {
   Building2,
-  Filter,
   LoaderCircle,
   PencilLine,
   Plus,

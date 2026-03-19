@@ -3,7 +3,6 @@
 import * as React from "react";
 import {
   BookText,
-  Filter,
   LoaderCircle,
   PencilLine,
   Plus,
@@ -987,7 +986,6 @@ export function StudentBooksWorkspace() {
         )}
       </BottomSheetForm>
     </>
-  );
   );
 }
 

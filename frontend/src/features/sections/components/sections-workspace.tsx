@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import {
-  Filter,
   Layers2,
   LoaderCircle,
   PencilLine,

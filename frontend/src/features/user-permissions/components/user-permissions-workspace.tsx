@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import {
-  Filter,
   KeyRound,
   LoaderCircle,
   PencilLine,
@@ -79,6 +78,25 @@ function toIsoFromLocal(value: string): string | undefined {
   return new Date(normalized).toISOString();
 }
 
+function formatLocalDateTime(value: string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  return date.toLocaleString("ar-SA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function toFormState(item: UserPermissionListItem): UserPermissionFormState {
   return {
     userId: item.userId,
@@ -101,11 +119,6 @@ function ensureDateRange(validFrom: string, validUntil: string): string | null {
   }
 
   return null;
-}
-
-function toDisplayName(user: UserPermissionListItem["user"]): string {
-  const fullName = `${user.firstName} ${user.lastName}`.trim();
-  return fullName.length > 0 ? fullName : user.email;
 }
 
 function getPermissionOptionLabel(permissionCode: string): string {
@@ -365,7 +378,7 @@ export function UserPermissionsWorkspace() {
     }
   };
 
-  const handleRevoke = (item: UserPermissionListItem) => {
+  const handleToggleRevoke = (item: UserPermissionListItem) => {
     if (!canRevoke || item.revokedAt) {
       return;
     }
@@ -564,8 +577,8 @@ export function UserPermissionsWorkspace() {
                       {item.validUntil ? ` إلى ${formatLocalDateTime(item.validUntil)}` : ""}
                     </p>
                   </div>
-                  <Badge variant={item.isRevoked ? "outline" : "default"}>
-                    {item.isRevoked ? "ملغاة" : "سارية"}
+                  <Badge variant={item.revokedAt ? "outline" : "default"}>
+                    {item.revokedAt ? "ملغاة" : "سارية"}
                   </Badge>
                 </div>
 
@@ -588,7 +601,7 @@ export function UserPermissionsWorkspace() {
                     disabled={!canRevoke || revokeMutation.isPending}
                   >
                     <ShieldOff className="h-3.5 w-3.5" />
-                    {item.isRevoked ? "إعادة تفعيل" : "سحب"}
+                    {item.revokedAt ? "إعادة تفعيل" : "سحب"}
                   </Button>
                   <Button
                     variant="destructive"

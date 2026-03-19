@@ -3,7 +3,6 @@
 import * as React from "react";
 import {
   CalendarDays,
-  Filter,
   LoaderCircle,
   PencilLine,
   Plus,

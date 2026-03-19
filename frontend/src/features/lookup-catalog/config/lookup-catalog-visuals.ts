@@ -19,7 +19,6 @@ import {
   MapPin,
   MapPinHouse,
   MapPinned,
-  Map,
   MoonStar,
   School,
   Sparkles,
