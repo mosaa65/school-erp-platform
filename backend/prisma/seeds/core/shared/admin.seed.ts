@@ -1,5 +1,6 @@
 ﻿import { hash } from 'bcrypt';
 import type { PrismaClient } from '@prisma/client';
+import { processInBatches } from './batch';
 
 type SeedPermission = {
   id: string;
@@ -286,7 +287,7 @@ async function syncRolePermissions(
 ) {
   const selectedIds = Array.from(new Set(permissionIds));
 
-  for (const permissionId of selectedIds) {
+  await processInBatches(selectedIds, 25, async (permissionId) => {
     await prisma.rolePermission.upsert({
       where: {
         roleId_permissionId: {
@@ -303,7 +304,7 @@ async function syncRolePermissions(
         permissionId,
       },
     });
-  }
+  });
 
   await prisma.rolePermission.updateMany({
     where: {
