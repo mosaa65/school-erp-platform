@@ -45,6 +45,7 @@ export class ClassroomsController {
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'buildingLookupId', required: false, type: Number })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
   findAll(@Query() query: ListClassroomsDto) {
     return this.classroomsService.findAll(query);

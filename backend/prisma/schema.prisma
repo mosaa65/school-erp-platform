@@ -1180,6 +1180,7 @@ model LookupBuilding {
   createdBy User? @relation("lookup_building_created_by", fields: [createdById], references: [id], onDelete: SetNull)
   updatedBy User? @relation("lookup_building_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
   sections  Section[] @relation("section_building_lookup")
+  classrooms Classroom[] @relation("classroom_building_lookup")
 
   @@index([isActive, deletedAt], map: "lbd_active_del_idx")
   @@index([deletedAt], map: "lbd_deleted_at_idx")
@@ -1749,6 +1750,7 @@ model Classroom {
   id          String    @id @default(cuid()) @db.VarChar(191)
   code        String    @unique @db.VarChar(40)
   name        String    @db.VarChar(120)
+  buildingLookupId Int? @map("building_lookup_id")
   capacity    Int?
   notes       String?   @db.VarChar(255)
   isActive    Boolean   @default(true) @map("is_active")
@@ -1760,10 +1762,12 @@ model Classroom {
 
   createdBy User? @relation("classroom_created_by", fields: [createdById], references: [id], onDelete: SetNull)
   updatedBy User? @relation("classroom_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+  building  LookupBuilding? @relation("classroom_building_lookup", fields: [buildingLookupId], references: [id], onDelete: SetNull)
 
   timetableEntries     TimetableEntry[]
   classroomAssignments SectionClassroomAssignment[]
 
+  @@index([buildingLookupId, deletedAt])
   @@index([isActive, deletedAt])
   @@index([deletedAt])
   @@map("classrooms")

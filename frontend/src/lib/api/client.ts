@@ -651,9 +651,17 @@ export type ClassroomListItem = {
   name: string;
   capacity: number | null;
   notes: string | null;
+  buildingLookupId: number | null;
+  activeAssignmentsCount: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  building: {
+    id: number;
+    code: string;
+    nameAr: string;
+    isActive: boolean;
+  } | null;
   createdBy: {
     id: string;
     email: string;
@@ -697,6 +705,13 @@ export type SectionClassroomAssignmentListItem = {
     capacity: number | null;
     notes: string | null;
     isActive: boolean;
+    building?: {
+      id: number;
+      code: string;
+      nameAr: string;
+      nameEn: string | null;
+      isActive: boolean;
+    } | null;
   };
   academicYear: {
     id: string;
@@ -3348,6 +3363,7 @@ export type CreateClassroomPayload = {
   name: string;
   capacity?: number;
   notes?: string;
+  buildingLookupId?: number;
   isActive?: boolean;
 };
 
@@ -3366,6 +3382,7 @@ export type UpdateClassroomPayload = {
   name?: string;
   capacity?: number;
   notes?: string;
+  buildingLookupId?: number | null;
   isActive?: boolean;
 };
 
@@ -5953,6 +5970,7 @@ export const apiClient = {
     page?: number;
     limit?: number;
     search?: string;
+    buildingLookupId?: number;
     isActive?: boolean;
   }) =>
     request<PaginatedResponse<ClassroomListItem>>(
@@ -5960,6 +5978,7 @@ export const apiClient = {
         page: query?.page,
         limit: query?.limit,
         search: query?.search,
+        buildingLookupId: query?.buildingLookupId,
         isActive: query?.isActive,
       })}`,
       "GET",

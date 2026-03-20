@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -11,6 +12,14 @@ import { ListClassroomsDto } from './dto/list-classrooms.dto';
 import { UpdateClassroomDto } from './dto/update-classroom.dto';
 
 const classroomInclude = {
+  building: {
+    select: {
+      id: true,
+      code: true,
+      nameAr: true,
+      isActive: true,
+    },
+  },
   createdBy: {
     select: {
       id: true,
@@ -25,6 +34,14 @@ const classroomInclude = {
   },
 } as const;
 
+type ClassroomWithRelations = Prisma.ClassroomGetPayload<{
+  include: typeof classroomInclude;
+}>;
+
+type ClassroomWithMeta = ClassroomWithRelations & {
+  activeAssignmentsCount: number;
+};
+
 @Injectable()
 export class ClassroomsService {
   constructor(
@@ -38,10 +55,15 @@ export class ClassroomsService {
     const notes = this.normalizeNotes(payload.notes);
 
     try {
+      if (payload.buildingLookupId !== undefined) {
+        await this.ensureBuildingExistsAndActive(payload.buildingLookupId);
+      }
+
       const classroom = await this.prisma.classroom.create({
         data: {
           code,
           name,
+          buildingLookupId: payload.buildingLookupId,
           capacity: payload.capacity,
           notes,
           isActive: payload.isActive ?? true,
@@ -62,7 +84,8 @@ export class ClassroomsService {
         },
       });
 
-      return classroom;
+      const [enrichedClassroom] = await this.attachActiveAssignmentCounts([classroom]);
+      return enrichedClassroom;
     } catch (error) {
       await this.auditLogsService.record({
         actorUserId,
@@ -87,11 +110,20 @@ export class ClassroomsService {
     const where: Prisma.ClassroomWhereInput = {
       deletedAt: null,
       isActive: query.isActive,
+      buildingLookupId: query.buildingLookupId,
       OR: search
         ? [
             { code: { contains: search } },
             { name: { contains: search } },
             { notes: { contains: search } },
+            {
+              building: {
+                OR: [
+                  { code: { contains: search } },
+                  { nameAr: { contains: search } },
+                ],
+              },
+            },
           ]
         : undefined,
     };
@@ -107,8 +139,10 @@ export class ClassroomsService {
       }),
     ]);
 
+    const enrichedItems = await this.attachActiveAssignmentCounts(items);
+
     return {
-      data: items,
+      data: enrichedItems,
       pagination: {
         page,
         limit,
@@ -131,7 +165,8 @@ export class ClassroomsService {
       throw new NotFoundException('Classroom not found');
     }
 
-    return classroom;
+    const [enrichedClassroom] = await this.attachActiveAssignmentCounts([classroom]);
+    return enrichedClassroom;
   }
 
   async update(id: string, payload: UpdateClassroomDto, actorUserId: string) {
@@ -143,6 +178,10 @@ export class ClassroomsService {
       payload.notes === undefined ? undefined : this.normalizeNotes(payload.notes);
 
     try {
+      if (payload.buildingLookupId !== undefined && payload.buildingLookupId !== null) {
+        await this.ensureBuildingExistsAndActive(payload.buildingLookupId);
+      }
+
       const classroom = await this.prisma.classroom.update({
         where: {
           id,
@@ -150,6 +189,10 @@ export class ClassroomsService {
         data: {
           code,
           name,
+          buildingLookupId:
+            payload.buildingLookupId === undefined
+              ? undefined
+              : payload.buildingLookupId,
           capacity: payload.capacity,
           notes,
           isActive: payload.isActive,
@@ -166,7 +209,8 @@ export class ClassroomsService {
         details: payload as Prisma.InputJsonValue,
       });
 
-      return classroom;
+      const [enrichedClassroom] = await this.attachActiveAssignmentCounts([classroom]);
+      return enrichedClassroom;
     } catch (error) {
       this.throwKnownDatabaseErrors(error);
     }
@@ -212,6 +256,60 @@ export class ClassroomsService {
     }
 
     return classroom;
+  }
+
+  private async attachActiveAssignmentCounts(
+    classrooms: ClassroomWithRelations[],
+  ): Promise<ClassroomWithMeta[]> {
+    if (classrooms.length === 0) {
+      return [];
+    }
+
+    const counts = await this.prisma.sectionClassroomAssignment.groupBy({
+      by: ['classroomId'],
+      where: {
+        deletedAt: null,
+        isActive: true,
+        classroomId: {
+          in: classrooms.map((classroom) => classroom.id),
+        },
+      },
+      _count: {
+        classroomId: true,
+      },
+    });
+
+    const countsMap = new Map(
+      counts.map((entry) => [entry.classroomId, entry._count.classroomId]),
+    );
+
+    return classrooms.map((classroom) => ({
+      ...classroom,
+      activeAssignmentsCount: countsMap.get(classroom.id) ?? 0,
+    }));
+  }
+
+  private async ensureBuildingExistsAndActive(buildingLookupId: number) {
+    const building = await this.prisma.lookupBuilding.findFirst({
+      where: {
+        id: buildingLookupId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        isActive: true,
+      },
+    });
+
+    if (!building) {
+      throw new BadRequestException('Building is invalid or deleted');
+    }
+
+    if (!building.isActive) {
+      throw new BadRequestException('Building is inactive');
+    }
+
+    return building;
   }
 
   private normalizeNotes(notes?: string) {

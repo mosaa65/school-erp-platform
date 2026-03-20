@@ -328,6 +328,7 @@ export function SectionsWorkspace() {
     const params = new URLSearchParams({
       sectionId: section.id,
       gradeLevelId: section.gradeLevelId,
+      mode: "create",
     });
 
     router.push(`/app/section-classroom-assignments?${params.toString()}`);

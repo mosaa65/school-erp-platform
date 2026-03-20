@@ -6,6 +6,9 @@ type SectionClassroomAssignmentsPageProps = {
   searchParams?: {
     sectionId?: string | string[];
     gradeLevelId?: string | string[];
+    classroomId?: string | string[];
+    academicYearId?: string | string[];
+    mode?: string | string[];
   };
 };
 
@@ -32,6 +35,9 @@ export default function SectionClassroomAssignmentsPage({
         <SectionClassroomAssignmentsWorkspace
           initialSectionId={firstQueryValue(searchParams?.sectionId)}
           initialGradeLevelId={firstQueryValue(searchParams?.gradeLevelId)}
+          initialClassroomId={firstQueryValue(searchParams?.classroomId)}
+          initialAcademicYearId={firstQueryValue(searchParams?.academicYearId)}
+          initialMode={firstQueryValue(searchParams?.mode)}
         />
       </div>
     </PermissionGuard>

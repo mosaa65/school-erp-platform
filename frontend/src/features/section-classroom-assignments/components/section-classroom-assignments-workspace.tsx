@@ -60,6 +60,9 @@ type AssignmentFormState = {
 type SectionClassroomAssignmentsWorkspaceProps = {
   initialSectionId?: string;
   initialGradeLevelId?: string;
+  initialClassroomId?: string;
+  initialAcademicYearId?: string;
+  initialMode?: string;
 };
 
 const PAGE_SIZE = 12;
@@ -126,6 +129,19 @@ function normalizeText(value: string) {
   return value.trim().toLowerCase();
 }
 
+function formatBuildingLabel(building?: {
+  id: number;
+  code: string;
+  nameAr: string;
+  nameEn?: string | null;
+} | null) {
+  if (!building) {
+    return "بدون مبنى";
+  }
+
+  return building.nameAr || building.nameEn || building.code || `مبنى ${building.id}`;
+}
+
 type ClassroomSuggestion = {
   classroom: {
     id: string;
@@ -133,6 +149,14 @@ type ClassroomSuggestion = {
     name: string;
     capacity: number | null;
     notes: string | null;
+    activeAssignmentsCount: number;
+    building: {
+      id: number;
+      code: string;
+      nameAr: string;
+      nameEn?: string | null;
+      isActive: boolean;
+    } | null;
   };
   reason: string;
   fitsCapacity: boolean;
@@ -142,6 +166,9 @@ type ClassroomSuggestion = {
 export function SectionClassroomAssignmentsWorkspace({
   initialSectionId,
   initialGradeLevelId,
+  initialClassroomId,
+  initialAcademicYearId,
+  initialMode,
 }: SectionClassroomAssignmentsWorkspaceProps) {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("sections.create");
@@ -153,11 +180,15 @@ export function SectionClassroomAssignmentsWorkspace({
   const [search, setSearch] = React.useState("");
   const [filters, setFilters] = React.useState<FilterState>(() => ({
     ...DEFAULT_FILTER_STATE,
+    academicYearId: initialAcademicYearId ?? "all",
     sectionId: initialSectionId ?? "all",
+    classroomId: initialClassroomId ?? "all",
   }));
   const [filterDraft, setFilterDraft] = React.useState<FilterState>(() => ({
     ...DEFAULT_FILTER_STATE,
+    academicYearId: initialAcademicYearId ?? "all",
     sectionId: initialSectionId ?? "all",
+    classroomId: initialClassroomId ?? "all",
   }));
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
@@ -221,6 +252,10 @@ export function SectionClassroomAssignmentsWorkspace({
   );
   const isEditing = editingAssignmentId !== null;
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
+  const currentAcademicYear = React.useMemo(
+    () => academicYears.find((year) => year.isCurrent) ?? null,
+    [academicYears],
+  );
   const selectedSection = React.useMemo(
     () => sections.find((section) => section.id === formState.sectionId) ?? null,
     [formState.sectionId, sections],
@@ -236,11 +271,39 @@ export function SectionClassroomAssignmentsWorkspace({
     setEditingAssignmentId(null);
     setFormState({
       ...DEFAULT_FORM_STATE,
+      academicYearId: initialAcademicYearId ?? currentAcademicYear?.id ?? "",
       sectionId: initialSectionId ?? "",
+      classroomId: initialClassroomId ?? "",
     });
     setFormError(null);
     setIsFormOpen(false);
-  }, [initialSectionId]);
+  }, [currentAcademicYear?.id, initialAcademicYearId, initialClassroomId, initialSectionId]);
+
+  React.useEffect(() => {
+    const nextAcademicYearId = initialAcademicYearId ?? currentAcademicYear?.id;
+    if (!nextAcademicYearId) {
+      return;
+    }
+
+    setFilters((prev) =>
+      prev.academicYearId === "all"
+        ? { ...prev, academicYearId: nextAcademicYearId }
+        : prev,
+    );
+    setFilterDraft((prev) =>
+      prev.academicYearId === "all"
+        ? { ...prev, academicYearId: nextAcademicYearId }
+        : prev,
+    );
+    setFormState((prev) =>
+      prev.academicYearId
+        ? prev
+        : {
+            ...prev,
+            academicYearId: nextAcademicYearId,
+          },
+    );
+  }, [currentAcademicYear?.id, initialAcademicYearId]);
 
   React.useEffect(() => {
     if (!isEditing) {
@@ -259,6 +322,7 @@ export function SectionClassroomAssignmentsWorkspace({
     }
 
     const sectionCapacity = selectedSection.capacity;
+    const sectionBuildingId = selectedSection.building?.id ?? null;
     const sectionBuildingTerms = [selectedSection.building?.nameAr, selectedSection.building?.code]
       .filter(Boolean)
       .map((value) => normalizeText(String(value)));
@@ -266,11 +330,18 @@ export function SectionClassroomAssignmentsWorkspace({
     const ranked = classrooms
       .map((classroom) => {
         const roomText = normalizeText(
-          [classroom.code, classroom.name, classroom.notes ?? ""].join(" "),
+          [
+            classroom.code,
+            classroom.name,
+            classroom.notes ?? "",
+            classroom.building?.nameAr ?? "",
+            classroom.building?.code ?? "",
+          ].join(" "),
         );
         const matchesBuilding =
-          sectionBuildingTerms.length > 0 &&
-          sectionBuildingTerms.some((term) => term.length > 0 && roomText.includes(term));
+          (sectionBuildingId !== null && classroom.building?.id === sectionBuildingId) ||
+          (sectionBuildingTerms.length > 0 &&
+            sectionBuildingTerms.some((term) => term.length > 0 && roomText.includes(term)));
 
         let score = 0;
         let fitsCapacity = true;
@@ -299,6 +370,14 @@ export function SectionClassroomAssignmentsWorkspace({
         if (matchesBuilding) {
           score -= 200;
           reasonParts.push("يطابق المبنى");
+        }
+
+        if (classroom.activeAssignmentsCount > 0) {
+          score += classroom.activeAssignmentsCount * 10;
+          reasonParts.push(`مرتبط حاليًا بـ ${classroom.activeAssignmentsCount} شعبة`);
+        } else {
+          score -= 20;
+          reasonParts.push("غير مزدحم حاليًا");
         }
 
         return {
@@ -332,7 +411,7 @@ export function SectionClassroomAssignmentsWorkspace({
     };
   }, [classrooms, selectedSection]);
 
-  const handleStartCreate = () => {
+  const handleStartCreate = React.useCallback(() => {
     if (!canCreate) {
       return;
     }
@@ -342,10 +421,49 @@ export function SectionClassroomAssignmentsWorkspace({
     setEditingAssignmentId(null);
     setFormState({
       ...DEFAULT_FORM_STATE,
+      academicYearId:
+        filters.academicYearId !== "all"
+          ? filters.academicYearId
+          : initialAcademicYearId ?? currentAcademicYear?.id ?? "",
       sectionId: filters.sectionId !== "all" ? filters.sectionId : initialSectionId ?? "",
+      classroomId:
+        filters.classroomId !== "all" ? filters.classroomId : initialClassroomId ?? "",
     });
     setIsFormOpen(true);
-  };
+  }, [
+    canCreate,
+    currentAcademicYear?.id,
+    filters.academicYearId,
+    filters.classroomId,
+    filters.sectionId,
+    initialAcademicYearId,
+    initialClassroomId,
+    initialSectionId,
+  ]);
+
+  React.useEffect(() => {
+    if (initialMode !== "create" || isFormOpen || isEditing) {
+      return;
+    }
+
+    if (
+      initialSectionId ||
+      initialClassroomId ||
+      initialAcademicYearId ||
+      currentAcademicYear?.id
+    ) {
+      handleStartCreate();
+    }
+  }, [
+    currentAcademicYear?.id,
+    handleStartCreate,
+    initialAcademicYearId,
+    initialClassroomId,
+    initialMode,
+    initialSectionId,
+    isEditing,
+    isFormOpen,
+  ]);
 
   const handleStartEdit = (assignment: SectionClassroomAssignmentListItem) => {
     if (!canUpdate) {
@@ -508,6 +626,13 @@ export function SectionClassroomAssignmentsWorkspace({
           </div>
         ) : null}
 
+        {!initialSectionId && initialClassroomId ? (
+          <div className="flex items-start gap-2 rounded-md border border-sky-300/40 bg-sky-500/10 p-3 text-sm text-sky-900 dark:text-sky-200">
+            <Lightbulb className="mt-0.5 h-4 w-4 shrink-0" />
+            <p>تم فتح الشاشة مع غرفة محددة مسبقًا لتسهيل مراجعة الروابط أو إنشاء ربط جديد عليها.</p>
+          </div>
+        ) : null}
+
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex min-w-[240px] max-w-lg flex-1 flex-wrap items-center gap-2">
             <SearchField
@@ -577,9 +702,9 @@ export function SectionClassroomAssignmentsWorkspace({
               <option value="all">كل الشعب</option>
               {sections.map((section) => (
                 <option key={section.id} value={section.id}>
-                    {section.gradeLevel.code} - {section.name}
-                    {section.capacity !== null ? ` | السعة ${section.capacity}` : ""}
-                    {section.building ? ` | المبنى ${section.building.nameAr}` : ""}
+                  {section.gradeLevel.code} - {section.name}
+                  {section.capacity !== null ? ` | السعة ${section.capacity}` : ""}
+                  {section.building ? ` | المبنى ${section.building.nameAr}` : ""}
                 </option>
               ))}
             </SelectField>
@@ -594,6 +719,10 @@ export function SectionClassroomAssignmentsWorkspace({
               {classrooms.map((classroom) => (
                 <option key={classroom.id} value={classroom.id}>
                   {classroom.name}
+                  {classroom.building ? ` | ${formatBuildingLabel(classroom.building)}` : ""}
+                  {classroom.activeAssignmentsCount > 0
+                    ? ` | روابط نشطة ${classroom.activeAssignmentsCount}`
+                    : ""}
                 </option>
               ))}
             </SelectField>
@@ -856,6 +985,9 @@ export function SectionClassroomAssignmentsWorkspace({
                   <option key={classroom.id} value={classroom.id}>
                     {classroom.name} ({classroom.code})
                     {classroom.capacity !== null ? ` | السعة ${classroom.capacity}` : ""}
+                    {classroom.activeAssignmentsCount > 0
+                      ? ` | روابط نشطة ${classroom.activeAssignmentsCount}`
+                      : ""}
                   </option>
                 ))}
               </SelectField>
@@ -893,6 +1025,16 @@ export function SectionClassroomAssignmentsWorkspace({
                       {classroomSuggestion.classroom.capacity !== null
                         ? ` - السعة ${classroomSuggestion.classroom.capacity}`
                         : ""}
+                    </p>
+                    <p className="text-muted-foreground dark:text-amber-100/80">
+                      {classroomSuggestion.classroom.building
+                        ? `المبنى: ${formatBuildingLabel(classroomSuggestion.classroom.building)}`
+                        : "المبنى: غير محدد"}
+                    </p>
+                    <p className="text-muted-foreground dark:text-amber-100/80">
+                      {classroomSuggestion.classroom.activeAssignmentsCount > 0
+                        ? `الروابط النشطة الحالية: ${classroomSuggestion.classroom.activeAssignmentsCount}`
+                        : "لا توجد روابط نشطة حاليًا على هذه الغرفة"}
                     </p>
                     <p className="text-muted-foreground dark:text-amber-100/80">
                       {classroomSuggestion.reason}

@@ -8,6 +8,7 @@ type UseClassroomsQueryOptions = {
   page?: number;
   limit?: number;
   search?: string;
+  buildingLookupId?: number;
   isActive?: boolean;
 };
 
@@ -21,6 +22,7 @@ export function useClassroomsQuery(options: UseClassroomsQueryOptions = {}) {
       options.page ?? 1,
       options.limit ?? 12,
       options.search ?? "",
+      options.buildingLookupId ?? "all-buildings",
       options.isActive === undefined ? "all" : options.isActive ? "active" : "inactive",
     ],
     enabled: auth.isHydrated && auth.isAuthenticated,
@@ -30,6 +32,7 @@ export function useClassroomsQuery(options: UseClassroomsQueryOptions = {}) {
           page: options.page ?? 1,
           limit: options.limit ?? 12,
           search: options.search,
+          buildingLookupId: options.buildingLookupId,
           isActive: options.isActive,
         });
       } catch (error) {

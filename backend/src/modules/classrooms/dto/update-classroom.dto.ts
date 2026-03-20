@@ -35,6 +35,13 @@ export class UpdateClassroomDto {
   @Max(1000)
   capacity?: number;
 
+  @ApiPropertyOptional({ example: 3 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  buildingLookupId?: number | null;
+
   @ApiPropertyOptional({ example: 'قريب من المختبر' })
   @IsOptional()
   @Transform(({ value }: { value: string }) => value?.trim())

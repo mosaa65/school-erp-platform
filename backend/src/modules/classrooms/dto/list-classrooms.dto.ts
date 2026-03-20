@@ -30,6 +30,13 @@ export class ListClassroomsDto {
   @IsString()
   search?: string;
 
+  @ApiPropertyOptional({ example: 3 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  buildingLookupId?: number;
+
   @ApiPropertyOptional({ example: true })
   @IsOptional()
   @Type(() => Boolean)

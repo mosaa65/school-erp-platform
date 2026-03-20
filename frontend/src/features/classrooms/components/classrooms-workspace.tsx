@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Building, LoaderCircle, PencilLine, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
+import { useBuildingOptionsQuery } from "@/features/sections/hooks/use-building-options-query";
 import {
   useCreateClassroomMutation,
   useDeleteClassroomMutation,
@@ -28,6 +30,7 @@ import { useClassroomsQuery } from "@/features/classrooms/hooks/use-classrooms-q
 import type { ClassroomListItem } from "@/lib/api/client";
 
 type ClassroomFormState = {
+  buildingLookupId: string;
   code: string;
   name: string;
   capacity: string;
@@ -38,6 +41,7 @@ type ClassroomFormState = {
 const PAGE_SIZE = 12;
 
 const DEFAULT_FORM_STATE: ClassroomFormState = {
+  buildingLookupId: "",
   code: "",
   name: "",
   capacity: "",
@@ -51,6 +55,8 @@ function normalizeCode(value: string): string {
 
 function toFormState(classroom: ClassroomListItem): ClassroomFormState {
   return {
+    buildingLookupId:
+      classroom.buildingLookupId === null ? "" : String(classroom.buildingLookupId),
     code: classroom.code,
     name: classroom.name,
     capacity: classroom.capacity === null ? "" : String(classroom.capacity),
@@ -59,20 +65,32 @@ function toFormState(classroom: ClassroomListItem): ClassroomFormState {
   };
 }
 
+function formatBuildingName(classroom: ClassroomListItem): string {
+  if (!classroom.building) {
+    return "بدون مبنى";
+  }
+
+  return classroom.building.nameAr || classroom.building.code || `مبنى ${classroom.building.id}`;
+}
+
 export function ClassroomsWorkspace() {
+  const router = useRouter();
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("classrooms.create");
   const canUpdate = hasPermission("classrooms.update");
   const canDelete = hasPermission("classrooms.delete");
+  const canReadBuildings = hasPermission("lookup-buildings.read");
 
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
   const [debounceTimer, setDebounceTimer] = React.useState<NodeJS.Timeout | null>(null);
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">("all");
+  const [buildingFilter, setBuildingFilter] = React.useState<string>("all");
   const [filterDraft, setFilterDraft] = React.useState<{
     active: "all" | "active" | "inactive";
-  }>({ active: "all" });
+    buildingLookupId: string;
+  }>({ active: "all", buildingLookupId: "all" });
   const [editingClassroomId, setEditingClassroomId] = React.useState<string | null>(null);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
@@ -84,8 +102,13 @@ export function ClassroomsWorkspace() {
     page,
     limit: PAGE_SIZE,
     search: search || undefined,
+    buildingLookupId:
+      buildingFilter === "all" ? undefined : Number(buildingFilter),
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
   });
+
+  const buildingsQuery = useBuildingOptionsQuery("classrooms");
+  const buildings = React.useMemo(() => buildingsQuery.data ?? [], [buildingsQuery.data]);
 
   const classrooms = React.useMemo(() => classroomsQuery.data?.data ?? [], [classroomsQuery.data?.data]);
   const pagination = classroomsQuery.data?.pagination;
@@ -139,8 +162,9 @@ export function ClassroomsWorkspace() {
 
     setFilterDraft({
       active: activeFilter,
+      buildingLookupId: buildingFilter,
     });
-  }, [activeFilter, isFilterOpen]);
+  }, [activeFilter, buildingFilter, isFilterOpen]);
 
   const resetForm = () => {
     setEditingClassroomId(null);
@@ -200,7 +224,7 @@ export function ClassroomsWorkspace() {
       return;
     }
 
-    const payload = {
+    const commonPayload = {
       code: normalizeCode(formState.code),
       name: formState.name.trim(),
       capacity: formState.capacity.trim() ? Number(formState.capacity) : undefined,
@@ -217,7 +241,12 @@ export function ClassroomsWorkspace() {
       updateMutation.mutate(
         {
           classroomId: editingClassroomId,
-          payload,
+          payload: {
+            ...commonPayload,
+            buildingLookupId: formState.buildingLookupId
+              ? Number(formState.buildingLookupId)
+              : null,
+          },
         },
         {
           onSuccess: () => {
@@ -234,13 +263,21 @@ export function ClassroomsWorkspace() {
       return;
     }
 
-    createMutation.mutate(payload, {
-      onSuccess: () => {
-        resetForm();
-        setPage(1);
-        setActionSuccess("تم إنشاء الفصل بنجاح.");
+    createMutation.mutate(
+      {
+        ...commonPayload,
+        ...(formState.buildingLookupId
+          ? { buildingLookupId: Number(formState.buildingLookupId) }
+          : {}),
       },
-    });
+      {
+        onSuccess: () => {
+          resetForm();
+          setPage(1);
+          setActionSuccess("تم إنشاء الفصل بنجاح.");
+        },
+      },
+    );
   };
 
   const handleStartEdit = (classroom: ClassroomListItem) => {
@@ -297,9 +334,18 @@ export function ClassroomsWorkspace() {
     });
   };
 
+  const openClassroomAssignments = (classroom: ClassroomListItem) => {
+    const params = new URLSearchParams({
+      classroomId: classroom.id,
+    });
+
+    router.push(`/app/section-classroom-assignments?${params.toString()}`);
+  };
+
   const applyFilters = () => {
     setPage(1);
     setActiveFilter(filterDraft.active);
+    setBuildingFilter(filterDraft.buildingLookupId);
     setIsFilterOpen(false);
   };
 
@@ -308,16 +354,20 @@ export function ClassroomsWorkspace() {
     setSearchInput("");
     setSearch("");
     setActiveFilter("all");
-    setFilterDraft({ active: "all" });
+    setBuildingFilter("all");
+    setFilterDraft({ active: "all", buildingLookupId: "all" });
     setIsFilterOpen(false);
   };
 
-  const activeFiltersCount = React.useMemo(() => {
-    return [searchInput.trim() ? 1 : 0, activeFilter !== "all" ? 1 : 0].reduce(
-      (acc, value) => acc + value,
-      0,
-    );
-  }, [activeFilter, searchInput]);
+  const activeFiltersCount = React.useMemo(
+    () =>
+      [
+        searchInput.trim() ? 1 : 0,
+        activeFilter !== "all" ? 1 : 0,
+        buildingFilter !== "all" ? 1 : 0,
+      ].reduce((acc, value) => acc + value, 0),
+    [activeFilter, buildingFilter, searchInput],
+  );
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
 
@@ -330,7 +380,7 @@ export function ClassroomsWorkspace() {
               containerClassName="flex-1"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="بحث بالكود أو الاسم أو الملاحظات..."
+              placeholder="بحث بالكود أو الاسم أو المبنى..."
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -362,6 +412,29 @@ export function ClassroomsWorkspace() {
             </div>
           }
         >
+          {canReadBuildings ? (
+            <SelectField
+              value={filterDraft.buildingLookupId}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  buildingLookupId: event.target.value,
+                }))
+              }
+            >
+              <option value="all">كل المباني</option>
+              {buildings.map((building) => (
+                <option key={building.id} value={String(building.id)}>
+                  {building.nameAr ?? building.name ?? building.code ?? `مبنى ${building.id}`}
+                </option>
+              ))}
+            </SelectField>
+          ) : (
+            <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+              فلتر المبنى متاح فقط عند وجود صلاحية <code>lookup-buildings.read</code>.
+            </div>
+          )}
+
           <SelectField
             value={filterDraft.active}
             onChange={(event) =>
@@ -384,7 +457,7 @@ export function ClassroomsWorkspace() {
               <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
             <CardDescription>
-              إدارة الفصول/الغرف ككيان مستقل مع دعم السعة والملاحظات والحالة.
+              إدارة الفصول/الغرف ككيان مستقل مع دعم المبنى والسعة والملاحظات والحالة.
             </CardDescription>
           </CardHeader>
 
@@ -428,10 +501,25 @@ export function ClassroomsWorkspace() {
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="space-y-1">
-                    <p className="font-medium">{classroom.name}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium">{classroom.name}</p>
+                      {classroom.building ? (
+                        <Badge variant="outline">
+                          {formatBuildingName(classroom)}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline">بدون مبنى</Badge>
+                      )}
+                      <Badge variant="secondary">
+                        الروابط النشطة: {classroom.activeAssignmentsCount}
+                      </Badge>
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       <code>{classroom.code}</code>
                       {classroom.capacity !== null ? ` - السعة: ${classroom.capacity}` : ""}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      المبنى: {formatBuildingName(classroom)}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       الملاحظات: {classroom.notes ?? "-"}
@@ -446,6 +534,13 @@ export function ClassroomsWorkspace() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openClassroomAssignments(classroom)}
+                  >
+                    الروابط
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
@@ -550,27 +645,51 @@ export function ClassroomsWorkspace() {
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الكود *</label>
-              <Input
-                value={formState.code}
+              <label className="text-xs font-medium text-muted-foreground">المبنى</label>
+              <SelectField
+                value={formState.buildingLookupId}
                 onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, code: event.target.value }))
+                  setFormState((prev) => ({ ...prev, buildingLookupId: event.target.value }))
                 }
-                placeholder="مثال: room-a1"
-                required
-              />
+                disabled={!canReadBuildings}
+              >
+                <option value="">بدون مبنى</option>
+                {buildings.map((building) => (
+                  <option key={building.id} value={String(building.id)}>
+                    {building.nameAr ?? building.name ?? building.code ?? `مبنى ${building.id}`}
+                  </option>
+                ))}
+              </SelectField>
+              {!canReadBuildings ? (
+                <p className="text-[11px] text-muted-foreground">
+                  ربط الفصل بالمبنى يحتاج صلاحية <code>lookup-buildings.read</code>.
+                </p>
+              ) : null}
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
-              <Input
-                value={formState.name}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, name: event.target.value }))
-                }
-                placeholder="الفصل A1"
-                required
-              />
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">الكود *</label>
+                <Input
+                  value={formState.code}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, code: event.target.value }))
+                  }
+                  placeholder="مثال: room-a1"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
+                <Input
+                  value={formState.name}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, name: event.target.value }))
+                  }
+                  placeholder="الفصل A1"
+                  required
+                />
+              </div>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
@@ -598,6 +717,12 @@ export function ClassroomsWorkspace() {
                 />
               </div>
             </div>
+
+            {formState.buildingLookupId ? (
+              <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+                تم ربط الفصل بمبنى محدد، وهذا سيساعد شاشة توزيع الشعب والاقتراحات الذكية.
+              </div>
+            ) : null}
 
             <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
               <span>نشط</span>
