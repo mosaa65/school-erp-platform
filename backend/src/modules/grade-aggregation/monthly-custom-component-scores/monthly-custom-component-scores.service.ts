@@ -554,9 +554,14 @@ export class MonthlyCustomComponentScoresService {
       );
     }
 
+    const sectionId = this.requireAssignedSectionId(
+      monthlyGrade.studentEnrollment.sectionId,
+      'لا يمكن تسجيل مكوّن شهري مخصص لقيد غير موزع على شعبة',
+    );
+
     return {
       monthlyGradeId: monthlyGrade.id,
-      sectionId: monthlyGrade.studentEnrollment.sectionId,
+      sectionId,
       subjectId: monthlyGrade.subjectId,
       academicYearId: monthlyGrade.academicYearId,
       gradingPolicyId: monthlyGrade.gradingPolicyId,
@@ -630,6 +635,14 @@ export class MonthlyCustomComponentScoresService {
         updatedById: actorUserId,
       },
     });
+  }
+
+  private requireAssignedSectionId(sectionId: string | null, message: string) {
+    if (!sectionId) {
+      throw new BadRequestException(message);
+    }
+
+    return sectionId;
   }
 
   private validateScore(score: number, maxScore: number) {

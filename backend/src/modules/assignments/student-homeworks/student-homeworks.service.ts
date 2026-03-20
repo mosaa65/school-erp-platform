@@ -550,6 +550,10 @@ export class StudentHomeworksService {
       throw new BadRequestException('قيد الطالب غير نشط');
     }
 
+    if (!enrollment.sectionId) {
+      throw new BadRequestException('قيد الطالب غير موزع على شعبة');
+    }
+
     return {
       id: enrollment.id,
       sectionId: enrollment.sectionId,

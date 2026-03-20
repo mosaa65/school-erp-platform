@@ -97,7 +97,7 @@ type AssessmentContext = {
 
 type EnrollmentContext = {
   id: string;
-  sectionId: string;
+  sectionId: string | null;
   academicYearId: string;
   isActive: boolean;
 };
@@ -550,6 +550,10 @@ export class StudentExamScoresService {
 
     if (!enrollment.isActive) {
       throw new BadRequestException('قيد الطالب غير نشط');
+    }
+
+    if (!enrollment.sectionId) {
+      throw new BadRequestException('قيد الطالب غير موزع على شعبة');
     }
 
     return enrollment;

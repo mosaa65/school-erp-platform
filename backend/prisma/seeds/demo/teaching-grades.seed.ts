@@ -618,6 +618,10 @@ export async function seedDemoTeachingGrades(
 
   const enrollmentsBySection = new Map<string, Array<{ id: string }>>();
   for (const enrollment of enrollmentRows) {
+    if (!enrollment.sectionId) {
+      continue;
+    }
+
     const bucket = enrollmentsBySection.get(enrollment.sectionId) ?? [];
     if (bucket.length < DEFAULT_STUDENTS_PER_SECTION) {
       bucket.push({ id: enrollment.id });

@@ -552,7 +552,14 @@ export class StudentExamScoresService {
       throw new BadRequestException('قيد الطالب غير نشط');
     }
 
-    return enrollment;
+    if (!enrollment.sectionId) {
+      throw new BadRequestException('قيد الطالب غير موزع على شعبة');
+    }
+
+    return {
+      ...enrollment,
+      sectionId: enrollment.sectionId,
+    };
   }
 
   private ensureEnrollmentMatchesAssessment(

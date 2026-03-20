@@ -24,7 +24,7 @@ type HomeworkContext = {
 
 type EnrollmentContext = {
   id: string;
-  sectionId: string;
+  sectionId: string | null;
   academicYearId: string;
 };
 
@@ -548,6 +548,10 @@ export class StudentHomeworksService {
 
     if (!enrollment.isActive) {
       throw new BadRequestException('قيد الطالب غير نشط');
+    }
+
+    if (!enrollment.sectionId) {
+      throw new BadRequestException('قيد الطالب غير موزع على شعبة');
     }
 
     return {

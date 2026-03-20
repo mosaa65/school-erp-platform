@@ -763,9 +763,14 @@ export class SemesterGradesService {
       throw new NotFoundException('الدرجة الفصلية غير موجودة');
     }
 
+    const sectionId = this.requireAssignedSectionId(
+      semesterGrade.studentEnrollment.sectionId,
+      'لا يمكن عرض الدرجة الفصلية لقيد غير موزع على شعبة',
+    );
+
     await this.ensureActorAuthorized(
       actorUserId,
-      semesterGrade.studentEnrollment.sectionId,
+      sectionId,
       semesterGrade.subject.id,
       semesterGrade.academicYear.id,
     );
@@ -995,6 +1000,7 @@ export class SemesterGradesService {
         select: {
           id: true,
           academicYearId: true,
+          gradeLevelId: true,
           sectionId: true,
           isActive: true,
           section: {
@@ -1025,7 +1031,15 @@ export class SemesterGradesService {
     if (!enrollment.isActive) {
       throw new BadRequestException('قيد الطالب غير نشط');
     }
-    if (!enrollment.section.isActive) {
+    const sectionId = this.requireAssignedSectionId(
+      enrollment.sectionId,
+      'لا يمكن احتساب درجة فصلية لقيد غير موزع على شعبة',
+    );
+    const section = enrollment.section;
+    if (!section) {
+      throw new BadRequestException('بيانات شعبة القيد غير متاحة');
+    }
+    if (!section.isActive) {
       throw new BadRequestException('شعبة القيد غير نشطة');
     }
     if (!term) {
@@ -1041,16 +1055,17 @@ export class SemesterGradesService {
     }
 
     await this.ensureSubjectExistsAndActive(subjectId);
+    const gradeLevelId = enrollment.gradeLevelId ?? section.gradeLevelId;
     await this.ensureSubjectOfferedInTerm(
       term.academicYearId,
       academicTermId,
-      enrollment.section.gradeLevelId,
+      gradeLevelId,
       subjectId,
     );
 
     return {
-      sectionId: enrollment.sectionId,
-      gradeLevelId: enrollment.section.gradeLevelId,
+      sectionId,
+      gradeLevelId,
       academicYearId: term.academicYearId,
     };
   }
@@ -1125,6 +1140,7 @@ export class SemesterGradesService {
         academicYearId: true,
         studentEnrollment: {
           select: {
+            gradeLevelId: true,
             sectionId: true,
             section: {
               select: {
@@ -1140,9 +1156,21 @@ export class SemesterGradesService {
       throw new NotFoundException('الدرجة الفصلية غير موجودة');
     }
 
+    const sectionId = this.requireAssignedSectionId(
+      semesterGrade.studentEnrollment.sectionId,
+      'لا يمكن استخدام درجة فصلية لقيد غير موزع على شعبة',
+    );
+    const gradeLevelId =
+      semesterGrade.studentEnrollment.gradeLevelId ??
+      semesterGrade.studentEnrollment.section?.gradeLevelId;
+
+    if (!gradeLevelId) {
+      throw new BadRequestException('تعذر تحديد الصف المرتبط بالقيد');
+    }
+
     return {
-      sectionId: semesterGrade.studentEnrollment.sectionId,
-      gradeLevelId: semesterGrade.studentEnrollment.section.gradeLevelId,
+      sectionId,
+      gradeLevelId,
       academicYearId: semesterGrade.academicYearId,
     };
   }
@@ -1180,6 +1208,14 @@ export class SemesterGradesService {
     if (!subject.isActive) {
       throw new BadRequestException('المادة غير نشطة');
     }
+  }
+
+  private requireAssignedSectionId(sectionId: string | null, message: string) {
+    if (!sectionId) {
+      throw new BadRequestException(message);
+    }
+
+    return sectionId;
   }
 
   private async ensureSubjectOfferedInTerm(

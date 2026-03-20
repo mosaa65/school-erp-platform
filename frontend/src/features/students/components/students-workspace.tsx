@@ -600,11 +600,6 @@ export function StudentsWorkspace() {
       return false;
     }
 
-    if (formState.admissionNo.trim().length > 40) {
-      setFormError("رقم القيد يجب ألا يتجاوز 40 حرفًا.");
-      return false;
-    }
-
     if (formState.fullName.trim().length > 150) {
       setFormError("الاسم الكامل يجب ألا يتجاوز 150 حرفًا.");
       return false;
@@ -652,7 +647,6 @@ export function StudentsWorkspace() {
         : undefined;
 
     const payload = {
-      admissionNo: toOptionalString(formState.admissionNo),
       fullName: formState.fullName.trim(),
       gender: mappedGender,
       genderId: formState.genderId ? Number(formState.genderId) : undefined,
@@ -874,7 +868,7 @@ export function StudentsWorkspace() {
               containerClassName="flex-1"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="بحث بالاسم أو رقم القيد..."
+              placeholder="بحث بالاسم أو رقم الطالب..."
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -1032,7 +1026,7 @@ export function StudentsWorkspace() {
                           <div className="space-y-1">
                             <p className="font-medium">{student.fullName}</p>
                             <p className="text-xs text-muted-foreground">
-                              رقم القيد: {student.admissionNo ?? "-"} | الميلاد: {formatDate(student.birthDate)}
+                              رقم الطالب: {student.admissionNo ?? "-"} | الميلاد: {formatDate(student.birthDate)}
                             </p>
                             <p className="text-xs text-muted-foreground">
                               أولياء الأمور: {student.guardians.length} | القيود: {student.enrollments.length}
@@ -1040,7 +1034,7 @@ export function StudentsWorkspace() {
                             {latestEnrollment ? (
                               <p className="text-xs text-muted-foreground">
                                 آخر قيد: {latestEnrollment.academicYear.code} /{" "}
-                                {latestEnrollment.section.code} (
+                                {latestEnrollment.section?.code ?? "غير موزع"} (
                                 {translateStudentEnrollmentStatus(latestEnrollment.status)})
                               </p>
                             ) : null}
@@ -1183,14 +1177,19 @@ export function StudentsWorkspace() {
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">رقم القيد</label>
-              <Input
-                value={formState.admissionNo}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, admissionNo: event.target.value }))
-                }
-                placeholder="ق-2026-00123"
-              />
+              <label className="text-xs font-medium text-muted-foreground">رقم الطالب</label>
+              {isEditing ? (
+                <Input
+                  value={formState.admissionNo}
+                  readOnly
+                  placeholder="سيتم توليده تلقائيًا"
+                  className="bg-muted/40"
+                />
+              ) : (
+                <div className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                  سيُولد رقم الطالب تلقائيًا بعد الحفظ.
+                </div>
+              )}
             </div>
 
             <div className="space-y-1.5">

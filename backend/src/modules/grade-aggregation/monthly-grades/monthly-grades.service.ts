@@ -736,9 +736,14 @@ export class MonthlyGradesService {
       throw new NotFoundException('الدرجة الشهرية غير موجودة');
     }
 
+    const sectionId = this.requireAssignedSectionId(
+      monthlyGrade.studentEnrollment.sectionId,
+      'لا يمكن عرض الدرجة الشهرية لقيد غير موزع على شعبة',
+    );
+
     await this.ensureActorAuthorized(
       actorUserId,
-      monthlyGrade.studentEnrollment.sectionId,
+      sectionId,
       monthlyGrade.subject.id,
       monthlyGrade.academicYear.id,
     );
@@ -972,6 +977,7 @@ export class MonthlyGradesService {
         select: {
           id: true,
           academicYearId: true,
+          gradeLevelId: true,
           sectionId: true,
           isActive: true,
           section: {
@@ -1007,7 +1013,17 @@ export class MonthlyGradesService {
       throw new BadRequestException('قيد الطالب غير نشط');
     }
 
-    if (!enrollment.section.isActive) {
+    const sectionId = this.requireAssignedSectionId(
+      enrollment.sectionId,
+      'لا يمكن احتساب درجة شهرية لقيد غير موزع على شعبة',
+    );
+    const section = enrollment.section;
+
+    if (!section) {
+      throw new BadRequestException('بيانات شعبة القيد غير متاحة');
+    }
+
+    if (!section.isActive) {
       throw new BadRequestException('شعبة القيد غير نشطة');
     }
 
@@ -1026,23 +1042,24 @@ export class MonthlyGradesService {
     }
 
     await this.ensureSubjectExistsAndActive(subjectId);
+    const gradeLevelId = enrollment.gradeLevelId ?? section.gradeLevelId;
     await this.ensureSubjectOfferedInTerm(
       month.academicYearId,
       month.academicTermId,
-      enrollment.section.gradeLevelId,
+      gradeLevelId,
       subjectId,
     );
 
     const policy = await this.findMonthlyPolicy(
       month.academicYearId,
-      enrollment.section.gradeLevelId,
+      gradeLevelId,
       subjectId,
       month.academicTermId,
     );
 
     return {
-      sectionId: enrollment.sectionId,
-      gradeLevelId: enrollment.section.gradeLevelId,
+      sectionId,
+      gradeLevelId,
       academicYearId: month.academicYearId,
       academicTermId: month.academicTermId,
       monthStartDate: month.startDate,
@@ -1057,20 +1074,21 @@ export class MonthlyGradesService {
         id,
         deletedAt: null,
       },
-        select: {
-          id: true,
-          subjectId: true,
-          academicYearId: true,
-          academicMonthId: true,
-          academicTermId: true,
-          academicMonth: {
-            select: {
-              startDate: true,
-              endDate: true,
-            },
+      select: {
+        id: true,
+        subjectId: true,
+        academicYearId: true,
+        academicMonthId: true,
+        academicTermId: true,
+        academicMonth: {
+          select: {
+            startDate: true,
+            endDate: true,
+          },
         },
         studentEnrollment: {
           select: {
+            gradeLevelId: true,
             sectionId: true,
             section: {
               select: {
@@ -1086,15 +1104,27 @@ export class MonthlyGradesService {
       throw new NotFoundException('الدرجة الشهرية غير موجودة');
     }
 
+    const sectionId = this.requireAssignedSectionId(
+      monthlyGrade.studentEnrollment.sectionId,
+      'لا يمكن استخدام درجة شهرية لقيد غير موزع على شعبة',
+    );
+    const gradeLevelId =
+      monthlyGrade.studentEnrollment.gradeLevelId ??
+      monthlyGrade.studentEnrollment.section?.gradeLevelId;
+
+    if (!gradeLevelId) {
+      throw new BadRequestException('تعذر تحديد الصف المرتبط بالقيد');
+    }
+
     const policy = await this.findMonthlyPolicy(
       monthlyGrade.academicYearId,
-      monthlyGrade.studentEnrollment.section.gradeLevelId,
+      gradeLevelId,
       monthlyGrade.subjectId,
       monthlyGrade.academicTermId,
     );
 
     return {
-      sectionId: monthlyGrade.studentEnrollment.sectionId,
+      sectionId,
       monthStartDate: monthlyGrade.academicMonth.startDate,
       monthEndDate: monthlyGrade.academicMonth.endDate,
       policy,
@@ -1114,6 +1144,14 @@ export class MonthlyGradesService {
     }
 
     return monthlyGrade;
+  }
+
+  private requireAssignedSectionId(sectionId: string | null, message: string) {
+    if (!sectionId) {
+      throw new BadRequestException(message);
+    }
+
+    return sectionId;
   }
 
   private async ensureAcademicMonthExistsAndActive(academicMonthId: string) {
@@ -1541,4 +1579,3 @@ export class MonthlyGradesService {
     return 'خطأ غير معروف';
   }
 }
-

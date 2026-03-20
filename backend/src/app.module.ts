@@ -23,6 +23,7 @@ import { GradeLevelSubjectsModule } from './modules/grade-level-subjects/grade-l
 import { GradeLevelsModule } from './modules/grade-levels/grade-levels.module';
 import { GlobalSettingsModule } from './modules/global-settings/global-settings.module';
 import { HrReportsModule } from './modules/hr-reports/hr-reports.module';
+import { ClassroomsModule } from './modules/classrooms/classrooms.module';
 import { LookupBloodTypesModule } from './modules/lookup-blood-types/lookup-blood-types.module';
 import { LookupEnrollmentStatusesModule } from './modules/lookup-enrollment-statuses/lookup-enrollment-statuses.module';
 import { LookupCatalogModule } from './modules/lookup-catalog/lookup-catalog.module';
@@ -36,6 +37,7 @@ import { LookupPeriodsModule } from './modules/lookup-periods/lookup-periods.mod
 import { TalentsModule } from './modules/talents/talents.module';
 import { PermissionsModule } from './modules/permissions/permissions.module';
 import { RolesModule } from './modules/roles/roles.module';
+import { SectionClassroomAssignmentsModule } from './modules/section-classroom-assignments/section-classroom-assignments.module';
 import { SectionsModule } from './modules/sections/sections.module';
 import { StudentEnrollmentsModule } from './modules/student-enrollments/student-enrollments.module';
 import { StudentGuardiansModule } from './modules/student-guardians/student-guardians.module';
@@ -73,6 +75,7 @@ import { PrismaModule } from './prisma/prisma.module';
     ResultsDecisionsModule,
     GradeLevelSubjectsModule,
     GradeLevelsModule,
+    ClassroomsModule,
     SectionsModule,
     SubjectsModule,
     StudentsModule,
@@ -104,6 +107,7 @@ import { PrismaModule } from './prisma/prisma.module';
     TermSubjectOfferingsModule,
     UsersModule,
     RolesModule,
+    SectionClassroomAssignmentsModule,
     PermissionsModule,
     AuditLogsModule,
     GlobalSettingsModule,

@@ -16,6 +16,7 @@
   LayoutGrid,
   Layers3,
   Medal,
+  Shuffle,
   ScrollText,
   Settings2,
   ShieldCheck,
@@ -171,6 +172,20 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         requiredPermission: "sections.read",
       },
       {
+        href: "/app/classrooms",
+        label: "الفصول / الغرف",
+        icon: Building,
+        requiredPermission: "classrooms.read",
+        iconClassName: "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+      },
+      {
+        href: "/app/section-classroom-assignments",
+        label: "ربط الشعب بالغرف",
+        icon: Cable,
+        requiredPermission: "sections.read",
+        iconClassName: "border-teal-500/20 bg-teal-500/10 text-teal-700 dark:text-teal-300",
+      },
+      {
         href: "/app/grade-level-subjects",
         label: "ربط الصفوف بالمواد",
         icon: Cable,
@@ -294,6 +309,12 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         href: "/app/student-enrollments",
         label: "قيود الطلاب",
         icon: ClipboardList,
+        requiredPermission: "student-enrollments.read",
+      },
+      {
+        href: "/app/student-distributions",
+        label: "توزيع الطلاب على الشعب",
+        icon: Shuffle,
         requiredPermission: "student-enrollments.read",
       },
       {

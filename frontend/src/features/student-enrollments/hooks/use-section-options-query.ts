@@ -4,11 +4,22 @@ import { useQuery } from "@tanstack/react-query";
 import { ApiError, apiClient } from "@/lib/api/client";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 
-export function useSectionOptionsQuery() {
+type UseSectionOptionsQueryOptions = {
+  gradeLevelId?: string;
+};
+
+export function useSectionOptionsQuery(
+  options: UseSectionOptionsQueryOptions = {},
+) {
   const auth = useAuth();
 
   return useQuery({
-    queryKey: ["sections", "options", "student-enrollments"],
+    queryKey: [
+      "sections",
+      "options",
+      "student-enrollments",
+      options.gradeLevelId ?? "all",
+    ],
     enabled: auth.isHydrated && auth.isAuthenticated,
     queryFn: async () => {
       try {
@@ -16,6 +27,7 @@ export function useSectionOptionsQuery() {
           page: 1,
           limit: 100,
           isActive: true,
+          gradeLevelId: options.gradeLevelId,
         });
 
         return response.data;
@@ -34,6 +46,3 @@ export function useSectionOptionsQuery() {
     },
   });
 }
-
-
-

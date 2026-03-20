@@ -1148,6 +1148,7 @@ export class AnnualResultsService {
         id: true,
         sectionId: true,
         academicYearId: true,
+        gradeLevelId: true,
         isActive: true,
         section: {
           select: {
@@ -1164,7 +1165,15 @@ export class AnnualResultsService {
     if (!enrollment.isActive) {
       throw new BadRequestException('قيد الطالب غير نشط');
     }
-    if (!enrollment.section.isActive) {
+    const sectionId = this.requireAssignedSectionId(
+      enrollment.sectionId,
+      'لا يمكن احتساب نتيجة سنوية لقيد غير موزع على شعبة',
+    );
+    const section = enrollment.section;
+    if (!section) {
+      throw new BadRequestException('بيانات شعبة القيد غير متاحة');
+    }
+    if (!section.isActive) {
       throw new BadRequestException('شعبة القيد غير نشطة');
     }
     if (enrollment.academicYearId !== academicYearId) {
@@ -1173,9 +1182,11 @@ export class AnnualResultsService {
       );
     }
 
+    const gradeLevelId = enrollment.gradeLevelId ?? section.gradeLevelId;
+
     return {
-      sectionId: enrollment.sectionId,
-      gradeLevelId: enrollment.section.gradeLevelId,
+      sectionId,
+      gradeLevelId,
       academicYearId,
     };
   }
@@ -1190,6 +1201,7 @@ export class AnnualResultsService {
         academicYearId: true,
         studentEnrollment: {
           select: {
+            gradeLevelId: true,
             sectionId: true,
             section: {
               select: {
@@ -1205,9 +1217,21 @@ export class AnnualResultsService {
       throw new NotFoundException('النتيجة السنوية غير موجودة');
     }
 
+    const sectionId = this.requireAssignedSectionId(
+      annualResult.studentEnrollment.sectionId,
+      'لا يمكن استخدام نتيجة سنوية لقيد غير موزع على شعبة',
+    );
+    const gradeLevelId =
+      annualResult.studentEnrollment.gradeLevelId ??
+      annualResult.studentEnrollment.section?.gradeLevelId;
+
+    if (!gradeLevelId) {
+      throw new BadRequestException('تعذر تحديد الصف المرتبط بالقيد');
+    }
+
     return {
-      sectionId: annualResult.studentEnrollment.sectionId,
-      gradeLevelId: annualResult.studentEnrollment.section.gradeLevelId,
+      sectionId,
+      gradeLevelId,
       academicYearId: annualResult.academicYearId,
     };
   }
@@ -1244,6 +1268,14 @@ export class AnnualResultsService {
         'قرار الترفيع غير صالح أو محذوف أو غير نشط',
       );
     }
+  }
+
+  private requireAssignedSectionId(sectionId: string | null, message: string) {
+    if (!sectionId) {
+      throw new BadRequestException(message);
+    }
+
+    return sectionId;
   }
 
   private async ensureActorAuthorizedForSection(

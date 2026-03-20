@@ -430,9 +430,14 @@ export class AnnualGradesService {
       throw new NotFoundException('لم يتم العثور على الدرجة السنوية');
     }
 
+    const sectionId = this.requireAssignedSectionId(
+      annualGrade.studentEnrollment.sectionId,
+      'لا يمكن عرض الدرجة السنوية لقيد غير موزع على شعبة',
+    );
+
     await this.ensureActorAuthorized(
       actorUserId,
-      annualGrade.studentEnrollment.sectionId,
+      sectionId,
       annualGrade.subject.id,
       annualGrade.academicYear.id,
     );
@@ -677,6 +682,7 @@ export class AnnualGradesService {
       select: {
         id: true,
         academicYearId: true,
+        gradeLevelId: true,
         sectionId: true,
         isActive: true,
         section: {
@@ -694,7 +700,15 @@ export class AnnualGradesService {
     if (!enrollment.isActive) {
       throw new BadRequestException('قيد الطالب غير نشط');
     }
-    if (!enrollment.section.isActive) {
+    const sectionId = this.requireAssignedSectionId(
+      enrollment.sectionId,
+      'لا يمكن احتساب درجة سنوية لقيد غير موزع على شعبة',
+    );
+    const section = enrollment.section;
+    if (!section) {
+      throw new BadRequestException('بيانات شعبة القيد غير متاحة');
+    }
+    if (!section.isActive) {
       throw new BadRequestException('شعبة القيد غير نشطة');
     }
     if (enrollment.academicYearId !== academicYearId) {
@@ -704,11 +718,12 @@ export class AnnualGradesService {
     }
 
     await this.ensureSubjectExistsAndActive(subjectId);
+    const gradeLevelId = enrollment.gradeLevelId ?? section.gradeLevelId;
 
     const subjectMapped = await this.prisma.gradeLevelSubject.count({
       where: {
         academicYearId,
-        gradeLevelId: enrollment.section.gradeLevelId,
+        gradeLevelId,
         subjectId,
         deletedAt: null,
         isActive: true,
@@ -722,8 +737,8 @@ export class AnnualGradesService {
     }
 
     return {
-      sectionId: enrollment.sectionId,
-      gradeLevelId: enrollment.section.gradeLevelId,
+      sectionId,
+      gradeLevelId,
       academicYearId,
     };
   }
@@ -740,6 +755,7 @@ export class AnnualGradesService {
         academicYearId: true,
         studentEnrollment: {
           select: {
+            gradeLevelId: true,
             sectionId: true,
             section: {
               select: {
@@ -755,9 +771,21 @@ export class AnnualGradesService {
       throw new NotFoundException('لم يتم العثور على الدرجة السنوية');
     }
 
+    const sectionId = this.requireAssignedSectionId(
+      annualGrade.studentEnrollment.sectionId,
+      'لا يمكن استخدام درجة سنوية لقيد غير موزع على شعبة',
+    );
+    const gradeLevelId =
+      annualGrade.studentEnrollment.gradeLevelId ??
+      annualGrade.studentEnrollment.section?.gradeLevelId;
+
+    if (!gradeLevelId) {
+      throw new BadRequestException('تعذر تحديد الصف المرتبط بالقيد');
+    }
+
     return {
-      sectionId: annualGrade.studentEnrollment.sectionId,
-      gradeLevelId: annualGrade.studentEnrollment.section.gradeLevelId,
+      sectionId,
+      gradeLevelId,
       academicYearId: annualGrade.academicYearId,
     };
   }
@@ -794,6 +822,14 @@ export class AnnualGradesService {
         'الحالة السنوية غير صالحة أو محذوفة أو غير نشطة',
       );
     }
+  }
+
+  private requireAssignedSectionId(sectionId: string | null, message: string) {
+    if (!sectionId) {
+      throw new BadRequestException(message);
+    }
+
+    return sectionId;
   }
 
   private async ensureSubjectExistsAndActive(subjectId: string) {

@@ -17,6 +17,11 @@ export type SectionYearGrant = {
   academicYearId: string;
 };
 
+export type GradeYearGrant = {
+  gradeLevelId: string;
+  academicYearId: string;
+};
+
 type ActorContext = {
   userId: string;
   employeeId: string | null;
@@ -47,6 +52,26 @@ export class DataScopeService {
       throw new ForbiddenException(
         'User must be linked to an active employee profile for scoped actions',
       );
+    }
+
+    const section = await this.prisma.section.findFirst({
+      where: {
+        id: params.sectionId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        gradeLevelId: true,
+        isActive: true,
+      },
+    });
+
+    if (!section) {
+      throw new ForbiddenException('Section is invalid or deleted');
+    }
+
+    if (!section.isActive) {
+      throw new ForbiddenException('Section is inactive');
     }
 
     const assignmentCount = await this.prisma.employeeTeachingAssignment.count({
@@ -87,21 +112,45 @@ export class DataScopeService {
         'You are not allowed to access this section/subject/year scope',
       );
     }
+
+    const scope = await this.getSectionSubjectYearGrants({
+      actorUserId: params.actorUserId,
+      capability: params.capability,
+      academicYearId: params.academicYearId,
+    });
+
+    const hasGradeGrant = scope.gradeGrants.some(
+      (grant) =>
+        grant.gradeLevelId === section.gradeLevelId &&
+        grant.academicYearId === params.academicYearId,
+    );
+
+    if (hasGradeGrant) {
+      return;
+    }
+
+    throw new ForbiddenException(
+      'You are not allowed to access this section/subject/year scope',
+    );
   }
 
   async getSectionSubjectYearGrants(params: {
     actorUserId: string;
     capability: Exclude<DataScopeCapability, 'VIEW_STUDENTS'>;
     academicYearId?: string;
-  }): Promise<{ isPrivileged: boolean; grants: SectionSubjectYearGrant[] }> {
+  }): Promise<{
+    isPrivileged: boolean;
+    grants: SectionSubjectYearGrant[];
+    gradeGrants: GradeYearGrant[];
+  }> {
     const actor = await this.getActorContext(params.actorUserId);
 
     if (actor.isPrivileged) {
-      return { isPrivileged: true, grants: [] };
+      return { isPrivileged: true, grants: [], gradeGrants: [] };
     }
 
     if (!actor.employeeId) {
-      return { isPrivileged: false, grants: [] };
+      return { isPrivileged: false, grants: [], gradeGrants: [] };
     }
 
     const [teachingAssignments, sectionSupervisions] = await Promise.all([
@@ -136,8 +185,10 @@ export class DataScopeService {
     ]);
 
     const dedup = new Map<string, SectionSubjectYearGrant>();
+    const sectionIds = new Set<string>();
 
     for (const item of teachingAssignments) {
+      sectionIds.add(item.sectionId);
       const key = `${item.sectionId}|${item.subjectId}|${item.academicYearId}`;
       dedup.set(key, {
         sectionId: item.sectionId,
@@ -147,6 +198,7 @@ export class DataScopeService {
     }
 
     for (const item of sectionSupervisions) {
+      sectionIds.add(item.sectionId);
       const key = `${item.sectionId}|*|${item.academicYearId}`;
       dedup.set(key, {
         sectionId: item.sectionId,
@@ -154,24 +206,63 @@ export class DataScopeService {
       });
     }
 
+    const sections = sectionIds.size
+      ? await this.prisma.section.findMany({
+          where: {
+            id: {
+              in: Array.from(sectionIds),
+            },
+            deletedAt: null,
+            isActive: true,
+          },
+          select: {
+            id: true,
+            gradeLevelId: true,
+          },
+        })
+      : [];
+
+    const sectionToGradeLevel = new Map(
+      sections.map((section) => [section.id, section.gradeLevelId] as const),
+    );
+    const gradeDedup = new Map<string, GradeYearGrant>();
+
+    for (const item of [...teachingAssignments, ...sectionSupervisions]) {
+      const gradeLevelId = sectionToGradeLevel.get(item.sectionId);
+      if (!gradeLevelId) {
+        continue;
+      }
+
+      const key = `${gradeLevelId}|${item.academicYearId}`;
+      gradeDedup.set(key, {
+        gradeLevelId,
+        academicYearId: item.academicYearId,
+      });
+    }
+
     return {
       isPrivileged: false,
       grants: Array.from(dedup.values()),
+      gradeGrants: Array.from(gradeDedup.values()),
     };
   }
 
   async getStudentSectionYearGrants(params: {
     actorUserId: string;
     academicYearId?: string;
-  }): Promise<{ isPrivileged: boolean; grants: SectionYearGrant[] }> {
+  }): Promise<{
+    isPrivileged: boolean;
+    grants: SectionYearGrant[];
+    gradeGrants: GradeYearGrant[];
+  }> {
     const actor = await this.getActorContext(params.actorUserId);
 
     if (actor.isPrivileged) {
-      return { isPrivileged: true, grants: [] };
+      return { isPrivileged: true, grants: [], gradeGrants: [] };
     }
 
     if (!actor.employeeId) {
-      return { isPrivileged: false, grants: [] };
+      return { isPrivileged: false, grants: [], gradeGrants: [] };
     }
 
     const [teachingAssignments, sectionSupervisions] = await Promise.all([
@@ -203,8 +294,10 @@ export class DataScopeService {
     ]);
 
     const dedup = new Map<string, SectionYearGrant>();
+    const sectionIds = new Set<string>();
 
     for (const item of [...teachingAssignments, ...sectionSupervisions]) {
+      sectionIds.add(item.sectionId);
       const key = `${item.sectionId}|${item.academicYearId}`;
       dedup.set(key, {
         sectionId: item.sectionId,
@@ -212,9 +305,44 @@ export class DataScopeService {
       });
     }
 
+    const sections = sectionIds.size
+      ? await this.prisma.section.findMany({
+          where: {
+            id: {
+              in: Array.from(sectionIds),
+            },
+            deletedAt: null,
+            isActive: true,
+          },
+          select: {
+            id: true,
+            gradeLevelId: true,
+          },
+        })
+      : [];
+
+    const sectionToGradeLevel = new Map(
+      sections.map((section) => [section.id, section.gradeLevelId] as const),
+    );
+    const gradeDedup = new Map<string, GradeYearGrant>();
+
+    for (const item of [...teachingAssignments, ...sectionSupervisions]) {
+      const gradeLevelId = sectionToGradeLevel.get(item.sectionId);
+      if (!gradeLevelId) {
+        continue;
+      }
+
+      const key = `${gradeLevelId}|${item.academicYearId}`;
+      gradeDedup.set(key, {
+        gradeLevelId,
+        academicYearId: item.academicYearId,
+      });
+    }
+
     return {
       isPrivileged: false,
       grants: Array.from(dedup.values()),
+      gradeGrants: Array.from(gradeDedup.values()),
     };
   }
 

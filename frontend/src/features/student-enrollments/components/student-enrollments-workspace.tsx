@@ -2,13 +2,16 @@
 
 import * as React from "react";
 import {
+  ArrowRightLeft,
   GraduationCap,
   LoaderCircle,
   PencilLine,
   Plus,
   RefreshCw,
   Trash2,
+  Undo2,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +30,7 @@ import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useLookupEnrollmentStatusesQuery } from "@/features/lookup-enrollment-statuses/hooks/use-lookup-enrollment-statuses-query";
+import { useGradeLevelOptionsQuery } from "@/features/student-enrollments/hooks/use-grade-level-options-query";
 import {
   useCreateStudentEnrollmentMutation,
   useDeleteStudentEnrollmentMutation,
@@ -37,6 +41,7 @@ import { useStudentOptionsQuery } from "@/features/student-enrollments/hooks/use
 import { useAcademicYearOptionsQuery } from "@/features/student-enrollments/hooks/use-academic-year-options-query";
 import { useSectionOptionsQuery } from "@/features/student-enrollments/hooks/use-section-options-query";
 import type {
+  StudentEnrollmentDistributionStatus,
   StudentEnrollmentListItem,
   StudentEnrollmentStatus,
 } from "@/lib/api/client";
@@ -44,7 +49,10 @@ import type {
 type EnrollmentFormState = {
   studentId: string;
   academicYearId: string;
+  gradeLevelId: string;
   sectionId: string;
+  yearlyEnrollmentNo: string;
+  distributionStatus: StudentEnrollmentDistributionStatus;
   enrollmentDate: string;
   status: StudentEnrollmentStatus;
   notes: string;
@@ -78,6 +86,15 @@ const ENROLLMENT_STATUS_FALLBACK_OPTIONS: Array<{
   { code: "SUSPENDED", nameAr: "موقوف" },
 ];
 
+const DISTRIBUTION_STATUS_OPTIONS: Array<{
+  code: StudentEnrollmentDistributionStatus;
+  nameAr: string;
+}> = [
+  { code: "PENDING_DISTRIBUTION", nameAr: "بانتظار التوزيع" },
+  { code: "ASSIGNED", nameAr: "موزع" },
+  { code: "TRANSFERRED", nameAr: "منقول" },
+];
+
 function isStudentEnrollmentStatus(value: string): value is StudentEnrollmentStatus {
   return STATUS_OPTIONS.includes(value as StudentEnrollmentStatus);
 }
@@ -85,7 +102,10 @@ function isStudentEnrollmentStatus(value: string): value is StudentEnrollmentSta
 const DEFAULT_FORM_STATE: EnrollmentFormState = {
   studentId: "",
   academicYearId: "",
+  gradeLevelId: "",
   sectionId: "",
+  yearlyEnrollmentNo: "",
+  distributionStatus: "ASSIGNED",
   enrollmentDate: "",
   status: "ACTIVE",
   notes: "",
@@ -131,7 +151,13 @@ function toFormState(enrollment: StudentEnrollmentListItem): EnrollmentFormState
   return {
     studentId: enrollment.studentId,
     academicYearId: enrollment.academicYearId,
-    sectionId: enrollment.sectionId,
+    gradeLevelId:
+      enrollment.gradeLevelId ?? enrollment.gradeLevel?.id ?? enrollment.section?.gradeLevel.id ?? "",
+    sectionId: enrollment.sectionId ?? "",
+    yearlyEnrollmentNo: enrollment.yearlyEnrollmentNo ?? "",
+    distributionStatus:
+      enrollment.distributionStatus ??
+      (enrollment.sectionId ? "ASSIGNED" : "PENDING_DISTRIBUTION"),
     enrollmentDate: toDateInput(enrollment.enrollmentDate),
     status: enrollment.status,
     notes: enrollment.notes ?? "",
@@ -140,12 +166,14 @@ function toFormState(enrollment: StudentEnrollmentListItem): EnrollmentFormState
 }
 
 export function StudentEnrollmentsWorkspace() {
+  const router = useRouter();
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("student-enrollments.create");
   const canUpdate = hasPermission("student-enrollments.update");
   const canDelete = hasPermission("student-enrollments.delete");
   const canReadStudents = hasPermission("students.read");
   const canReadAcademicYears = hasPermission("academic-years.read");
+  const canReadGradeLevels = hasPermission("grade-levels.read");
   const canReadSections = hasPermission("sections.read");
   const canReadEnrollmentStatuses = hasPermission("lookup-enrollment-statuses.read");
 
@@ -155,24 +183,31 @@ export function StudentEnrollmentsWorkspace() {
   const [debounceTimer, setDebounceTimer] = React.useState<NodeJS.Timeout | null>(null);
   const [studentFilter, setStudentFilter] = React.useState("all");
   const [academicYearFilter, setAcademicYearFilter] = React.useState("all");
+  const [gradeLevelFilter, setGradeLevelFilter] = React.useState("all");
   const [sectionFilter, setSectionFilter] = React.useState("all");
   const [statusFilter, setStatusFilter] = React.useState<StudentEnrollmentStatus | "all">(
     "all",
   );
+  const [distributionStatusFilter, setDistributionStatusFilter] =
+    React.useState<StudentEnrollmentDistributionStatus | "all">("all");
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
     "all",
   );
   const [filterDraft, setFilterDraft] = React.useState<{
     student: string;
     academicYear: string;
+    gradeLevel: string;
     section: string;
     status: StudentEnrollmentStatus | "all";
+    distributionStatus: StudentEnrollmentDistributionStatus | "all";
     active: "all" | "active" | "inactive";
   }>({
     student: "all",
     academicYear: "all",
+    gradeLevel: "all",
     section: "all",
     status: "all",
+    distributionStatus: "all",
     active: "all",
   });
 
@@ -189,14 +224,31 @@ export function StudentEnrollmentsWorkspace() {
     search: search || undefined,
     studentId: studentFilter === "all" ? undefined : studentFilter,
     academicYearId: academicYearFilter === "all" ? undefined : academicYearFilter,
+    gradeLevelId: gradeLevelFilter === "all" ? undefined : gradeLevelFilter,
     sectionId: sectionFilter === "all" ? undefined : sectionFilter,
     status: statusFilter === "all" ? undefined : statusFilter,
+    distributionStatus:
+      distributionStatusFilter === "all" ? undefined : distributionStatusFilter,
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
   });
 
   const studentsQuery = useStudentOptionsQuery();
   const academicYearsQuery = useAcademicYearOptionsQuery();
-  const sectionsQuery = useSectionOptionsQuery();
+  const gradeLevelsQuery = useGradeLevelOptionsQuery();
+  const sectionsQuery = useSectionOptionsQuery({
+    gradeLevelId: filterDraft.gradeLevel === "all" ? undefined : filterDraft.gradeLevel,
+  });
+  const formSectionsQuery = useSectionOptionsQuery({
+    gradeLevelId: formState.gradeLevelId || undefined,
+  });
+  const gradeLevelOptions = React.useMemo(
+    () => gradeLevelsQuery.data ?? [],
+    [gradeLevelsQuery.data],
+  );
+  const formSectionOptions = React.useMemo(
+    () => formSectionsQuery.data ?? [],
+    [formSectionsQuery.data],
+  );
   const enrollmentStatusesQuery = useLookupEnrollmentStatusesQuery({
     page: 1,
     limit: 100,
@@ -227,7 +279,7 @@ export function StudentEnrollmentsWorkspace() {
   const pagination = enrollmentsQuery.data?.pagination;
   const isEditing = editingEnrollmentId !== null;
   const hasDependenciesReadPermissions =
-    canReadStudents && canReadAcademicYears && canReadSections;
+    canReadStudents && canReadAcademicYears && canReadSections && canReadGradeLevels;
 
   const mutationError =
     (createMutation.error as Error | null)?.message ??
@@ -274,11 +326,22 @@ export function StudentEnrollmentsWorkspace() {
     setFilterDraft({
       student: studentFilter,
       academicYear: academicYearFilter,
+      gradeLevel: gradeLevelFilter,
       section: sectionFilter,
       status: statusFilter,
+      distributionStatus: distributionStatusFilter,
       active: activeFilter,
     });
-  }, [academicYearFilter, activeFilter, isFilterOpen, sectionFilter, statusFilter, studentFilter]);
+  }, [
+    academicYearFilter,
+    activeFilter,
+    distributionStatusFilter,
+    gradeLevelFilter,
+    isFilterOpen,
+    sectionFilter,
+    statusFilter,
+    studentFilter,
+  ]);
 
   const resetForm = () => {
     setEditingEnrollmentId(null);
@@ -300,8 +363,15 @@ export function StudentEnrollmentsWorkspace() {
   };
 
   const validateForm = (): boolean => {
-    if (!formState.studentId || !formState.academicYearId || !formState.sectionId) {
-      setFormError("الطالب والسنة الأكاديمية والشعبة حقول مطلوبة.");
+    const requiresSection = formState.distributionStatus !== "PENDING_DISTRIBUTION";
+
+    if (!formState.studentId || !formState.academicYearId || !formState.gradeLevelId) {
+      setFormError("الطالب والسنة الأكاديمية والصف حقول مطلوبة.");
+      return false;
+    }
+
+    if (requiresSection && !formState.sectionId) {
+      setFormError("الشعبة مطلوبة عندما لا تكون حالة التوزيع بانتظار التوزيع.");
       return false;
     }
 
@@ -322,14 +392,21 @@ export function StudentEnrollmentsWorkspace() {
       return;
     }
 
+    const normalizedSectionId = toOptionalString(formState.sectionId);
     const payload = {
       studentId: formState.studentId,
       academicYearId: formState.academicYearId,
-      sectionId: formState.sectionId,
+      gradeLevelId: formState.gradeLevelId,
+      distributionStatus: formState.distributionStatus,
       enrollmentDate: formState.enrollmentDate ? toDateIso(formState.enrollmentDate) : undefined,
       status: formState.status,
       notes: toOptionalString(formState.notes),
       isActive: formState.isActive,
+      ...(isEditing
+        ? { sectionId: normalizedSectionId ?? "" }
+        : normalizedSectionId
+          ? { sectionId: normalizedSectionId }
+          : {}),
     };
 
     if (isEditing && editingEnrollmentId) {
@@ -424,8 +501,14 @@ export function StudentEnrollmentsWorkspace() {
   };
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
+  const requiresSection = formState.distributionStatus !== "PENDING_DISTRIBUTION";
   const getStatusLabel = (value: StudentEnrollmentStatus) =>
     enrollmentStatusLabels.get(value) ?? value;
+  const getDistributionStatusLabel = (
+    value: StudentEnrollmentDistributionStatus,
+  ) =>
+    DISTRIBUTION_STATUS_OPTIONS.find((option) => option.code === value)?.nameAr ??
+    value;
 
   const clearFilters = () => {
     setPage(1);
@@ -433,18 +516,70 @@ export function StudentEnrollmentsWorkspace() {
     setSearch("");
     setStudentFilter("all");
     setAcademicYearFilter("all");
+    setGradeLevelFilter("all");
     setSectionFilter("all");
     setStatusFilter("all");
+    setDistributionStatusFilter("all");
     setActiveFilter("all");
     setIsFilterOpen(false);
+  };
+
+  const handleOpenDistributionBoard = (enrollment: StudentEnrollmentListItem) => {
+    const gradeLevelId =
+      enrollment.gradeLevelId ?? enrollment.gradeLevel?.id ?? enrollment.section?.gradeLevel.id;
+
+    if (!gradeLevelId) {
+      setActionSuccess(null);
+      setFormError("لا يمكن فتح شاشة التوزيع قبل توفر الصف على هذا القيد.");
+      return;
+    }
+
+    const query = new URLSearchParams({
+      academicYearId: enrollment.academicYearId,
+      gradeLevelId,
+    });
+    router.push(`/app/student-distributions?${query.toString()}`);
+  };
+
+  const handleReturnToPendingDistribution = (enrollment: StudentEnrollmentListItem) => {
+    if (!canUpdate) {
+      return;
+    }
+
+    const gradeLevelId =
+      enrollment.gradeLevelId ?? enrollment.gradeLevel?.id ?? enrollment.section?.gradeLevel.id;
+
+    if (!gradeLevelId) {
+      setActionSuccess(null);
+      setFormError("لا يمكن إعادة القيد إلى الانتظار قبل معرفة الصف المرتبط به.");
+      return;
+    }
+
+    updateMutation.mutate(
+      {
+        enrollmentId: enrollment.id,
+        payload: {
+          gradeLevelId,
+          sectionId: "",
+          distributionStatus: "PENDING_DISTRIBUTION",
+        },
+      },
+      {
+        onSuccess: () => {
+          setActionSuccess("تمت إعادة القيد إلى انتظار التوزيع بنجاح.");
+        },
+      },
+    );
   };
 
   const applyFilters = () => {
     setPage(1);
     setStudentFilter(filterDraft.student);
     setAcademicYearFilter(filterDraft.academicYear);
+    setGradeLevelFilter(filterDraft.gradeLevel);
     setSectionFilter(filterDraft.section);
     setStatusFilter(filterDraft.status);
+    setDistributionStatusFilter(filterDraft.distributionStatus);
     setActiveFilter(filterDraft.active);
     setIsFilterOpen(false);
   };
@@ -454,12 +589,23 @@ export function StudentEnrollmentsWorkspace() {
       searchInput.trim() ? 1 : 0,
       studentFilter !== "all" ? 1 : 0,
       academicYearFilter !== "all" ? 1 : 0,
+      gradeLevelFilter !== "all" ? 1 : 0,
       sectionFilter !== "all" ? 1 : 0,
       statusFilter !== "all" ? 1 : 0,
+      distributionStatusFilter !== "all" ? 1 : 0,
       activeFilter !== "all" ? 1 : 0,
     ].reduce((acc, value) => acc + value, 0);
     return count;
-  }, [academicYearFilter, activeFilter, searchInput, sectionFilter, statusFilter, studentFilter]);
+  }, [
+    academicYearFilter,
+    activeFilter,
+    distributionStatusFilter,
+    gradeLevelFilter,
+    searchInput,
+    sectionFilter,
+    statusFilter,
+    studentFilter,
+  ]);
 
   return (
     <>
@@ -470,7 +616,7 @@ export function StudentEnrollmentsWorkspace() {
               containerClassName="flex-1"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="بحث بالطالب/الرقم/الشعبة/السنة..."
+              placeholder="بحث بالطالب/رقم الطالب/رقم القيد السنوي/الصف/الشعبة/السنة..."
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -512,7 +658,9 @@ export function StudentEnrollmentsWorkspace() {
               <option value="all">كل الطلاب</option>
               {(studentsQuery.data ?? []).map((student) => (
                 <option key={student.id} value={student.id}>
-                  {student.admissionNo ?? student.fullName}
+                  {student.admissionNo
+                    ? `رقم الطالب ${student.admissionNo} - ${student.fullName}`
+                    : student.fullName}
                 </option>
               ))}
             </SelectField>
@@ -532,6 +680,24 @@ export function StudentEnrollmentsWorkspace() {
             </SelectField>
 
             <SelectField
+              value={filterDraft.gradeLevel}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  gradeLevel: event.target.value,
+                  section: "all",
+                }))
+              }
+            >
+              <option value="all">كل الصفوف</option>
+              {gradeLevelOptions.map((gradeLevel) => (
+                <option key={gradeLevel.id} value={gradeLevel.id}>
+                  {gradeLevel.name} ({gradeLevel.code})
+                </option>
+              ))}
+            </SelectField>
+
+            <SelectField
               value={filterDraft.section}
               onChange={(event) =>
                 setFilterDraft((prev) => ({ ...prev, section: event.target.value }))
@@ -540,7 +706,7 @@ export function StudentEnrollmentsWorkspace() {
               <option value="all">كل الشعب</option>
               {(sectionsQuery.data ?? []).map((section) => (
                 <option key={section.id} value={section.id}>
-                  {section.code}
+                  {section.code} - {section.gradeLevel.name}
                 </option>
               ))}
             </SelectField>
@@ -558,6 +724,25 @@ export function StudentEnrollmentsWorkspace() {
               {enrollmentStatusOptions.map((status) => (
                 <option key={status.code} value={status.code}>
                   {status.nameAr}
+                </option>
+              ))}
+            </SelectField>
+
+            <SelectField
+              value={filterDraft.distributionStatus}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  distributionStatus: event.target.value as
+                    | StudentEnrollmentDistributionStatus
+                    | "all",
+                }))
+              }
+            >
+              <option value="all">كل حالات التوزيع</option>
+              {DISTRIBUTION_STATUS_OPTIONS.map((option) => (
+                <option key={option.code} value={option.code}>
+                  {option.nameAr}
                 </option>
               ))}
             </SelectField>
@@ -584,10 +769,30 @@ export function StudentEnrollmentsWorkspace() {
               <CardTitle>قيود الطلاب</CardTitle>
               <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
-            <CardDescription>إدارة القيود الدراسية للطلاب حسب السنة والشعبة والحالة.</CardDescription>
+            <CardDescription>
+              إدارة القيود الدراسية للطلاب حسب السنة والصف والشعبة والحالة.
+            </CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-3">
+          {actionSuccess ? (
+            <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">
+              {actionSuccess}
+            </div>
+          ) : null}
+
+          {mutationError && !isFormOpen ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              {mutationError}
+            </div>
+          ) : null}
+
+          {formError && !isFormOpen ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              {formError}
+            </div>
+          ) : null}
+
           {enrollmentsQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
               جارٍ تحميل البيانات...
@@ -616,14 +821,29 @@ export function StudentEnrollmentsWorkspace() {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="space-y-1">
                   <p className="font-medium">
-                    {enrollment.student.fullName} ({enrollment.student.admissionNo ?? "بدون رقم قيد"})
+                    {enrollment.student.fullName} (
+                    {enrollment.student.admissionNo ?? "بدون رقم طالب"})
                   </p>
                   <p className="text-xs text-muted-foreground">
                     السنة: {enrollment.academicYear.name} ({enrollment.academicYear.code})
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    الشعبة: {enrollment.section.name} ({enrollment.section.code}) -{" "}
-                    {enrollment.section.gradeLevel.name}
+                    الصف:{" "}
+                    {enrollment.gradeLevel?.name ??
+                      enrollment.section?.gradeLevel.name ??
+                      "غير محدد"}
+                    {enrollment.section
+                      ? ` | الشعبة: ${enrollment.section.name} (${enrollment.section.code})`
+                      : " | الشعبة: غير موزع"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    رقم القيد السنوي: {enrollment.yearlyEnrollmentNo ?? "سيولد تلقائيًا"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    حالة التوزيع:{" "}
+                    {enrollment.distributionStatus
+                      ? getDistributionStatusLabel(enrollment.distributionStatus)
+                      : "غير محددة"}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     تاريخ القيد: {formatDate(enrollment.enrollmentDate)}
@@ -640,6 +860,27 @@ export function StudentEnrollmentsWorkspace() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => handleOpenDistributionBoard(enrollment)}
+                >
+                  <ArrowRightLeft className="h-3.5 w-3.5" />
+                  شاشة التوزيع
+                </Button>
+                {enrollment.sectionId ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleReturnToPendingDistribution(enrollment)}
+                    disabled={!canUpdate || updateMutation.isPending}
+                  >
+                    <Undo2 className="h-3.5 w-3.5" />
+                    إرجاع للانتظار
+                  </Button>
+                ) : null}
                 <Button
                   variant="outline"
                   size="sm"
@@ -756,7 +997,7 @@ export function StudentEnrollmentsWorkspace() {
                 <option value="">اختر الطالب</option>
                 {(studentsQuery.data ?? []).map((student) => (
                   <option key={student.id} value={student.id}>
-                    {student.fullName} ({student.admissionNo ?? "بدون رقم قيد"})
+                    {student.fullName} ({student.admissionNo ?? "بدون رقم طالب"})
                   </option>
                 ))}
               </select>
@@ -784,22 +1025,107 @@ export function StudentEnrollmentsWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الشعبة *</label>
+              <label className="text-xs font-medium text-muted-foreground">الصف *</label>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={formState.gradeLevelId}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    gradeLevelId: event.target.value,
+                    sectionId: "",
+                  }))
+                }
+                disabled={!canReadGradeLevels || gradeLevelsQuery.isLoading}
+              >
+                <option value="">اختر الصف</option>
+                {gradeLevelOptions.map((gradeLevel) => (
+                  <option key={gradeLevel.id} value={gradeLevel.id}>
+                    {gradeLevel.name} ({gradeLevel.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                الشعبة {requiresSection ? "*" : "(اختيارية مع بانتظار التوزيع)"}
+              </label>
               <select
                 className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                 value={formState.sectionId}
                 onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, sectionId: event.target.value }))
+                  setFormState((prev) => ({
+                    ...prev,
+                    sectionId: event.target.value,
+                    distributionStatus:
+                      event.target.value && prev.distributionStatus === "PENDING_DISTRIBUTION"
+                        ? "ASSIGNED"
+                        : prev.distributionStatus,
+                  }))
                 }
-                disabled={!canReadSections}
+                disabled={
+                  !canReadSections ||
+                  requiresSection === false ||
+                  formSectionOptions.length === 0
+                }
               >
-                <option value="">اختر الشعبة</option>
-                {(sectionsQuery.data ?? []).map((section) => (
+                <option value="">
+                  {requiresSection ? "اختر الشعبة" : "سيتم التوزيع لاحقًا"}
+                </option>
+                {formSectionOptions.map((section) => (
                   <option key={section.id} value={section.id}>
                     {section.name} ({section.code})
                   </option>
                 ))}
               </select>
+              {!requiresSection ? (
+                <p className="text-[11px] text-muted-foreground">
+                  يمكن ترك الشعبة فارغة عندما تكون حالة التوزيع بانتظار التوزيع.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                رقم القيد السنوي
+              </label>
+              <Input
+                value={formState.yearlyEnrollmentNo}
+                readOnly
+                placeholder="سيُولد تلقائيًا عند الحفظ"
+                className="bg-muted/40"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                حالة التوزيع
+              </label>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={formState.distributionStatus}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    distributionStatus:
+                      event.target.value as StudentEnrollmentDistributionStatus,
+                    sectionId:
+                      event.target.value === "PENDING_DISTRIBUTION" ? "" : prev.sectionId,
+                  }))
+                }
+              >
+                {DISTRIBUTION_STATUS_OPTIONS.map((option) => (
+                  <option key={option.code} value={option.code}>
+                    {option.nameAr}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-muted-foreground">
+                رقم القيد السنوي سيُولد تلقائيًا عند الحفظ. عند اختيار
+                {" "} &quot;بانتظار التوزيع&quot; {" "}سيُحفظ القيد على مستوى الصف فقط بدون شعبة، ويمكن إسناده
+                لاحقًا من شاشة التوزيع.
+              </p>
             </div>
 
             <div className="space-y-1.5">
@@ -875,7 +1201,8 @@ export function StudentEnrollmentsWorkspace() {
             {!hasDependenciesReadPermissions ? (
               <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
                 يتطلب هذا الجزء صلاحيات القراءة: <code>students.read</code>,{" "}
-                <code>academic-years.read</code>, <code>sections.read</code>.
+                <code>academic-years.read</code>, <code>grade-levels.read</code>,{" "}
+                <code>sections.read</code>.
               </div>
             ) : null}
 

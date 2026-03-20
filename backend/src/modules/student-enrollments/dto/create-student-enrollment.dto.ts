@@ -8,7 +8,10 @@ import {
   MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { StudentEnrollmentStatus } from '@prisma/client';
+import {
+  EnrollmentDistributionStatus,
+  StudentEnrollmentStatus,
+} from '@prisma/client';
 
 export class CreateStudentEnrollmentDto {
   @ApiProperty({ example: 'cmabc123student' })
@@ -19,9 +22,15 @@ export class CreateStudentEnrollmentDto {
   @IsString()
   academicYearId!: string;
 
-  @ApiProperty({ example: 'cmabc123section' })
+  @ApiPropertyOptional({ example: 'cmabc123grade' })
+  @IsOptional()
   @IsString()
-  sectionId!: string;
+  gradeLevelId?: string;
+
+  @ApiPropertyOptional({ example: 'cmabc123section' })
+  @IsOptional()
+  @IsString()
+  sectionId?: string;
 
   @ApiPropertyOptional({ example: '2026-09-01T00:00:00.000Z' })
   @IsOptional()
@@ -35,6 +44,14 @@ export class CreateStudentEnrollmentDto {
   @IsOptional()
   @IsEnum(StudentEnrollmentStatus)
   status?: StudentEnrollmentStatus;
+
+  @ApiPropertyOptional({
+    enum: EnrollmentDistributionStatus,
+    example: EnrollmentDistributionStatus.ASSIGNED,
+  })
+  @IsOptional()
+  @IsEnum(EnrollmentDistributionStatus)
+  distributionStatus?: EnrollmentDistributionStatus;
 
   @ApiPropertyOptional({ example: 'Transferred from another school' })
   @IsOptional()

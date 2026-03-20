@@ -65,7 +65,7 @@ function resolveGroupTheme(groupId?: string): GroupTheme {
         panelClassName: "border-violet-500/20 bg-background/55",
         activeGlowClassName: "from-violet-500/18 via-violet-500/7 to-transparent",
         headerClassName:
-          "border-b-violet-500/25 bg-gradient-to-l from-violet-500/18 via-background/95 to-background/88 md:from-violet-500/12 md:via-background/92",
+          "border-violet-500/25 bg-gradient-to-l from-violet-500/20 via-background/92 to-background/78 shadow-[0_22px_55px_-34px_rgba(139,92,246,0.55)]",
         headerIconClassName:
           "border-violet-500/20 bg-violet-500/10 text-violet-700 dark:text-violet-300",
         headerBadgeClassName:
@@ -82,7 +82,7 @@ function resolveGroupTheme(groupId?: string): GroupTheme {
         panelClassName: "border-emerald-500/20 bg-background/55",
         activeGlowClassName: "from-emerald-500/18 via-emerald-500/7 to-transparent",
         headerClassName:
-          "border-b-emerald-500/25 bg-gradient-to-l from-emerald-500/18 via-background/95 to-background/88 md:from-emerald-500/12 md:via-background/92",
+          "border-emerald-500/25 bg-gradient-to-l from-emerald-500/20 via-background/92 to-background/78 shadow-[0_22px_55px_-34px_rgba(16,185,129,0.52)]",
         headerIconClassName:
           "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
         headerBadgeClassName:
@@ -99,7 +99,7 @@ function resolveGroupTheme(groupId?: string): GroupTheme {
         panelClassName: "border-sky-500/20 bg-background/55",
         activeGlowClassName: "from-sky-500/18 via-sky-500/7 to-transparent",
         headerClassName:
-          "border-b-sky-500/25 bg-gradient-to-l from-sky-500/18 via-background/95 to-background/88 md:from-sky-500/12 md:via-background/92",
+          "border-sky-500/25 bg-gradient-to-l from-sky-500/20 via-background/92 to-background/78 shadow-[0_22px_55px_-34px_rgba(14,165,233,0.52)]",
         headerIconClassName:
           "border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-300",
         headerBadgeClassName:
@@ -116,7 +116,7 @@ function resolveGroupTheme(groupId?: string): GroupTheme {
         panelClassName: "border-indigo-500/20 bg-background/55",
         activeGlowClassName: "from-indigo-500/18 via-indigo-500/7 to-transparent",
         headerClassName:
-          "border-b-indigo-500/25 bg-gradient-to-l from-indigo-500/18 via-background/95 to-background/88 md:from-indigo-500/12 md:via-background/92",
+          "border-indigo-500/25 bg-gradient-to-l from-indigo-500/20 via-background/92 to-background/78 shadow-[0_22px_55px_-34px_rgba(99,102,241,0.52)]",
         headerIconClassName:
           "border-indigo-500/20 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300",
         headerBadgeClassName:
@@ -139,7 +139,7 @@ function resolveGroupTheme(groupId?: string): GroupTheme {
         panelClassName: "border-fuchsia-500/20 bg-background/55",
         activeGlowClassName: "from-fuchsia-500/18 via-fuchsia-500/7 to-transparent",
         headerClassName:
-          "border-b-fuchsia-500/25 bg-gradient-to-l from-fuchsia-500/18 via-background/95 to-background/88 md:from-fuchsia-500/12 md:via-background/92",
+          "border-fuchsia-500/25 bg-gradient-to-l from-fuchsia-500/20 via-background/92 to-background/78 shadow-[0_22px_55px_-34px_rgba(217,70,239,0.52)]",
         headerIconClassName:
           "border-fuchsia-500/20 bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-300",
         headerBadgeClassName:
@@ -156,7 +156,7 @@ function resolveGroupTheme(groupId?: string): GroupTheme {
         panelClassName: "border-emerald-500/20 bg-background/55",
         activeGlowClassName: "from-emerald-500/18 via-emerald-500/7 to-transparent",
         headerClassName:
-          "border-b-emerald-500/25 bg-gradient-to-l from-emerald-500/18 via-background/95 to-background/88 md:from-emerald-500/12 md:via-background/92",
+          "border-emerald-500/25 bg-gradient-to-l from-emerald-500/20 via-background/92 to-background/78 shadow-[0_22px_55px_-34px_rgba(16,185,129,0.52)]",
         headerIconClassName:
           "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
         headerBadgeClassName:
@@ -173,7 +173,7 @@ function resolveGroupTheme(groupId?: string): GroupTheme {
         panelClassName: "border-slate-500/20 bg-background/55",
         activeGlowClassName: "from-slate-500/16 via-slate-500/6 to-transparent",
         headerClassName:
-          "border-b-slate-500/25 bg-gradient-to-l from-slate-500/16 via-background/95 to-background/88 md:from-slate-500/10 md:via-background/92",
+          "border-slate-500/25 bg-gradient-to-l from-slate-500/16 via-background/92 to-background/78 shadow-[0_22px_55px_-34px_rgba(100,116,139,0.42)]",
         headerIconClassName:
           "border-slate-500/20 bg-slate-500/10 text-slate-700 dark:text-slate-300",
         headerBadgeClassName:
@@ -737,61 +737,74 @@ export function AppShell({ children }: AppShellProps) {
       ) : null}
 
       <div className="flex min-h-screen flex-col">
-        <header
-          className={cn(
-            "sticky top-0 z-20 border-b px-4 py-3 backdrop-blur-sm md:px-6",
-            activeGroupTheme.headerClassName,
-          )}
-        >
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                className="md:hidden rounded-2xl border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)] shadow-sm hover:bg-[color:var(--app-accent-strong)] hover:text-[color:var(--app-accent-color)]"
-                onClick={() => setSidebarOpen(true)}
-                aria-label="فتح الشريط الجانبي"
-              >
-                <Menu className="h-5 w-5" />
-              </Button>
-              <div className="flex items-center gap-3">
+        <header className="sticky top-0 z-20 px-4 py-3 md:px-6 md:py-4">
+          <div
+            className={cn(
+              "relative overflow-hidden rounded-[28px] border bg-background/70 px-3 py-3 backdrop-blur-xl md:px-4",
+              activeGroupTheme.headerClassName,
+            )}
+          >
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-[color:var(--app-accent-strong)] via-[color:var(--app-accent-soft)] to-transparent opacity-90 sm:w-40" />
+            <div className="relative flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2 md:gap-3">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="md:hidden rounded-2xl border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)] shadow-sm hover:bg-[color:var(--app-accent-strong)] hover:text-[color:var(--app-accent-color)]"
+                  onClick={() => setSidebarOpen(true)}
+                  aria-label="فتح الشريط الجانبي"
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
                 {activeGroup ? (
                   <div
                     className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-2xl border shadow-sm md:h-11 md:w-11",
+                      "flex h-11 w-11 shrink-0 items-center justify-center rounded-[20px] border shadow-sm md:h-12 md:w-12",
                       activeGroupTheme.headerIconClassName,
                     )}
                   >
                     <activeGroup.icon className="h-5 w-5" />
                   </div>
                 ) : null}
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-xs text-muted-foreground">الوحدة الحالية</p>
+                <div className="min-w-0">
+                  <div className="mb-1 flex flex-wrap items-center gap-2">
                     {activeGroup ? (
                       <Badge
                         variant="outline"
                         className={cn(
-                          "rounded-full px-2 py-0.5 text-[10px] sm:px-2.5 sm:text-[11px]",
+                          "rounded-full px-2.5 py-1 text-[10px] font-medium sm:text-[11px]",
                           activeGroupTheme.headerBadgeClassName,
                         )}
                       >
                         {activeGroup.label}
                       </Badge>
                     ) : null}
+                    <span className="text-[11px] text-muted-foreground md:text-xs">
+                      School ERP
+                    </span>
                   </div>
-                  <h1 className="text-base font-semibold md:text-lg">
+                  <h1 className="truncate text-base font-semibold tracking-tight md:text-xl">
                     {activeNavItem?.label ?? "School ERP"}
                   </h1>
                 </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <ThemeToggle />
-              <Button variant="outline" size="sm" className="gap-2" onClick={handleLogout}>
-                <LogOut className="h-4 w-4" />
-                تسجيل الخروج
-              </Button>
+              <div className="flex shrink-0 items-center gap-2 rounded-[22px] border border-white/35 bg-white/45 p-1.5 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/5">
+                <ThemeToggle
+                  label="المظهر"
+                  className="border-0 bg-transparent shadow-none hover:bg-white/70 dark:hover:bg-white/10"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-11 gap-2 rounded-2xl border-white/40 bg-white/70 px-3.5 text-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:bg-white/90 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
+                  onClick={handleLogout}
+                >
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]">
+                    <LogOut className="h-4 w-4" />
+                  </span>
+                  <span className="hidden text-sm font-medium sm:inline">تسجيل الخروج</span>
+                </Button>
+              </div>
             </div>
           </div>
         </header>

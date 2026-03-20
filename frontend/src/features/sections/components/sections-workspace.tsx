@@ -1,12 +1,14 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import {
   Layers2,
   LoaderCircle,
   PencilLine,
   Plus,
   RefreshCw,
+  Shuffle,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -31,15 +33,18 @@ import {
   useDeleteSectionMutation,
   useUpdateSectionMutation,
 } from "@/features/sections/hooks/use-sections-mutations";
+import { useBuildingOptionsQuery } from "@/features/sections/hooks/use-building-options-query";
 import { useSectionsQuery } from "@/features/sections/hooks/use-sections-query";
 import { useGradeLevelOptionsQuery } from "@/features/sections/hooks/use-grade-level-options-query";
 import type { SectionListItem } from "@/lib/api/client";
 
 type SectionFormState = {
   gradeLevelId: string;
+  buildingLookupId: string;
   code: string;
   name: string;
   capacity: string;
+  roomLabel: string;
   isActive: boolean;
 };
 
@@ -47,9 +52,11 @@ const PAGE_SIZE = 12;
 
 const DEFAULT_FORM_STATE: SectionFormState = {
   gradeLevelId: "",
+  buildingLookupId: "",
   code: "",
   name: "",
   capacity: "",
+  roomLabel: "",
   isActive: true,
 };
 
@@ -60,9 +67,11 @@ function normalizeCode(value: string): string {
 function toFormState(section: SectionListItem): SectionFormState {
   return {
     gradeLevelId: section.gradeLevelId,
+    buildingLookupId: section.buildingLookupId === null ? "" : String(section.buildingLookupId),
     code: section.code,
     name: section.name,
     capacity: section.capacity === null ? "" : String(section.capacity),
+    roomLabel: section.roomLabel ?? "",
     isActive: section.isActive,
   };
 }
@@ -79,11 +88,13 @@ function translateStage(stage: string): string {
 }
 
 export function SectionsWorkspace() {
+  const router = useRouter();
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("sections.create");
   const canUpdate = hasPermission("sections.update");
   const canDelete = hasPermission("sections.delete");
   const canReadGradeLevels = hasPermission("grade-levels.read");
+  const canReadBuildings = hasPermission("lookup-buildings.read");
 
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
@@ -117,6 +128,7 @@ export function SectionsWorkspace() {
   });
 
   const gradeLevelOptionsQuery = useGradeLevelOptionsQuery();
+  const buildingOptionsQuery = useBuildingOptionsQuery();
 
   const createMutation = useCreateSectionMutation();
   const updateMutation = useUpdateSectionMutation();
@@ -127,6 +139,10 @@ export function SectionsWorkspace() {
   const gradeLevelOptions = React.useMemo(
     () => gradeLevelOptionsQuery.data ?? [],
     [gradeLevelOptionsQuery.data],
+  );
+  const buildingOptions = React.useMemo(
+    () => buildingOptionsQuery.data ?? [],
+    [buildingOptionsQuery.data],
   );
   const isEditing = editingSectionId !== null;
 
@@ -233,9 +249,11 @@ export function SectionsWorkspace() {
 
     const payload = {
       gradeLevelId: formState.gradeLevelId,
+      buildingLookupId: formState.buildingLookupId ? Number(formState.buildingLookupId) : undefined,
       code: normalizeCode(formState.code),
       name: formState.name.trim(),
       capacity: formState.capacity.trim() ? Number(formState.capacity) : undefined,
+      roomLabel: formState.roomLabel.trim() || undefined,
       isActive: formState.isActive,
     };
 
@@ -304,6 +322,15 @@ export function SectionsWorkspace() {
         setActionSuccess("تم حذف الشعبة بنجاح.");
       },
     });
+  };
+
+  const openSectionClassroomAssignments = (section: SectionListItem) => {
+    const params = new URLSearchParams({
+      sectionId: section.id,
+      gradeLevelId: section.gradeLevelId,
+    });
+
+    router.push(`/app/section-classroom-assignments?${params.toString()}`);
   };
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
@@ -461,6 +488,15 @@ export function SectionsWorkspace() {
                     <p className="text-xs text-muted-foreground">
                       الصف: {section.gradeLevel.name} ({section.gradeLevel.code})
                     </p>
+                    <p className="text-xs text-muted-foreground">
+                      الموقع:
+                      {" "}
+                      {section.building
+                        ? `المبنى ${section.building.nameAr}${section.roomLabel ? ` | الغرفة ${section.roomLabel}` : ""}`
+                        : section.roomLabel
+                          ? `الغرفة ${section.roomLabel}`
+                          : "غير محدد بعد"}
+                    </p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-1.5">
@@ -472,6 +508,15 @@ export function SectionsWorkspace() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => openSectionClassroomAssignments(section)}
+                  >
+                    <Shuffle className="h-3.5 w-3.5" />
+                    ربط الغرف
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
@@ -617,6 +662,39 @@ export function SectionsWorkspace() {
               </div>
             </div>
 
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">المبنى</label>
+                <SelectField
+                  value={formState.buildingLookupId}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      buildingLookupId: event.target.value,
+                    }))
+                  }
+                  disabled={!canReadBuildings}
+                >
+                  <option value="">بدون ربط بمبنى الآن</option>
+                  {buildingOptions.map((building) => (
+                    <option key={building.id} value={String(building.id)}>
+                      {building.nameAr ?? building.name ?? building.code ?? `مبنى ${building.id}`}
+                    </option>
+                  ))}
+                </SelectField>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">الغرفة/الفصل</label>
+                <Input
+                  value={formState.roomLabel}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, roomLabel: event.target.value }))
+                  }
+                  placeholder="مثال: A-101"
+                />
+              </div>
+            </div>
+
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
               <Input
@@ -655,6 +733,14 @@ export function SectionsWorkspace() {
             {!canReadGradeLevels ? (
               <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
                 يتطلب هذا الجزء الصلاحية: <code>grade-levels.read</code> لاختيار الصف.
+              </div>
+            ) : null}
+
+            {!canReadBuildings ? (
+              <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+                ربط الشعبة بمبنى اختياري في هذه المرحلة، ويتطلب الصلاحية:
+                {" "}
+                <code>lookup-buildings.read</code>.
               </div>
             ) : null}
 

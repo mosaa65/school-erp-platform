@@ -317,6 +317,13 @@ export class GradingReportsService {
               select: {
                 id: true,
                 sectionId: true,
+                gradeLevel: {
+                  select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                  },
+                },
                 student: {
                   select: {
                     id: true,
@@ -420,7 +427,10 @@ export class GradingReportsService {
         updatedAt: row.updatedAt,
         student: row.studentEnrollment.student,
         section: row.studentEnrollment.section,
-        gradeLevel: row.studentEnrollment.section.gradeLevel,
+        gradeLevel:
+          row.studentEnrollment.gradeLevel ??
+          row.studentEnrollment.section?.gradeLevel ??
+          null,
         academicYear: row.academicYear,
         promotionDecision: row.promotionDecision,
         gradeDescription,
@@ -554,11 +564,12 @@ export class GradingReportsService {
 
     return {
       sectionId,
-      section: gradeLevelId
-        ? {
+      gradeLevelId: gradeLevelId ?? undefined,
+      section: !gradeLevelId
+        ? undefined
+        : {
             gradeLevelId,
-          }
-        : undefined,
+          },
     } satisfies Prisma.StudentEnrollmentWhereInput;
   }
 
