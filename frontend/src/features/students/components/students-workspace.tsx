@@ -48,6 +48,7 @@ import {
   translateStudentHealthStatus,
   translateStudentOrphanStatus,
 } from "@/lib/i18n/ar";
+import { formatNameCodeLabel } from "@/lib/option-labels";
 import type {
   StudentGender,
   StudentHealthStatus,
@@ -154,6 +155,45 @@ function formatDate(isoDate: string | null): string {
   }
 
   return date.toLocaleDateString();
+}
+
+type StudentEnrollmentLabelInput = {
+  academicYear: {
+    name: string;
+    code: string;
+  };
+  gradeLevel?: {
+    name: string;
+    code: string;
+  } | null;
+  section?: {
+    name?: string | null;
+    code?: string | null;
+    gradeLevel?: {
+      name: string;
+      code: string;
+    } | null;
+  } | null;
+};
+
+function formatStudentEnrollmentPlacementLabel(
+  enrollment: StudentEnrollmentLabelInput,
+): string {
+  const yearLabel = formatNameCodeLabel(enrollment.academicYear.name, enrollment.academicYear.code);
+  const gradeLabel = enrollment.gradeLevel
+    ? formatNameCodeLabel(enrollment.gradeLevel.name, enrollment.gradeLevel.code)
+    : enrollment.section?.gradeLevel
+      ? formatNameCodeLabel(
+          enrollment.section.gradeLevel.name,
+          enrollment.section.gradeLevel.code,
+        )
+      : "";
+
+  if (enrollment.section) {
+    return `${yearLabel} / ${gradeLabel || "غير موزع"} / ${formatNameCodeLabel(enrollment.section.name, enrollment.section.code)}`;
+  }
+
+  return gradeLabel ? `${yearLabel} / ${gradeLabel} / غير موزع` : `${yearLabel} / غير موزع`;
 }
 
 type LocalityLabelInput = {
@@ -1033,8 +1073,7 @@ export function StudentsWorkspace() {
                             </p>
                             {latestEnrollment ? (
                               <p className="text-xs text-muted-foreground">
-                                آخر قيد: {latestEnrollment.academicYear.code} /{" "}
-                                {latestEnrollment.section?.code ?? "غير موزع"} (
+                                آخر قيد: {formatStudentEnrollmentPlacementLabel(latestEnrollment)} (
                                 {translateStudentEnrollmentStatus(latestEnrollment.status)})
                               </p>
                             ) : null}

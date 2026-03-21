@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import {
@@ -44,6 +44,7 @@ import { useSubjectOptionsQuery } from "@/features/grade-aggregation/monthly-gra
 import { useStudentEnrollmentOptionsQuery } from "@/features/grade-aggregation/monthly-grades/hooks/use-student-enrollment-options-query";
 import { translateGradingWorkflowStatus } from "@/lib/i18n/ar";
 import { formatNameCodeLabel, formatSectionWithGradeLabel } from "@/lib/option-labels";
+import { formatStudentEnrollmentOptionLabel, formatStudentEnrollmentPlacementLabel } from "@/lib/student-enrollment-display";
 import type { GradingWorkflowStatus, MonthlyGradeListItem } from "@/lib/api/client";
 
 type FormState = {
@@ -535,7 +536,7 @@ export function MonthlyGradesWorkspace() {
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {formatNameCodeLabel(item.academicMonth.name, item.academicMonth.code)} |{" "}
-                      {formatSectionWithGradeLabel(item.studentEnrollment.section)}
+                      {formatStudentEnrollmentPlacementLabel({ academicYear: item.academicYear, section: item.studentEnrollment.section })}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       الإجمالي: {item.monthlyTotal} | تلقائي: {item.periodGradeComponents.length} | يدوي:{" "}
@@ -826,7 +827,7 @@ export function MonthlyGradesWorkspace() {
               <option value="">القيد *</option>
               {(enrollmentsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.student.fullName} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatSectionWithGradeLabel(item.section)})
+                  {formatStudentEnrollmentOptionLabel(item)}
                 </option>
               ))}
             </SelectField>
@@ -890,3 +891,4 @@ export function MonthlyGradesWorkspace() {
     </>
   );
 }
+

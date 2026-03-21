@@ -98,6 +98,7 @@ type AssessmentContext = {
 type EnrollmentContext = {
   id: string;
   sectionId: string | null;
+  gradeLevelId: string | null;
   academicYearId: string;
   isActive: boolean;
 };
@@ -539,6 +540,7 @@ export class StudentExamScoresService {
       select: {
         id: true,
         sectionId: true,
+        gradeLevelId: true,
         academicYearId: true,
         isActive: true,
       },
@@ -553,7 +555,9 @@ export class StudentExamScoresService {
     }
 
     if (!enrollment.sectionId) {
-      throw new BadRequestException('قيد الطالب غير موزع على شعبة');
+      throw new BadRequestException(
+        'لا يمكن تسجيل درجة اختبار لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
+      );
     }
 
     return enrollment;
@@ -565,13 +569,13 @@ export class StudentExamScoresService {
   ) {
     if (enrollment.sectionId !== assessment.sectionId) {
       throw new BadRequestException(
-        'Student enrollment section does not match the exam assessment section',
+        'شعبة القيد لا تطابق شعبة الاختبار المحددة',
       );
     }
 
     if (enrollment.academicYearId !== assessment.academicYearId) {
       throw new BadRequestException(
-        'Student enrollment academic year does not match the exam period academic year',
+        'السنة الدراسية للقيد لا تطابق سنة الاختبار',
       );
     }
   }

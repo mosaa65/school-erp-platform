@@ -1167,11 +1167,11 @@ export class AnnualResultsService {
     }
     const sectionId = this.requireAssignedSectionId(
       enrollment.sectionId,
-      'لا يمكن احتساب نتيجة سنوية لقيد غير موزع على شعبة',
+      'لا يمكن احتساب نتيجة سنوية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
     );
     const section = enrollment.section;
     if (!section) {
-      throw new BadRequestException('بيانات شعبة القيد غير متاحة');
+      throw new BadRequestException('بيانات الشعبة المرتبطة بالقيد غير متاحة');
     }
     if (!section.isActive) {
       throw new BadRequestException('شعبة القيد غير نشطة');
@@ -1219,14 +1219,14 @@ export class AnnualResultsService {
 
     const sectionId = this.requireAssignedSectionId(
       annualResult.studentEnrollment.sectionId,
-      'لا يمكن استخدام نتيجة سنوية لقيد غير موزع على شعبة',
+      'لا يمكن استخدام نتيجة سنوية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
     );
     const gradeLevelId =
       annualResult.studentEnrollment.gradeLevelId ??
       annualResult.studentEnrollment.section?.gradeLevelId;
 
     if (!gradeLevelId) {
-      throw new BadRequestException('تعذر تحديد الصف المرتبط بالقيد');
+      throw new BadRequestException('تعذر تحديد الصف المرتبط بالقيد أو شُعبته');
     }
 
     return {

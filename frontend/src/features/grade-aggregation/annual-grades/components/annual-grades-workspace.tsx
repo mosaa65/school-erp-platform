@@ -39,6 +39,7 @@ import { useSubjectOptionsQuery } from "@/features/grade-aggregation/annual-grad
 import { translateGradingWorkflowStatus } from "@/lib/i18n/ar";
 import type { AnnualGradeListItem, GradingWorkflowStatus } from "@/lib/api/client";
 import { formatNameCodeLabel, formatSectionWithGradeLabel } from "@/lib/option-labels";
+import { formatStudentEnrollmentOptionLabel, formatStudentEnrollmentPlacementLabel } from "@/lib/student-enrollment-display";
 
 type FormState = {
   academicYearId: string;
@@ -469,7 +470,7 @@ export function AnnualGradesWorkspace() {
                 <option value="">القيد *</option>
                 {(enrollmentsQuery.data ?? []).map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.student.fullName} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatSectionWithGradeLabel(item.section)})
+                    {formatStudentEnrollmentOptionLabel(item)}
                   </option>
                 ))}
               </select>
@@ -830,7 +831,7 @@ export function AnnualGradesWorkspace() {
                     {item.studentEnrollment.student.fullName} - {formatNameCodeLabel(item.subject.name, item.subject.code)}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} | {formatSectionWithGradeLabel(item.studentEnrollment.section)} |{" "}
+                    {formatStudentEnrollmentPlacementLabel({ academicYear: item.academicYear, section: item.studentEnrollment.section })} |{" "}
                     الحالة النهائية: {formatNameCodeLabel(item.finalStatus.name, item.finalStatus.code)}
                   </p>
                   <p className="text-xs text-muted-foreground">

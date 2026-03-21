@@ -765,7 +765,7 @@ export class SemesterGradesService {
 
     const sectionId = this.requireAssignedSectionId(
       semesterGrade.studentEnrollment.sectionId,
-      'لا يمكن عرض الدرجة الفصلية لقيد غير موزع على شعبة',
+      'لا يمكن عرض الدرجة الفصلية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
     );
 
     await this.ensureActorAuthorized(
@@ -1033,11 +1033,11 @@ export class SemesterGradesService {
     }
     const sectionId = this.requireAssignedSectionId(
       enrollment.sectionId,
-      'لا يمكن احتساب درجة فصلية لقيد غير موزع على شعبة',
+      'لا يمكن احتساب درجة فصلية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
     );
     const section = enrollment.section;
     if (!section) {
-      throw new BadRequestException('بيانات شعبة القيد غير متاحة');
+      throw new BadRequestException('بيانات الشعبة المرتبطة بالقيد غير متاحة');
     }
     if (!section.isActive) {
       throw new BadRequestException('شعبة القيد غير نشطة');
@@ -1158,7 +1158,7 @@ export class SemesterGradesService {
 
     const sectionId = this.requireAssignedSectionId(
       semesterGrade.studentEnrollment.sectionId,
-      'لا يمكن استخدام درجة فصلية لقيد غير موزع على شعبة',
+      'لا يمكن استخدام درجة فصلية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
     );
     const gradeLevelId =
       semesterGrade.studentEnrollment.gradeLevelId ??

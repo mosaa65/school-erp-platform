@@ -40,6 +40,7 @@ import { useSemesterGradesQuery } from "@/features/grade-aggregation/semester-gr
 import type { GradingWorkflowStatus, SemesterGradeListItem } from "@/lib/api/client";
 import { translateGradingWorkflowStatus } from "@/lib/i18n/ar";
 import { formatNameCodeLabel, formatSectionWithGradeLabel } from "@/lib/option-labels";
+import { formatStudentEnrollmentOptionLabel, formatStudentEnrollmentPlacementLabel } from "@/lib/student-enrollment-display";
 
 type FormState = {
   academicTermId: string;
@@ -335,7 +336,7 @@ export function SemesterGradesWorkspace() {
               </select>
               <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.studentEnrollmentId} disabled={editingId !== null} onChange={(event) => setForm((prev) => ({ ...prev, studentEnrollmentId: event.target.value }))}>
                 <option value="">القيد *</option>
-                {(enrollmentsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{item.student.fullName} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatSectionWithGradeLabel(item.section)})</option>)}
+                {(enrollmentsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatStudentEnrollmentOptionLabel(item)}</option>)}
               </select>
             </div>
             <div className="grid gap-2 md:grid-cols-2">
@@ -408,7 +409,7 @@ export function SemesterGradesWorkspace() {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="space-y-1">
                   <p className="font-medium">{item.studentEnrollment.student.fullName} - {formatNameCodeLabel(item.subject.name, item.subject.code)}</p>
-                  <p className="text-xs text-muted-foreground">{formatNameCodeLabel(item.academicTerm.name, item.academicTerm.code)} | {formatSectionWithGradeLabel(item.studentEnrollment.section)}</p>
+                  <p className="text-xs text-muted-foreground">{formatNameCodeLabel(item.academicTerm.name, item.academicTerm.code)} | {formatStudentEnrollmentPlacementLabel({ academicYear: item.academicYear, section: item.studentEnrollment.section })}</p>
                   <p className="text-xs text-muted-foreground">أعمال الفصل: {item.semesterWorkTotal} | النهائي: {item.finalExamScore ?? 0} | الإجمالي: {item.semesterTotal}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">

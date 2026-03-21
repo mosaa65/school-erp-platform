@@ -38,6 +38,7 @@ import type {
   StudentAttendanceListItem,
   StudentAttendanceStatus,
 } from "@/lib/api/client";
+import { formatNameCodeLabel } from "@/lib/option-labels";
 import { translateAttendanceStatus } from "@/lib/i18n/ar";
 
 type AttendanceFormState = {
@@ -141,6 +142,45 @@ function formatDateTime(value: string | null): string {
   });
 }
 
+type EnrollmentPlacementLabelInput = {
+  academicYear: {
+    name: string;
+    code: string;
+  };
+  gradeLevel?: {
+    name: string;
+    code: string;
+  } | null;
+  section?: {
+    name?: string | null;
+    code?: string | null;
+    gradeLevel?: {
+      name: string;
+      code: string;
+    } | null;
+  } | null;
+};
+
+function formatEnrollmentPlacementLabel(
+  enrollment: EnrollmentPlacementLabelInput,
+): string {
+  const yearLabel = formatNameCodeLabel(enrollment.academicYear.name, enrollment.academicYear.code);
+  const gradeLabel = enrollment.gradeLevel
+    ? formatNameCodeLabel(enrollment.gradeLevel.name, enrollment.gradeLevel.code)
+    : enrollment.section?.gradeLevel
+      ? formatNameCodeLabel(
+          enrollment.section.gradeLevel.name,
+          enrollment.section.gradeLevel.code,
+        )
+      : "";
+
+  if (enrollment.section) {
+    return `${yearLabel} / ${gradeLabel || "غير موزع"} / ${formatNameCodeLabel(enrollment.section.name, enrollment.section.code)}`;
+  }
+
+  return gradeLabel ? `${yearLabel} / ${gradeLabel} / غير موزع` : `${yearLabel} / غير موزع`;
+}
+
 function toFormState(attendance: StudentAttendanceListItem): AttendanceFormState {
   return {
     studentEnrollmentId: attendance.studentEnrollmentId,
@@ -151,17 +191,6 @@ function toFormState(attendance: StudentAttendanceListItem): AttendanceFormState
     notes: attendance.notes ?? "",
     isActive: attendance.isActive,
   };
-}
-
-function enrollmentLabel(item: {
-  studentEnrollment: {
-    student: { fullName: string; admissionNo: string | null };
-    academicYear: { code: string };
-    section: { code: string };
-  };
-}) {
-  const admission = item.studentEnrollment.student.admissionNo ?? "غير متوفر";
-  return `${item.studentEnrollment.student.fullName} (${admission}) - ${item.studentEnrollment.academicYear.code} / ${item.studentEnrollment.section.code}`;
 }
 
 export function StudentAttendanceWorkspace() {
@@ -573,13 +602,7 @@ export function StudentAttendanceWorkspace() {
               <option value="all">كل القيود</option>
               {enrollmentOptions.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {enrollmentLabel({
-                    studentEnrollment: {
-                      student: item.student,
-                      academicYear: item.academicYear,
-                      section: item.section,
-                    },
-                  })}
+                  {item.displayLabel}
                 </option>
               ))}
             </SelectField>
@@ -683,8 +706,7 @@ export function StudentAttendanceWorkspace() {
                     {record.studentEnrollment.student.admissionNo ?? "غير متوفر"})
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    القيد: {record.studentEnrollment.academicYear.code} /{" "}
-                    {record.studentEnrollment.section.code}
+                    القيد: {formatEnrollmentPlacementLabel(record.studentEnrollment)}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     التاريخ: {formatDate(record.attendanceDate)}
@@ -829,8 +851,7 @@ export function StudentAttendanceWorkspace() {
                 <option value="">اختر القيد</option>
                 {(enrollmentsQuery.data ?? []).map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.student.fullName} ({item.student.admissionNo ?? "غير متوفر"}) -{" "}
-                    {item.academicYear.code} / {item.section.code}
+                    {item.displayLabel}
                   </option>
                 ))}
               </select>

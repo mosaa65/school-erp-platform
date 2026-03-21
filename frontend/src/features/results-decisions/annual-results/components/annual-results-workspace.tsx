@@ -47,6 +47,7 @@ import { usePromotionDecisionOptionsQuery } from "@/features/results-decisions/a
 import { translateGradingWorkflowStatus } from "@/lib/i18n/ar";
 import type { AnnualGradeListItem, AnnualResultListItem, GradingWorkflowStatus } from "@/lib/api/client";
 import { formatNameCodeLabel, formatSectionWithGradeLabel } from "@/lib/option-labels";
+import { formatStudentEnrollmentOptionLabel, formatStudentEnrollmentPlacementLabel } from "@/lib/student-enrollment-display";
 
 type FormState = {
   academicYearId: string;
@@ -596,7 +597,7 @@ export function AnnualResultsWorkspace() {
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="space-y-1">
                     <p className="font-medium">{item.studentEnrollment.student.fullName}</p>
-                    <p className="text-xs text-muted-foreground">{formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} | {formatSectionWithGradeLabel(item.studentEnrollment.section)} | {formatNameCodeLabel(item.promotionDecision.name, item.promotionDecision.code)}</p>
+                    <p className="text-xs text-muted-foreground">{formatStudentEnrollmentPlacementLabel({ academicYear: item.academicYear, section: item.studentEnrollment.section })} | {formatNameCodeLabel(item.promotionDecision.name, item.promotionDecision.code)}</p>
                     <p className="text-xs text-muted-foreground">الإجمالي: {item.totalAllSubjects}/{item.maxPossibleTotal} | النسبة: {item.percentage}% | ترتيب الشعبة: {item.rankInClass ?? "-"} | ترتيب الصف: {item.rankInGrade ?? "-"}</p>
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5">
@@ -704,7 +705,7 @@ export function AnnualResultsWorkspace() {
             <SelectField value={form.studentEnrollmentId} disabled={editingId !== null} onChange={(event) => setForm((prev) => ({ ...prev, studentEnrollmentId: event.target.value }))}>
               <option value="">القيد *</option>
               {(enrollmentsQuery.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>{item.student.fullName} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatSectionWithGradeLabel(item.section)})</option>
+                <option key={item.id} value={item.id}>{formatStudentEnrollmentOptionLabel(item)}</option>
               ))}
             </SelectField>
             <SelectField value={form.promotionDecisionId} onChange={(event) => setForm((prev) => ({ ...prev, promotionDecisionId: event.target.value }))}>

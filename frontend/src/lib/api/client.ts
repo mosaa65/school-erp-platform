@@ -1636,6 +1636,26 @@ export type StudentHomeworkListItem = {
       fullName: string;
       isActive: boolean;
     };
+    academicYear: {
+      id: string;
+      code: string;
+      name: string;
+      status: AcademicYearStatus;
+      isCurrent: boolean;
+    };
+    section: {
+      id: string;
+      code: string;
+      name: string;
+      isActive: boolean;
+      gradeLevel: {
+        id: string;
+        code: string;
+        name: string;
+        stage: GradeStage;
+        sequence: number;
+      };
+    };
   };
 };
 
@@ -1793,6 +1813,25 @@ export type StudentExamScoreListItem = {
       admissionNo: string | null;
       fullName: string;
       isActive: boolean;
+    };
+    academicYear: {
+      id: string;
+      code: string;
+      name: string;
+      status: AcademicYearStatus;
+      isCurrent: boolean;
+    };
+    section: {
+      id: string;
+      code: string;
+      name: string;
+      isActive: boolean;
+      gradeLevel: {
+        id: string;
+        code: string;
+        name: string;
+        sequence: number;
+      };
     };
   };
 };

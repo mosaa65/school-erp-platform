@@ -432,7 +432,7 @@ export class AnnualGradesService {
 
     const sectionId = this.requireAssignedSectionId(
       annualGrade.studentEnrollment.sectionId,
-      'لا يمكن عرض الدرجة السنوية لقيد غير موزع على شعبة',
+      'لا يمكن عرض الدرجة السنوية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
     );
 
     await this.ensureActorAuthorized(
@@ -702,18 +702,18 @@ export class AnnualGradesService {
     }
     const sectionId = this.requireAssignedSectionId(
       enrollment.sectionId,
-      'لا يمكن احتساب درجة سنوية لقيد غير موزع على شعبة',
+      'لا يمكن احتساب درجة سنوية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
     );
     const section = enrollment.section;
     if (!section) {
-      throw new BadRequestException('بيانات شعبة القيد غير متاحة');
+      throw new BadRequestException('بيانات الشعبة المرتبطة بالقيد غير متاحة');
     }
     if (!section.isActive) {
       throw new BadRequestException('شعبة القيد غير نشطة');
     }
     if (enrollment.academicYearId !== academicYearId) {
       throw new BadRequestException(
-        'Student enrollment academic year does not match payload academic year',
+        'السنة الدراسية للقيد لا تطابق السنة المرسلة',
       );
     }
 
@@ -732,7 +732,7 @@ export class AnnualGradesService {
 
     if (subjectMapped === 0) {
       throw new BadRequestException(
-        'Subject is not configured for this grade level and academic year',
+        'المادة غير مهيأة لهذا الصف وهذه السنة الدراسية',
       );
     }
 
@@ -773,7 +773,7 @@ export class AnnualGradesService {
 
     const sectionId = this.requireAssignedSectionId(
       annualGrade.studentEnrollment.sectionId,
-      'لا يمكن استخدام درجة سنوية لقيد غير موزع على شعبة',
+      'لا يمكن استخدام درجة سنوية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
     );
     const gradeLevelId =
       annualGrade.studentEnrollment.gradeLevelId ??

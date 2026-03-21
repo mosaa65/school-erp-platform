@@ -39,6 +39,7 @@ import type {
   StudentBookListItem,
   StudentBookStatus,
 } from "@/lib/api/client";
+import { formatNameCodeLabel } from "@/lib/option-labels";
 import { translateStudentBookStatus } from "@/lib/i18n/ar";
 
 type StudentBookFormState = {
@@ -102,6 +103,45 @@ function formatDate(value: string | null): string {
   }
 
   return date.toLocaleDateString("ar-YE");
+}
+
+type EnrollmentPlacementLabelInput = {
+  academicYear: {
+    name: string;
+    code: string;
+  };
+  gradeLevel?: {
+    name: string;
+    code: string;
+  } | null;
+  section?: {
+    name?: string | null;
+    code?: string | null;
+    gradeLevel?: {
+      name: string;
+      code: string;
+    } | null;
+  } | null;
+};
+
+function formatEnrollmentPlacementLabel(
+  enrollment: EnrollmentPlacementLabelInput,
+): string {
+  const yearLabel = formatNameCodeLabel(enrollment.academicYear.name, enrollment.academicYear.code);
+  const gradeLabel = enrollment.gradeLevel
+    ? formatNameCodeLabel(enrollment.gradeLevel.name, enrollment.gradeLevel.code)
+    : enrollment.section?.gradeLevel
+      ? formatNameCodeLabel(
+          enrollment.section.gradeLevel.name,
+          enrollment.section.gradeLevel.code,
+        )
+      : "";
+
+  if (enrollment.section) {
+    return `${yearLabel} / ${gradeLabel || "غير موزع"} / ${formatNameCodeLabel(enrollment.section.name, enrollment.section.code)}`;
+  }
+
+  return gradeLabel ? `${yearLabel} / ${gradeLabel} / غير موزع` : `${yearLabel} / غير موزع`;
 }
 
 function toFormState(item: StudentBookListItem): StudentBookFormState {
@@ -551,8 +591,7 @@ export function StudentBooksWorkspace() {
               <option value="all">كل القيود</option>
               {enrollmentOptions.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.student.fullName} ({item.student.admissionNo ?? "غير متوفر"}) -{" "}
-                  {item.academicYear.code} / {item.section.code}
+                  {item.displayLabel}
                 </option>
               ))}
             </SelectField>
@@ -677,8 +716,7 @@ export function StudentBooksWorkspace() {
                     {item.studentEnrollment.student.admissionNo ?? "غير متوفر"}) - {item.subject.name}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    القيد: {item.studentEnrollment.academicYear.code} /{" "}
-                    {item.studentEnrollment.section.code}
+                    القيد: {formatEnrollmentPlacementLabel(item.studentEnrollment)}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     جزء الكتاب: {item.bookPart} | سُلّم: {formatDate(item.issuedDate)} | الاستحقاق:{" "}
@@ -819,8 +857,7 @@ export function StudentBooksWorkspace() {
                 <option value="">اختر القيد</option>
                 {(enrollmentsQuery.data ?? []).map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.student.fullName} ({item.student.admissionNo ?? "غير متوفر"}) -{" "}
-                    {item.academicYear.code} / {item.section.code}
+                    {item.displayLabel}
                   </option>
                 ))}
               </select>

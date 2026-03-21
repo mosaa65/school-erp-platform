@@ -41,7 +41,11 @@ import {
   translateExamAbsenceType,
 } from "@/lib/i18n/ar";
 import { formatNameCodeLabel, formatSectionWithGradeLabel } from "@/lib/option-labels";
-import type { ExamAbsenceType, StudentExamScoreListItem } from "@/lib/api/client";
+import type {
+  ExamAbsenceType,
+  StudentEnrollmentListItem,
+  StudentExamScoreListItem,
+} from "@/lib/api/client";
 
 type FormState = {
   examPeriodId: string;
@@ -89,6 +93,39 @@ function toFormState(item: StudentExamScoreListItem): FormState {
 
 function getAbsenceTypeLabel(value: ExamAbsenceType): string {
   return translateExamAbsenceType(value);
+}
+
+function formatEnrollmentPlacementLabel(
+  item: Pick<StudentEnrollmentListItem, "academicYear" | "gradeLevel" | "section">,
+): string {
+  const academicYearLabel = formatNameCodeLabel(item.academicYear.name, item.academicYear.code);
+
+  if (item.section) {
+    return `${academicYearLabel} / ${formatSectionWithGradeLabel(item.section)}`;
+  }
+
+  const gradeLevelLabel = item.gradeLevel
+    ? formatNameCodeLabel(item.gradeLevel.name, item.gradeLevel.code)
+    : null;
+
+  return gradeLevelLabel
+    ? `${academicYearLabel} / ${gradeLevelLabel} / غير موزع`
+    : `${academicYearLabel} / غير موزع`;
+}
+
+function isExamEnrollmentSelectable(
+  enrollment: StudentEnrollmentListItem,
+  assessment: StudentExamScoreListItem["examAssessment"],
+): boolean {
+  if (enrollment.academicYearId !== assessment.examPeriod.academicYearId) {
+    return false;
+  }
+
+  if (!enrollment.sectionId) {
+    return false;
+  }
+
+  return enrollment.sectionId === assessment.sectionId;
 }
 
 export function StudentExamScoresWorkspace() {
@@ -151,17 +188,7 @@ export function StudentExamScoresWorkspace() {
   const selectedAssessment = (assessmentsForFormQuery.data ?? []).find(
     (item) => item.id === form.examAssessmentId,
   );
-  const formEnrollments = React.useMemo(() => {
-    const all = enrollmentsQuery.data ?? [];
-    if (!selectedAssessment) {
-      return all;
-    }
-    return all.filter(
-      (item) =>
-        item.sectionId === selectedAssessment.sectionId &&
-        item.academicYearId === selectedAssessment.examPeriod.academicYearId,
-    );
-  }, [enrollmentsQuery.data, selectedAssessment]);
+  const formEnrollments = React.useMemo(() => enrollmentsQuery.data ?? [], [enrollmentsQuery.data]);
 
   const mutationError =
     (createMutation.error as Error | null)?.message ??
@@ -250,19 +277,19 @@ export function StudentExamScoresWorkspace() {
 
   const validateForm = (): boolean => {
     if (!form.examAssessmentId || !form.studentEnrollmentId) {
-      setFormError("???????? ?????? ???????.");
+      setFormError("يجب اختيار التقييم والطالب أولًا.");
       return false;
     }
     if (form.teacherNotes.trim().length > 255 || form.excuseDetails.trim().length > 255) {
-      setFormError("??????? ?????? ??????? ????? ??? ??? ?????? 255 ?????.");
+      setFormError("ملاحظات المدرس أو تفاصيل العذر لا يمكن أن تتجاوز 255 حرفًا.");
       return false;
     }
     if (!selectedAssessment) {
-      setFormError("???????? ??? ????.");
+      setFormError("الرجاء اختيار تقييم صحيح.");
       return false;
     }
     if (selectedAssessment.examPeriod.isLocked) {
-      setFormError("?????? ?????????? ?????.");
+      setFormError("فترة الاختبار مقفلة.");
       return false;
     }
 
@@ -270,24 +297,31 @@ export function StudentExamScoresWorkspace() {
       (item) => item.id === form.studentEnrollmentId,
     );
     if (!selectedEnrollment) {
-      setFormError("??? ?????? ??? ????.");
+      setFormError("الرجاء اختيار قيد طالب صحيح.");
       return false;
     }
-    if (
-      selectedEnrollment.sectionId !== selectedAssessment.sectionId ||
-      selectedEnrollment.academicYearId !== selectedAssessment.examPeriod.academicYearId
-    ) {
-      setFormError("??? ?????? ?? ????? ??????/????? ?????? ?????????.");
+    if (selectedEnrollment.academicYearId !== selectedAssessment.examPeriod.academicYearId) {
+      setFormError("قيد الطالب لا ينتمي لنفس السنة الدراسية للاختبار.");
+      return false;
+    }
+
+    if (!selectedEnrollment.sectionId) {
+      setFormError("قيد الطالب غير موزع على شعبة بعد، ولا يمكن ربطه بهذا الاختبار.");
+      return false;
+    }
+
+    if (selectedEnrollment.sectionId !== selectedAssessment.sectionId) {
+      setFormError("قيد الطالب لا يطابق شعبة الاختبار.");
       return false;
     }
 
     const score = Number(form.score || "0");
     if (!Number.isFinite(score) || score < 0) {
-      setFormError("?????? ??? ?? ???? ????? ?????? ???? ?? ?? ????? 0.");
+      setFormError("الدرجة يجب أن تكون رقمًا صحيحًا أو عشريًا أكبر من أو يساوي 0.");
       return false;
     }
     if (form.isPresent && score > selectedAssessment.maxScore) {
-      setFormError(`?????? ??? ??? ?????? ${selectedAssessment.maxScore}.`);
+      setFormError(`الدرجة لا يمكن أن تتجاوز الحد الأعلى ${selectedAssessment.maxScore}.`);
       return false;
     }
 
@@ -315,7 +349,7 @@ export function StudentExamScoresWorkspace() {
 
     if (editingId) {
       if (!canUpdate) {
-        setFormError("?? ???? ???????? ????????: student-exam-scores.update.");
+        setFormError("ليس لديك صلاحية تعديل درجات الاختبارات: student-exam-scores.update.");
         return;
       }
       updateMutation.mutate(
@@ -323,7 +357,7 @@ export function StudentExamScoresWorkspace() {
         {
           onSuccess: () => {
             resetForm();
-            setActionSuccess("?? ????? ???? ???????? ?????.");
+            setActionSuccess("تم تحديث درجة الاختبار بنجاح.");
           },
         },
       );
@@ -331,14 +365,14 @@ export function StudentExamScoresWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("?? ???? ???????? ????????: student-exam-scores.create.");
+      setFormError("ليس لديك صلاحية إضافة درجات الاختبارات: student-exam-scores.create.");
       return;
     }
     createMutation.mutate(payload, {
       onSuccess: () => {
         resetForm();
         setPage(1);
-        setActionSuccess("?? ????? ???? ???????? ?????.");
+        setActionSuccess("تمت إضافة درجة الاختبار بنجاح.");
       },
     });
   };
@@ -353,13 +387,13 @@ export function StudentExamScoresWorkspace() {
         studentExamScoreId: item.id,
         payload: { isActive: !item.isActive },
       },
-      {
-        onSuccess: () => {
-          setActionSuccess(
-            item.isActive ? "?? ????? ???? ???????? ?????." : "?? ????? ???? ???????? ?????.",
-          );
+        {
+          onSuccess: () => {
+            setActionSuccess(
+              item.isActive ? "تم تعطيل درجة الاختبار بنجاح." : "تم تفعيل درجة الاختبار بنجاح.",
+            );
+          },
         },
-      },
     );
   };
 
@@ -368,13 +402,13 @@ export function StudentExamScoresWorkspace() {
       return;
     }
 
-    if (!window.confirm("????? ??????")) {
+    if (!window.confirm("هل تريد حذف هذا السجل؟")) {
       return;
     }
 
     deleteMutation.mutate(item.id, {
       onSuccess: () => {
-        setActionSuccess("?? ??? ???? ???????? ?????.");
+        setActionSuccess("تم حذف درجة الاختبار بنجاح.");
       },
     });
   };
@@ -421,7 +455,7 @@ export function StudentExamScoresWorkspace() {
               containerClassName="flex-1"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="???..."
+              placeholder="ابحث..."
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -435,7 +469,7 @@ export function StudentExamScoresWorkspace() {
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
-          title="????? ????? ??????????"
+          title="مرشحات درجات الاختبارات"
           actionButtons={
             <div className="flex w-full gap-2">
               <Button
@@ -445,10 +479,10 @@ export function StudentExamScoresWorkspace() {
                 className="flex-1 gap-1.5"
               >
                 <Trash2 className="h-4 w-4" />
-                ???
+                مسح
               </Button>
               <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                ?????
+                تطبيق
               </Button>
             </div>
           }
@@ -465,7 +499,7 @@ export function StudentExamScoresWorkspace() {
                 }));
               }}
             >
-              <option value="all">?? ???????</option>
+              <option value="all">كل الفترات</option>
               {(examPeriodsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name} ({translateAssessmentType(item.assessmentType)})
@@ -479,7 +513,7 @@ export function StudentExamScoresWorkspace() {
                 setFilterDraft((prev) => ({ ...prev, assessment: event.target.value }))
               }
             >
-              <option value="all">?? ?????????</option>
+              <option value="all">كل التقييمات</option>
               {(assessmentsForFilterQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.title}
@@ -496,9 +530,9 @@ export function StudentExamScoresWorkspace() {
                 }))
               }
             >
-              <option value="all">???? ??????: ????</option>
-              <option value="present">????</option>
-              <option value="absent">????</option>
+              <option value="all">الحضور: الكل</option>
+              <option value="present">موجود</option>
+              <option value="absent">غائب</option>
             </SelectField>
 
             <SelectField
@@ -510,9 +544,9 @@ export function StudentExamScoresWorkspace() {
                 }))
               }
             >
-              <option value="all">????</option>
-              <option value="active">???</option>
-              <option value="inactive">??? ???</option>
+              <option value="all">الكل</option>
+              <option value="active">نشط</option>
+              <option value="inactive">غير نشط</option>
             </SelectField>
           </div>
         </FilterDrawer>
@@ -520,10 +554,10 @@ export function StudentExamScoresWorkspace() {
         <Card className="border-border/70 bg-card/80">
           <CardHeader className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>????? ???????? ??????</CardTitle>
-              <Badge variant="secondary">????????: {pagination?.total ?? 0}</Badge>
+              <CardTitle>درجات الاختبارات</CardTitle>
+              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
-            <CardDescription>????? ????? ?????????? ??????.</CardDescription>
+            <CardDescription>عرض درجات الاختبارات مع إمكانية التصفية والبحث.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {actionSuccess ? (
@@ -533,19 +567,19 @@ export function StudentExamScoresWorkspace() {
             ) : null}
             {scoresQuery.isPending ? (
               <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                ???? ????? ????????...
+                جاري تحميل درجات الاختبارات...
               </div>
             ) : null}
             {scoresQuery.error ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
                 {scoresQuery.error instanceof Error
                   ? scoresQuery.error.message
-                  : "????? ????? ????????."}
+                  : "تعذر تحميل درجات الاختبارات."}
               </div>
             ) : null}
             {!scoresQuery.isPending && records.length === 0 ? (
               <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                ?? ???? ?????.
+                لا توجد درجات مطابقة.
               </div>
             ) : null}
 
@@ -560,22 +594,26 @@ export function StudentExamScoresWorkspace() {
                       {item.studentEnrollment.student.fullName} - {item.examAssessment.title}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      ??????: {item.score}/{item.examAssessment.maxScore}
+                      الدرجة: {item.score}/{item.examAssessment.maxScore}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      رقم الطالب: {item.studentEnrollment.student.admissionNo ?? "غير متوفر"} -{" "}
+                      {formatEnrollmentPlacementLabel(item.studentEnrollment)}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5">
                     <Badge variant={item.isPresent ? "default" : "secondary"}>
                       {item.isPresent
-                        ? "????"
-                        : `???? (${getAbsenceTypeLabel(item.absenceType ?? "UNEXCUSED")})`}
+                        ? "موجود"
+                        : `غائب (${getAbsenceTypeLabel(item.absenceType ?? "UNEXCUSED")})`}
                     </Badge>
                     {item.examAssessment.examPeriod.isLocked ? (
                       <Badge variant="outline" className="gap-1.5">
-                        <Lock className="h-3.5 w-3.5" />????
+                        <Lock className="h-3.5 w-3.5" />مقفل
                       </Badge>
                     ) : null}
                     <Badge variant={item.isActive ? "default" : "outline"}>
-                      {item.isActive ? "???" : "??? ???"}
+                      {item.isActive ? "نشط" : "غير نشط"}
                     </Badge>
                   </div>
                 </div>
@@ -588,7 +626,7 @@ export function StudentExamScoresWorkspace() {
                     disabled={!canUpdate || item.examAssessment.examPeriod.isLocked || updateMutation.isPending}
                   >
                     <PencilLine className="h-3.5 w-3.5" />
-                    ?????
+                    تعديل
                   </Button>
                   <Button
                     variant="outline"
@@ -596,7 +634,7 @@ export function StudentExamScoresWorkspace() {
                     onClick={() => handleToggleActive(item)}
                     disabled={!canUpdate || item.examAssessment.examPeriod.isLocked || updateMutation.isPending}
                   >
-                    {item.isActive ? "?????" : "?????"}
+                    {item.isActive ? "تعطيل" : "تفعيل"}
                   </Button>
                   <Button
                     variant="destructive"
@@ -606,7 +644,7 @@ export function StudentExamScoresWorkspace() {
                     disabled={!canDelete || item.examAssessment.examPeriod.isLocked || deleteMutation.isPending}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                    ???
+                    حذف
                   </Button>
                 </div>
               </div>
@@ -614,7 +652,7 @@ export function StudentExamScoresWorkspace() {
 
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
               <p className="text-xs text-muted-foreground">
-                ?????? {pagination?.page ?? 1} ?? {pagination?.totalPages ?? 1}
+                الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
               </p>
               <div className="flex items-center gap-2">
                 <Button
@@ -623,7 +661,7 @@ export function StudentExamScoresWorkspace() {
                   onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
                   disabled={!pagination || pagination.page <= 1 || scoresQuery.isFetching}
                 >
-                  ??????
+                  السابق
                 </Button>
                 <Button
                   variant="outline"
@@ -635,7 +673,7 @@ export function StudentExamScoresWorkspace() {
                   }
                   disabled={!pagination || pagination.page >= pagination.totalPages || scoresQuery.isFetching}
                 >
-                  ??????
+                  التالي
                 </Button>
                 <Button
                   variant="ghost"
@@ -647,7 +685,7 @@ export function StudentExamScoresWorkspace() {
                   <RefreshCw
                     className={`h-4 w-4 ${scoresQuery.isFetching ? "animate-spin" : ""}`}
                   />
-                  ?????
+                  تحديث
                 </Button>
               </div>
             </div>
@@ -657,19 +695,19 @@ export function StudentExamScoresWorkspace() {
 
       <Fab
         icon={<Plus className="h-4 w-4" />}
-        label="?????"
-        ariaLabel="????? ???? ??????"
+        label="إضافة"
+        ariaLabel="إضافة درجة اختبار"
         onClick={handleStartCreate}
         disabled={!canCreate}
       />
 
       <BottomSheetForm
         open={isFormOpen}
-        title={editingId ? "????? ???? ??????" : "????? ???? ??????"}
+        title={editingId ? "تعديل درجة اختبار" : "إضافة درجة اختبار"}
         onClose={resetForm}
         onSubmit={() => undefined}
         isSubmitting={isSubmitting}
-        submitLabel={editingId ? "??? ?????????" : "????? ???? ??????"}
+        submitLabel={editingId ? "حفظ التغييرات" : "إضافة الدرجة"}
         showFooter={false}
       >
         <form className="space-y-3" onSubmit={handleSubmit}>
@@ -685,7 +723,7 @@ export function StudentExamScoresWorkspace() {
               }))
             }
           >
-            <option value="">???? ?????? *</option>
+            <option value="">اختر الفترة *</option>
             {(examPeriodsQuery.data ?? []).map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name} ({translateAssessmentType(item.assessmentType)})
@@ -704,7 +742,7 @@ export function StudentExamScoresWorkspace() {
               }))
             }
           >
-            <option value="">???? ??????? *</option>
+            <option value="">اختر التقييم *</option>
             {(assessmentsForFormQuery.data ?? []).map((item) => (
               <option key={item.id} value={item.id}>
                 {item.title} ({formatSectionWithGradeLabel(item.section)} / {formatNameCodeLabel(item.subject.name, item.subject.code)})
@@ -719,17 +757,26 @@ export function StudentExamScoresWorkspace() {
               setForm((prev) => ({ ...prev, studentEnrollmentId: event.target.value }))
             }
           >
-            <option value="">???? ????? *</option>
+            <option value="">اختر الطالب *</option>
             {formEnrollments.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.student.fullName} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatSectionWithGradeLabel(item.section)})
+              <option
+                key={item.id}
+                value={item.id}
+                disabled={
+                  selectedAssessment
+                    ? !isExamEnrollmentSelectable(item, selectedAssessment)
+                    : false
+                }
+              >
+                {item.student.fullName} ({item.student.admissionNo ?? "بدون رقم طالب"}) -{" "}
+                {formatEnrollmentPlacementLabel(item)}
               </option>
             ))}
           </select>
 
           <div className="grid gap-3 md:grid-cols-2">
             <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>????</span>
+              <span>موجود</span>
               <input
                 type="checkbox"
                 checked={form.isPresent}
@@ -748,7 +795,7 @@ export function StudentExamScoresWorkspace() {
               step={0.01}
               value={form.score}
               onChange={(event) => setForm((prev) => ({ ...prev, score: event.target.value }))}
-              placeholder="??????"
+              placeholder="الدرجة"
               disabled={!form.isPresent}
             />
           </div>
@@ -773,7 +820,7 @@ export function StudentExamScoresWorkspace() {
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, excuseDetails: event.target.value }))
               }
-              placeholder="?????? ?????"
+              placeholder="تفاصيل العذر"
               disabled={form.isPresent}
             />
           </div>
@@ -783,11 +830,11 @@ export function StudentExamScoresWorkspace() {
             onChange={(event) =>
               setForm((prev) => ({ ...prev, teacherNotes: event.target.value }))
             }
-            placeholder="??????? ??????"
+            placeholder="ملاحظات المدرس"
           />
 
           <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-            <span>???</span>
+            <span>نشط</span>
             <input
               type="checkbox"
               checked={form.isActive}
@@ -813,11 +860,11 @@ export function StudentExamScoresWorkspace() {
               ) : (
                 <CalendarCheck2 className="h-4 w-4" />
               )}
-              {editingId ? "??? ?????????" : "????? ???? ??????"}
+              {editingId ? "حفظ التغييرات" : "إضافة الدرجة"}
             </Button>
             {editingId ? (
               <Button type="button" variant="outline" onClick={resetForm}>
-                ?????
+                إلغاء
               </Button>
             ) : null}
           </div>

@@ -27,7 +27,7 @@ import {
 import { useStudentHomeworksQuery } from "@/features/assignments/student-homeworks/hooks/use-student-homeworks-query";
 import { useHomeworkOptionsQuery } from "@/features/assignments/student-homeworks/hooks/use-homework-options-query";
 import { useStudentEnrollmentOptionsQuery } from "@/features/assignments/student-homeworks/hooks/use-student-enrollment-options-query";
-import type { StudentHomeworkListItem } from "@/lib/api/client";
+import type { StudentHomeworkListItem, StudentEnrollmentListItem } from "@/lib/api/client";
 import {
   formatNameCodeLabel,
   formatSectionWithGradeLabel,
@@ -121,6 +121,39 @@ function toFormState(item: StudentHomeworkListItem): StudentHomeworkFormState {
   };
 }
 
+function formatEnrollmentPlacementLabel(
+  item: Pick<StudentEnrollmentListItem, "academicYear" | "gradeLevel" | "section">,
+): string {
+  const academicYearLabel = formatNameCodeLabel(item.academicYear.name, item.academicYear.code);
+
+  if (item.section) {
+    return `${academicYearLabel} / ${formatSectionWithGradeLabel(item.section)}`;
+  }
+
+  const gradeLevelLabel = item.gradeLevel
+    ? formatNameCodeLabel(item.gradeLevel.name, item.gradeLevel.code)
+    : null;
+
+  return gradeLevelLabel
+    ? `${academicYearLabel} / ${gradeLevelLabel} / غير موزع`
+    : `${academicYearLabel} / غير موزع`;
+}
+
+function isHomeworkEnrollmentSelectable(
+  enrollment: StudentEnrollmentListItem,
+  homework: StudentHomeworkListItem["homework"],
+): boolean {
+  if (enrollment.academicYearId !== homework.academicYearId) {
+    return false;
+  }
+
+  if (!enrollment.sectionId) {
+    return false;
+  }
+
+  return enrollment.sectionId === homework.sectionId;
+}
+
 export function StudentHomeworksWorkspace() {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("student-homeworks.create");
@@ -202,17 +235,7 @@ export function StudentHomeworksWorkspace() {
     [formState.homeworkId, homeworksQuery.data],
   );
 
-  const formEnrollmentOptions = React.useMemo(() => {
-    const all = enrollmentsQuery.data ?? [];
-    if (!selectedHomeworkForForm) {
-      return all;
-    }
-    return all.filter(
-      (item) =>
-        item.sectionId === selectedHomeworkForForm.sectionId &&
-        item.academicYearId === selectedHomeworkForForm.academicYearId,
-    );
-  }, [enrollmentsQuery.data, selectedHomeworkForForm]);
+  const formEnrollmentOptions = React.useMemo(() => enrollmentsQuery.data ?? [], [enrollmentsQuery.data]);
 
   const mutationError =
     (createMutation.error as Error | null)?.message ??
@@ -314,11 +337,18 @@ export function StudentHomeworksWorkspace() {
       (item) => item.id === formState.studentEnrollmentId,
     );
     if (selectedHomeworkForForm && selectedEnrollment) {
-      if (
-        selectedEnrollment.sectionId !== selectedHomeworkForForm.sectionId ||
-        selectedEnrollment.academicYearId !== selectedHomeworkForForm.academicYearId
-      ) {
+      if (selectedEnrollment.academicYearId !== selectedHomeworkForForm.academicYearId) {
         setFormError("قيد الطالب لا يطابق شعبة/سنة الواجب.");
+        return false;
+      }
+
+      if (!selectedEnrollment.sectionId) {
+        setFormError("قيد الطالب غير موزع على شعبة بعد، ولا يمكن ربطه بهذا الواجب.");
+        return false;
+      }
+
+      if (selectedEnrollment.sectionId !== selectedHomeworkForForm.sectionId) {
+        setFormError("قيد الطالب لا يطابق شعبة الواجب.");
         return false;
       }
     }
@@ -493,9 +523,17 @@ export function StudentHomeworksWorkspace() {
               >
                 <option value="">اختر القيد *</option>
                 {formEnrollmentOptions.map((item) => (
-                  <option key={item.id} value={item.id}>
+                  <option
+                    key={item.id}
+                    value={item.id}
+                    disabled={
+                      selectedHomeworkForForm
+                        ? !isHomeworkEnrollmentSelectable(item, selectedHomeworkForForm)
+                        : false
+                    }
+                  >
                     {item.student.fullName} ({item.student.admissionNo ?? "بدون رقم قيد"}) -{" "}
-                    {formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatSectionWithGradeLabel(item.section)}
+                    {formatEnrollmentPlacementLabel(item)}
                   </option>
                 ))}
               </select>

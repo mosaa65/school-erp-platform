@@ -738,7 +738,7 @@ export class MonthlyGradesService {
 
     const sectionId = this.requireAssignedSectionId(
       monthlyGrade.studentEnrollment.sectionId,
-      'لا يمكن عرض الدرجة الشهرية لقيد غير موزع على شعبة',
+      'لا يمكن عرض الدرجة الشهرية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
     );
 
     await this.ensureActorAuthorized(
@@ -1015,12 +1015,12 @@ export class MonthlyGradesService {
 
     const sectionId = this.requireAssignedSectionId(
       enrollment.sectionId,
-      'لا يمكن احتساب درجة شهرية لقيد غير موزع على شعبة',
+      'لا يمكن احتساب درجة شهرية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
     );
     const section = enrollment.section;
 
     if (!section) {
-      throw new BadRequestException('بيانات شعبة القيد غير متاحة');
+      throw new BadRequestException('بيانات الشعبة المرتبطة بالقيد غير متاحة');
     }
 
     if (!section.isActive) {
@@ -1106,7 +1106,7 @@ export class MonthlyGradesService {
 
     const sectionId = this.requireAssignedSectionId(
       monthlyGrade.studentEnrollment.sectionId,
-      'لا يمكن استخدام درجة شهرية لقيد غير موزع على شعبة',
+      'لا يمكن استخدام درجة شهرية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
     );
     const gradeLevelId =
       monthlyGrade.studentEnrollment.gradeLevelId ??
