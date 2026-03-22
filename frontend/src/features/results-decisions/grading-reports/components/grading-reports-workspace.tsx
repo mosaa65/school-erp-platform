@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import * as React from "react";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import { BarChart3, Filter, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
@@ -69,9 +70,7 @@ function toPercentageLabel(value: number): string {
 
 export function GradingReportsWorkspace() {
   const [searchInput, setSearchInput] = React.useState("");
-  const [search, setSearch] = React.useState("");
-  const [debounceTimer, setDebounceTimer] = React.useState<NodeJS.Timeout | null>(null);
-  const [filterDraft, setFilterDraft] = React.useState<FiltersState>(DEFAULT_FILTERS);
+  const [search, setSearch] = React.useState("");  const [filterDraft, setFilterDraft] = React.useState<FiltersState>(DEFAULT_FILTERS);
   const [appliedFilters, setAppliedFilters] = React.useState<FiltersState>(DEFAULT_FILTERS);
   const [detailsPage, setDetailsPage] = React.useState(1);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
@@ -106,22 +105,10 @@ export function GradingReportsWorkspace() {
   const details = detailsQuery.data?.data ?? [];
   const detailsPagination = detailsQuery.data?.pagination;
 
-  React.useEffect(() => {
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
-    }
-
-    const timer = setTimeout(() => {
+  useDebounceEffect(() => {
       setSearch(searchInput.trim());
       setDetailsPage(1);
-    }, 400);
-
-    setDebounceTimer(timer);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [searchInput]);
+    }, 400, [searchInput]);
 
   const clearFilters = () => {
     setSearchInput("");

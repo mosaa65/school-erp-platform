@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   CalendarCheck2,
   LoaderCircle,
@@ -156,7 +157,6 @@ export function StudentExamScoresWorkspace() {
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
-  const [debounceTimer, setDebounceTimer] = React.useState<NodeJS.Timeout | null>(null);
   const [examPeriodFilter, setExamPeriodFilter] = React.useState("all");
   const [assessmentFilter, setAssessmentFilter] = React.useState("all");
   const [presenceFilter, setPresenceFilter] = React.useState<"all" | "present" | "absent">("all");
@@ -202,7 +202,7 @@ export function StudentExamScoresWorkspace() {
   const updateMutation = useUpdateStudentExamScoreMutation();
   const deleteMutation = useDeleteStudentExamScoreMutation();
 
-  const records = scoresQuery.data?.data ?? [];
+  const records = React.useMemo(() => scoresQuery.data?.data ?? [], [scoresQuery.data?.data]);
   const pagination = scoresQuery.data?.pagination;
   const selectedAssessment = (assessmentsForFormQuery.data ?? []).find(
     (item) => item.id === form.examAssessmentId,
@@ -229,22 +229,10 @@ export function StudentExamScoresWorkspace() {
     }
   }, [editingId, records]);
 
-  React.useEffect(() => {
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
-    }
-
-    const timer = setTimeout(() => {
+  useDebounceEffect(() => {
       setPage(1);
       setSearch(searchInput.trim());
-    }, 400);
-
-    setDebounceTimer(timer);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [searchInput]);
+    }, 400, [searchInput]);
 
   React.useEffect(() => {
     if (!isFilterOpen) {

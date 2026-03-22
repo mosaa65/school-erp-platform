@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   BookText,
   LoaderCircle,
@@ -170,7 +171,6 @@ export function StudentBooksWorkspace() {
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
-  const [debounceTimer, setDebounceTimer] = React.useState<NodeJS.Timeout | null>(null);
   const [studentFilter, setStudentFilter] = React.useState("all");
   const [enrollmentFilter, setEnrollmentFilter] = React.useState("all");
   const [subjectFilter, setSubjectFilter] = React.useState("all");
@@ -267,22 +267,10 @@ export function StudentBooksWorkspace() {
     }
   }, [books, editingStudentBookId, isEditing]);
 
-  React.useEffect(() => {
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
-    }
-
-    const timer = setTimeout(() => {
+  useDebounceEffect(() => {
       setPage(1);
       setSearch(searchInput.trim());
-    }, 400);
-
-    setDebounceTimer(timer);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [searchInput]);
+    }, 400, [searchInput]);
 
   React.useEffect(() => {
     if (!isFilterOpen) {

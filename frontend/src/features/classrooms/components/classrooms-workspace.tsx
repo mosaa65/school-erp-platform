@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import { useRouter } from "next/navigation";
 import { Building, LoaderCircle, PencilLine, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -83,9 +84,7 @@ export function ClassroomsWorkspace() {
 
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
-  const [search, setSearch] = React.useState("");
-  const [debounceTimer, setDebounceTimer] = React.useState<NodeJS.Timeout | null>(null);
-  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">("all");
+  const [search, setSearch] = React.useState("");  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">("all");
   const [buildingFilter, setBuildingFilter] = React.useState<string>("all");
   const [filterDraft, setFilterDraft] = React.useState<{
     active: "all" | "active" | "inactive";
@@ -138,22 +137,10 @@ export function ClassroomsWorkspace() {
     }
   }, [classrooms, editingClassroomId, isEditing]);
 
-  React.useEffect(() => {
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
-    }
-
-    const timer = setTimeout(() => {
+  useDebounceEffect(() => {
       setPage(1);
       setSearch(searchInput.trim());
-    }, 350);
-
-    setDebounceTimer(timer);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [searchInput]);
+    }, 350, [searchInput]);
 
   React.useEffect(() => {
     if (!isFilterOpen) {

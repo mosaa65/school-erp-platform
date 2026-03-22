@@ -160,7 +160,7 @@ export function AnnualResultsWorkspace() {
   const unlockMutation = useUnlockAnnualResultMutation();
   const deleteMutation = useDeleteAnnualResultMutation();
 
-  const records = annualResultsQuery.data?.data ?? [];
+  const records = React.useMemo(() => annualResultsQuery.data?.data ?? [], [annualResultsQuery.data?.data]);
   const pagination = annualResultsQuery.data?.pagination;
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
   const mutationError =

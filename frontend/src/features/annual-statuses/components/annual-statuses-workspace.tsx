@@ -97,7 +97,7 @@ export function AnnualStatusesWorkspace() {
   const updateMutation = useUpdateAnnualStatusMutation();
   const deleteMutation = useDeleteAnnualStatusMutation();
 
-  const records = annualStatusesQuery.data?.data ?? [];
+  const records = React.useMemo(() => annualStatusesQuery.data?.data ?? [], [annualStatusesQuery.data?.data]);
   const pagination = annualStatusesQuery.data?.pagination;
   const isEditing = editingId !== null;
   const isSubmitting = createMutation.isPending || updateMutation.isPending;

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   Calculator,
   LoaderCircle,
@@ -113,7 +114,6 @@ export function MonthlyGradesWorkspace() {
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
-  const [debounceTimer, setDebounceTimer] = React.useState<NodeJS.Timeout | null>(null);
   const [monthFilter, setMonthFilter] = React.useState("all");
   const [sectionFilter, setSectionFilter] = React.useState("all");
   const [subjectFilter, setSubjectFilter] = React.useState("all");
@@ -167,7 +167,7 @@ export function MonthlyGradesWorkspace() {
   const unlockMutation = useUnlockMonthlyGradeMutation();
   const deleteMutation = useDeleteMonthlyGradeMutation();
 
-  const records = monthlyGradesQuery.data?.data ?? [];
+  const records = React.useMemo(() => monthlyGradesQuery.data?.data ?? [], [monthlyGradesQuery.data?.data]);
   const pagination = monthlyGradesQuery.data?.pagination;
   const mutationError =
     (createMutation.error as Error | null)?.message ??
@@ -178,22 +178,10 @@ export function MonthlyGradesWorkspace() {
     (deleteMutation.error as Error | null)?.message ??
     null;
 
-  React.useEffect(() => {
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
-    }
-
-    const timer = setTimeout(() => {
+  useDebounceEffect(() => {
       setPage(1);
       setSearch(searchInput.trim());
-    }, 400);
-
-    setDebounceTimer(timer);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [searchInput]);
+    }, 400, [searchInput]);
 
   React.useEffect(() => {
     if (!isFilterOpen) {

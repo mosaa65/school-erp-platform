@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   BadgeCheck,
   LoaderCircle,
@@ -98,7 +99,6 @@ export function GradingPolicyComponentsWorkspace() {
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
-  const [debounceTimer, setDebounceTimer] = React.useState<NodeJS.Timeout | null>(null);
   const [selectedPolicyId, setSelectedPolicyId] = React.useState("all");
   const [filterDraft, setFilterDraft] = React.useState<{ policy: string }>({
     policy: "all",
@@ -138,22 +138,10 @@ export function GradingPolicyComponentsWorkspace() {
     return map;
   }, [policiesQuery.data]);
 
-  React.useEffect(() => {
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
-    }
-
-    const timer = setTimeout(() => {
+  useDebounceEffect(() => {
       setPage(1);
       setSearch(searchInput.trim());
-    }, 400);
-
-    setDebounceTimer(timer);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [searchInput]);
+    }, 400, [searchInput]);
 
   React.useEffect(() => {
     if (!isFilterOpen) {

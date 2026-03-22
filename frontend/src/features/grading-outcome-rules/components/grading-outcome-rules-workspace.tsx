@@ -117,7 +117,7 @@ export function GradingOutcomeRulesWorkspace() {
   const updateMutation = useUpdateGradingOutcomeRuleMutation();
   const deleteMutation = useDeleteGradingOutcomeRuleMutation();
 
-  const records = rulesQuery.data?.data ?? [];
+  const records = React.useMemo(() => rulesQuery.data?.data ?? [], [rulesQuery.data?.data]);
   const pagination = rulesQuery.data?.pagination;
   const isEditing = editingId !== null;
   const isSubmitting = createMutation.isPending || updateMutation.isPending;

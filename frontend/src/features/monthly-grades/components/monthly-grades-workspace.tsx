@@ -164,7 +164,7 @@ export function MonthlyGradesWorkspace() {
   const unlockMutation = useUnlockMonthlyGradeMutation();
   const deleteMutation = useDeleteMonthlyGradeMutation();
 
-  const records = monthlyGradesQuery.data?.data ?? [];
+  const records = React.useMemo(() => monthlyGradesQuery.data?.data ?? [], [monthlyGradesQuery.data?.data]);
   const pagination = monthlyGradesQuery.data?.pagination;
   const mutationError =
     (createMutation.error as Error | null)?.message ??

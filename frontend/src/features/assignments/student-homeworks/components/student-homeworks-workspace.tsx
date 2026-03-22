@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   ClipboardCheck,
   LoaderCircle,
@@ -165,9 +166,7 @@ export function StudentHomeworksWorkspace() {
 
   const [page, setPage] = React.useState(1);
   const [searchInput] = React.useState("");
-  const [search, setSearch] = React.useState("");
-  const [debounceTimer, setDebounceTimer] = React.useState<NodeJS.Timeout | null>(null);
-  const [homeworkFilter] = React.useState("all");
+  const [search, setSearch] = React.useState("");  const [homeworkFilter] = React.useState("all");
   const [enrollmentFilter] = React.useState("all");
   const [studentFilter] = React.useState("all");
   const [completedFilter] = React.useState<"all" | "completed" | "pending">("all");
@@ -257,22 +256,10 @@ export function StudentHomeworksWorkspace() {
     }
   }, [editingStudentHomeworkId, isEditing, records]);
 
-  React.useEffect(() => {
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
-    }
-
-    const timer = setTimeout(() => {
+  useDebounceEffect(() => {
       setPage(1);
       setSearch(searchInput.trim());
-    }, 400);
-
-    setDebounceTimer(timer);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [searchInput]);
+    }, 400, [searchInput]);
 
   React.useEffect(() => {
     if (!isFilterOpen) {

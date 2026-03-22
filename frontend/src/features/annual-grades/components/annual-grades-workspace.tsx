@@ -154,7 +154,7 @@ export function AnnualGradesWorkspace() {
   const unlockMutation = useUnlockAnnualGradeMutation();
   const deleteMutation = useDeleteAnnualGradeMutation();
 
-  const records = annualGradesQuery.data?.data ?? [];
+  const records = React.useMemo(() => annualGradesQuery.data?.data ?? [], [annualGradesQuery.data?.data]);
   const pagination = annualGradesQuery.data?.pagination;
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
 

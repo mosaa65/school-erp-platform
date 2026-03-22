@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   LoaderCircle,
   Medal,
@@ -94,7 +95,6 @@ export function GradingOutcomeRulesWorkspace() {
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
-  const [debounceTimer, setDebounceTimer] = React.useState<NodeJS.Timeout | null>(null);
   const [yearFilter, setYearFilter] = React.useState("all");
   const [gradeFilter, setGradeFilter] = React.useState("all");
   const [strategyFilter, setStrategyFilter] = React.useState<"all" | TieBreakStrategy>("all");
@@ -138,7 +138,7 @@ export function GradingOutcomeRulesWorkspace() {
   const updateMutation = useUpdateGradingOutcomeRuleMutation();
   const deleteMutation = useDeleteGradingOutcomeRuleMutation();
 
-  const records = rulesQuery.data?.data ?? [];
+  const records = React.useMemo(() => rulesQuery.data?.data ?? [], [rulesQuery.data?.data]);
   const pagination = rulesQuery.data?.pagination;
   const isEditing = editingId !== null;
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
@@ -162,22 +162,10 @@ export function GradingOutcomeRulesWorkspace() {
     }
   }, [editingId, isEditing, records]);
 
-  React.useEffect(() => {
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
-    }
-
-    const timer = setTimeout(() => {
+  useDebounceEffect(() => {
       setPage(1);
       setSearch(searchInput.trim());
-    }, 400);
-
-    setDebounceTimer(timer);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [searchInput]);
+    }, 400, [searchInput]);
 
   React.useEffect(() => {
     if (!isFilterOpen) {

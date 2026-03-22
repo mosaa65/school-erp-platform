@@ -167,7 +167,7 @@ export function MonthlyCustomComponentScoresWorkspace() {
   const updateMutation = useUpdateMonthlyCustomComponentScoreMutation();
   const deleteMutation = useDeleteMonthlyCustomComponentScoreMutation();
 
-  const records = scoresQuery.data?.data ?? [];
+  const records = React.useMemo(() => scoresQuery.data?.data ?? [], [scoresQuery.data?.data]);
   const pagination = scoresQuery.data?.pagination;
 
   const selectedComponent = (componentsQuery.data ?? []).find(

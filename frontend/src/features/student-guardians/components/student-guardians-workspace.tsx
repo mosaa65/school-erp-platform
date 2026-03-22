@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   Link2,
   LoaderCircle,
@@ -187,7 +188,6 @@ export function StudentGuardiansWorkspace() {
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
-  const [debounceTimer, setDebounceTimer] = React.useState<NodeJS.Timeout | null>(null);
   const [studentFilter, setStudentFilter] = React.useState("all");
   const [guardianFilter, setGuardianFilter] = React.useState("all");
   const [relationshipTypeFilter, setRelationshipTypeFilter] = React.useState("all");
@@ -272,22 +272,10 @@ export function StudentGuardiansWorkspace() {
     }
   }, [editingRelationId, isEditing, relations]);
 
-  React.useEffect(() => {
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
-    }
-
-    const timer = setTimeout(() => {
+  useDebounceEffect(() => {
       setPage(1);
       setSearch(searchInput.trim());
-    }, 400);
-
-    setDebounceTimer(timer);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [searchInput]);
+    }, 400, [searchInput]);
 
   React.useEffect(() => {
     if (!isFilterOpen) {

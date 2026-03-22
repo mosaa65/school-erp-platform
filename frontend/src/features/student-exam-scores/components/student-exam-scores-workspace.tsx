@@ -125,7 +125,7 @@ export function StudentExamScoresWorkspace() {
   const updateMutation = useUpdateStudentExamScoreMutation();
   const deleteMutation = useDeleteStudentExamScoreMutation();
 
-  const records = scoresQuery.data?.data ?? [];
+  const records = React.useMemo(() => scoresQuery.data?.data ?? [], [scoresQuery.data?.data]);
   const pagination = scoresQuery.data?.pagination;
   const selectedAssessment = (assessmentsForFormQuery.data ?? []).find(
     (item) => item.id === form.examAssessmentId,

@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import * as React from "react";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   Calculator,
   LoaderCircle,
@@ -214,7 +215,6 @@ export function AnnualResultsWorkspace() {
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
-  const [debounceTimer, setDebounceTimer] = React.useState<NodeJS.Timeout | null>(null);
   const [yearFilter, setYearFilter] = React.useState("all");
   const [sectionFilter, setSectionFilter] = React.useState("all");
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">("all");
@@ -265,7 +265,7 @@ export function AnnualResultsWorkspace() {
   const unlockMutation = useUnlockAnnualResultMutation();
   const deleteMutation = useDeleteAnnualResultMutation();
 
-  const records = annualResultsQuery.data?.data ?? [];
+  const records = React.useMemo(() => annualResultsQuery.data?.data ?? [], [annualResultsQuery.data?.data]);
   const pagination = annualResultsQuery.data?.pagination;
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
   const mutationError =
@@ -277,22 +277,10 @@ export function AnnualResultsWorkspace() {
     (deleteMutation.error as Error | null)?.message ??
     null;
 
-  React.useEffect(() => {
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
-    }
-
-    const timer = setTimeout(() => {
+  useDebounceEffect(() => {
       setPage(1);
       setSearch(searchInput.trim());
-    }, 400);
-
-    setDebounceTimer(timer);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [searchInput]);
+    }, 400, [searchInput]);
 
   React.useEffect(() => {
     if (!isFilterOpen) {

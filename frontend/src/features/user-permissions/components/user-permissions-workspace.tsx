@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   KeyRound,
   LoaderCircle,
@@ -143,7 +144,6 @@ export function UserPermissionsWorkspace() {
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
-  const [debounceTimer, setDebounceTimer] = React.useState<NodeJS.Timeout | null>(null);
   const [statusFilter, setStatusFilter] = React.useState<"all" | "current" | "revoked">("all");
   const [userFilter, setUserFilter] = React.useState<string>("all");
   const [permissionFilter, setPermissionFilter] = React.useState<string>("all");
@@ -218,22 +218,10 @@ export function UserPermissionsWorkspace() {
     }
   }, [editingItemId, isEditing, items]);
 
-  React.useEffect(() => {
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
-    }
-
-    const timer = setTimeout(() => {
+  useDebounceEffect(() => {
       setPage(1);
       setSearch(searchInput.trim());
-    }, 400);
-
-    setDebounceTimer(timer);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [searchInput]);
+    }, 400, [searchInput]);
 
   React.useEffect(() => {
     if (!isFilterOpen) {

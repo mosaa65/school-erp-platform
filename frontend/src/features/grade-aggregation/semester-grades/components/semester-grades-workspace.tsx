@@ -165,7 +165,7 @@ export function SemesterGradesWorkspace() {
   const unlockMutation = useUnlockSemesterGradeMutation();
   const deleteMutation = useDeleteSemesterGradeMutation();
 
-  const records = semesterGradesQuery.data?.data ?? [];
+  const records = React.useMemo(() => semesterGradesQuery.data?.data ?? [], [semesterGradesQuery.data?.data]);
   const pagination = semesterGradesQuery.data?.pagination;
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
   const mutationError =
