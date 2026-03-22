@@ -536,7 +536,11 @@ export function MonthlyGradesWorkspace() {
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {formatNameCodeLabel(item.academicMonth.name, item.academicMonth.code)} |{" "}
-                      {formatStudentEnrollmentPlacementLabel({ academicYear: item.academicYear, section: item.studentEnrollment.section })}
+                      {formatStudentEnrollmentPlacementLabel({
+                        academicYear: item.academicYear,
+                        gradeLevel: item.studentEnrollment.gradeLevel,
+                        section: item.studentEnrollment.section,
+                      })}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       الإجمالي: {item.monthlyTotal} | تلقائي: {item.periodGradeComponents.length} | يدوي:{" "}

@@ -72,15 +72,15 @@ export class AnnualResultsController {
   @ApiQuery({ name: 'status', required: false, enum: GradingWorkflowStatus })
   @ApiQuery({ name: 'isLocked', required: false, type: Boolean })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
-  findAll(@Query() query: ListAnnualResultsDto) {
-    return this.annualResultsService.findAll(query);
+  findAll(@Query() query: ListAnnualResultsDto, @CurrentUser() user: AuthUser) {
+    return this.annualResultsService.findAll(query, user.userId);
   }
 
   @Get(':id')
   @RequirePermissions('annual-results.read')
   @ApiOperation({ summary: 'Get annual result by ID' })
-  findOne(@Param('id') id: string) {
-    return this.annualResultsService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.annualResultsService.findOne(id, user.userId);
   }
 
   @Patch(':id')

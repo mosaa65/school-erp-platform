@@ -346,7 +346,7 @@ export class StudentsService {
     });
 
     if (!student) {
-      throw new NotFoundException('Student not found');
+      throw new NotFoundException('الطالب غير موجود');
     }
 
     const scope = await this.dataScopeService.getStudentSectionYearGrants({
@@ -371,7 +371,7 @@ export class StudentsService {
 
       if (!isAllowed) {
         throw new ForbiddenException(
-          'You are not allowed to access this student profile',
+          'ليست لديك صلاحية للوصول إلى ملف هذا الطالب',
         );
       }
     }
@@ -479,7 +479,7 @@ export class StudentsService {
     });
 
     if (!student) {
-      throw new NotFoundException('Student not found');
+      throw new NotFoundException('الطالب غير موجود');
     }
 
     if (!student.isActive) {
@@ -498,7 +498,7 @@ export class StudentsService {
     });
 
     if (!student) {
-      throw new NotFoundException('Student not found');
+      throw new NotFoundException('الطالب غير موجود');
     }
 
     return student;

@@ -50,7 +50,7 @@ export class DataScopeService {
 
     if (!actor.employeeId) {
       throw new ForbiddenException(
-        'User must be linked to an active employee profile for scoped actions',
+        'يجب ربط المستخدم بملف موظف نشط حتى يتمكن من تنفيذ العمليات المقيّدة بالنطاق',
       );
     }
 
@@ -67,50 +67,11 @@ export class DataScopeService {
     });
 
     if (!section) {
-      throw new ForbiddenException('Section is invalid or deleted');
+      throw new ForbiddenException('الشعبة غير صالحة أو محذوفة');
     }
 
     if (!section.isActive) {
-      throw new ForbiddenException('Section is inactive');
-    }
-
-    const assignmentCount = await this.prisma.employeeTeachingAssignment.count({
-      where: {
-        employeeId: actor.employeeId,
-        sectionId: params.sectionId,
-        subjectId: params.subjectId,
-        academicYearId: params.academicYearId,
-        deletedAt: null,
-        isActive: true,
-      },
-    });
-
-    if (assignmentCount > 0) {
-      return;
-    }
-
-    const supervisionWhere =
-      params.capability === 'MANAGE_HOMEWORKS'
-        ? { canManageHomeworks: true }
-        : { canManageGrades: true };
-
-    const supervisionCount = await this.prisma.employeeSectionSupervision.count(
-      {
-        where: {
-          employeeId: actor.employeeId,
-          sectionId: params.sectionId,
-          academicYearId: params.academicYearId,
-          deletedAt: null,
-          isActive: true,
-          ...supervisionWhere,
-        },
-      },
-    );
-
-    if (supervisionCount === 0) {
-      throw new ForbiddenException(
-        'You are not allowed to access this section/subject/year scope',
-      );
+      throw new ForbiddenException('الشعبة غير نشطة');
     }
 
     const scope = await this.getSectionSubjectYearGrants({
@@ -118,6 +79,17 @@ export class DataScopeService {
       capability: params.capability,
       academicYearId: params.academicYearId,
     });
+
+    const hasExactGrant = scope.grants.some(
+      (grant) =>
+        grant.sectionId === params.sectionId &&
+        grant.academicYearId === params.academicYearId &&
+        (!grant.subjectId || grant.subjectId === params.subjectId),
+    );
+
+    if (hasExactGrant) {
+      return;
+    }
 
     const hasGradeGrant = scope.gradeGrants.some(
       (grant) =>
@@ -130,8 +102,45 @@ export class DataScopeService {
     }
 
     throw new ForbiddenException(
-      'You are not allowed to access this section/subject/year scope',
+      'ليست لديك صلاحية للوصول إلى هذا النطاق: شعبة/مادة/سنة',
     );
+  }
+
+  async ensureCanManageGradeYear(params: {
+    actorUserId: string;
+    gradeLevelId: string;
+    academicYearId: string;
+    capability: Exclude<DataScopeCapability, 'VIEW_STUDENTS'>;
+  }) {
+    const actor = await this.getActorContext(params.actorUserId);
+
+    if (actor.isPrivileged) {
+      return;
+    }
+
+    if (!actor.employeeId) {
+      throw new ForbiddenException(
+        'يجب ربط المستخدم بملف موظف نشط حتى يتمكن من تنفيذ العمليات المقيّدة بالنطاق',
+      );
+    }
+
+    const scope = await this.getSectionSubjectYearGrants({
+      actorUserId: params.actorUserId,
+      capability: params.capability,
+      academicYearId: params.academicYearId,
+    });
+
+    const hasGradeGrant = scope.gradeGrants.some(
+      (grant) =>
+        grant.gradeLevelId === params.gradeLevelId &&
+        grant.academicYearId === params.academicYearId,
+    );
+
+    if (!hasGradeGrant) {
+      throw new ForbiddenException(
+        'ليست لديك صلاحية للوصول إلى هذا النطاق: صف/سنة',
+      );
+    }
   }
 
   async getSectionSubjectYearGrants(params: {
@@ -206,39 +215,11 @@ export class DataScopeService {
       });
     }
 
-    const sections = sectionIds.size
-      ? await this.prisma.section.findMany({
-          where: {
-            id: {
-              in: Array.from(sectionIds),
-            },
-            deletedAt: null,
-            isActive: true,
-          },
-          select: {
-            id: true,
-            gradeLevelId: true,
-          },
-        })
-      : [];
-
-    const sectionToGradeLevel = new Map(
-      sections.map((section) => [section.id, section.gradeLevelId] as const),
+    const sectionToGradeLevel = await this.buildSectionGradeLevelMap(sectionIds);
+    const gradeDedup = this.buildGradeYearGrantMap(
+      sectionSupervisions,
+      sectionToGradeLevel,
     );
-    const gradeDedup = new Map<string, GradeYearGrant>();
-
-    for (const item of [...teachingAssignments, ...sectionSupervisions]) {
-      const gradeLevelId = sectionToGradeLevel.get(item.sectionId);
-      if (!gradeLevelId) {
-        continue;
-      }
-
-      const key = `${gradeLevelId}|${item.academicYearId}`;
-      gradeDedup.set(key, {
-        gradeLevelId,
-        academicYearId: item.academicYearId,
-      });
-    }
 
     return {
       isPrivileged: false,
@@ -305,39 +286,11 @@ export class DataScopeService {
       });
     }
 
-    const sections = sectionIds.size
-      ? await this.prisma.section.findMany({
-          where: {
-            id: {
-              in: Array.from(sectionIds),
-            },
-            deletedAt: null,
-            isActive: true,
-          },
-          select: {
-            id: true,
-            gradeLevelId: true,
-          },
-        })
-      : [];
-
-    const sectionToGradeLevel = new Map(
-      sections.map((section) => [section.id, section.gradeLevelId] as const),
+    const sectionToGradeLevel = await this.buildSectionGradeLevelMap(sectionIds);
+    const gradeDedup = this.buildGradeYearGrantMap(
+      sectionSupervisions,
+      sectionToGradeLevel,
     );
-    const gradeDedup = new Map<string, GradeYearGrant>();
-
-    for (const item of [...teachingAssignments, ...sectionSupervisions]) {
-      const gradeLevelId = sectionToGradeLevel.get(item.sectionId);
-      if (!gradeLevelId) {
-        continue;
-      }
-
-      const key = `${gradeLevelId}|${item.academicYearId}`;
-      gradeDedup.set(key, {
-        gradeLevelId,
-        academicYearId: item.academicYearId,
-      });
-    }
 
     return {
       isPrivileged: false,
@@ -374,7 +327,7 @@ export class DataScopeService {
     });
 
     if (!user) {
-      throw new ForbiddenException('Authenticated user is not active');
+      throw new ForbiddenException('المستخدم المصادق عليه غير نشط');
     }
 
     const roleCodes = user.userRoles
@@ -400,7 +353,7 @@ export class DataScopeService {
 
       if (!employee) {
         throw new ForbiddenException(
-          'Linked employee profile is missing or inactive',
+          'ملف الموظف المرتبط بالمستخدم غير موجود أو غير نشط',
         );
       }
     }
@@ -411,5 +364,51 @@ export class DataScopeService {
       roleCodes,
       isPrivileged,
     };
+  }
+
+  private async buildSectionGradeLevelMap(sectionIds: Set<string>) {
+    if (sectionIds.size === 0) {
+      return new Map<string, string>();
+    }
+
+    const sections = await this.prisma.section.findMany({
+      where: {
+        id: {
+          in: Array.from(sectionIds),
+        },
+        deletedAt: null,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        gradeLevelId: true,
+      },
+    });
+
+    return new Map(
+      sections.map((section) => [section.id, section.gradeLevelId] as const),
+    );
+  }
+
+  private buildGradeYearGrantMap(
+    items: Array<{ sectionId: string; academicYearId: string }>,
+    sectionToGradeLevel: Map<string, string>,
+  ) {
+    const gradeDedup = new Map<string, GradeYearGrant>();
+
+    for (const item of items) {
+      const gradeLevelId = sectionToGradeLevel.get(item.sectionId);
+      if (!gradeLevelId) {
+        continue;
+      }
+
+      const key = `${gradeLevelId}|${item.academicYearId}`;
+      gradeDedup.set(key, {
+        gradeLevelId,
+        academicYearId: item.academicYearId,
+      });
+    }
+
+    return gradeDedup;
   }
 }

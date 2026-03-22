@@ -96,7 +96,26 @@ function getAbsenceTypeLabel(value: ExamAbsenceType): string {
 }
 
 function formatEnrollmentPlacementLabel(
-  item: Pick<StudentEnrollmentListItem, "academicYear" | "gradeLevel" | "section">,
+  item: {
+    academicYear: StudentEnrollmentListItem["academicYear"];
+    gradeLevel?: {
+      id: string;
+      code: string;
+      name: string;
+      sequence: number;
+    } | null;
+    section?: {
+      id: string;
+      code: string;
+      name: string;
+      gradeLevel?: {
+        id: string;
+        code: string;
+        name: string;
+        sequence: number;
+      } | null;
+    } | null;
+  },
 ): string {
   const academicYearLabel = formatNameCodeLabel(item.academicYear.name, item.academicYear.code);
 

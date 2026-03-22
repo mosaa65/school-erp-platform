@@ -60,6 +60,7 @@ const monthlyGradeInclude: Prisma.MonthlyGradeInclude = {
     select: {
       id: true,
       sectionId: true,
+      gradeLevelId: true,
       academicYearId: true,
       status: true,
       isActive: true,
@@ -85,6 +86,14 @@ const monthlyGradeInclude: Prisma.MonthlyGradeInclude = {
               sequence: true,
             },
           },
+        },
+      },
+      gradeLevel: {
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          sequence: true,
         },
       },
       academicYear: {
@@ -1013,14 +1022,20 @@ export class MonthlyGradesService {
       throw new BadRequestException('قيد الطالب غير نشط');
     }
 
-    const sectionId = this.requireAssignedSectionId(
-      enrollment.sectionId,
-      'لا يمكن احتساب درجة شهرية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
-    );
     const section = enrollment.section;
+    const gradeLevelId = this.resolveEnrollmentGradeLevelId(
+      enrollment.gradeLevelId,
+      section?.gradeLevelId,
+    );
+
+    if (!gradeLevelId) {
+      throw new BadRequestException('تعذر تحديد الصف المرتبط بالقيد');
+    }
 
     if (!section) {
-      throw new BadRequestException('بيانات الشعبة المرتبطة بالقيد غير متاحة');
+      throw new BadRequestException(
+        'لا يمكن احتساب درجة شهرية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
+      );
     }
 
     if (!section.isActive) {
@@ -1042,7 +1057,6 @@ export class MonthlyGradesService {
     }
 
     await this.ensureSubjectExistsAndActive(subjectId);
-    const gradeLevelId = enrollment.gradeLevelId ?? section.gradeLevelId;
     await this.ensureSubjectOfferedInTerm(
       month.academicYearId,
       month.academicTermId,
@@ -1058,7 +1072,7 @@ export class MonthlyGradesService {
     );
 
     return {
-      sectionId,
+      sectionId: section.id,
       gradeLevelId,
       academicYearId: month.academicYearId,
       academicTermId: month.academicTermId,
@@ -1108,9 +1122,10 @@ export class MonthlyGradesService {
       monthlyGrade.studentEnrollment.sectionId,
       'لا يمكن استخدام درجة شهرية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
     );
-    const gradeLevelId =
-      monthlyGrade.studentEnrollment.gradeLevelId ??
-      monthlyGrade.studentEnrollment.section?.gradeLevelId;
+    const gradeLevelId = this.resolveEnrollmentGradeLevelId(
+      monthlyGrade.studentEnrollment.gradeLevelId,
+      monthlyGrade.studentEnrollment.section?.gradeLevelId,
+    );
 
     if (!gradeLevelId) {
       throw new BadRequestException('تعذر تحديد الصف المرتبط بالقيد');
@@ -1152,6 +1167,13 @@ export class MonthlyGradesService {
     }
 
     return sectionId;
+  }
+
+  private resolveEnrollmentGradeLevelId(
+    enrollmentGradeLevelId: string | null | undefined,
+    sectionGradeLevelId: string | null | undefined,
+  ) {
+    return enrollmentGradeLevelId ?? sectionGradeLevelId ?? null;
   }
 
   private async ensureAcademicMonthExistsAndActive(academicMonthId: string) {

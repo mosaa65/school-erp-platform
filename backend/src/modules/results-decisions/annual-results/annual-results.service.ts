@@ -16,13 +16,14 @@ import {
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogsService } from '../../audit-logs/audit-logs.service';
 import { PolicyResolverService } from '../../evaluation-policies/grading-policies/policy-resolver.service';
+import { DataScopeService } from '../../teaching-assignments/data-scope/data-scope.service';
 import { CalculateAnnualResultsDto } from './dto/calculate-annual-results.dto';
 import { CreateAnnualResultDto } from './dto/create-annual-result.dto';
 import { ListAnnualResultsDto } from './dto/list-annual-results.dto';
 import { UpdateAnnualResultDto } from './dto/update-annual-result.dto';
 
 type SectionContext = {
-  sectionId: string;
+  sectionId: string | null;
   gradeLevelId: string;
   academicYearId: string;
 };
@@ -52,6 +53,7 @@ const annualResultInclude: Prisma.AnnualResultInclude = {
       id: true,
       studentId: true,
       sectionId: true,
+      gradeLevelId: true,
       academicYearId: true,
       status: true,
       isActive: true,
@@ -78,6 +80,14 @@ const annualResultInclude: Prisma.AnnualResultInclude = {
               sequence: true,
             },
           },
+        },
+      },
+      gradeLevel: {
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          sequence: true,
         },
       },
     },
@@ -131,6 +141,7 @@ export class AnnualResultsService {
     private readonly prisma: PrismaService,
     private readonly auditLogsService: AuditLogsService,
     private readonly policyResolver: PolicyResolverService,
+    private readonly dataScopeService: DataScopeService,
   ) {}
 
   async create(payload: CreateAnnualResultDto, actorUserId: string) {
@@ -142,6 +153,7 @@ export class AnnualResultsService {
       actorUserId,
       context.sectionId,
       context.academicYearId,
+      context.gradeLevelId,
     );
     await this.ensurePromotionDecisionExists(payload.promotionDecisionId);
 
@@ -236,9 +248,28 @@ export class AnnualResultsService {
     }
   }
 
-  async findAll(query: ListAnnualResultsDto) {
+  async findAll(query: ListAnnualResultsDto, actorUserId: string) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
+
+    const studentEnrollmentWhere: Prisma.StudentEnrollmentWhereInput = {
+      sectionId: query.sectionId,
+      studentId: query.studentId,
+      ...(query.gradeLevelId
+        ? {
+            OR: [
+              {
+                gradeLevelId: query.gradeLevelId,
+              },
+              {
+                section: {
+                  gradeLevelId: query.gradeLevelId,
+                },
+              },
+            ],
+          }
+        : {}),
+    };
 
     const where: Prisma.AnnualResultWhereInput = {
       deletedAt: null,
@@ -248,13 +279,7 @@ export class AnnualResultsService {
       status: query.status,
       isLocked: query.isLocked,
       isActive: query.isActive,
-      studentEnrollment: {
-        sectionId: query.sectionId,
-        studentId: query.studentId,
-        section: {
-          gradeLevelId: query.gradeLevelId,
-        },
-      },
+      studentEnrollment: studentEnrollmentWhere,
       OR: query.search
         ? [
             {
@@ -283,6 +308,51 @@ export class AnnualResultsService {
           ]
         : undefined,
     };
+
+    const scope = await this.dataScopeService.getStudentSectionYearGrants({
+      actorUserId,
+      academicYearId: query.academicYearId,
+    });
+
+    if (!scope.isPrivileged) {
+      if (scope.grants.length === 0 && scope.gradeGrants.length === 0) {
+        return {
+          data: [],
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            totalPages: 0,
+          },
+        };
+      }
+
+      const scopedEnrollments: Prisma.StudentEnrollmentWhereInput[] = [
+        ...scope.grants.map((grant) => ({
+          sectionId: grant.sectionId,
+          academicYearId: grant.academicYearId,
+          deletedAt: null,
+          isActive: true,
+        })),
+        ...scope.gradeGrants.map((grant) => ({
+          academicYearId: grant.academicYearId,
+          deletedAt: null,
+          isActive: true,
+          OR: [
+            {
+              gradeLevelId: grant.gradeLevelId,
+            },
+            {
+              section: {
+                gradeLevelId: grant.gradeLevelId,
+              },
+            },
+          ],
+        })),
+      ];
+
+      where.AND = [...(where.AND ?? []), { studentEnrollment: { OR: scopedEnrollments } }];
+    }
 
     const [total, items] = await this.prisma.$transaction([
       this.prisma.annualResult.count({ where }),
@@ -325,7 +395,7 @@ export class AnnualResultsService {
     };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, actorUserId: string) {
     const annualResult = await this.prisma.annualResult.findFirst({
       where: {
         id,
@@ -336,6 +406,46 @@ export class AnnualResultsService {
 
     if (!annualResult) {
       throw new NotFoundException('النتيجة السنوية غير موجودة');
+    }
+
+    const scope = await this.dataScopeService.getStudentSectionYearGrants({
+      actorUserId,
+      academicYearId: annualResult.academicYearId,
+    });
+
+    if (!scope.isPrivileged) {
+      const sectionGrantSet = new Set(
+        scope.grants.map((item) => `${item.sectionId}|${item.academicYearId}`),
+      );
+      const gradeGrantSet = new Set(
+        scope.gradeGrants.map(
+          (item) => `${item.gradeLevelId}|${item.academicYearId}`,
+        ),
+      );
+
+      const enrollment = annualResult.studentEnrollment;
+      const enrollmentGradeLevelId =
+        enrollment.gradeLevel?.id ??
+        enrollment.gradeLevelId ??
+        enrollment.section?.gradeLevel?.id ??
+        enrollment.section?.gradeLevelId;
+      const enrollmentSectionId = enrollment.sectionId;
+
+      const isAllowed =
+        (enrollmentSectionId
+          ? sectionGrantSet.has(
+              `${enrollmentSectionId}|${annualResult.academicYearId}`,
+            )
+          : false) ||
+        (enrollmentGradeLevelId
+          ? gradeGrantSet.has(
+              `${enrollmentGradeLevelId}|${annualResult.academicYearId}`,
+            )
+          : false);
+
+      if (!isAllowed) {
+        throw new ForbiddenException('ليست لديك صلاحية للوصول إلى هذه النتيجة السنوية');
+      }
     }
 
     return annualResult;
@@ -366,6 +476,7 @@ export class AnnualResultsService {
       actorUserId,
       context.sectionId,
       existing.academicYearId,
+      context.gradeLevelId,
     );
 
     if (payload.promotionDecisionId) {
@@ -448,6 +559,7 @@ export class AnnualResultsService {
       actorUserId,
       context.sectionId,
       existing.academicYearId,
+      context.gradeLevelId,
     );
 
     if (existing.isLocked) {
@@ -488,6 +600,7 @@ export class AnnualResultsService {
       actorUserId,
       context.sectionId,
       existing.academicYearId,
+      context.gradeLevelId,
     );
 
     if (!existing.isLocked) {
@@ -528,6 +641,7 @@ export class AnnualResultsService {
       actorUserId,
       context.sectionId,
       existing.academicYearId,
+      context.gradeLevelId,
     );
 
     if (existing.isLocked) {
@@ -694,8 +808,8 @@ export class AnnualResultsService {
       payload.academicYearId,
       context.gradeLevelId,
       subjectIds,
-      context.sectionId,
       termCount,
+      context.sectionId,
     );
 
     const annualGradeSummary = {
@@ -1150,10 +1264,34 @@ export class AnnualResultsService {
         academicYearId: true,
         gradeLevelId: true,
         isActive: true,
+        academicYear: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+          },
+        },
+        gradeLevel: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+          },
+        },
         section: {
           select: {
+            id: true,
+            code: true,
+            name: true,
             gradeLevelId: true,
             isActive: true,
+            gradeLevel: {
+              select: {
+                id: true,
+                code: true,
+                name: true,
+              },
+            },
           },
         },
       },
@@ -1165,15 +1303,8 @@ export class AnnualResultsService {
     if (!enrollment.isActive) {
       throw new BadRequestException('قيد الطالب غير نشط');
     }
-    const sectionId = this.requireAssignedSectionId(
-      enrollment.sectionId,
-      'لا يمكن احتساب نتيجة سنوية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
-    );
     const section = enrollment.section;
-    if (!section) {
-      throw new BadRequestException('بيانات الشعبة المرتبطة بالقيد غير متاحة');
-    }
-    if (!section.isActive) {
+    if (section && !section.isActive) {
       throw new BadRequestException('شعبة القيد غير نشطة');
     }
     if (enrollment.academicYearId !== academicYearId) {
@@ -1182,10 +1313,30 @@ export class AnnualResultsService {
       );
     }
 
-    const gradeLevelId = enrollment.gradeLevelId ?? section.gradeLevelId;
+    const gradeLevelId =
+      enrollment.gradeLevelId ??
+      enrollment.gradeLevel?.id ??
+      section?.gradeLevelId ??
+      section?.gradeLevel?.id;
+
+    if (!enrollment.sectionId) {
+      throw new BadRequestException(
+        this.buildUnassignedEnrollmentMessage(
+          'لا يمكن احتساب نتيجة سنوية لهذا القيد',
+          enrollment.academicYear,
+          enrollment.gradeLevel ?? section?.gradeLevel,
+        ),
+      );
+    }
+
+    if (!gradeLevelId) {
+      throw new BadRequestException(
+        'تعذر تحديد الصف المرتبط بالقيد أو شُعبته، لذلك لا يمكن متابعة العملية',
+      );
+    }
 
     return {
-      sectionId,
+      sectionId: enrollment.sectionId,
       gradeLevelId,
       academicYearId,
     };
@@ -1198,14 +1349,38 @@ export class AnnualResultsService {
         deletedAt: null,
       },
       select: {
+        academicYear: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+          },
+        },
         academicYearId: true,
         studentEnrollment: {
           select: {
             gradeLevelId: true,
+            gradeLevel: {
+              select: {
+                id: true,
+                code: true,
+                name: true,
+              },
+            },
             sectionId: true,
             section: {
               select: {
+                id: true,
+                code: true,
+                name: true,
                 gradeLevelId: true,
+                gradeLevel: {
+                  select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                  },
+                },
               },
             },
           },
@@ -1217,16 +1392,27 @@ export class AnnualResultsService {
       throw new NotFoundException('النتيجة السنوية غير موجودة');
     }
 
-    const sectionId = this.requireAssignedSectionId(
-      annualResult.studentEnrollment.sectionId,
-      'لا يمكن استخدام نتيجة سنوية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
-    );
+    const sectionId = annualResult.studentEnrollment.sectionId;
     const gradeLevelId =
       annualResult.studentEnrollment.gradeLevelId ??
+      annualResult.studentEnrollment.gradeLevel?.id ??
       annualResult.studentEnrollment.section?.gradeLevelId;
 
+    if (!sectionId) {
+      throw new BadRequestException(
+        this.buildUnassignedEnrollmentMessage(
+          'لا يمكن استخدام هذه النتيجة السنوية',
+          annualResult.academicYear,
+          annualResult.studentEnrollment.gradeLevel ??
+            annualResult.studentEnrollment.section?.gradeLevel,
+        ),
+      );
+    }
+
     if (!gradeLevelId) {
-      throw new BadRequestException('تعذر تحديد الصف المرتبط بالقيد أو شُعبته');
+      throw new BadRequestException(
+        'تعذر تحديد الصف المرتبط بالقيد أو شُعبته، لذلك لا يمكن متابعة العملية',
+      );
     }
 
     return {
@@ -1270,19 +1456,28 @@ export class AnnualResultsService {
     }
   }
 
-  private requireAssignedSectionId(sectionId: string | null, message: string) {
-    if (!sectionId) {
-      throw new BadRequestException(message);
-    }
-
-    return sectionId;
-  }
-
   private async ensureActorAuthorizedForSection(
     actorUserId: string,
-    sectionId: string,
+    sectionId: string | null,
     academicYearId: string,
+    gradeLevelId?: string | null,
   ) {
+    if (!sectionId) {
+      if (!gradeLevelId) {
+        throw new BadRequestException(
+          'لا يمكن تنفيذ هذه العملية لأن القيد غير مرتبط بشعبة أو صف صالحين حاليًا.',
+        );
+      }
+
+      await this.dataScopeService.ensureCanManageGradeYear({
+        actorUserId,
+        gradeLevelId,
+        academicYearId,
+        capability: 'MANAGE_GRADES',
+      });
+      return;
+    }
+
     const user = await this.prisma.user.findFirst({
       where: {
         id: actorUserId,
@@ -1407,8 +1602,8 @@ export class AnnualResultsService {
     academicYearId: string,
     gradeLevelId: string,
     subjectIds: string[],
-    sectionId: string,
     termCount: number,
+    sectionId: string | null | undefined,
   ): Promise<Map<string, { passingScore: number; maxAnnual: number }>> {
     if (subjectIds.length === 0) {
       return new Map();
@@ -1426,7 +1621,7 @@ export class AnnualResultsService {
           gradeLevelId,
           subjectId,
           assessmentType: AssessmentType.MONTHLY,
-          sectionId,
+          sectionId: sectionId ?? undefined,
         });
 
         const componentTotal = policy.components
@@ -1454,6 +1649,25 @@ export class AnnualResultsService {
     }
 
     return result;
+  }
+
+  private buildUnassignedEnrollmentMessage(
+    prefix: string,
+    academicYear:
+      | { code: string | null | undefined; name: string | null | undefined }
+      | undefined,
+    gradeLevel:
+      | { code: string | null | undefined; name: string | null | undefined }
+      | undefined,
+  ) {
+    const academicYearLabel = academicYear
+      ? `${academicYear.name ?? academicYear.code ?? 'غير معروفة'}${academicYear.code ? ` (${academicYear.code})` : ''}`
+      : 'غير معروفة';
+    const gradeLevelLabel = gradeLevel
+      ? `${gradeLevel.name ?? gradeLevel.code ?? 'غير معروف'}${gradeLevel.code ? ` (${gradeLevel.code})` : ''}`
+      : 'غير معروف';
+
+    return `${prefix}. القيد غير موزع على شعبة بعد. السنة: ${academicYearLabel}، الصف: ${gradeLevelLabel}`;
   }
 
 

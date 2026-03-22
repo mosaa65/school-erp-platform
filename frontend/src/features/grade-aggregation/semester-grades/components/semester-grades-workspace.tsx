@@ -409,7 +409,11 @@ export function SemesterGradesWorkspace() {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="space-y-1">
                   <p className="font-medium">{item.studentEnrollment.student.fullName} - {formatNameCodeLabel(item.subject.name, item.subject.code)}</p>
-                  <p className="text-xs text-muted-foreground">{formatNameCodeLabel(item.academicTerm.name, item.academicTerm.code)} | {formatStudentEnrollmentPlacementLabel({ academicYear: item.academicYear, section: item.studentEnrollment.section })}</p>
+                  <p className="text-xs text-muted-foreground">{formatNameCodeLabel(item.academicTerm.name, item.academicTerm.code)} | {formatStudentEnrollmentPlacementLabel({
+                    academicYear: item.academicYear,
+                    gradeLevel: item.studentEnrollment.gradeLevel,
+                    section: item.studentEnrollment.section,
+                  })}</p>
                   <p className="text-xs text-muted-foreground">أعمال الفصل: {item.semesterWorkTotal} | النهائي: {item.finalExamScore ?? 0} | الإجمالي: {item.semesterTotal}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">

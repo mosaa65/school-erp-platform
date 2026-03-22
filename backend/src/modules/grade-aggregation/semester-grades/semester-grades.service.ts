@@ -35,6 +35,7 @@ const semesterGradeInclude: Prisma.SemesterGradeInclude = {
       id: true,
       studentId: true,
       sectionId: true,
+      gradeLevelId: true,
       academicYearId: true,
       status: true,
       isActive: true,
@@ -60,6 +61,14 @@ const semesterGradeInclude: Prisma.SemesterGradeInclude = {
               sequence: true,
             },
           },
+        },
+      },
+      gradeLevel: {
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          sequence: true,
         },
       },
     },
@@ -1031,13 +1040,20 @@ export class SemesterGradesService {
     if (!enrollment.isActive) {
       throw new BadRequestException('قيد الطالب غير نشط');
     }
-    const sectionId = this.requireAssignedSectionId(
-      enrollment.sectionId,
-      'لا يمكن احتساب درجة فصلية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
-    );
     const section = enrollment.section;
+    const gradeLevelId = this.resolveEnrollmentGradeLevelId(
+      enrollment.gradeLevelId,
+      section?.gradeLevelId,
+    );
+
+    if (!gradeLevelId) {
+      throw new BadRequestException('تعذر تحديد الصف المرتبط بالقيد');
+    }
+
     if (!section) {
-      throw new BadRequestException('بيانات الشعبة المرتبطة بالقيد غير متاحة');
+      throw new BadRequestException(
+        'لا يمكن احتساب درجة فصلية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
+      );
     }
     if (!section.isActive) {
       throw new BadRequestException('شعبة القيد غير نشطة');
@@ -1055,7 +1071,6 @@ export class SemesterGradesService {
     }
 
     await this.ensureSubjectExistsAndActive(subjectId);
-    const gradeLevelId = enrollment.gradeLevelId ?? section.gradeLevelId;
     await this.ensureSubjectOfferedInTerm(
       term.academicYearId,
       academicTermId,
@@ -1064,7 +1079,7 @@ export class SemesterGradesService {
     );
 
     return {
-      sectionId,
+      sectionId: section.id,
       gradeLevelId,
       academicYearId: term.academicYearId,
     };
@@ -1160,9 +1175,10 @@ export class SemesterGradesService {
       semesterGrade.studentEnrollment.sectionId,
       'لا يمكن استخدام درجة فصلية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
     );
-    const gradeLevelId =
-      semesterGrade.studentEnrollment.gradeLevelId ??
-      semesterGrade.studentEnrollment.section?.gradeLevelId;
+    const gradeLevelId = this.resolveEnrollmentGradeLevelId(
+      semesterGrade.studentEnrollment.gradeLevelId,
+      semesterGrade.studentEnrollment.section?.gradeLevelId,
+    );
 
     if (!gradeLevelId) {
       throw new BadRequestException('تعذر تحديد الصف المرتبط بالقيد');
@@ -1216,6 +1232,13 @@ export class SemesterGradesService {
     }
 
     return sectionId;
+  }
+
+  private resolveEnrollmentGradeLevelId(
+    enrollmentGradeLevelId: string | null | undefined,
+    sectionGradeLevelId: string | null | undefined,
+  ) {
+    return enrollmentGradeLevelId ?? sectionGradeLevelId ?? null;
   }
 
   private async ensureSubjectOfferedInTerm(

@@ -47,6 +47,7 @@ const annualGradeInclude: Prisma.AnnualGradeInclude = {
       id: true,
       studentId: true,
       sectionId: true,
+      gradeLevelId: true,
       academicYearId: true,
       status: true,
       isActive: true,
@@ -73,6 +74,14 @@ const annualGradeInclude: Prisma.AnnualGradeInclude = {
               sequence: true,
             },
           },
+        },
+      },
+      gradeLevel: {
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          sequence: true,
         },
       },
     },
@@ -687,6 +696,7 @@ export class AnnualGradesService {
         isActive: true,
         section: {
           select: {
+            id: true,
             gradeLevelId: true,
             isActive: true,
           },
@@ -700,13 +710,20 @@ export class AnnualGradesService {
     if (!enrollment.isActive) {
       throw new BadRequestException('قيد الطالب غير نشط');
     }
-    const sectionId = this.requireAssignedSectionId(
-      enrollment.sectionId,
-      'لا يمكن احتساب درجة سنوية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
-    );
     const section = enrollment.section;
+    const gradeLevelId = this.resolveEnrollmentGradeLevelId(
+      enrollment.gradeLevelId,
+      section?.gradeLevelId,
+    );
+
+    if (!gradeLevelId) {
+      throw new BadRequestException('تعذر تحديد الصف المرتبط بالقيد');
+    }
+
     if (!section) {
-      throw new BadRequestException('بيانات الشعبة المرتبطة بالقيد غير متاحة');
+      throw new BadRequestException(
+        'لا يمكن احتساب درجة سنوية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
+      );
     }
     if (!section.isActive) {
       throw new BadRequestException('شعبة القيد غير نشطة');
@@ -718,7 +735,6 @@ export class AnnualGradesService {
     }
 
     await this.ensureSubjectExistsAndActive(subjectId);
-    const gradeLevelId = enrollment.gradeLevelId ?? section.gradeLevelId;
 
     const subjectMapped = await this.prisma.gradeLevelSubject.count({
       where: {
@@ -737,7 +753,7 @@ export class AnnualGradesService {
     }
 
     return {
-      sectionId,
+      sectionId: section.id,
       gradeLevelId,
       academicYearId,
     };
@@ -775,9 +791,10 @@ export class AnnualGradesService {
       annualGrade.studentEnrollment.sectionId,
       'لا يمكن استخدام درجة سنوية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
     );
-    const gradeLevelId =
-      annualGrade.studentEnrollment.gradeLevelId ??
-      annualGrade.studentEnrollment.section?.gradeLevelId;
+    const gradeLevelId = this.resolveEnrollmentGradeLevelId(
+      annualGrade.studentEnrollment.gradeLevelId,
+      annualGrade.studentEnrollment.section?.gradeLevelId,
+    );
 
     if (!gradeLevelId) {
       throw new BadRequestException('تعذر تحديد الصف المرتبط بالقيد');
@@ -830,6 +847,13 @@ export class AnnualGradesService {
     }
 
     return sectionId;
+  }
+
+  private resolveEnrollmentGradeLevelId(
+    enrollmentGradeLevelId: string | null | undefined,
+    sectionGradeLevelId: string | null | undefined,
+  ) {
+    return enrollmentGradeLevelId ?? sectionGradeLevelId ?? null;
   }
 
   private async ensureSubjectExistsAndActive(subjectId: string) {

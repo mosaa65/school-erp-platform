@@ -831,7 +831,11 @@ export function AnnualGradesWorkspace() {
                     {item.studentEnrollment.student.fullName} - {formatNameCodeLabel(item.subject.name, item.subject.code)}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {formatStudentEnrollmentPlacementLabel({ academicYear: item.academicYear, section: item.studentEnrollment.section })} |{" "}
+                    {formatStudentEnrollmentPlacementLabel({
+                      academicYear: item.academicYear,
+                      gradeLevel: item.studentEnrollment.gradeLevel,
+                      section: item.studentEnrollment.section,
+                    })} |{" "}
                     الحالة النهائية: {formatNameCodeLabel(item.finalStatus.name, item.finalStatus.code)}
                   </p>
                   <p className="text-xs text-muted-foreground">

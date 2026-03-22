@@ -1973,6 +1973,7 @@ export type MonthlyGradeListItem = {
   studentEnrollment: {
     id: string;
     sectionId: string;
+    gradeLevelId: string | null;
     academicYearId: string;
     status: StudentEnrollmentStatus;
     isActive: boolean;
@@ -1994,6 +1995,12 @@ export type MonthlyGradeListItem = {
         sequence: number;
       };
     };
+    gradeLevel: {
+      id: string;
+      code: string;
+      name: string;
+      sequence: number;
+    } | null;
     academicYear: {
       id: string;
       code: string;
@@ -2157,6 +2164,7 @@ export type SemesterGradeListItem = {
     id: string;
     studentId: string;
     sectionId: string;
+    gradeLevelId: string | null;
     academicYearId: string;
     status: StudentEnrollmentStatus;
     isActive: boolean;
@@ -2178,6 +2186,12 @@ export type SemesterGradeListItem = {
         sequence: number;
       };
     };
+    gradeLevel: {
+      id: string;
+      code: string;
+      name: string;
+      sequence: number;
+    } | null;
   };
   subject: {
     id: string;
@@ -2346,6 +2360,7 @@ export type AnnualGradeListItem = {
     id: string;
     studentId: string;
     sectionId: string;
+    gradeLevelId: string | null;
     academicYearId: string;
     status: StudentEnrollmentStatus;
     isActive: boolean;
@@ -2368,6 +2383,12 @@ export type AnnualGradeListItem = {
         sequence: number;
       };
     };
+    gradeLevel: {
+      id: string;
+      code: string;
+      name: string;
+      sequence: number;
+    } | null;
   };
   subject: {
     id: string;
@@ -2431,6 +2452,7 @@ export type AnnualResultListItem = {
     id: string;
     studentId: string;
     sectionId: string;
+    gradeLevelId: string | null;
     academicYearId: string;
     status: StudentEnrollmentStatus;
     isActive: boolean;
@@ -2453,6 +2475,12 @@ export type AnnualResultListItem = {
         sequence: number;
       };
     };
+    gradeLevel: {
+      id: string;
+      code: string;
+      name: string;
+      sequence: number;
+    } | null;
   };
   academicYear: {
     id: string;

@@ -597,7 +597,11 @@ export function AnnualResultsWorkspace() {
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="space-y-1">
                     <p className="font-medium">{item.studentEnrollment.student.fullName}</p>
-                    <p className="text-xs text-muted-foreground">{formatStudentEnrollmentPlacementLabel({ academicYear: item.academicYear, section: item.studentEnrollment.section })} | {formatNameCodeLabel(item.promotionDecision.name, item.promotionDecision.code)}</p>
+                    <p className="text-xs text-muted-foreground">{formatStudentEnrollmentPlacementLabel({
+                      academicYear: item.academicYear,
+                      gradeLevel: item.studentEnrollment.gradeLevel,
+                      section: item.studentEnrollment.section,
+                    })} | {formatNameCodeLabel(item.promotionDecision.name, item.promotionDecision.code)}</p>
                     <p className="text-xs text-muted-foreground">الإجمالي: {item.totalAllSubjects}/{item.maxPossibleTotal} | النسبة: {item.percentage}% | ترتيب الشعبة: {item.rankInClass ?? "-"} | ترتيب الصف: {item.rankInGrade ?? "-"}</p>
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5">
