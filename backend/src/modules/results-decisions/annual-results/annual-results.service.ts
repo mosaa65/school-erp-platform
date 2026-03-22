@@ -351,7 +351,10 @@ export class AnnualResultsService {
         })),
       ];
 
-      where.AND = [...(where.AND ?? []), { studentEnrollment: { OR: scopedEnrollments } }];
+      where.AND = [
+        ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+        { studentEnrollment: { OR: scopedEnrollments } },
+      ];
     }
 
     const [total, items] = await this.prisma.$transaction([
@@ -423,7 +426,7 @@ export class AnnualResultsService {
         ),
       );
 
-      const enrollment = annualResult.studentEnrollment;
+      const enrollment = annualResult.studentEnrollment as any;
       const enrollmentGradeLevelId =
         enrollment.gradeLevel?.id ??
         enrollment.gradeLevelId ??
