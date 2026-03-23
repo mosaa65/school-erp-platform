@@ -50,4 +50,14 @@ export class CreateExamAssessmentDto {
   @Type(() => Boolean)
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({
+    example: true,
+    description:
+      'إذا كان true (الافتراضي)، يتم إنشاء سجل StudentExamScore تلقائياً لكل طالب نشط في الشعبة',
+  })
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  autoPopulateStudents?: boolean;
 }

@@ -29,40 +29,12 @@ export class CreateGradingPolicyDto {
   @IsEnum(AssessmentType)
   assessmentType!: AssessmentType;
 
-  @ApiPropertyOptional({ example: 20 })
+  @ApiPropertyOptional({ example: 100 })
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
-  maxExamScore?: number;
-
-  @ApiPropertyOptional({ example: 5 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  maxHomeworkScore?: number;
-
-  @ApiPropertyOptional({ example: 5 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  maxAttendanceScore?: number;
-
-  @ApiPropertyOptional({ example: 5 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  maxActivityScore?: number;
-
-  @ApiPropertyOptional({ example: 0 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  maxContributionScore?: number;
+  totalMaxScore?: number;
 
   @ApiPropertyOptional({ example: 50 })
   @IsOptional()

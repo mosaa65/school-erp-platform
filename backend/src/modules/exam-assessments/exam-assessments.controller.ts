@@ -67,6 +67,16 @@ export class ExamAssessmentsController {
     return this.examAssessmentsService.findOne(id);
   }
 
+  @Post(':id/populate-students')
+  @RequirePermissions('exam-assessments.update')
+  @ApiOperation({
+    summary:
+      'إنشاء/إعادة تفعيل سجلات StudentExamScore لجميع الطلاب النشطين في الشعبة',
+  })
+  populateStudents(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.examAssessmentsService.populateStudents(id, user.userId);
+  }
+
   @Patch(':id')
   @RequirePermissions('exam-assessments.update')
   @ApiOperation({ summary: 'Update exam assessment' })
@@ -85,3 +95,4 @@ export class ExamAssessmentsController {
     return this.examAssessmentsService.remove(id, user.userId);
   }
 }
+

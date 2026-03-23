@@ -80,6 +80,16 @@ export class ExamAssessmentsService {
     await this.ensureSubjectExistsAndActive(payload.subjectId);
     this.ensureExamDateInsidePeriod(payload.examDate, examPeriod);
 
+    // جلب قيود الطلاب النشطين عند autoPopulateStudents (الافتراضي: true)
+    // academicYearId يأتي من examPeriod وليس من section
+    const enrollmentIds =
+      payload.autoPopulateStudents === false
+        ? []
+        : await this.findActiveEnrollmentIds(
+            payload.sectionId,
+            examPeriod.academicYearId,
+          );
+
     try {
       const examAssessment = await this.prisma.examAssessment.create({
         data: {
@@ -97,6 +107,22 @@ export class ExamAssessmentsService {
         include: examAssessmentInclude,
       });
 
+      // إنشاء سجلات درجات الطلاب تلقائياً بعد إنشاء الاختبار
+      if (enrollmentIds.length > 0) {
+        await this.prisma.studentExamScore.createMany({
+          data: enrollmentIds.map((studentEnrollmentId) => ({
+            examAssessmentId: examAssessment.id,
+            studentEnrollmentId,
+            score: 0,
+            isPresent: false,
+            isActive: true,
+            createdById: actorUserId,
+            updatedById: actorUserId,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
       await this.auditLogsService.record({
         actorUserId,
         action: 'EXAM_ASSESSMENT_CREATE',
@@ -107,6 +133,7 @@ export class ExamAssessmentsService {
           sectionId: examAssessment.sectionId,
           subjectId: examAssessment.subjectId,
           examDate: examAssessment.examDate,
+          autoPopulatedStudentsCount: enrollmentIds.length,
         },
       });
 
@@ -127,6 +154,133 @@ export class ExamAssessmentsService {
 
       this.throwKnownDatabaseErrors(error);
     }
+  }
+
+  /**
+   * إضافة سجلات درجات الطلاب لاختبار موجود (مشابه لـ homeworks.populateStudents)
+   * يُضيف الطلاب الجدد ويُعيد تفعيل سجلات الطلاب المحذوفة سابقاً
+   */
+  async populateStudents(id: string, actorUserId: string) {
+    const examAssessment = await this.ensureExamAssessmentExists(id);
+    await this.ensureExamPeriodNotLocked(examAssessment.examPeriodId);
+
+    // جلب academicYearId من examPeriod لأنه غير موجود مباشرة في ExamAssessment
+    const examPeriodContext = await this.prisma.examPeriod.findFirst({
+      where: { id: examAssessment.examPeriodId, deletedAt: null },
+      select: { academicYearId: true },
+    });
+    if (!examPeriodContext) {
+      throw new BadRequestException('فترة الاختبار غير صالحة أو محذوفة');
+    }
+
+    const activeEnrollmentIds = await this.findActiveEnrollmentIds(
+      examAssessment.sectionId,
+      examPeriodContext.academicYearId,
+    );
+
+    // جلب السجلات الموجودة (نشطة ومحذوفة ناعماً)
+    const existingRows = await this.prisma.studentExamScore.findMany({
+      where: { examAssessmentId: id },
+      select: {
+        id: true,
+        studentEnrollmentId: true,
+        deletedAt: true,
+      },
+    });
+
+    const activeEnrollmentSet = new Set(
+      existingRows
+        .filter((row) => row.deletedAt === null)
+        .map((row) => row.studentEnrollmentId),
+    );
+    const softDeletedByEnrollment = new Map(
+      existingRows
+        .filter((row) => row.deletedAt !== null)
+        .map((row) => [row.studentEnrollmentId, row.id] as const),
+    );
+
+    const enrollmentIdsToCreate: string[] = [];
+    const rowIdsToReactivate: string[] = [];
+
+    for (const studentEnrollmentId of activeEnrollmentIds) {
+      if (activeEnrollmentSet.has(studentEnrollmentId)) {
+        // السجل موجود ونشط، لا حاجة لأي إجراء
+        continue;
+      }
+      const softDeletedRowId = softDeletedByEnrollment.get(studentEnrollmentId);
+      if (softDeletedRowId) {
+        rowIdsToReactivate.push(softDeletedRowId);
+      } else {
+        enrollmentIdsToCreate.push(studentEnrollmentId);
+      }
+    }
+
+    const operations: Prisma.PrismaPromise<unknown>[] = [];
+
+    // إعادة تفعيل السجلات المحذوفة
+    for (const rowId of rowIdsToReactivate) {
+      operations.push(
+        this.prisma.studentExamScore.update({
+          where: { id: rowId },
+          data: {
+            score: 0,
+            isPresent: false,
+            isActive: true,
+            deletedAt: null,
+            updatedById: actorUserId,
+          },
+        }),
+      );
+    }
+
+    // إنشاء سجلات جديدة للطلاب الغير موجودين
+    if (enrollmentIdsToCreate.length > 0) {
+      operations.push(
+        this.prisma.studentExamScore.createMany({
+          data: enrollmentIdsToCreate.map((studentEnrollmentId) => ({
+            examAssessmentId: id,
+            studentEnrollmentId,
+            score: 0,
+            isPresent: false,
+            isActive: true,
+            createdById: actorUserId,
+            updatedById: actorUserId,
+          })),
+          skipDuplicates: true,
+        }),
+      );
+    }
+
+    // تحديث updatedById في الاختبار
+    operations.push(
+      this.prisma.examAssessment.update({
+        where: { id },
+        data: { updatedById: actorUserId },
+      }),
+    );
+
+    if (operations.length > 0) {
+      await this.prisma.$transaction(operations);
+    }
+
+    await this.auditLogsService.record({
+      actorUserId,
+      action: 'EXAM_ASSESSMENT_POPULATE_STUDENTS',
+      resource: 'exam-assessments',
+      resourceId: id,
+      details: {
+        insertedCount: enrollmentIdsToCreate.length,
+        restoredCount: rowIdsToReactivate.length,
+        activeEnrollmentCount: activeEnrollmentIds.length,
+      },
+    });
+
+    return {
+      examAssessmentId: id,
+      insertedCount: enrollmentIdsToCreate.length,
+      restoredCount: rowIdsToReactivate.length,
+      activeEnrollmentCount: activeEnrollmentIds.length,
+    };
   }
 
   async findAll(query: ListExamAssessmentsDto) {
@@ -334,6 +488,7 @@ export class ExamAssessmentsService {
         isLocked: true,
         startDate: true,
         endDate: true,
+        academicYearId: true,
       },
     });
 
@@ -396,6 +551,26 @@ export class ExamAssessmentsService {
     if (!section.isActive) {
       throw new BadRequestException('الشعبة غير نشطة');
     }
+
+    return section;
+  }
+
+  private async findActiveEnrollmentIds(
+    sectionId: string,
+    academicYearId: string,
+  ): Promise<string[]> {
+    const enrollments = await this.prisma.studentEnrollment.findMany({
+      where: {
+        sectionId,
+        academicYearId,
+        isActive: true,
+        deletedAt: null,
+      },
+      select: { id: true },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return enrollments.map((e) => e.id);
   }
 
   private async ensureSubjectExistsAndActive(subjectId: string) {

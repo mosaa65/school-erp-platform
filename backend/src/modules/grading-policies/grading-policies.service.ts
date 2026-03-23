@@ -83,11 +83,7 @@ export class GradingPoliciesService {
           gradeLevelId: payload.gradeLevelId,
           subjectId: payload.subjectId,
           assessmentType: payload.assessmentType,
-          maxExamScore: payload.maxExamScore,
-          maxHomeworkScore: payload.maxHomeworkScore,
-          maxAttendanceScore: payload.maxAttendanceScore,
-          maxActivityScore: payload.maxActivityScore,
-          maxContributionScore: payload.maxContributionScore,
+          totalMaxScore: payload.totalMaxScore,
           passingScore: payload.passingScore,
           isDefault: payload.isDefault ?? false,
           status: payload.status,
@@ -244,7 +240,6 @@ export class GradingPoliciesService {
     actorUserId: string,
   ) {
     const existing = await this.ensureGradingPolicyExists(id);
-    this.validateScoreRules(payload);
 
     const resolvedAcademicYearId =
       payload.academicYearId ?? existing.academicYearId;
@@ -257,6 +252,13 @@ export class GradingPoliciesService {
       resolvedSubjectId,
     );
 
+    const mergedPayloadForValidation = {
+      totalMaxScore: payload.totalMaxScore ?? existing.totalMaxScore,
+      passingScore: payload.passingScore ?? existing.passingScore,
+    };
+
+    this.validateScoreRules(mergedPayloadForValidation as any);
+
     try {
       const gradingPolicy = await this.prisma.gradingPolicy.update({
         where: {
@@ -267,11 +269,7 @@ export class GradingPoliciesService {
           gradeLevelId: payload.gradeLevelId,
           subjectId: payload.subjectId,
           assessmentType: payload.assessmentType,
-          maxExamScore: payload.maxExamScore,
-          maxHomeworkScore: payload.maxHomeworkScore,
-          maxAttendanceScore: payload.maxAttendanceScore,
-          maxActivityScore: payload.maxActivityScore,
-          maxContributionScore: payload.maxContributionScore,
+          totalMaxScore: payload.totalMaxScore,
           passingScore: payload.passingScore,
           isDefault: payload.isDefault,
           status: payload.status,
@@ -385,28 +383,12 @@ export class GradingPoliciesService {
   }
 
   private validateScoreRules(
-    payload: Pick<
-      CreateGradingPolicyDto,
-      | 'maxExamScore'
-      | 'maxHomeworkScore'
-      | 'maxAttendanceScore'
-      | 'maxActivityScore'
-      | 'maxContributionScore'
-      | 'passingScore'
-    >,
+    payload: Pick<CreateGradingPolicyDto, 'totalMaxScore' | 'passingScore'>,
   ) {
-    const scorePairs = [
-      ['maxExamScore', payload.maxExamScore],
-      ['maxHomeworkScore', payload.maxHomeworkScore],
-      ['maxAttendanceScore', payload.maxAttendanceScore],
-      ['maxActivityScore', payload.maxActivityScore],
-      ['maxContributionScore', payload.maxContributionScore],
-    ] as const;
-
-    for (const [fieldName, value] of scorePairs) {
-      if (value !== undefined && value < 0) {
+    if (payload.totalMaxScore !== undefined) {
+      if (payload.totalMaxScore <= 0 || payload.totalMaxScore > 100) {
         throw new BadRequestException(
-          `لا يمكن أن تكون قيمة ${fieldName} سالبة`,
+          'إجمالي الدرجات يجب أن يكون أكبر من 0 ولا يتجاوز 100',
         );
       }
     }
@@ -414,6 +396,14 @@ export class GradingPoliciesService {
     if (payload.passingScore !== undefined) {
       if (payload.passingScore < 0 || payload.passingScore > 100) {
         throw new BadRequestException('يجب أن تكون درجة النجاح بين 0 و100');
+      }
+      if (
+        payload.totalMaxScore !== undefined &&
+        payload.passingScore > payload.totalMaxScore
+      ) {
+        throw new BadRequestException(
+          'درجة النجاح لا يمكن أن تتجاوز إجمالي الدرجات',
+        );
       }
     }
   }
