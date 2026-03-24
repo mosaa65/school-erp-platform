@@ -1,17 +1,21 @@
 "use client";
 
 import * as React from "react";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   CalendarRange,
   LoaderCircle,
   PencilLine,
+  Plus,
   RefreshCw,
-  Search,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField } from "@/components/ui/select-field";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
   CardContent,
@@ -19,6 +23,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateAcademicTermMutation,
@@ -128,8 +135,19 @@ export function AcademicTermsWorkspace() {
   const [yearFilter, setYearFilter] = React.useState("all");
   const [typeFilter, setTypeFilter] = React.useState<AcademicTermType | "all">("all");
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">("all");
+  const [filterDraft, setFilterDraft] = React.useState<{
+    year: string;
+    type: AcademicTermType | "all";
+    active: "all" | "active" | "inactive";
+  }>({
+    year: "all",
+    type: "all",
+    active: "all",
+  });
 
   const [editingTermId, setEditingTermId] = React.useState<string | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<AcademicTermFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
 
@@ -175,16 +193,39 @@ export function AcademicTermsWorkspace() {
     }
   }, [editingTermId, isEditing, terms]);
 
+  useDebounceEffect(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 400, [searchInput]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setFilterDraft({
+      year: yearFilter,
+      type: typeFilter,
+      active: activeFilter,
+    });
+  }, [activeFilter, isFilterOpen, typeFilter, yearFilter]);
+
   const resetForm = () => {
     setEditingTermId(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
+    setIsFormOpen(false);
   };
 
-  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPage(1);
-    setSearch(searchInput.trim());
+  const handleStartCreate = () => {
+    if (!canCreate) {
+      return;
+    }
+
+    setFormError(null);
+    setEditingTermId(null);
+    setFormState(DEFAULT_FORM_STATE);
+    setIsFormOpen(true);
   };
 
   const validateForm = (): boolean => {
@@ -232,8 +273,8 @@ export function AcademicTermsWorkspace() {
     return true;
   };
 
-  const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
 
     if (!validateForm()) {
       return;
@@ -291,6 +332,7 @@ export function AcademicTermsWorkspace() {
     setFormError(null);
     setEditingTermId(term.id);
     setFormState(toFormState(term));
+    setIsFormOpen(true);
   };
 
   const handleDelete = (term: AcademicTermListItem) => {
@@ -313,208 +355,81 @@ export function AcademicTermsWorkspace() {
   };
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setYearFilter("all");
+    setTypeFilter("all");
+    setActiveFilter("all");
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    setPage(1);
+    setYearFilter(filterDraft.year);
+    setTypeFilter(filterDraft.type);
+    setActiveFilter(filterDraft.active);
+    setIsFilterOpen(false);
+  };
+
+  const activeFiltersCount = React.useMemo(() => {
+    return [
+      searchInput.trim() ? 1 : 0,
+      yearFilter !== "all" ? 1 : 0,
+      typeFilter !== "all" ? 1 : 0,
+      activeFilter !== "all" ? 1 : 0,
+    ].reduce((acc, value) => acc + value, 0);
+  }, [activeFilter, searchInput, typeFilter, yearFilter]);
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[400px_1fr]">
-      <Card className="h-fit border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CalendarRange className="h-5 w-5 text-primary" />
-            {isEditing ? "تعديل فصل أكاديمي" : "إنشاء فصل أكاديمي"}
-          </CardTitle>
-          <CardDescription>
-            {isEditing
-              ? "تعديل بيانات الفصل وربطه بالسنة الأكاديمية."
-              : "إضافة فصل أكاديمي جديد ضمن سنة أكاديمية محددة."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!canCreate && !isEditing ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك الصلاحية المطلوبة: <code>academic-terms.create</code>.
-            </div>
-          ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm}>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">السنة الأكاديمية *</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.academicYearId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      academicYearId: event.target.value,
-                    }))
-                  }
-                  disabled={!canReadAcademicYears}
-                >
-                  <option value="">اختر السنة الدراسية</option>
-                  {yearOptions.map((year) => (
-                    <option key={year.id} value={year.id}>
-                      {year.name} ({year.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">الكود *</label>
-                  <Input
-                    value={formState.code}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, code: event.target.value }))
-                    }
-                    placeholder="term-1"
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">الترتيب *</label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={20}
-                    value={formState.sequence}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, sequence: event.target.value }))
-                    }
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
-                <Input
-                  value={formState.name}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, name: event.target.value }))
-                  }
-                  placeholder="الفصل الأول"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">نوع الفصل *</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.termType}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      termType: event.target.value as AcademicTermType,
-                    }))
-                  }
-                >
-                  <option value="SEMESTER">فصلي</option>
-                  <option value="TRIMESTER">ثلاثي</option>
-                  <option value="QUARTER">ربعي</option>
-                  <option value="CUSTOM">مخصص</option>
-                </select>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">تاريخ البداية *</label>
-                  <Input
-                    type="date"
-                    value={formState.startDate}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, startDate: event.target.value }))
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">تاريخ النهاية *</label>
-                  <Input
-                    type="date"
-                    value={formState.endDate}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, endDate: event.target.value }))
-                    }
-                    required
-                  />
-                </div>
-              </div>
-
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشط</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                />
-              </label>
-
-              {formError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {formError}
-                </div>
-              ) : null}
-
-              {mutationError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {mutationError}
-                </div>
-              ) : null}
-
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  className="flex-1 gap-2"
-                  disabled={isFormSubmitting || (!canCreate && !isEditing)}
-                >
-                  {isFormSubmitting ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <CalendarRange className="h-4 w-4" />
-                  )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء فصل أكاديمي"}
-                </Button>
-                {isEditing ? (
-                  <Button type="button" variant="outline" onClick={resetForm}>
-                    إلغاء
-                  </Button>
-                ) : null}
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>قائمة الفصول الأكاديمية</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+    <>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-1 flex-wrap items-center gap-2 min-w-0 sm:min-w-[240px] max-w-lg">
+            <SearchField
+              containerClassName="flex-1"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="بحث بالاسم أو الكود..."
+            />
           </div>
-          <CardDescription>
-            إدارة الفصول الأكاديمية مع فلترة بالبحث والسنة والنوع والحالة.
-          </CardDescription>
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterTriggerButton
+              count={activeFiltersCount}
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+            />
+          </div>
+        </div>
 
-          <form onSubmit={handleSearchSubmit} className="grid gap-2 md:grid-cols-[1fr_180px_160px_140px_auto]">
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث بالاسم أو الكود..."
-                className="pr-8"
-              />
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="فلاتر الفصول الأكاديمية"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={clearFilters}
+                className="flex-1 gap-1.5"
+              >
+                <Trash2 className="h-4 w-4" />
+                مسح
+              </Button>
+              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
+                تطبيق
+              </Button>
             </div>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={yearFilter}
-              onChange={(event) => {
-                setPage(1);
-                setYearFilter(event.target.value);
-              }}
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectField
+              value={filterDraft.year}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, year: event.target.value }))
+              }
+              disabled={!canReadAcademicYears || academicYearOptionsQuery.isLoading}
             >
               <option value="all">كل السنوات</option>
               {yearOptions.map((year) => (
@@ -522,164 +437,347 @@ export function AcademicTermsWorkspace() {
                   {year.code}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={typeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setTypeFilter(event.target.value as AcademicTermType | "all");
-              }}
+            <SelectField
+              value={filterDraft.type}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  type: event.target.value as AcademicTermType | "all",
+                }))
+              }
             >
               <option value="all">كل الأنواع</option>
               <option value="SEMESTER">فصلي</option>
               <option value="TRIMESTER">ثلاثي</option>
               <option value="QUARTER">ربعي</option>
               <option value="CUSTOM">مخصص</option>
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={activeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setActiveFilter(event.target.value as "all" | "active" | "inactive");
-              }}
+            <SelectField
+              value={filterDraft.active}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  active: event.target.value as "all" | "active" | "inactive",
+                }))
+              }
             >
               <option value="all">كل الحالات</option>
               <option value="active">النشطة فقط</option>
               <option value="inactive">غير النشطة فقط</option>
-            </select>
+            </SelectField>
+          </div>
+        </FilterDrawer>
 
-            <Button type="submit" variant="outline" className="gap-2">
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
-          </form>
-        </CardHeader>
-
-        <CardContent className="space-y-3">
-          {termsQuery.isPending ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ تحميل البيانات...
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+          <CardHeader className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>قائمة الفصول الأكاديمية</CardTitle>
+              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
-          ) : null}
+            <CardDescription>
+              إدارة الفصول الأكاديمية مع فلترة بالبحث والسنة والنوع والحالة.
+            </CardDescription>
+          </CardHeader>
 
-          {termsQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {termsQuery.error instanceof Error
-                ? termsQuery.error.message
-                : "تعذّر تحميل البيانات."}
-            </div>
-          ) : null}
+          <CardContent className="space-y-3">
+            {termsQuery.isPending ? (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                جارٍ تحميل البيانات...
+              </div>
+            ) : null}
 
-          {!termsQuery.isPending && terms.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              لا توجد فصول مطابقة.
-            </div>
-          ) : null}
+            {termsQuery.error ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                {termsQuery.error instanceof Error
+                  ? termsQuery.error.message
+                  : "تعذّر تحميل البيانات."}
+              </div>
+            ) : null}
 
-          {terms.map((term) => (
-            <div
-              key={term.id}
-              className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <p className="font-medium">{term.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    <code>{term.code}</code> - الترتيب: {term.sequence}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(term.startDate).toLocaleDateString()} -{" "}
-                    {new Date(term.endDate).toLocaleDateString()}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    السنة: {term.academicYear.name} ({term.academicYear.code})
-                  </p>
+            {!termsQuery.isPending && terms.length === 0 ? (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                لا توجد فصول مطابقة.
+              </div>
+            ) : null}
+
+            {terms.map((term) => (
+              <div
+                key={term.id}
+                className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="space-y-1">
+                    <p className="font-medium">{term.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      <code>{term.code}</code> - الترتيب: {term.sequence}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(term.startDate).toLocaleDateString()} -{" "}
+                      {new Date(term.endDate).toLocaleDateString()}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      السنة: {term.academicYear.name} ({term.academicYear.code})
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge variant={termTypeBadgeVariant(term.termType)}>
+                      {termTypeLabel(term.termType)}
+                    </Badge>
+                    <Badge variant={term.isActive ? "default" : "outline"}>
+                      {term.isActive ? "نشط" : "غير نشط"}
+                    </Badge>
+                  </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant={termTypeBadgeVariant(term.termType)}>
-                    {termTypeLabel(term.termType)}
-                  </Badge>
-                  <Badge variant={term.isActive ? "default" : "outline"}>
-                    {term.isActive ? "نشط" : "غير نشط"}
-                  </Badge>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleStartEdit(term)}
+                    disabled={!canUpdate || updateMutation.isPending}
+                  >
+                    <PencilLine className="h-3.5 w-3.5" />
+                    تعديل
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleDelete(term)}
+                    disabled={!canDelete || deleteMutation.isPending}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    حذف
+                  </Button>
                 </div>
               </div>
+            ))}
 
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
+              <p className="text-xs text-muted-foreground">
+                الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
+              </p>
+              <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleStartEdit(term)}
-                  disabled={!canUpdate || updateMutation.isPending}
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={!pagination || pagination.page <= 1 || termsQuery.isFetching}
                 >
-                  <PencilLine className="h-3.5 w-3.5" />
-                  تعديل
+                  السابق
                 </Button>
                 <Button
-                  variant="destructive"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setPage((prev) =>
+                      pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
+                    )
+                  }
+                  disabled={
+                    !pagination ||
+                    pagination.page >= pagination.totalPages ||
+                    termsQuery.isFetching
+                  }
+                >
+                  التالي
+                </Button>
+                <Button
+                  variant="ghost"
                   size="sm"
                   className="gap-1.5"
-                  onClick={() => handleDelete(term)}
-                  disabled={!canDelete || deleteMutation.isPending}
+                  onClick={() => void termsQuery.refetch()}
+                  disabled={termsQuery.isFetching}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  حذف
+                  <RefreshCw
+                    className={`h-4 w-4 ${termsQuery.isFetching ? "animate-spin" : ""}`}
+                  />
+                  تحديث
                 </Button>
               </div>
             </div>
-          ))}
+          </CardContent>
+        </Card>
+      </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-            <p className="text-xs text-muted-foreground">
-              الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={!pagination || pagination.page <= 1 || termsQuery.isFetching}
-              >
-                السابق
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPage((prev) =>
-                    pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                  )
-                }
-                disabled={
-                  !pagination ||
-                  pagination.page >= pagination.totalPages ||
-                  termsQuery.isFetching
-                }
-              >
-                التالي
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => void termsQuery.refetch()}
-                disabled={termsQuery.isFetching}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${termsQuery.isFetching ? "animate-spin" : ""}`}
-                />
-                تحديث
-              </Button>
-            </div>
+      <Fab
+        icon={<Plus className="h-4 w-4" />}
+        label="إنشاء"
+        ariaLabel="إنشاء فصل أكاديمي"
+        onClick={handleStartCreate}
+        disabled={!canCreate}
+      />
+
+      <BottomSheetForm
+        open={isFormOpen}
+        title={isEditing ? "تعديل فصل أكاديمي" : "إنشاء فصل أكاديمي"}
+        onClose={resetForm}
+        onSubmit={() => handleSubmitForm()}
+        isSubmitting={isFormSubmitting}
+        submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء فصل أكاديمي"}
+        showFooter={false}
+      >
+        {!canCreate && !isEditing ? (
+          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+            لا تملك الصلاحية المطلوبة: <code>academic-terms.create</code>.
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        ) : (
+          <form className="space-y-3" onSubmit={handleSubmitForm}>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">السنة الأكاديمية *</label>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={formState.academicYearId}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    academicYearId: event.target.value,
+                  }))
+                }
+                disabled={!canReadAcademicYears}
+              >
+                <option value="">اختر السنة الدراسية</option>
+                {yearOptions.map((year) => (
+                  <option key={year.id} value={year.id}>
+                    {year.name} ({year.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">الكود *</label>
+                <Input
+                  value={formState.code}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, code: event.target.value }))
+                  }
+                  placeholder="term-1"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">الترتيب *</label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={formState.sequence}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, sequence: event.target.value }))
+                  }
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
+              <Input
+                value={formState.name}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, name: event.target.value }))
+                }
+                placeholder="الفصل الأول"
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">نوع الفصل *</label>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={formState.termType}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    termType: event.target.value as AcademicTermType,
+                  }))
+                }
+              >
+                <option value="SEMESTER">فصلي</option>
+                <option value="TRIMESTER">ثلاثي</option>
+                <option value="QUARTER">ربعي</option>
+                <option value="CUSTOM">مخصص</option>
+              </select>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">تاريخ البداية *</label>
+                <Input
+                  type="date"
+                  value={formState.startDate}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, startDate: event.target.value }))
+                  }
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">تاريخ النهاية *</label>
+                <Input
+                  type="date"
+                  value={formState.endDate}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, endDate: event.target.value }))
+                  }
+                  required
+                />
+              </div>
+            </div>
+
+            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+              <span>نشط</span>
+              <input
+                type="checkbox"
+                checked={formState.isActive}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                }
+              />
+            </label>
+
+            {formError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {formError}
+              </div>
+            ) : null}
+
+            {mutationError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {mutationError}
+              </div>
+            ) : null}
+
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                className="flex-1 gap-2"
+                disabled={isFormSubmitting || (!canCreate && !isEditing)}
+              >
+                {isFormSubmitting ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CalendarRange className="h-4 w-4" />
+                )}
+                {isEditing ? "حفظ التعديلات" : "إنشاء فصل أكاديمي"}
+              </Button>
+              {isEditing ? (
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  إلغاء
+                </Button>
+              ) : null}
+            </div>
+          </form>
+        )}
+      </BottomSheetForm>
+    </>
   );
 }
 

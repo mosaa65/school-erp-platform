@@ -1,0 +1,357 @@
+
+> frontend@0.1.0 predev
+> node scripts/swc-workaround.cjs
+
+
+> frontend@0.1.0 dev
+> next dev -p 3001
+
+  ▲ Next.js 14.2.28
+  - Local:        http://localhost:3001
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 5.5s
+ ○ Compiling /auth/login ...
+ ✓ Compiled / in 23.5s (846 modules)
+ GET /auth/login 200 in 24269ms
+ GET / 307 in 7549ms
+ GET /auth/login 200 in 83ms
+ ○ Compiling /app ...
+ ✓ Compiled /app in 552ms (465 modules)
+ ✓ Compiled in 1087ms (470 modules)
+ GET /favicon.ico 200 in 1904ms
+ ○ Compiling /app/users ...
+ ✓ Compiled /app/users in 2.1s (1041 modules)
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 1852ms (1274 modules)
+ ○ Compiling /app/reminders-ticker ...
+ ✓ Compiled /app/reminders-ticker in 1443ms (1287 modules)
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 869ms (1276 modules)
+ GET /_next/static/css/app/layout.css?v=1774126861683 404 in 1147ms
+ GET /auth/login 200 in 203ms
+ GET /_next/static/css/app/layout.css?v=1774127118549 404 in 77ms
+ GET /_next/static/chunks/main-app.js?v=1774127118549 404 in 92ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 89ms
+ GET /_next/static/chunks/app/auth/login/page.js 404 in 88ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 652ms (614 modules)
+ GET /favicon.ico 200 in 891ms
+ GET /auth/login 200 in 249ms
+ GET /_next/static/css/app/layout.css?v=1774127991215 404 in 51ms
+ GET /_next/static/chunks/main-app.js?v=1774127991215 404 in 76ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 73ms
+ GET /_next/static/chunks/app/auth/login/page.js 404 in 73ms
+ GET /favicon.ico 200 in 28ms
+ GET /auth/login 200 in 341ms
+ GET /_next/static/css/app/layout.css?v=1774129026622 404 in 173ms
+ GET /_next/static/chunks/main-app.js?v=1774129026622 404 in 236ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 234ms
+ GET /_next/static/chunks/app/auth/login/page.js 404 in 231ms
+ GET /favicon.ico 200 in 41ms
+ GET /auth/login 200 in 126ms
+ GET /_next/static/css/app/layout.css?v=1774130126731 404 in 80ms
+ GET /_next/static/chunks/main-app.js?v=1774130126731 404 in 153ms
+ GET /_next/static/chunks/webpack.js?v=1774130126731 404 in 159ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 153ms
+ GET /_next/static/chunks/app/auth/login/page.js 404 in 153ms
+ GET /_next/static/chunks/app/layout.js 404 in 142ms
+ GET /favicon.ico 200 in 28ms
+ GET /auth/login 200 in 82ms
+ GET /_next/static/css/app/layout.css?v=1774130131246 404 in 51ms
+ GET /_next/static/chunks/webpack.js?v=1774130131246 404 in 174ms
+ GET /_next/static/chunks/main-app.js?v=1774130131246 404 in 173ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 171ms
+ GET /_next/static/chunks/app/auth/login/page.js 404 in 170ms
+ GET /_next/static/chunks/app/layout.js 404 in 168ms
+ GET /favicon.ico 200 in 32ms
+ GET /auth/login 200 in 93ms
+ GET /_next/static/css/app/layout.css?v=1774130131789 404 in 110ms
+ GET /_next/static/chunks/webpack.js?v=1774130131789 404 in 139ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 136ms
+ GET /_next/static/chunks/main-app.js?v=1774130131789 404 in 138ms
+ GET /_next/static/chunks/app/auth/login/page.js 404 in 134ms
+ GET /_next/static/chunks/app/layout.js 404 in 132ms
+ GET /favicon.ico 200 in 27ms
+ ○ Compiling / ...
+ ✓ Compiled / in 1531ms (630 modules)
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 747ms (1338 modules)
+ GET / 500 in 2945ms
+ GET /_next/static/chunks/fallback/webpack.js 500 in 92ms
+ GET /_next/static/chunks/fallback/main.js 500 in 81ms
+ GET /_next/static/chunks/fallback/react-refresh.js 500 in 79ms
+ GET /_next/static/chunks/fallback/pages/_app.js 500 in 76ms
+ GET /_next/static/chunks/fallback/pages/_error.js 500 in 75ms
+ GET / 307 in 234ms
+ GET /auth/login 500 in 44ms
+ GET /_next/static/chunks/fallback/webpack.js 500 in 26ms
+ GET /_next/static/chunks/fallback/main.js 500 in 43ms
+ GET /_next/static/chunks/fallback/react-refresh.js 500 in 40ms
+ GET /_next/static/chunks/fallback/pages/_app.js 500 in 39ms
+ GET /_next/static/chunks/fallback/pages/_error.js 500 in 37ms
+ GET /auth/login 500 in 96ms
+ GET /_next/static/chunks/fallback/webpack.js 500 in 82ms
+ GET /_next/static/chunks/fallback/main.js 500 in 59ms
+ GET /_next/static/chunks/fallback/pages/_app.js 500 in 55ms
+ GET /_next/static/chunks/fallback/react-refresh.js 500 in 53ms
+ GET /_next/static/chunks/fallback/pages/_error.js 500 in 49ms
+ GET /favicon.ico 500 in 30ms
+ ✓ Compiled in 1085ms (1271 modules)
+ ✓ Compiled in 453ms (1271 modules)
+ ✓ Compiled in 779ms (1271 modules)
+ GET /auth/login 200 in 378ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 550ms (613 modules)
+ GET /favicon.ico 500 in 695ms
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 825ms (1305 modules)
+ GET /app 500 in 48ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 738ms (1276 modules)
+ GET /_next/static/chunks/fallback/main.js 404 in 950ms
+ GET /_next/static/chunks/fallback/pages/_app.js 404 in 944ms
+ GET /_next/static/chunks/fallback/react-refresh.js 404 in 948ms
+ GET /_next/static/chunks/fallback/webpack.js 404 in 981ms
+ GET /_next/static/chunks/fallback/pages/_error.js 404 in 946ms
+ ✓ Compiled /favicon.ico in 276ms (615 modules)
+ GET /favicon.ico 500 in 333ms
+ GET /app 200 in 586ms
+ GET /_next/static/css/app/layout.css?v=1774131095097 404 in 158ms
+ GET /_next/static/chunks/main-app.js?v=1774131095097 404 in 269ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 268ms
+ GET /_next/static/chunks/app/app/page.js 404 in 266ms
+ GET /_next/static/chunks/app/app/layout.js 404 in 268ms
+ GET /_next/static/chunks/app/layout.js 404 in 155ms
+ GET /favicon.ico 500 in 170ms
+ ○ Compiling / ...
+ ✓ Compiled / in 2.1s (630 modules)
+ GET / 307 in 2757ms
+ GET /app 200 in 229ms
+ GET /_next/static/css/app/layout.css?v=1774131111052 404 in 356ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 474ms
+ GET /_next/static/chunks/main-app.js?v=1774131111052 404 in 481ms
+ GET /_next/static/chunks/app/app/page.js 404 in 465ms
+ GET /_next/static/chunks/app/app/layout.js 404 in 472ms
+ GET /_next/static/chunks/app/layout.js 404 in 397ms
+ GET /favicon.ico 500 in 44ms
+ ✓ Compiled in 3.3s (1271 modules)
+ GET /app 200 in 721ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1453ms (1274 modules)
+ GET /_next/static/css/app/layout.css?v=1774131438716 404 in 1883ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 1876ms
+ GET /_next/static/chunks/app/app/layout.js 404 in 1864ms
+ GET /_next/static/chunks/app/layout.js 404 in 1844ms
+ GET /_next/static/chunks/main-app.js?v=1774131438716 404 in 1876ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 573ms (614 modules)
+ GET /favicon.ico 500 in 690ms
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 1367ms (1308 modules)
+ GET /app 404 in 1778ms
+ GET /app 404 in 307ms
+ GET /favicon.ico 404 in 339ms
+ GET /app 404 in 77ms
+ GET /app 404 in 92ms
+ GET /app 404 in 68ms
+ GET /app 404 in 124ms
+ GET /app 404 in 117ms
+ GET /app 404 in 101ms
+ GET /app 404 in 75ms
+ GET /app 404 in 70ms
+ GET /app 404 in 44ms
+ GET /app 404 in 47ms
+ GET /app 404 in 37ms
+ GET /app 404 in 62ms
+ GET /app 404 in 150ms
+ GET /app 404 in 170ms
+ GET /app 404 in 97ms
+ GET /app 404 in 220ms
+ GET /app 404 in 84ms
+ GET /app 404 in 81ms
+ GET /app 404 in 175ms
+ GET /app 404 in 150ms
+ GET /app 404 in 228ms
+ GET /app 404 in 98ms
+ GET /app 404 in 116ms
+ GET /app 404 in 127ms
+ GET /app 404 in 180ms
+ GET /app 404 in 62ms
+ GET /app 404 in 308ms
+ GET /app 404 in 92ms
+ GET /app 404 in 336ms
+ GET /app 404 in 54ms
+ GET /app 404 in 213ms
+ GET /app 404 in 149ms
+ GET /app 404 in 124ms
+ GET /app 404 in 130ms
+ GET /app 404 in 88ms
+ GET /app 404 in 94ms
+ GET /app 404 in 95ms
+ GET /app 500 in 672ms
+ GET /app 500 in 180ms
+ GET /app 500 in 183ms
+ GET /app 500 in 903ms
+ GET /app 500 in 308ms
+ GET /app 500 in 297ms
+ GET /app 500 in 245ms
+ GET /app 500 in 306ms
+ GET /app 500 in 283ms
+ GET /app 500 in 395ms
+ GET /app 500 in 259ms
+ GET /app 500 in 612ms
+ GET /app 500 in 177ms
+ GET /app 500 in 160ms
+ GET /app 500 in 162ms
+ GET /app 500 in 469ms
+ GET /app 500 in 528ms
+ GET /app 500 in 284ms
+ GET /app 500 in 214ms
+ GET /app 500 in 135ms
+ GET /app 500 in 139ms
+ GET /app 500 in 149ms
+ GET /app 500 in 153ms
+ GET /app 500 in 145ms
+ GET /app 500 in 380ms
+ GET /app 500 in 568ms
+ GET /app 500 in 262ms
+ GET /app 500 in 165ms
+ GET /app 500 in 114ms
+ GET /app 500 in 461ms
+ GET /app 500 in 530ms
+ GET /app 500 in 286ms
+ GET /app 500 in 279ms
+ GET /app 500 in 150ms
+ GET /app 500 in 182ms
+ GET /app 500 in 312ms
+ GET /app 500 in 280ms
+ GET /app 500 in 226ms
+ GET /app 500 in 286ms
+ GET /app 500 in 124ms
+ GET /app 500 in 181ms
+ GET /app 500 in 167ms
+ GET /app 404 in 170ms
+ GET /app 404 in 138ms
+ GET /app 404 in 58ms
+ GET /app 404 in 90ms
+ GET /app 404 in 67ms
+ GET /app 404 in 86ms
+ GET /app 500 in 204ms
+ GET /app 500 in 147ms
+ GET /app 500 in 208ms
+ GET /app 500 in 260ms
+ GET /app 500 in 116ms
+ GET /app 500 in 234ms
+ GET /app 500 in 108ms
+ GET /app 500 in 92ms
+ GET /app 500 in 145ms
+ GET /app 500 in 129ms
+ GET /app 500 in 106ms
+ GET /app 500 in 115ms
+ GET /app 500 in 212ms
+ GET /app 500 in 352ms
+ GET /app 500 in 362ms
+ GET /app 500 in 299ms
+ GET /app 500 in 187ms
+ GET /app 500 in 438ms
+ GET /app 500 in 260ms
+ GET /app 500 in 223ms
+ GET /app 500 in 172ms
+ GET /app 500 in 497ms
+ GET /app 500 in 132ms
+ GET /app 500 in 139ms
+ GET /app 500 in 185ms
+ GET /app 500 in 95ms
+ GET /app 500 in 180ms
+ GET /app 500 in 256ms
+ GET /app 500 in 176ms
+ GET /app 500 in 162ms
+ GET /app 500 in 454ms
+ GET /app 500 in 222ms
+ GET /app 500 in 171ms
+ GET /app 500 in 361ms
+ GET /app 500 in 165ms
+ GET /app 500 in 129ms
+ GET /app 500 in 254ms
+ GET /app 500 in 81ms
+ GET /app 500 in 201ms
+ GET /app 500 in 101ms
+ GET /app 500 in 108ms
+ GET /app 500 in 113ms
+ GET /app 500 in 136ms
+ GET /app 500 in 128ms
+ GET /app 500 in 88ms
+ GET /app 500 in 113ms
+ GET /app 500 in 89ms
+ GET /app 500 in 164ms
+ GET /app 500 in 70ms
+ GET /app 500 in 120ms
+ GET /app 500 in 103ms
+ GET /app 500 in 110ms
+ GET /app 500 in 60ms
+ GET /app 500 in 136ms
+ GET /app 500 in 103ms
+ GET /app 500 in 107ms
+ GET /app 500 in 124ms
+ GET /app 500 in 119ms
+ GET /app 500 in 170ms
+ GET /app 500 in 293ms
+ GET /app 500 in 89ms
+ GET /app 500 in 152ms
+ GET /app 500 in 150ms
+ GET /app 500 in 179ms
+ GET /app 500 in 92ms
+ GET /app 500 in 137ms
+ GET /app 500 in 189ms
+ GET /app 500 in 90ms
+ GET /app 500 in 289ms
+ GET /app 500 in 142ms
+ GET /app 500 in 119ms
+ GET /app 500 in 214ms
+ GET /app 500 in 147ms
+ GET /app 500 in 152ms
+ GET /app 500 in 148ms
+ GET /app 500 in 99ms
+ GET /app 500 in 89ms
+ GET /app 500 in 122ms
+ GET /app 500 in 93ms
+ GET /app 500 in 228ms
+ GET /app 500 in 146ms
+ GET /app 500 in 81ms
+ GET /app 500 in 123ms
+ GET /app 500 in 109ms
+ GET /app 500 in 120ms
+ GET /app 404 in 78ms
+ GET /app 404 in 90ms
+ GET /app 404 in 672ms
+ GET /app 404 in 208ms
+ GET /app 404 in 229ms
+ GET /app 404 in 452ms
+ GET /app 500 in 385ms
+ GET /app 500 in 265ms
+ GET /app 500 in 75ms
+ GET /_next/static/chunks/webpack.js 500 in 277ms
+ GET /_next/static/chunks/main.js 500 in 244ms
+ GET /_next/static/chunks/react-refresh.js 500 in 240ms
+ GET /_next/static/chunks/pages/_app.js 500 in 238ms
+ GET /_next/static/development/_buildManifest.js 500 in 246ms
+ GET /_next/static/chunks/pages/_error.js 500 in 187ms
+ GET /_next/static/development/_ssgManifest.js 500 in 56ms
+ GET /app 500 in 101ms
+ GET /_next/static/chunks/webpack.js 500 in 156ms
+ GET /_next/static/chunks/main.js 500 in 156ms
+ GET /_next/static/chunks/react-refresh.js 500 in 151ms
+ GET /_next/static/chunks/pages/_app.js 500 in 149ms
+ GET /_next/static/development/_buildManifest.js 500 in 142ms
+ GET /_next/static/chunks/pages/_error.js 500 in 126ms
+ GET /_next/static/development/_ssgManifest.js 500 in 68ms
+ GET /app 500 in 116ms
+ GET /_next/static/chunks/webpack.js 500 in 204ms
+ GET /_next/static/chunks/main.js 500 in 181ms
+ GET /_next/static/chunks/react-refresh.js 500 in 181ms
+ GET /_next/static/chunks/pages/_app.js 500 in 179ms
+ GET /_next/static/development/_buildManifest.js 500 in 177ms
+ GET /_next/static/chunks/pages/_error.js 500 in 185ms
+ GET /_next/static/development/_ssgManifest.js 500 in 69ms

@@ -32,6 +32,36 @@ export function useStudentEnrollmentOptionsQuery() {
         throw error;
       }
     },
+    select: (data) =>
+      [...data].sort((left, right) => {
+        const academicYearCompare = left.academicYear.code.localeCompare(right.academicYear.code, "ar", {
+          numeric: true,
+          sensitivity: "base",
+        });
+        if (academicYearCompare !== 0) {
+          return academicYearCompare;
+        }
+
+        const leftGradeSequence = left.gradeLevel?.sequence ?? Number.MAX_SAFE_INTEGER;
+        const rightGradeSequence = right.gradeLevel?.sequence ?? Number.MAX_SAFE_INTEGER;
+        if (leftGradeSequence !== rightGradeSequence) {
+          return leftGradeSequence - rightGradeSequence;
+        }
+
+        const leftSectionCode = left.section?.code ?? "";
+        const rightSectionCode = right.section?.code ?? "";
+        const sectionCompare = leftSectionCode.localeCompare(rightSectionCode, "ar", {
+          numeric: true,
+          sensitivity: "base",
+        });
+        if (sectionCompare !== 0) {
+          return sectionCompare;
+        }
+
+        return left.student.fullName.localeCompare(right.student.fullName, "ar", {
+          sensitivity: "base",
+        });
+      }),
   });
 }
 

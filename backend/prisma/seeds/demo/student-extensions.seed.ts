@@ -116,14 +116,19 @@ export async function seedDemoStudentExtensions(
     ],
   });
 
-  const rows: EnrollmentContext[] = enrollments.map((item) => ({
-    sectionId: item.sectionId,
-    sectionCode: item.section.code,
-    studentId: item.student.id,
-    studentGender: item.student.gender,
-    studentFullName: item.student.fullName,
-    admissionNo: item.student.admissionNo,
-  }));
+  const rows: EnrollmentContext[] = enrollments
+    .filter(
+      (item): item is typeof item & { sectionId: string; section: { code: string } } =>
+        Boolean(item.sectionId && item.section),
+    )
+    .map((item) => ({
+      sectionId: item.sectionId,
+      sectionCode: item.section.code,
+      studentId: item.student.id,
+      studentGender: item.student.gender,
+      studentFullName: item.student.fullName,
+      admissionNo: item.student.admissionNo,
+    }));
 
   const sectionBuckets = new Map<string, EnrollmentContext[]>();
   for (const row of rows) {

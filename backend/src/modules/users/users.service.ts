@@ -127,10 +127,11 @@ export class UsersService {
   async findAll(query: ListUsersDto) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
+    const deletedOnly = query.deletedOnly ?? false;
 
     const where: Prisma.UserWhereInput = {
-      deletedAt: null,
-      isActive: query.isActive,
+      deletedAt: deletedOnly ? { not: null } : null,
+      isActive: deletedOnly ? undefined : query.isActive,
       OR: query.search
         ? [
             { email: { contains: query.search } },

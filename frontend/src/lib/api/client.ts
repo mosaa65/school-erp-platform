@@ -1,4 +1,4 @@
-import { appConfig } from "@/lib/env";
+﻿﻿import { appConfig } from "@/lib/env";
 import type { AuthSession } from "@/features/auth/types/auth-session";
 import { getAccessTokenFromStorage } from "@/lib/auth/session";
 
@@ -621,9 +621,11 @@ export type SubjectListItem = {
 export type SectionListItem = {
   id: string;
   gradeLevelId: string;
+  buildingLookupId: number | null;
   code: string;
   name: string;
   capacity: number | null;
+  roomLabel: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -635,6 +637,97 @@ export type SectionListItem = {
     sequence: number;
     isActive: boolean;
   };
+  building: {
+    id: number;
+    code: string;
+    nameAr: string;
+    isActive: boolean;
+  } | null;
+};
+
+export type ClassroomListItem = {
+  id: string;
+  code: string;
+  name: string;
+  capacity: number | null;
+  notes: string | null;
+  buildingLookupId: number | null;
+  activeAssignmentsCount: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  building: {
+    id: number;
+    code: string;
+    nameAr: string;
+    isActive: boolean;
+  } | null;
+  createdBy: {
+    id: string;
+    email: string;
+  } | null;
+  updatedBy: {
+    id: string;
+    email: string;
+  } | null;
+};
+
+export type SectionClassroomAssignmentListItem = {
+  id: string;
+  sectionId: string;
+  classroomId: string;
+  academicYearId: string;
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
+  notes: string | null;
+  isPrimary: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  section: {
+    id: string;
+    code: string;
+    name: string;
+    capacity: number | null;
+    isActive: boolean;
+    gradeLevel: {
+      id: string;
+      code: string;
+      name: string;
+      stage: GradeStage;
+      sequence: number;
+    };
+  };
+  classroom: {
+    id: string;
+    code: string;
+    name: string;
+    capacity: number | null;
+    notes: string | null;
+    isActive: boolean;
+    building?: {
+      id: number;
+      code: string;
+      nameAr: string;
+      nameEn: string | null;
+      isActive: boolean;
+    } | null;
+  };
+  academicYear: {
+    id: string;
+    code: string;
+    name: string;
+    status: AcademicYearStatus;
+    isCurrent: boolean;
+  };
+  createdBy: {
+    id: string;
+    email: string;
+  } | null;
+  updatedBy: {
+    id: string;
+    email: string;
+  } | null;
 };
 
 export type GradeLevelSubjectListItem = {
@@ -795,6 +888,11 @@ export type StudentEnrollmentStatus =
   | "GRADUATED"
   | "SUSPENDED";
 
+export type StudentEnrollmentDistributionStatus =
+  | "PENDING_DISTRIBUTION"
+  | "ASSIGNED"
+  | "TRANSFERRED";
+
 export type StudentListItem = {
   id: string;
   admissionNo: string | null;
@@ -867,6 +965,9 @@ export type StudentListItem = {
     id: string;
     status: StudentEnrollmentStatus;
     enrollmentDate: string;
+    gradeLevelId?: string | null;
+    yearlyEnrollmentNo?: string | null;
+    distributionStatus?: StudentEnrollmentDistributionStatus | null;
     academicYear: {
       id: string;
       code: string;
@@ -993,7 +1094,10 @@ export type StudentEnrollmentListItem = {
   id: string;
   studentId: string;
   academicYearId: string;
-  sectionId: string;
+  sectionId: string | null;
+  gradeLevelId?: string | null;
+  yearlyEnrollmentNo?: string | null;
+  distributionStatus?: StudentEnrollmentDistributionStatus | null;
   enrollmentDate: string | null;
   status: StudentEnrollmentStatus;
   notes: string | null;
@@ -1021,6 +1125,13 @@ export type StudentEnrollmentListItem = {
     status: AcademicYearStatus;
     isCurrent: boolean;
   };
+  gradeLevel?: {
+    id: string;
+    code: string;
+    name: string;
+    stage: GradeStage;
+    sequence: number;
+  } | null;
   section: {
     id: string;
     code: string;
@@ -1307,6 +1418,79 @@ export type ParentNotificationListItem = {
   } | null;
 };
 
+export type HealthVisitListItem = {
+  id: string;
+  visitDate: string;
+  student: {
+    id: string;
+    admissionNo: string | null;
+    fullName: string;
+  };
+  nurse: {
+    id: string;
+    fullName: string;
+    jobTitle: string | null;
+  } | null;
+  healthStatus: {
+    id: number;
+    code: string;
+    nameAr: string;
+    requiresDetails: boolean;
+  } | null;
+  notes: string | null;
+  followUpRequired: boolean;
+  followUpNotes: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: {
+    id: string;
+    email: string;
+  } | null;
+  updatedBy: {
+    id: string;
+    email: string;
+  } | null;
+};
+
+export type HealthVisitStatusBreakdownItem = {
+  id: number;
+  code: string;
+  nameAr: string;
+  requiresDetails: boolean;
+  count: number;
+};
+
+export type HealthVisitsSummary = {
+  totalVisits: number;
+  uniqueStudents: number;
+  statusBreakdown: HealthVisitStatusBreakdownItem[];
+  latestVisit: HealthVisitListItem | null;
+  lastUpdatedAt: string;
+};
+
+export type CreateHealthVisitPayload = {
+  studentId: string;
+  nurseId?: string;
+  healthStatusId: number;
+  visitDate: string;
+  notes?: string;
+  followUpRequired?: boolean;
+  followUpNotes?: string;
+  isActive?: boolean;
+};
+
+export type UpdateHealthVisitPayload = {
+  studentId?: string;
+  nurseId?: string;
+  healthStatusId?: number;
+  visitDate?: string;
+  notes?: string;
+  followUpRequired?: boolean;
+  followUpNotes?: string;
+  isActive?: boolean;
+};
+
 export type HomeworkTypeListItem = {
   id: string;
   code: string;
@@ -1451,6 +1635,26 @@ export type StudentHomeworkListItem = {
       admissionNo: string | null;
       fullName: string;
       isActive: boolean;
+    };
+    academicYear: {
+      id: string;
+      code: string;
+      name: string;
+      status: AcademicYearStatus;
+      isCurrent: boolean;
+    };
+    section: {
+      id: string;
+      code: string;
+      name: string;
+      isActive: boolean;
+      gradeLevel: {
+        id: string;
+        code: string;
+        name: string;
+        stage: GradeStage;
+        sequence: number;
+      };
     };
   };
 };
@@ -1610,6 +1814,25 @@ export type StudentExamScoreListItem = {
       fullName: string;
       isActive: boolean;
     };
+    academicYear: {
+      id: string;
+      code: string;
+      name: string;
+      status: AcademicYearStatus;
+      isCurrent: boolean;
+    };
+    section: {
+      id: string;
+      code: string;
+      name: string;
+      isActive: boolean;
+      gradeLevel: {
+        id: string;
+        code: string;
+        name: string;
+        sequence: number;
+      };
+    };
   };
 };
 
@@ -1619,13 +1842,12 @@ export type GradingPolicyListItem = {
   gradeLevelId: string;
   subjectId: string;
   assessmentType: AssessmentType;
-  maxExamScore: number;
-  maxHomeworkScore: number;
-  maxAttendanceScore: number;
-  maxActivityScore: number;
-  maxContributionScore: number;
-  passingScore: number;
+  sectionId: string | null;
+  academicTermId: string | null;
+  teacherEmployeeId: string | null;
+  version: number;
   totalMaxScore: number;
+  passingScore: number;
   isDefault: boolean;
   status: GradingWorkflowStatus;
   notes: string | null;
@@ -1684,6 +1906,10 @@ export type GradingPolicyComponentListItem = {
     gradeLevelId: string;
     subjectId: string;
     assessmentType: AssessmentType;
+    sectionId: string | null;
+    academicTermId: string | null;
+    teacherEmployeeId: string | null;
+    version: number;
     status: GradingWorkflowStatus;
     isActive: boolean;
   };
@@ -1747,6 +1973,7 @@ export type MonthlyGradeListItem = {
   studentEnrollment: {
     id: string;
     sectionId: string;
+    gradeLevelId: string | null;
     academicYearId: string;
     status: StudentEnrollmentStatus;
     isActive: boolean;
@@ -1768,6 +1995,12 @@ export type MonthlyGradeListItem = {
         sequence: number;
       };
     };
+    gradeLevel: {
+      id: string;
+      code: string;
+      name: string;
+      sequence: number;
+    } | null;
     academicYear: {
       id: string;
       code: string;
@@ -1811,11 +2044,9 @@ export type MonthlyGradeListItem = {
     id: string;
     assessmentType: AssessmentType;
     status: GradingWorkflowStatus;
-    maxExamScore: number;
-    maxHomeworkScore: number;
-    maxAttendanceScore: number;
-    maxActivityScore: number;
-    maxContributionScore: number;
+    totalMaxScore: number;
+    passingScore: number;
+    components: GradingPolicyComponentListItem[];
     isActive: boolean;
   };
   createdBy: {
@@ -1933,6 +2164,7 @@ export type SemesterGradeListItem = {
     id: string;
     studentId: string;
     sectionId: string;
+    gradeLevelId: string | null;
     academicYearId: string;
     status: StudentEnrollmentStatus;
     isActive: boolean;
@@ -1954,6 +2186,12 @@ export type SemesterGradeListItem = {
         sequence: number;
       };
     };
+    gradeLevel: {
+      id: string;
+      code: string;
+      name: string;
+      sequence: number;
+    } | null;
   };
   subject: {
     id: string;
@@ -2122,6 +2360,7 @@ export type AnnualGradeListItem = {
     id: string;
     studentId: string;
     sectionId: string;
+    gradeLevelId: string | null;
     academicYearId: string;
     status: StudentEnrollmentStatus;
     isActive: boolean;
@@ -2144,6 +2383,12 @@ export type AnnualGradeListItem = {
         sequence: number;
       };
     };
+    gradeLevel: {
+      id: string;
+      code: string;
+      name: string;
+      sequence: number;
+    } | null;
   };
   subject: {
     id: string;
@@ -2207,6 +2452,7 @@ export type AnnualResultListItem = {
     id: string;
     studentId: string;
     sectionId: string;
+    gradeLevelId: string | null;
     academicYearId: string;
     status: StudentEnrollmentStatus;
     isActive: boolean;
@@ -2229,6 +2475,12 @@ export type AnnualResultListItem = {
         sequence: number;
       };
     };
+    gradeLevel: {
+      id: string;
+      code: string;
+      name: string;
+      sequence: number;
+    } | null;
   };
   academicYear: {
     id: string;
@@ -3168,6 +3420,17 @@ export type CreateSectionPayload = {
   code: string;
   name: string;
   capacity?: number;
+  buildingLookupId?: number;
+  roomLabel?: string;
+  isActive?: boolean;
+};
+
+export type CreateClassroomPayload = {
+  code: string;
+  name: string;
+  capacity?: number;
+  notes?: string;
+  buildingLookupId?: number;
   isActive?: boolean;
 };
 
@@ -3176,6 +3439,39 @@ export type UpdateSectionPayload = {
   code?: string;
   name?: string;
   capacity?: number;
+  buildingLookupId?: number | null;
+  roomLabel?: string;
+  isActive?: boolean;
+};
+
+export type UpdateClassroomPayload = {
+  code?: string;
+  name?: string;
+  capacity?: number;
+  notes?: string;
+  buildingLookupId?: number | null;
+  isActive?: boolean;
+};
+
+export type CreateSectionClassroomAssignmentPayload = {
+  sectionId: string;
+  classroomId: string;
+  academicYearId: string;
+  effectiveFrom?: string;
+  effectiveTo?: string;
+  notes?: string;
+  isPrimary?: boolean;
+  isActive?: boolean;
+};
+
+export type UpdateSectionClassroomAssignmentPayload = {
+  sectionId?: string;
+  classroomId?: string;
+  academicYearId?: string;
+  effectiveFrom?: string | null;
+  effectiveTo?: string | null;
+  notes?: string | null;
+  isPrimary?: boolean;
   isActive?: boolean;
 };
 
@@ -3238,7 +3534,6 @@ export type UpdateTimetableEntryPayload = {
 };
 
 export type CreateStudentPayload = {
-  admissionNo?: string;
   fullName: string;
   gender?: StudentGender;
   genderId?: number;
@@ -3254,7 +3549,6 @@ export type CreateStudentPayload = {
 };
 
 export type UpdateStudentPayload = {
-  admissionNo?: string;
   fullName?: string;
   gender?: StudentGender;
   genderId?: number;
@@ -3328,7 +3622,10 @@ export type UpdateStudentGuardianPayload = {
 export type CreateStudentEnrollmentPayload = {
   studentId: string;
   academicYearId: string;
-  sectionId: string;
+  sectionId?: string;
+  gradeLevelId?: string;
+  yearlyEnrollmentNo?: string;
+  distributionStatus?: StudentEnrollmentDistributionStatus;
   enrollmentDate?: string;
   status?: StudentEnrollmentStatus;
   notes?: string;
@@ -3339,10 +3636,65 @@ export type UpdateStudentEnrollmentPayload = {
   studentId?: string;
   academicYearId?: string;
   sectionId?: string;
+  gradeLevelId?: string;
+  yearlyEnrollmentNo?: string;
+  distributionStatus?: StudentEnrollmentDistributionStatus;
   enrollmentDate?: string;
   status?: StudentEnrollmentStatus;
   notes?: string;
   isActive?: boolean;
+};
+
+export type StudentEnrollmentDistributionBoard = {
+  summary: {
+    pendingCount: number;
+    assignedCount: number;
+    totalCount: number;
+  };
+  sections: Array<{
+    id: string;
+    code: string;
+    name: string;
+    capacity: number | null;
+    assignedCount: number;
+    availableSeats: number | null;
+  }>;
+  pendingEnrollments: StudentEnrollmentListItem[];
+  assignedEnrollments: StudentEnrollmentListItem[];
+};
+
+export type AutoDistributeStudentEnrollmentsPayload = {
+  academicYearId: string;
+  gradeLevelId: string;
+  sectionIds?: string[];
+  limit?: number;
+};
+
+export type ManualDistributeStudentEnrollmentsPayload = {
+  academicYearId: string;
+  gradeLevelId: string;
+  assignments: Array<{
+    enrollmentId: string;
+    sectionId: string;
+  }>;
+};
+
+export type TransferStudentEnrollmentsPayload = {
+  academicYearId: string;
+  gradeLevelId: string;
+  sourceSectionId: string;
+  targetSectionId: string;
+  enrollments?: Array<{
+    enrollmentId: string;
+  }>;
+};
+
+export type ReturnStudentEnrollmentsToPendingPayload = {
+  academicYearId: string;
+  gradeLevelId: string;
+  enrollments: Array<{
+    enrollmentId: string;
+  }>;
 };
 
 export type CreateStudentAttendancePayload = {
@@ -3610,15 +3962,11 @@ export type CreateMonthlyGradePayload = {
   studentEnrollmentId: string;
   subjectId: string;
   academicMonthId: string;
-  activityScore?: number;
-  contributionScore?: number;
   notes?: string;
   isActive?: boolean;
 };
 
 export type UpdateMonthlyGradePayload = {
-  activityScore?: number;
-  contributionScore?: number;
   status?: GradingWorkflowStatus;
   notes?: string;
   isActive?: boolean;
@@ -3628,7 +3976,6 @@ export type CalculateMonthlyGradesPayload = {
   academicMonthId: string;
   sectionId: string;
   subjectId: string;
-  overwriteManual?: boolean;
 };
 
 export type CalculateMonthlyGradesResponse = {
@@ -3714,11 +4061,10 @@ export type CreateGradingPolicyPayload = {
   gradeLevelId: string;
   subjectId: string;
   assessmentType: AssessmentType;
-  maxExamScore?: number;
-  maxHomeworkScore?: number;
-  maxAttendanceScore?: number;
-  maxActivityScore?: number;
-  maxContributionScore?: number;
+  totalMaxScore?: number;
+  sectionId?: string;
+  academicTermId?: string;
+  teacherEmployeeId?: string;
   passingScore?: number;
   isDefault?: boolean;
   status?: GradingWorkflowStatus;
@@ -3731,11 +4077,10 @@ export type UpdateGradingPolicyPayload = {
   gradeLevelId?: string;
   subjectId?: string;
   assessmentType?: AssessmentType;
-  maxExamScore?: number;
-  maxHomeworkScore?: number;
-  maxAttendanceScore?: number;
-  maxActivityScore?: number;
-  maxContributionScore?: number;
+  totalMaxScore?: number;
+  sectionId?: string;
+  academicTermId?: string;
+  teacherEmployeeId?: string;
   passingScore?: number;
   isDefault?: boolean;
   status?: GradingWorkflowStatus;
@@ -4246,6 +4591,7 @@ export const apiClient = {
     limit?: number;
     search?: string;
     isActive?: boolean;
+    deletedOnly?: boolean;
   }) =>
     request<PaginatedResponse<UserListItem>>(
       `/users${buildQueryString({
@@ -4253,6 +4599,7 @@ export const apiClient = {
         limit: query?.limit,
         search: query?.search,
         isActive: query?.isActive,
+        deletedOnly: query?.deletedOnly,
       })}`,
       "GET",
       {
@@ -4423,6 +4770,7 @@ export const apiClient = {
     search?: string;
     tickerType?: ReminderTickerType;
     isActive?: boolean;
+    deletedOnly?: boolean;
   }) =>
     request<PaginatedResponse<ReminderTickerListItem>>(
       `/reminders-ticker${buildQueryString({
@@ -4431,6 +4779,7 @@ export const apiClient = {
         search: query?.search,
         tickerType: query?.tickerType,
         isActive: query?.isActive,
+        deletedOnly: query?.deletedOnly,
       })}`,
       "GET",
       {
@@ -4589,6 +4938,7 @@ export const apiClient = {
     limit?: number;
     search?: string;
     isActive?: boolean;
+    deletedOnly?: boolean;
   }) =>
     request<PaginatedResponse<LookupBloodTypeListItem>>(
       `/lookup/blood-types${buildQueryString({
@@ -4596,6 +4946,7 @@ export const apiClient = {
         limit: query?.limit,
         search: query?.search,
         isActive: query?.isActive,
+        deletedOnly: query?.deletedOnly,
       })}`,
       "GET",
       {
@@ -4632,6 +4983,7 @@ export const apiClient = {
     limit?: number;
     search?: string;
     isActive?: boolean;
+    deletedOnly?: boolean;
   }) =>
     request<PaginatedResponse<LookupIdTypeListItem>>(
       `/lookup/id-types${buildQueryString({
@@ -4639,6 +4991,7 @@ export const apiClient = {
         limit: query?.limit,
         search: query?.search,
         isActive: query?.isActive,
+        deletedOnly: query?.deletedOnly,
       })}`,
       "GET",
       {
@@ -4675,6 +5028,7 @@ export const apiClient = {
     limit?: number;
     search?: string;
     isActive?: boolean;
+    deletedOnly?: boolean;
   }) =>
     request<PaginatedResponse<LookupOwnershipTypeListItem>>(
       `/lookup/ownership-types${buildQueryString({
@@ -4682,6 +5036,7 @@ export const apiClient = {
         limit: query?.limit,
         search: query?.search,
         isActive: query?.isActive,
+        deletedOnly: query?.deletedOnly,
       })}`,
       "GET",
       {
@@ -4718,6 +5073,7 @@ export const apiClient = {
     limit?: number;
     search?: string;
     isActive?: boolean;
+    deletedOnly?: boolean;
   }) =>
     request<PaginatedResponse<LookupPeriodListItem>>(
       `/lookup/periods${buildQueryString({
@@ -4725,6 +5081,7 @@ export const apiClient = {
         limit: query?.limit,
         search: query?.search,
         isActive: query?.isActive,
+        deletedOnly: query?.deletedOnly,
       })}`,
       "GET",
       {
@@ -4761,6 +5118,7 @@ export const apiClient = {
     limit?: number;
     search?: string;
     isActive?: boolean;
+    deletedOnly?: boolean;
   }) =>
     request<PaginatedResponse<LookupEnrollmentStatusListItem>>(
       `/lookup/enrollment-statuses${buildQueryString({
@@ -4768,6 +5126,7 @@ export const apiClient = {
         limit: query?.limit,
         search: query?.search,
         isActive: query?.isActive,
+        deletedOnly: query?.deletedOnly,
       })}`,
       "GET",
       {
@@ -4810,6 +5169,7 @@ export const apiClient = {
     limit?: number;
     search?: string;
     isActive?: boolean;
+    deletedOnly?: boolean;
   }) =>
     request<PaginatedResponse<LookupOrphanStatusListItem>>(
       `/lookup/orphan-statuses${buildQueryString({
@@ -4817,6 +5177,7 @@ export const apiClient = {
         limit: query?.limit,
         search: query?.search,
         isActive: query?.isActive,
+        deletedOnly: query?.deletedOnly,
       })}`,
       "GET",
       {
@@ -4853,6 +5214,7 @@ export const apiClient = {
     limit?: number;
     search?: string;
     isActive?: boolean;
+    deletedOnly?: boolean;
   }) =>
     request<PaginatedResponse<LookupAbilityLevelListItem>>(
       `/lookup/ability-levels${buildQueryString({
@@ -4860,6 +5222,7 @@ export const apiClient = {
         limit: query?.limit,
         search: query?.search,
         isActive: query?.isActive,
+        deletedOnly: query?.deletedOnly,
       })}`,
       "GET",
       {
@@ -4896,6 +5259,7 @@ export const apiClient = {
     limit?: number;
     search?: string;
     isActive?: boolean;
+    deletedOnly?: boolean;
   }) =>
     request<PaginatedResponse<LookupActivityTypeListItem>>(
       `/lookup/activity-types${buildQueryString({
@@ -4903,6 +5267,7 @@ export const apiClient = {
         limit: query?.limit,
         search: query?.search,
         isActive: query?.isActive,
+        deletedOnly: query?.deletedOnly,
       })}`,
       "GET",
       {
@@ -4939,6 +5304,7 @@ export const apiClient = {
     limit?: number;
     search?: string;
     isActive?: boolean;
+    deletedOnly?: boolean;
   }) =>
     request<PaginatedResponse<LookupGradeDescriptionListItem>>(
       `/lookup/grade-descriptions${buildQueryString({
@@ -4946,6 +5312,7 @@ export const apiClient = {
         limit: query?.limit,
         search: query?.search,
         isActive: query?.isActive,
+        deletedOnly: query?.deletedOnly,
       })}`,
       "GET",
       {
@@ -4990,6 +5357,7 @@ export const apiClient = {
       limit?: number;
       search?: string;
       isActive?: boolean;
+      deletedOnly?: boolean;
     },
   ) =>
     request<PaginatedResponse<LookupCatalogListItem>>(
@@ -4998,6 +5366,7 @@ export const apiClient = {
         limit: query?.limit,
         search: query?.search,
         isActive: query?.isActive,
+        deletedOnly: query?.deletedOnly,
       })}`,
       "GET",
       {
@@ -5039,6 +5408,7 @@ export const apiClient = {
     search?: string;
     ownershipTypeId?: number;
     isActive?: boolean;
+    deletedOnly?: boolean;
   }) =>
     request<PaginatedResponse<SchoolProfileListItem>>(
       `/school-profiles${buildQueryString({
@@ -5047,6 +5417,7 @@ export const apiClient = {
         search: query?.search,
         ownershipTypeId: query?.ownershipTypeId,
         isActive: query?.isActive,
+        deletedOnly: query?.deletedOnly,
       })}`,
       "GET",
       {
@@ -5258,6 +5629,9 @@ export const apiClient = {
     academicYearId?: string;
     gradeLevelId?: string;
     subjectId?: string;
+    sectionId?: string;
+    academicTermId?: string;
+    teacherEmployeeId?: string;
     assessmentType?: AssessmentType;
     status?: GradingWorkflowStatus;
     isDefault?: boolean;
@@ -5268,12 +5642,15 @@ export const apiClient = {
         page: query?.page,
         limit: query?.limit,
         search: query?.search,
-        academicYearId: query?.academicYearId,
-        gradeLevelId: query?.gradeLevelId,
-        subjectId: query?.subjectId,
-        assessmentType: query?.assessmentType,
-        status: query?.status,
-        isDefault: query?.isDefault,
+          academicYearId: query?.academicYearId,
+          gradeLevelId: query?.gradeLevelId,
+          subjectId: query?.subjectId,
+          sectionId: query?.sectionId,
+          academicTermId: query?.academicTermId,
+          teacherEmployeeId: query?.teacherEmployeeId,
+          assessmentType: query?.assessmentType,
+          status: query?.status,
+          isDefault: query?.isDefault,
         isActive: query?.isActive,
       })}`,
       "GET",
@@ -5656,6 +6033,91 @@ export const apiClient = {
     request<DeleteEntityResponse>(`/sections/${sectionId}`, "DELETE", {
       withAuth: true,
     }),
+  listClassrooms: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    buildingLookupId?: number;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<ClassroomListItem>>(
+      `/classrooms${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        buildingLookupId: query?.buildingLookupId,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createClassroom: (payload: CreateClassroomPayload) =>
+    request<ClassroomListItem>("/classrooms", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateClassroom: (classroomId: string, payload: UpdateClassroomPayload) =>
+    request<ClassroomListItem>(`/classrooms/${classroomId}`, "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  deleteClassroom: (classroomId: string) =>
+    request<DeleteEntityResponse>(`/classrooms/${classroomId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listSectionClassroomAssignments: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    sectionId?: string;
+    classroomId?: string;
+    academicYearId?: string;
+    isActive?: boolean;
+    isPrimary?: boolean;
+  }) =>
+    request<PaginatedResponse<SectionClassroomAssignmentListItem>>(
+      `/section-classroom-assignments${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        sectionId: query?.sectionId,
+        classroomId: query?.classroomId,
+        academicYearId: query?.academicYearId,
+        isActive: query?.isActive,
+        isPrimary: query?.isPrimary,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createSectionClassroomAssignment: (payload: CreateSectionClassroomAssignmentPayload) =>
+    request<SectionClassroomAssignmentListItem>("/section-classroom-assignments", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateSectionClassroomAssignment: (
+    assignmentId: string,
+    payload: UpdateSectionClassroomAssignmentPayload,
+  ) =>
+    request<SectionClassroomAssignmentListItem>(
+      `/section-classroom-assignments/${assignmentId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  deleteSectionClassroomAssignment: (assignmentId: string) =>
+    request<DeleteEntityResponse>(
+      `/section-classroom-assignments/${assignmentId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listGradeLevelSubjects: (query?: {
     page?: number;
     limit?: number;
@@ -5836,7 +6298,20 @@ export const apiClient = {
   createStudent: (payload: CreateStudentPayload) =>
     request<StudentListItem>("/students", "POST", {
       withAuth: true,
-      json: payload,
+      json: {
+        fullName: payload.fullName,
+        gender: payload.gender,
+        genderId: payload.genderId,
+        birthDate: payload.birthDate,
+        bloodTypeId: payload.bloodTypeId,
+        localityId: payload.localityId,
+        healthStatus: payload.healthStatus,
+        healthStatusId: payload.healthStatusId,
+        healthNotes: payload.healthNotes,
+        orphanStatus: payload.orphanStatus,
+        orphanStatusId: payload.orphanStatusId,
+        isActive: payload.isActive,
+      },
     }),
   updateStudent: (studentId: string, payload: UpdateStudentPayload) =>
     request<StudentListItem>(`/students/${studentId}`, "PATCH", {
@@ -5946,8 +6421,10 @@ export const apiClient = {
     search?: string;
     studentId?: string;
     academicYearId?: string;
+    gradeLevelId?: string;
     sectionId?: string;
     status?: StudentEnrollmentStatus;
+    distributionStatus?: StudentEnrollmentDistributionStatus;
     isActive?: boolean;
   }) =>
     request<PaginatedResponse<StudentEnrollmentListItem>>(
@@ -5957,8 +6434,10 @@ export const apiClient = {
         search: query?.search,
         studentId: query?.studentId,
         academicYearId: query?.academicYearId,
+        gradeLevelId: query?.gradeLevelId,
         sectionId: query?.sectionId,
         status: query?.status,
+        distributionStatus: query?.distributionStatus,
         isActive: query?.isActive,
       })}`,
       "GET",
@@ -5966,10 +6445,108 @@ export const apiClient = {
         withAuth: true,
       },
     ),
+  getStudentEnrollmentDistributionBoard: (query: {
+    academicYearId: string;
+    gradeLevelId: string;
+    search?: string;
+    limit?: number;
+  }) =>
+    request<StudentEnrollmentDistributionBoard>(
+      `/student-enrollments/distribution/board${buildQueryString({
+        academicYearId: query.academicYearId,
+        gradeLevelId: query.gradeLevelId,
+        search: query.search,
+        limit: query.limit,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  autoDistributeStudentEnrollments: (
+    payload: AutoDistributeStudentEnrollmentsPayload,
+  ) =>
+    request<{
+      assignedCount: number;
+      skippedCount: number;
+      skippedEnrollmentIds: string[];
+      sections: Array<{
+        id: string;
+        code: string;
+        name: string;
+        capacity: number | null;
+        assignedCount: number;
+      }>;
+    }>("/student-enrollments/distribution/auto-assign", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  manualDistributeStudentEnrollments: (
+    payload: ManualDistributeStudentEnrollmentsPayload,
+  ) =>
+    request<{
+      success: boolean;
+      assignedCount: number;
+    }>("/student-enrollments/distribution/manual-assign", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  transferStudentEnrollments: (
+    payload: TransferStudentEnrollmentsPayload,
+  ) =>
+    request<{
+      success: boolean;
+      transferredCount: number;
+      sourceSection: {
+        id: string;
+        code: string;
+        name: string;
+      };
+      targetSection: {
+        id: string;
+        code: string;
+        name: string;
+      };
+      enrollments: Array<{
+        id: string;
+        studentId: string;
+        sectionId: string | null;
+        yearlyEnrollmentNo: string | null;
+      }>;
+    }>("/student-enrollments/distribution/transfer-section", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  returnStudentEnrollmentsToPending: (
+    payload: ReturnStudentEnrollmentsToPendingPayload,
+  ) =>
+    request<{
+      success: boolean;
+      returnedCount: number;
+      enrollments: Array<{
+        id: string;
+        studentId: string;
+        sectionId: string | null;
+        yearlyEnrollmentNo: string | null;
+      }>;
+    }>("/student-enrollments/distribution/return-to-pending", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
   createStudentEnrollment: (payload: CreateStudentEnrollmentPayload) =>
     request<StudentEnrollmentListItem>("/student-enrollments", "POST", {
       withAuth: true,
-      json: payload,
+      json: {
+        studentId: payload.studentId,
+        academicYearId: payload.academicYearId,
+        gradeLevelId: payload.gradeLevelId,
+        distributionStatus: payload.distributionStatus,
+        enrollmentDate: payload.enrollmentDate,
+        status: payload.status,
+        notes: payload.notes,
+        isActive: payload.isActive,
+        ...(payload.sectionId ? { sectionId: payload.sectionId } : {}),
+      },
     }),
   updateStudentEnrollment: (
     enrollmentId: string,
@@ -5980,7 +6557,17 @@ export const apiClient = {
       "PATCH",
       {
         withAuth: true,
-        json: payload,
+        json: {
+          studentId: payload.studentId,
+          academicYearId: payload.academicYearId,
+          gradeLevelId: payload.gradeLevelId,
+          distributionStatus: payload.distributionStatus,
+          enrollmentDate: payload.enrollmentDate,
+          status: payload.status,
+          notes: payload.notes,
+          isActive: payload.isActive,
+          ...(payload.sectionId ? { sectionId: payload.sectionId } : {}),
+        },
       },
     ),
   deleteStudentEnrollment: (enrollmentId: string) =>
@@ -6273,6 +6860,59 @@ export const apiClient = {
         withAuth: true,
       },
     ),
+  listHealthVisits: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    studentId?: string;
+    nurseId?: string;
+    healthStatusId?: number;
+    fromDate?: string;
+    toDate?: string;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<HealthVisitListItem>>(
+      `/health/visits${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        studentId: query?.studentId,
+        nurseId: query?.nurseId,
+        healthStatusId: query?.healthStatusId,
+        fromDate: query?.fromDate,
+        toDate: query?.toDate,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  getHealthVisit: (visitId: string) =>
+    request<HealthVisitListItem>(`/health/visits/${visitId}`, "GET", {
+      withAuth: true,
+    }),
+  createHealthVisit: (payload: CreateHealthVisitPayload) =>
+    request<HealthVisitListItem>("/health/visits", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateHealthVisit: (
+    visitId: string,
+    payload: UpdateHealthVisitPayload,
+  ) =>
+    request<HealthVisitListItem>(`/health/visits/${visitId}`, "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  deleteHealthVisit: (visitId: string) =>
+    request<DeleteEntityResponse>(`/health/visits/${visitId}`, "DELETE", {
+      withAuth: true,
+    }),
+  getHealthVisitsSummary: () =>
+    request<HealthVisitsSummary>("/health/summary", "GET", {
+      withAuth: true,
+    }),
   listExamPeriods: (query?: {
     page?: number;
     limit?: number;
@@ -7415,3 +8055,4 @@ export const apiClient = {
       withAuth: true,
     }),
 };
+

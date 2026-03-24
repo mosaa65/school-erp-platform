@@ -1,17 +1,21 @@
 "use client";
 
 import * as React from "react";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   AlertTriangle,
   LoaderCircle,
   PencilLine,
+  Plus,
   RefreshCw,
-  Search,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField } from "@/components/ui/select-field";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
   CardContent,
@@ -19,6 +23,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateEmployeeViolationMutation,
@@ -136,15 +143,30 @@ export function EmployeeViolationsWorkspace() {
   const [severityFilter, setSeverityFilter] = React.useState<ViolationSeverity | "all">(
     "all",
   );
-  const [fromDateInput, setFromDateInput] = React.useState("");
-  const [toDateInputValue, setToDateInputValue] = React.useState("");
   const [fromDateFilter, setFromDateFilter] = React.useState("");
   const [toDateFilter, setToDateFilter] = React.useState("");
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
     "all",
   );
+  const [filterDraft, setFilterDraft] = React.useState<{
+    employee: string;
+    reporter: string;
+    severity: ViolationSeverity | "all";
+    fromDate: string;
+    toDate: string;
+    active: "all" | "active" | "inactive";
+  }>({
+    employee: "all",
+    reporter: "all",
+    severity: "all",
+    fromDate: "",
+    toDate: "",
+    active: "all",
+  });
 
   const [editingViolationId, setEditingViolationId] = React.useState<string | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<ViolationFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [filtersError, setFiltersError] = React.useState<string | null>(null);
@@ -180,6 +202,11 @@ export function EmployeeViolationsWorkspace() {
     (deleteMutation.error as Error | null)?.message ??
     null;
 
+  useDebounceEffect(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 400, [searchInput]);
+
   React.useEffect(() => {
     if (!isEditing) {
       return;
@@ -190,71 +217,60 @@ export function EmployeeViolationsWorkspace() {
       setEditingViolationId(null);
       setFormState(DEFAULT_FORM_STATE);
       setFormError(null);
+      setIsFormOpen(false);
     }
-  }, [editingViolationId, violations, isEditing]);
+  }, [editingViolationId, isEditing, violations]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setFilterDraft({
+      employee: employeeFilter,
+      reporter: reporterFilter,
+      severity: severityFilter,
+      fromDate: fromDateFilter,
+      toDate: toDateFilter,
+      active: activeFilter,
+    });
+    setFiltersError(null);
+  }, [
+    activeFilter,
+    employeeFilter,
+    fromDateFilter,
+    isFilterOpen,
+    reporterFilter,
+    severityFilter,
+    toDateFilter,
+  ]);
 
   const resetForm = () => {
     setEditingViolationId(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
+    setIsFormOpen(false);
   };
 
-  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (fromDateInput && toDateInputValue && fromDateInput > toDateInputValue) {
-      setFiltersError("تاريخ البداية يجب أن يكون قبل أو يساوي تاريخ النهاية.");
+  const handleStartCreate = () => {
+    if (!canCreate) {
       return;
     }
 
-    setFiltersError(null);
-    setPage(1);
-    setSearch(searchInput.trim());
-    setFromDateFilter(fromDateInput);
-    setToDateFilter(toDateInputValue);
-  };
-
-  const handleResetFilters = () => {
-    setFiltersError(null);
-    setPage(1);
-    setSearchInput("");
-    setSearch("");
-    setEmployeeFilter("all");
-    setReporterFilter("all");
-    setSeverityFilter("all");
-    setFromDateInput("");
-    setToDateInputValue("");
-    setFromDateFilter("");
-    setToDateFilter("");
-    setActiveFilter("all");
+    setFormError(null);
+    setEditingViolationId(null);
+    setFormState(DEFAULT_FORM_STATE);
+    setIsFormOpen(true);
   };
 
   const validateForm = (): boolean => {
-    if (!formState.employeeId) {
-      setFormError("الموظف مطلوب.");
+    if (!formState.employeeId || !formState.violationDate) {
+      setFormError("الموظف وتاريخ المخالفة حقول مطلوبة.");
       return false;
     }
 
-    if (!formState.violationDate) {
-      setFormError("تاريخ المخالفة مطلوب.");
-      return false;
-    }
-
-    if (!formState.violationAspect.trim()) {
-      setFormError("عنوان/نوع المخالفة مطلوب.");
-      return false;
-    }
-
-    if (!formState.violationText.trim()) {
-      setFormError("وصف المخالفة مطلوب.");
-      return false;
-    }
-
-    if (
-      (formState.severity === "HIGH" || formState.severity === "CRITICAL") &&
-      !formState.actionTaken.trim()
-    ) {
-      setFormError("الإجراء المتخذ مطلوب للمخالفات العالية والحرجة.");
+    if (!formState.violationAspect.trim() || !formState.violationText.trim()) {
+      setFormError("البند والنص التفصيلي للمخالفة حقول مطلوبة.");
       return false;
     }
 
@@ -262,8 +278,8 @@ export function EmployeeViolationsWorkspace() {
     return true;
   };
 
-  const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
 
     if (!validateForm()) {
       return;
@@ -278,7 +294,7 @@ export function EmployeeViolationsWorkspace() {
       severity: formState.severity,
       hasWarning: formState.hasWarning,
       hasMinutes: formState.hasMinutes,
-      reportedByEmployeeId: formState.reportedByEmployeeId || undefined,
+      reportedByEmployeeId: toOptionalString(formState.reportedByEmployeeId),
       isActive: formState.isActive,
     };
 
@@ -323,6 +339,7 @@ export function EmployeeViolationsWorkspace() {
     setFormError(null);
     setEditingViolationId(violation.id);
     setFormState(toFormState(violation));
+    setIsFormOpen(true);
   };
 
   const handleDelete = (violation: EmployeeViolationListItem) => {
@@ -350,279 +367,111 @@ export function EmployeeViolationsWorkspace() {
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
 
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setEmployeeFilter("all");
+    setReporterFilter("all");
+    setSeverityFilter("all");
+    setFromDateFilter("");
+    setToDateFilter("");
+    setActiveFilter("all");
+    setFiltersError(null);
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    if (
+      filterDraft.fromDate &&
+      filterDraft.toDate &&
+      filterDraft.toDate.localeCompare(filterDraft.fromDate) < 0
+    ) {
+      setFiltersError("تاريخ النهاية يجب أن يكون في نفس يوم البداية أو بعده.");
+      return;
+    }
+
+    setPage(1);
+    setEmployeeFilter(filterDraft.employee);
+    setReporterFilter(filterDraft.reporter);
+    setSeverityFilter(filterDraft.severity);
+    setFromDateFilter(filterDraft.fromDate);
+    setToDateFilter(filterDraft.toDate);
+    setActiveFilter(filterDraft.active);
+    setFiltersError(null);
+    setIsFilterOpen(false);
+  };
+
+  const activeFiltersCount = React.useMemo(() => {
+    return [
+      searchInput.trim() ? 1 : 0,
+      employeeFilter !== "all" ? 1 : 0,
+      reporterFilter !== "all" ? 1 : 0,
+      severityFilter !== "all" ? 1 : 0,
+      fromDateFilter ? 1 : 0,
+      toDateFilter ? 1 : 0,
+      activeFilter !== "all" ? 1 : 0,
+    ].reduce((acc, value) => acc + value, 0);
+  }, [
+    activeFilter,
+    employeeFilter,
+    fromDateFilter,
+    reporterFilter,
+    searchInput,
+    severityFilter,
+    toDateFilter,
+  ]);
+
   return (
-    <div className="grid gap-4 xl:grid-cols-[430px_1fr]">
-      <Card className="h-fit border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-primary" />
-            {isEditing ? "تعديل مخالفة موظف" : "إنشاء مخالفة موظف"}
-          </CardTitle>
-          <CardDescription>
-            {isEditing
-              ? "تحديث سجل المخالفة."
-              : "إضافة سجل مخالفة جديد ضمن الموارد البشرية."}
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent>
-          {!canCreate && !isEditing ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك الصلاحية المطلوبة: <code>employee-violations.create</code>.
-            </div>
-          ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm}>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
-                <select
-                  data-testid="violation-form-employee"
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.employeeId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
-                  }
-                  disabled={!canReadEmployees}
-                >
-                  <option value="">اختر الموظف</option>
-                  {(employeesQuery.data ?? []).map((employee) => (
-                    <option key={employee.id} value={employee.id}>
-                      {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  تاريخ المخالفة *
-                </label>
-                <Input
-                  data-testid="violation-form-date"
-                  type="date"
-                  value={formState.violationDate}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      violationDate: event.target.value,
-                    }))
-                  }
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  نوع المخالفة *
-                </label>
-                <Input
-                  data-testid="violation-form-aspect"
-                  value={formState.violationAspect}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      violationAspect: event.target.value,
-                    }))
-                  }
-                  placeholder="تأخر عن الحضور"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  وصف المخالفة *
-                </label>
-                <Input
-                  data-testid="violation-form-text"
-                  value={formState.violationText}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      violationText: event.target.value,
-                    }))
-                  }
-                  placeholder="وصل الموظف متأخرًا 20 دقيقة دون إشعار"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الإجراء المتخذ</label>
-                <Input
-                  data-testid="violation-form-action-taken"
-                  value={formState.actionTaken}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, actionTaken: event.target.value }))
-                  }
-                  placeholder="تم إصدار إنذار خطي"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الشدة</label>
-                <select
-                  data-testid="violation-form-severity"
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.severity}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      severity: event.target.value as ViolationSeverity,
-                    }))
-                  }
-                >
-                  {SEVERITY_OPTIONS.map((severity) => (
-                    <option key={severity} value={severity}>
-                      {translateViolationSeverity(severity)}
-                    </option>
-                  ))}
-                </select>
-                {formState.severity === "HIGH" || formState.severity === "CRITICAL" ? (
-                  <p className="text-xs text-destructive">
-                    للمستويات العالية والحرجة يجب توثيق الإجراء المتخذ.
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  الموظف المُبلِّغ
-                </label>
-                <select
-                  data-testid="violation-form-reporter"
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.reportedByEmployeeId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      reportedByEmployeeId: event.target.value,
-                    }))
-                  }
-                  disabled={!canReadEmployees}
-                >
-                  <option value="">غير محدد</option>
-                  {(employeesQuery.data ?? []).map((employee) => (
-                    <option key={employee.id} value={employee.id}>
-                      {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid gap-2 md:grid-cols-3">
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>يوجد إنذار</span>
-                  <input
-                    type="checkbox"
-                    checked={formState.hasWarning}
-                    onChange={(event) =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        hasWarning: event.target.checked,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>يوجد محضر</span>
-                  <input
-                    type="checkbox"
-                    checked={formState.hasMinutes}
-                    onChange={(event) =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        hasMinutes: event.target.checked,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>نشط</span>
-                  <input
-                    type="checkbox"
-                    checked={formState.isActive}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                    }
-                  />
-                </label>
-              </div>
-
-              {formError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {formError}
-                </div>
-              ) : null}
-
-              {mutationError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {mutationError}
-                </div>
-              ) : null}
-
-              {!canReadEmployees ? (
-                <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يتطلب هذا الجزء الصلاحية: <code>employees.read</code> لاختيار الموظفين.
-                </div>
-              ) : null}
-
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  data-testid="violation-form-submit"
-                  className="flex-1 gap-2"
-                  disabled={isFormSubmitting || (!canCreate && !isEditing) || !canReadEmployees}
-                >
-                  {isFormSubmitting ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <AlertTriangle className="h-4 w-4" />
-                  )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء مخالفة"}
-                </Button>
-                {isEditing ? (
-                  <Button type="button" variant="outline" onClick={resetForm}>
-                    إلغاء
-                  </Button>
-                ) : null}
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>مخالفات الموظفين</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+    <>
+      <div className="space-y-4">
+        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+          <div className="flex min-w-0 items-center gap-2">
+            <SearchField
+              containerClassName="min-w-0"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="ابحث عن الموظف أو نوع المخالفة..."
+            />
           </div>
-          <CardDescription>
-            إدارة مخالفات الموظفين حسب الشدة والتاريخ والموظف.
-          </CardDescription>
+          <div className="flex items-center justify-end">
+            <FilterTriggerButton
+              count={activeFiltersCount}
+              className="px-3 sm:px-4 [&>span:nth-child(2)]:hidden [&>span:nth-child(3)]:hidden sm:[&>span:nth-child(2)]:inline-flex sm:[&>span:nth-child(3)]:inline-flex"
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+            />
+          </div>
+        </div>
 
-          <form
-            onSubmit={handleSearchSubmit}
-            data-testid="violation-filters-form"
-            className="grid gap-2 md:grid-cols-[1fr_160px_160px_150px_150px_150px_130px_auto]"
-          >
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث بالموظف أو نص المخالفة..."
-                className="pr-8"
-              />
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="فلترة المخالفات"
+          renderInPortal
+          overlayClassName="z-[70]"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={clearFilters}
+                className="flex-1 gap-1.5"
+              >
+                <Trash2 className="h-4 w-4" />
+                مسح
+              </Button>
+              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
+                تطبيق
+              </Button>
             </div>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={employeeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setEmployeeFilter(event.target.value);
-              }}
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectField
+              value={filterDraft.employee}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, employee: event.target.value }))
+              }
             >
               <option value="all">كل الموظفين</option>
               {(employeesQuery.data ?? []).map((employee) => (
@@ -630,222 +479,471 @@ export function EmployeeViolationsWorkspace() {
                   {employee.jobNumber ?? employee.fullName}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={reporterFilter}
-              onChange={(event) => {
-                setPage(1);
-                setReporterFilter(event.target.value);
-              }}
+            <SelectField
+              value={filterDraft.reporter}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, reporter: event.target.value }))
+              }
             >
-              <option value="all">كل المُبلِّغين</option>
+              <option value="all">كل المبلغين</option>
               {(employeesQuery.data ?? []).map((employee) => (
                 <option key={employee.id} value={employee.id}>
                   {employee.jobNumber ?? employee.fullName}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={severityFilter}
-              onChange={(event) => {
-                setPage(1);
-                setSeverityFilter(event.target.value as ViolationSeverity | "all");
-              }}
+            <SelectField
+              value={filterDraft.severity}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  severity: event.target.value as ViolationSeverity | "all",
+                }))
+              }
             >
-              <option value="all">كل مستويات الشدة</option>
+              <option value="all">كل درجات المخالفة</option>
               {SEVERITY_OPTIONS.map((severity) => (
                 <option key={severity} value={severity}>
                   {translateViolationSeverity(severity)}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
             <Input
-              data-testid="violation-filter-from-date"
               type="date"
-              value={fromDateInput}
-              onChange={(event) => setFromDateInput(event.target.value)}
+              value={filterDraft.fromDate}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, fromDate: event.target.value }))
+              }
             />
 
             <Input
-              data-testid="violation-filter-to-date"
               type="date"
-              value={toDateInputValue}
-              onChange={(event) => setToDateInputValue(event.target.value)}
+              value={filterDraft.toDate}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, toDate: event.target.value }))
+              }
             />
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={activeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setActiveFilter(event.target.value as "all" | "active" | "inactive");
-              }}
+            <SelectField
+              value={filterDraft.active}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  active: event.target.value as "all" | "active" | "inactive",
+                }))
+              }
             >
               <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </select>
-
-            <Button type="submit" variant="outline" className="gap-2" data-testid="violation-filters-submit">
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              data-testid="violation-filters-reset"
-              onClick={handleResetFilters}
-              disabled={violationsQuery.isFetching}
-            >
-              إعادة ضبط
-            </Button>
-          </form>
+              <option value="active">نشط فقط</option>
+              <option value="inactive">غير نشط فقط</option>
+            </SelectField>
+          </div>
           {filtersError ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+            <div className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
               {filtersError}
             </div>
           ) : null}
-        </CardHeader>
+        </FilterDrawer>
 
-        <CardContent className="space-y-3">
-          {violationsQuery.isPending ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ تحميل البيانات...
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+          <CardHeader className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>سجل المخالفات</CardTitle>
+              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
-          ) : null}
+            <CardDescription>
+              عرض مخالفات الموظفين مع الفلترة حسب الموظف والمبلّغ ودرجة المخالفة والتاريخ.
+            </CardDescription>
+          </CardHeader>
 
-          {violationsQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {violationsQuery.error instanceof Error
-                ? violationsQuery.error.message
-                : "تعذّر تحميل البيانات."}
-            </div>
-          ) : null}
+          <CardContent className="space-y-3">
+            {violationsQuery.isPending ? (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                جارٍ تحميل المخالفات...
+              </div>
+            ) : null}
 
-          {!violationsQuery.isPending && violations.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              لا توجد نتائج مطابقة.
-            </div>
-          ) : null}
+            {violationsQuery.error ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                {violationsQuery.error instanceof Error
+                  ? violationsQuery.error.message
+                  : "تعذّر تحميل المخالفات."}
+              </div>
+            ) : null}
 
-          {violations.map((violation) => (
-            <div
-              key={violation.id}
-              data-testid="violation-card"
-              className={`space-y-3 rounded-lg border border-border/70 bg-background/70 p-3 ${
-                violation.severity === "CRITICAL"
-                  ? "ring-1 ring-rose-300/60"
-                  : violation.severity === "HIGH"
-                    ? "ring-1 ring-orange-300/60"
-                    : ""
-              }`}
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <p className="font-medium">{violation.employee.fullName}</p>
-                  <p className="text-xs text-muted-foreground">
-                    التاريخ: {formatDate(violation.violationDate)} | النوع:{" "}
-                    {violation.violationAspect}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    المُبلِّغ: {violation.reportedBy?.fullName ?? "غير محدد"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{violation.violationText}</p>
-                  {violation.actionTaken ? (
+            {!violationsQuery.isPending && violations.length === 0 ? (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                لا توجد مخالفات مطابقة.
+              </div>
+            ) : null}
+
+            {violations.map((violation) => (
+              <div
+                key={violation.id}
+                data-testid="violation-card"
+                className={`space-y-3 rounded-lg border border-border/70 bg-background/70 p-3 ${
+                  violation.severity === "CRITICAL"
+                    ? "ring-1 ring-rose-300/60"
+                    : violation.severity === "HIGH"
+                      ? "ring-1 ring-orange-300/60"
+                      : ""
+                }`}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="space-y-1">
+                    <p className="font-medium">{violation.employee.fullName}</p>
                     <p className="text-xs text-muted-foreground">
-                      الإجراء: {violation.actionTaken}
+                      التاريخ: {formatDate(violation.violationDate)} | النوع:{" "}
+                      {violation.violationAspect}
                     </p>
-                  ) : null}
+                    <p className="text-xs text-muted-foreground">
+                      المبلّغ: {violation.reportedBy?.fullName ?? "غير محدد"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{violation.violationText}</p>
+                    {violation.actionTaken ? (
+                      <p className="text-xs text-muted-foreground">
+                        الإجراء المتخذ: {violation.actionTaken}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge variant="outline" className={severityBadgeClass(violation.severity)}>
+                      {translateViolationSeverity(violation.severity)}
+                    </Badge>
+                    {violation.hasWarning ? <Badge variant="secondary">يوجد إنذار</Badge> : null}
+                    {violation.hasMinutes ? <Badge variant="secondary">يوجد محضر</Badge> : null}
+                    <Badge variant={violation.isActive ? "default" : "outline"}>
+                      {violation.isActive ? "نشط" : "غير نشط"}
+                    </Badge>
+                  </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant="outline" className={severityBadgeClass(violation.severity)}>
-                    {translateViolationSeverity(violation.severity)}
-                  </Badge>
-                  {violation.hasWarning ? <Badge variant="secondary">إنذار</Badge> : null}
-                  {violation.hasMinutes ? <Badge variant="secondary">محضر</Badge> : null}
-                  <Badge variant={violation.isActive ? "default" : "outline"}>
-                    {violation.isActive ? "نشط" : "غير نشط"}
-                  </Badge>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleStartEdit(violation)}
+                    disabled={!canUpdate || updateMutation.isPending}
+                  >
+                    <PencilLine className="h-3.5 w-3.5" />
+                    تعديل
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleDelete(violation)}
+                    disabled={!canDelete || deleteMutation.isPending}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    حذف
+                  </Button>
                 </div>
               </div>
+            ))}
 
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
+              <p className="text-xs text-muted-foreground">
+                الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
+              </p>
+              <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleStartEdit(violation)}
-                  disabled={!canUpdate || updateMutation.isPending}
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={!pagination || pagination.page <= 1 || violationsQuery.isFetching}
                 >
-                  <PencilLine className="h-3.5 w-3.5" />
-                  تعديل
+                  السابق
                 </Button>
                 <Button
-                  variant="destructive"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setPage((prev) =>
+                      pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
+                    )
+                  }
+                  disabled={
+                    !pagination ||
+                    pagination.page >= pagination.totalPages ||
+                    violationsQuery.isFetching
+                  }
+                >
+                  التالي
+                </Button>
+                <Button
+                  variant="ghost"
                   size="sm"
                   className="gap-1.5"
-                  onClick={() => handleDelete(violation)}
-                  disabled={!canDelete || deleteMutation.isPending}
+                  onClick={() => void violationsQuery.refetch()}
+                  disabled={violationsQuery.isFetching}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  حذف
+                  <RefreshCw
+                    className={`h-4 w-4 ${violationsQuery.isFetching ? "animate-spin" : ""}`}
+                  />
+                  تحديث
                 </Button>
               </div>
             </div>
-          ))}
+          </CardContent>
+        </Card>
+      </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-            <p className="text-xs text-muted-foreground">
-              الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={!pagination || pagination.page <= 1 || violationsQuery.isFetching}
-              >
-                السابق
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPage((prev) =>
-                    pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                  )
-                }
-                disabled={
-                  !pagination ||
-                  pagination.page >= pagination.totalPages ||
-                  violationsQuery.isFetching
-                }
-              >
-                التالي
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => void violationsQuery.refetch()}
-                disabled={violationsQuery.isFetching}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${violationsQuery.isFetching ? "animate-spin" : ""}`}
-                />
-                تحديث
-              </Button>
-            </div>
+      <Fab
+        icon={<Plus className="h-4 w-4" />}
+        label="إضافة"
+        ariaLabel="إضافة مخالفة"
+        onClick={handleStartCreate}
+        disabled={!canCreate}
+      />
+
+      <BottomSheetForm
+        open={isFormOpen}
+        title={isEditing ? "تعديل مخالفة" : "إضافة مخالفة"}
+        onClose={resetForm}
+        onSubmit={() => handleSubmitForm()}
+        isSubmitting={isFormSubmitting}
+        submitLabel={isEditing ? "تحديث المخالفة" : "إضافة مخالفة"}
+        showFooter={false}
+        renderInPortal
+        overlayClassName="z-[70]"
+        panelClassName="md:max-w-[720px]"
+      >
+        {!canCreate && !isEditing ? (
+          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+            لا تملك الصلاحية المطلوبة: <code>employee-violations.create</code>.
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        ) : (
+          <form className="space-y-3" onSubmit={handleSubmitForm}>
+              <p className="text-sm text-muted-foreground">
+                {isEditing
+                  ? "عدّل بيانات المخالفة الحالية."
+                  : "أدخل بيانات المخالفة الجديدة لإنشاء سجل جديد."}
+              </p>
+              <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
+              <select
+                data-testid="violation-form-employee"
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={formState.employeeId}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
+                }
+                disabled={!canReadEmployees}
+              >
+                <option value="">اختر الموظف</option>
+                {(employeesQuery.data ?? []).map((employee) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                تاريخ المخالفة *
+              </label>
+              <Input
+                data-testid="violation-form-date"
+                type="date"
+                value={formState.violationDate}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    violationDate: event.target.value,
+                  }))
+                }
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                نوع المخالفة *
+              </label>
+              <Input
+                data-testid="violation-form-aspect"
+                value={formState.violationAspect}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    violationAspect: event.target.value,
+                  }))
+                }
+                placeholder="اكتب نوع المخالفة"
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                وصف المخالفة *
+              </label>
+              <Input
+                data-testid="violation-form-text"
+                value={formState.violationText}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    violationText: event.target.value,
+                  }))
+                }
+                placeholder="اكتب تفاصيل المخالفة بحد أدنى 20 حرفًا"
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الإجراء المتخذ</label>
+              <Input
+                data-testid="violation-form-action-taken"
+                value={formState.actionTaken}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, actionTaken: event.target.value }))
+                }
+                placeholder="إن وجد اكتب الإجراء المتخذ"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الدرجة</label>
+              <select
+                data-testid="violation-form-severity"
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={formState.severity}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    severity: event.target.value as ViolationSeverity,
+                  }))
+                }
+              >
+                {SEVERITY_OPTIONS.map((severity) => (
+                  <option key={severity} value={severity}>
+                    {translateViolationSeverity(severity)}
+                  </option>
+                ))}
+              </select>
+              {formState.severity === "HIGH" || formState.severity === "CRITICAL" ? (
+                <p className="text-xs text-destructive">
+                  المخالفات الشديدة تتطلب متابعة فورية من الإدارة.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                المبلّغ
+              </label>
+              <select
+                data-testid="violation-form-reporter"
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={formState.reportedByEmployeeId}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    reportedByEmployeeId: event.target.value,
+                  }))
+                }
+                disabled={!canReadEmployees}
+              >
+                <option value="">اختر المبلّغ</option>
+                {(employeesQuery.data ?? []).map((employee) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid gap-2 md:grid-cols-3">
+              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                <span>يوجد إنذار</span>
+                <input
+                  type="checkbox"
+                  checked={formState.hasWarning}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      hasWarning: event.target.checked,
+                    }))
+                  }
+                />
+              </label>
+              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                <span>يوجد محضر</span>
+                <input
+                  type="checkbox"
+                  checked={formState.hasMinutes}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      hasMinutes: event.target.checked,
+                    }))
+                  }
+                />
+              </label>
+              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                <span>نشطة</span>
+                <input
+                  type="checkbox"
+                  checked={formState.isActive}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                  }
+                />
+              </label>
+            </div>
+
+            {formError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {formError}
+              </div>
+            ) : null}
+
+            {mutationError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {mutationError}
+              </div>
+            ) : null}
+
+            {!canReadEmployees ? (
+              <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+                تحتاج صلاحية عرض الموظفين: <code>employees.read</code> لعرض القائمة.
+              </div>
+            ) : null}
+
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                data-testid="violation-form-submit"
+                className="flex-1 gap-2"
+                disabled={isFormSubmitting || (!canCreate && !isEditing) || !canReadEmployees}
+                >
+                  {isFormSubmitting ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <AlertTriangle className="h-4 w-4" />
+                  )}
+                {isEditing ? "تحديث المخالفة" : "إضافة مخالفة"}
+              </Button>
+              {isEditing ? (
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  إلغاء
+                </Button>
+              ) : null}
+            </div>
+          </form>
+        )}
+      </BottomSheetForm>
+    </>
   );
 }
 

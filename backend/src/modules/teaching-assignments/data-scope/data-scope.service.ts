@@ -17,6 +17,11 @@ export type SectionYearGrant = {
   academicYearId: string;
 };
 
+export type GradeYearGrant = {
+  gradeLevelId: string;
+  academicYearId: string;
+};
+
 type ActorContext = {
   userId: string;
   employeeId: string | null;
@@ -45,46 +50,95 @@ export class DataScopeService {
 
     if (!actor.employeeId) {
       throw new ForbiddenException(
-        'User must be linked to an active employee profile for scoped actions',
+        'يجب ربط المستخدم بملف موظف نشط حتى يتمكن من تنفيذ العمليات المقيّدة بالنطاق',
       );
     }
 
-    const assignmentCount = await this.prisma.employeeTeachingAssignment.count({
+    const section = await this.prisma.section.findFirst({
       where: {
-        employeeId: actor.employeeId,
-        sectionId: params.sectionId,
-        subjectId: params.subjectId,
-        academicYearId: params.academicYearId,
+        id: params.sectionId,
         deletedAt: null,
+      },
+      select: {
+        id: true,
+        gradeLevelId: true,
         isActive: true,
       },
     });
 
-    if (assignmentCount > 0) {
+    if (!section) {
+      throw new ForbiddenException('الشعبة غير صالحة أو محذوفة');
+    }
+
+    if (!section.isActive) {
+      throw new ForbiddenException('الشعبة غير نشطة');
+    }
+
+    const scope = await this.getSectionSubjectYearGrants({
+      actorUserId: params.actorUserId,
+      capability: params.capability,
+      academicYearId: params.academicYearId,
+    });
+
+    const hasExactGrant = scope.grants.some(
+      (grant) =>
+        grant.sectionId === params.sectionId &&
+        grant.academicYearId === params.academicYearId &&
+        (!grant.subjectId || grant.subjectId === params.subjectId),
+    );
+
+    if (hasExactGrant) {
       return;
     }
 
-    const supervisionWhere =
-      params.capability === 'MANAGE_HOMEWORKS'
-        ? { canManageHomeworks: true }
-        : { canManageGrades: true };
-
-    const supervisionCount = await this.prisma.employeeSectionSupervision.count(
-      {
-        where: {
-          employeeId: actor.employeeId,
-          sectionId: params.sectionId,
-          academicYearId: params.academicYearId,
-          deletedAt: null,
-          isActive: true,
-          ...supervisionWhere,
-        },
-      },
+    const hasGradeGrant = scope.gradeGrants.some(
+      (grant) =>
+        grant.gradeLevelId === section.gradeLevelId &&
+        grant.academicYearId === params.academicYearId,
     );
 
-    if (supervisionCount === 0) {
+    if (hasGradeGrant) {
+      return;
+    }
+
+    throw new ForbiddenException(
+      'ليست لديك صلاحية للوصول إلى هذا النطاق: شعبة/مادة/سنة',
+    );
+  }
+
+  async ensureCanManageGradeYear(params: {
+    actorUserId: string;
+    gradeLevelId: string;
+    academicYearId: string;
+    capability: Exclude<DataScopeCapability, 'VIEW_STUDENTS'>;
+  }) {
+    const actor = await this.getActorContext(params.actorUserId);
+
+    if (actor.isPrivileged) {
+      return;
+    }
+
+    if (!actor.employeeId) {
       throw new ForbiddenException(
-        'You are not allowed to access this section/subject/year scope',
+        'يجب ربط المستخدم بملف موظف نشط حتى يتمكن من تنفيذ العمليات المقيّدة بالنطاق',
+      );
+    }
+
+    const scope = await this.getSectionSubjectYearGrants({
+      actorUserId: params.actorUserId,
+      capability: params.capability,
+      academicYearId: params.academicYearId,
+    });
+
+    const hasGradeGrant = scope.gradeGrants.some(
+      (grant) =>
+        grant.gradeLevelId === params.gradeLevelId &&
+        grant.academicYearId === params.academicYearId,
+    );
+
+    if (!hasGradeGrant) {
+      throw new ForbiddenException(
+        'ليست لديك صلاحية للوصول إلى هذا النطاق: صف/سنة',
       );
     }
   }
@@ -93,15 +147,19 @@ export class DataScopeService {
     actorUserId: string;
     capability: Exclude<DataScopeCapability, 'VIEW_STUDENTS'>;
     academicYearId?: string;
-  }): Promise<{ isPrivileged: boolean; grants: SectionSubjectYearGrant[] }> {
+  }): Promise<{
+    isPrivileged: boolean;
+    grants: SectionSubjectYearGrant[];
+    gradeGrants: GradeYearGrant[];
+  }> {
     const actor = await this.getActorContext(params.actorUserId);
 
     if (actor.isPrivileged) {
-      return { isPrivileged: true, grants: [] };
+      return { isPrivileged: true, grants: [], gradeGrants: [] };
     }
 
     if (!actor.employeeId) {
-      return { isPrivileged: false, grants: [] };
+      return { isPrivileged: false, grants: [], gradeGrants: [] };
     }
 
     const [teachingAssignments, sectionSupervisions] = await Promise.all([
@@ -136,8 +194,10 @@ export class DataScopeService {
     ]);
 
     const dedup = new Map<string, SectionSubjectYearGrant>();
+    const sectionIds = new Set<string>();
 
     for (const item of teachingAssignments) {
+      sectionIds.add(item.sectionId);
       const key = `${item.sectionId}|${item.subjectId}|${item.academicYearId}`;
       dedup.set(key, {
         sectionId: item.sectionId,
@@ -147,6 +207,7 @@ export class DataScopeService {
     }
 
     for (const item of sectionSupervisions) {
+      sectionIds.add(item.sectionId);
       const key = `${item.sectionId}|*|${item.academicYearId}`;
       dedup.set(key, {
         sectionId: item.sectionId,
@@ -154,24 +215,35 @@ export class DataScopeService {
       });
     }
 
+    const sectionToGradeLevel = await this.buildSectionGradeLevelMap(sectionIds);
+    const gradeDedup = this.buildGradeYearGrantMap(
+      sectionSupervisions,
+      sectionToGradeLevel,
+    );
+
     return {
       isPrivileged: false,
       grants: Array.from(dedup.values()),
+      gradeGrants: Array.from(gradeDedup.values()),
     };
   }
 
   async getStudentSectionYearGrants(params: {
     actorUserId: string;
     academicYearId?: string;
-  }): Promise<{ isPrivileged: boolean; grants: SectionYearGrant[] }> {
+  }): Promise<{
+    isPrivileged: boolean;
+    grants: SectionYearGrant[];
+    gradeGrants: GradeYearGrant[];
+  }> {
     const actor = await this.getActorContext(params.actorUserId);
 
     if (actor.isPrivileged) {
-      return { isPrivileged: true, grants: [] };
+      return { isPrivileged: true, grants: [], gradeGrants: [] };
     }
 
     if (!actor.employeeId) {
-      return { isPrivileged: false, grants: [] };
+      return { isPrivileged: false, grants: [], gradeGrants: [] };
     }
 
     const [teachingAssignments, sectionSupervisions] = await Promise.all([
@@ -203,8 +275,10 @@ export class DataScopeService {
     ]);
 
     const dedup = new Map<string, SectionYearGrant>();
+    const sectionIds = new Set<string>();
 
     for (const item of [...teachingAssignments, ...sectionSupervisions]) {
+      sectionIds.add(item.sectionId);
       const key = `${item.sectionId}|${item.academicYearId}`;
       dedup.set(key, {
         sectionId: item.sectionId,
@@ -212,9 +286,16 @@ export class DataScopeService {
       });
     }
 
+    const sectionToGradeLevel = await this.buildSectionGradeLevelMap(sectionIds);
+    const gradeDedup = this.buildGradeYearGrantMap(
+      sectionSupervisions,
+      sectionToGradeLevel,
+    );
+
     return {
       isPrivileged: false,
       grants: Array.from(dedup.values()),
+      gradeGrants: Array.from(gradeDedup.values()),
     };
   }
 
@@ -246,7 +327,7 @@ export class DataScopeService {
     });
 
     if (!user) {
-      throw new ForbiddenException('Authenticated user is not active');
+      throw new ForbiddenException('المستخدم المصادق عليه غير نشط');
     }
 
     const roleCodes = user.userRoles
@@ -272,7 +353,7 @@ export class DataScopeService {
 
       if (!employee) {
         throw new ForbiddenException(
-          'Linked employee profile is missing or inactive',
+          'ملف الموظف المرتبط بالمستخدم غير موجود أو غير نشط',
         );
       }
     }
@@ -283,5 +364,51 @@ export class DataScopeService {
       roleCodes,
       isPrivileged,
     };
+  }
+
+  private async buildSectionGradeLevelMap(sectionIds: Set<string>) {
+    if (sectionIds.size === 0) {
+      return new Map<string, string>();
+    }
+
+    const sections = await this.prisma.section.findMany({
+      where: {
+        id: {
+          in: Array.from(sectionIds),
+        },
+        deletedAt: null,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        gradeLevelId: true,
+      },
+    });
+
+    return new Map(
+      sections.map((section) => [section.id, section.gradeLevelId] as const),
+    );
+  }
+
+  private buildGradeYearGrantMap(
+    items: Array<{ sectionId: string; academicYearId: string }>,
+    sectionToGradeLevel: Map<string, string>,
+  ) {
+    const gradeDedup = new Map<string, GradeYearGrant>();
+
+    for (const item of items) {
+      const gradeLevelId = sectionToGradeLevel.get(item.sectionId);
+      if (!gradeLevelId) {
+        continue;
+      }
+
+      const key = `${gradeLevelId}|${item.academicYearId}`;
+      gradeDedup.set(key, {
+        gradeLevelId,
+        academicYearId: item.academicYearId,
+      });
+    }
+
+    return gradeDedup;
   }
 }

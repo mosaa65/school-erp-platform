@@ -1,17 +1,25 @@
 "use client";
 
 import * as React from "react";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
+  BookOpen,
+  CalendarDays,
+  CheckCircle2,
+  Layers,
   LoaderCircle,
   Medal,
   PencilLine,
+  Plus,
   RefreshCw,
-  Search,
   Trash2,
+  User,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
 import {
   Card,
   CardContent,
@@ -19,6 +27,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { Fab } from "@/components/ui/fab";
+import { PageShell } from "@/components/ui/page-shell";
+import { SelectField } from "@/components/ui/select-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateGradingPolicyMutation,
@@ -29,6 +43,7 @@ import { useGradingPoliciesQuery } from "@/features/evaluation-policies/grading-
 import { useAcademicYearOptionsQuery } from "@/features/evaluation-policies/grading-policies/hooks/use-academic-year-options-query";
 import { useGradeLevelOptionsQuery } from "@/features/evaluation-policies/grading-policies/hooks/use-grade-level-options-query";
 import { useSubjectOptionsQuery } from "@/features/evaluation-policies/grading-policies/hooks/use-subject-options-query";
+import { useAcademicTermOptionsQuery } from "@/features/academic-months/hooks/use-academic-term-options-query";
 import {
   translateAssessmentType,
   translateGradingWorkflowStatus,
@@ -45,11 +60,8 @@ type GradingPolicyFormState = {
   gradeLevelId: string;
   subjectId: string;
   assessmentType: AssessmentType;
-  maxExamScore: string;
-  maxHomeworkScore: string;
-  maxAttendanceScore: string;
-  maxActivityScore: string;
-  maxContributionScore: string;
+  totalMaxScore: string;
+  academicTermId: string;
   passingScore: string;
   isDefault: boolean;
   status: GradingWorkflowStatus;
@@ -81,16 +93,35 @@ const DEFAULT_FORM_STATE: GradingPolicyFormState = {
   gradeLevelId: "",
   subjectId: "",
   assessmentType: "MONTHLY",
-  maxExamScore: "",
-  maxHomeworkScore: "",
-  maxAttendanceScore: "",
-  maxActivityScore: "",
-  maxContributionScore: "",
+  totalMaxScore: "",
+  academicTermId: "",
   passingScore: "",
   isDefault: false,
   status: "DRAFT",
   notes: "",
   isActive: true,
+};
+
+type FilterDraftState = {
+  year: string;
+  grade: string;
+  subject: string;
+  term: string;
+  assessment: AssessmentType | "all";
+  status: GradingWorkflowStatus | "all";
+  defaultType: "all" | "default" | "custom";
+  active: "all" | "active" | "inactive";
+};
+
+const DEFAULT_FILTER_STATE: FilterDraftState = {
+  year: "all",
+  grade: "all",
+  subject: "all",
+  term: "all",
+  assessment: "all",
+  status: "all",
+  defaultType: "all",
+  active: "all",
 };
 
 function toFormState(item: GradingPolicyListItem): GradingPolicyFormState {
@@ -99,11 +130,8 @@ function toFormState(item: GradingPolicyListItem): GradingPolicyFormState {
     gradeLevelId: item.gradeLevelId,
     subjectId: item.subjectId,
     assessmentType: item.assessmentType,
-    maxExamScore: String(item.maxExamScore ?? ""),
-    maxHomeworkScore: String(item.maxHomeworkScore ?? ""),
-    maxAttendanceScore: String(item.maxAttendanceScore ?? ""),
-    maxActivityScore: String(item.maxActivityScore ?? ""),
-    maxContributionScore: String(item.maxContributionScore ?? ""),
+    totalMaxScore: String(item.totalMaxScore ?? ""),
+    academicTermId: item.academicTermId ?? "",
     passingScore: String(item.passingScore ?? ""),
     isDefault: item.isDefault,
     status: item.status,
@@ -139,6 +167,11 @@ function parseOptionalNumber(value: string): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+function toOptionalString(value: string): string | undefined {
+  const normalized = value.trim();
+  return normalized ? normalized : undefined;
+}
+
 export function GradingPoliciesWorkspace() {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("grading-policies.create");
@@ -151,12 +184,17 @@ export function GradingPoliciesWorkspace() {
   const [yearFilter, setYearFilter] = React.useState("all");
   const [gradeFilter, setGradeFilter] = React.useState("all");
   const [subjectFilter, setSubjectFilter] = React.useState("all");
+  const [termFilter, setTermFilter] = React.useState("all");
   const [assessmentFilter, setAssessmentFilter] = React.useState<AssessmentType | "all">("all");
   const [statusFilter, setStatusFilter] = React.useState<GradingWorkflowStatus | "all">("all");
   const [defaultFilter, setDefaultFilter] = React.useState<"all" | "default" | "custom">("all");
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">("all");
+  const [filterDraft, setFilterDraft] =
+    React.useState<FilterDraftState>(DEFAULT_FILTER_STATE);
 
   const [editingPolicyId, setEditingPolicyId] = React.useState<string | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<GradingPolicyFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
@@ -168,6 +206,7 @@ export function GradingPoliciesWorkspace() {
     academicYearId: yearFilter === "all" ? undefined : yearFilter,
     gradeLevelId: gradeFilter === "all" ? undefined : gradeFilter,
     subjectId: subjectFilter === "all" ? undefined : subjectFilter,
+    academicTermId: termFilter === "all" ? undefined : termFilter,
     assessmentType: assessmentFilter === "all" ? undefined : assessmentFilter,
     status: statusFilter === "all" ? undefined : statusFilter,
     isDefault:
@@ -178,6 +217,11 @@ export function GradingPoliciesWorkspace() {
   const yearOptionsQuery = useAcademicYearOptionsQuery();
   const gradeOptionsQuery = useGradeLevelOptionsQuery();
   const subjectOptionsQuery = useSubjectOptionsQuery();
+  const termOptionsQuery = useAcademicTermOptionsQuery(formState.academicYearId || undefined);
+  const draftYearForTerms = isFilterOpen ? filterDraft.year : yearFilter;
+  const filterTermOptionsQuery = useAcademicTermOptionsQuery(
+    draftYearForTerms === "all" ? undefined : draftYearForTerms,
+  );
 
   const createMutation = useCreateGradingPolicyMutation();
   const updateMutation = useUpdateGradingPolicyMutation();
@@ -212,16 +256,43 @@ export function GradingPoliciesWorkspace() {
     }
   }, [editingPolicyId, isEditing, policies]);
 
+  useDebounceEffect(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 400, [searchInput]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setFilterDraft({
+      year: yearFilter,
+      grade: gradeFilter,
+      subject: subjectFilter,
+      term: termFilter,
+      assessment: assessmentFilter,
+      status: statusFilter,
+      defaultType: defaultFilter,
+      active: activeFilter,
+    });
+  }, [
+    isFilterOpen,
+    yearFilter,
+    gradeFilter,
+    subjectFilter,
+    termFilter,
+    assessmentFilter,
+    statusFilter,
+    defaultFilter,
+    activeFilter,
+  ]);
+
   const resetForm = () => {
     setEditingPolicyId(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
-  };
-
-  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPage(1);
-    setSearch(searchInput.trim());
+    setIsFormOpen(false);
   };
 
   const validateForm = (): boolean => {
@@ -231,11 +302,7 @@ export function GradingPoliciesWorkspace() {
     }
 
     const values = [
-      ["maxExamScore", formState.maxExamScore],
-      ["maxHomeworkScore", formState.maxHomeworkScore],
-      ["maxAttendanceScore", formState.maxAttendanceScore],
-      ["maxActivityScore", formState.maxActivityScore],
-      ["maxContributionScore", formState.maxContributionScore],
+      ["totalMaxScore", formState.totalMaxScore],
       ["passingScore", formState.passingScore],
     ] as const;
 
@@ -251,9 +318,23 @@ export function GradingPoliciesWorkspace() {
       }
     }
 
+    const totalMaxScore = parseOptionalNumber(formState.totalMaxScore);
+    if (totalMaxScore !== undefined && totalMaxScore <= 0) {
+      setFormError("الدرجة القصوى يجب أن تكون أكبر من صفر.");
+      return false;
+    }
+
     const passingScore = parseOptionalNumber(formState.passingScore);
-    if (passingScore !== undefined && passingScore > 100) {
-      setFormError("درجة النجاح يجب أن تكون بين 0 و100.");
+    if (passingScore !== undefined && passingScore < 0) {
+      setFormError("درجة النجاح يجب ألا تكون سالبة.");
+      return false;
+    }
+    if (
+      passingScore !== undefined &&
+      totalMaxScore !== undefined &&
+      passingScore > totalMaxScore
+    ) {
+      setFormError("درجة النجاح يجب ألا تتجاوز الدرجة القصوى الإجمالية.");
       return false;
     }
 
@@ -266,8 +347,8 @@ export function GradingPoliciesWorkspace() {
     return true;
   };
 
-  const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
     setActionSuccess(null);
 
     if (!validateForm()) {
@@ -279,11 +360,8 @@ export function GradingPoliciesWorkspace() {
       gradeLevelId: formState.gradeLevelId,
       subjectId: formState.subjectId,
       assessmentType: formState.assessmentType,
-      maxExamScore: parseOptionalNumber(formState.maxExamScore),
-      maxHomeworkScore: parseOptionalNumber(formState.maxHomeworkScore),
-      maxAttendanceScore: parseOptionalNumber(formState.maxAttendanceScore),
-      maxActivityScore: parseOptionalNumber(formState.maxActivityScore),
-      maxContributionScore: parseOptionalNumber(formState.maxContributionScore),
+      totalMaxScore: parseOptionalNumber(formState.totalMaxScore),
+      academicTermId: toOptionalString(formState.academicTermId),
       passingScore: parseOptionalNumber(formState.passingScore),
       isDefault: formState.isDefault,
       status: formState.status,
@@ -326,6 +404,16 @@ export function GradingPoliciesWorkspace() {
     });
   };
 
+  const handleStartCreate = () => {
+    if (!canCreate) return;
+
+    setFormError(null);
+    setActionSuccess(null);
+    setEditingPolicyId(null);
+    setFormState(DEFAULT_FORM_STATE);
+    setIsFormOpen(true);
+  };
+
   const handleStartEdit = (policy: GradingPolicyListItem) => {
     if (!canUpdate) {
       return;
@@ -335,6 +423,7 @@ export function GradingPoliciesWorkspace() {
     setActionSuccess(null);
     setEditingPolicyId(policy.id);
     setFormState(toFormState(policy));
+    setIsFormOpen(true);
   };
 
   const handleDelete = (policy: GradingPolicyListItem) => {
@@ -359,267 +448,257 @@ export function GradingPoliciesWorkspace() {
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
 
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setYearFilter("all");
+    setGradeFilter("all");
+    setSubjectFilter("all");
+    setTermFilter("all");
+    setAssessmentFilter("all");
+    setStatusFilter("all");
+    setDefaultFilter("all");
+    setActiveFilter("all");
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    setPage(1);
+    setYearFilter(filterDraft.year);
+    setGradeFilter(filterDraft.grade);
+    setSubjectFilter(filterDraft.subject);
+    setTermFilter(filterDraft.term);
+    setAssessmentFilter(filterDraft.assessment);
+    setStatusFilter(filterDraft.status);
+    setDefaultFilter(filterDraft.defaultType);
+    setActiveFilter(filterDraft.active);
+    setIsFilterOpen(false);
+  };
+
+  const activeFiltersCount = React.useMemo(() => {
+    const count = [
+      searchInput.trim() ? 1 : 0,
+      yearFilter !== "all" ? 1 : 0,
+      gradeFilter !== "all" ? 1 : 0,
+      subjectFilter !== "all" ? 1 : 0,
+      termFilter !== "all" ? 1 : 0,
+      assessmentFilter !== "all" ? 1 : 0,
+      statusFilter !== "all" ? 1 : 0,
+      defaultFilter !== "all" ? 1 : 0,
+      activeFilter !== "all" ? 1 : 0,
+    ].reduce((a, b) => a + b, 0);
+    return count;
+  }, [
+    searchInput,
+    yearFilter,
+    gradeFilter,
+    subjectFilter,
+    termFilter,
+    assessmentFilter,
+    statusFilter,
+    defaultFilter,
+    activeFilter,
+  ]);
+
   return (
-    <div className="grid gap-4 xl:grid-cols-[460px_1fr]">
-      <Card className="h-fit border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Medal className="h-5 w-5 text-primary" />
-            {isEditing ? "تعديل سياسة درجات" : "إنشاء سياسة درجات"}
-          </CardTitle>
-          <CardDescription>
-            ضبط قواعد التقييم والحدود القصوى والنجاح حسب السنة/الصف/المادة.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!canCreate && !isEditing ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك الصلاحية المطلوبة: <code>grading-policies.create</code>.
+    <>
+      <PageShell
+        title="سياسات التقييم"
+        subtitle="إدارة قواعد التقييم والحدود القصوى والتثبيت حسب السنة/الصف/المادة."
+
+        actions={
+          <IconButton
+            icon={
+              <RefreshCw
+                className={`h-5 w-5 ${policiesQuery.isFetching ? "animate-spin" : ""}`}
+              />
+            }
+            onClick={() => void policiesQuery.refetch()}
+            ariaLabel="تحديث"
+            disabled={policiesQuery.isFetching}
+          />
+        }
+      >
+        <div className="space-y-4">
+          <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+            <div className="min-w-0">
+              <SearchField
+                containerClassName="min-w-0"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                placeholder="بحث..."
+                data-testid="grading-policy-filter-search"
+              />
             </div>
-          ) : (
-            <form
-              className="space-y-3"
-              onSubmit={handleSubmitForm}
-              data-testid="grading-policy-form"
-            >
-              <div className="grid gap-3 md:grid-cols-2">
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.academicYearId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, academicYearId: event.target.value }))
-                  }
-                  data-testid="grading-policy-form-year"
-                >
-                  <option value="">السنة الدراسية *</option>
-                  {yearOptions.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {formatNameCodeLabel(item.name, item.code)}
-                    </option>
-                  ))}
-                </select>
 
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.gradeLevelId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, gradeLevelId: event.target.value }))
-                  }
-                  data-testid="grading-policy-form-grade"
-                >
-                  <option value="">الصف *</option>
-                  {gradeOptions.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {formatNameCodeLabel(item.name, item.code)}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div className="flex items-center justify-end gap-2">
+              <FilterTriggerButton
+                count={activeFiltersCount}
+                onClick={() => setIsFilterOpen((prev) => !prev)}
+                className="h-11 w-11 justify-center px-0 sm:w-auto sm:px-4 sm:justify-start [&>span:nth-child(2)]:hidden sm:[&>span:nth-child(2)]:inline [&>span:nth-child(3)]:hidden sm:[&>span:nth-child(3)]:inline"
+              />
+            </div>
+          </div>
 
-              <div className="grid gap-3 md:grid-cols-2">
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.subjectId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, subjectId: event.target.value }))
-                  }
-                  data-testid="grading-policy-form-subject"
-                >
-                  <option value="">المادة *</option>
-                  {subjectOptions.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {formatNameCodeLabel(item.name, item.code)}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.assessmentType}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      assessmentType: event.target.value as AssessmentType,
-                    }))
-                  }
-                  data-testid="grading-policy-form-assessment"
-                >
-                  {ASSESSMENT_OPTIONS.map((assessmentType) => (
-                    <option key={assessmentType} value={assessmentType}>
-                      {assessmentTypeLabel(assessmentType)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <Input
-                  type="number"
-                  step="0.01"
-                  min={0}
-                  value={formState.maxExamScore}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, maxExamScore: event.target.value }))
-                  }
-                  placeholder="الدرجة القصوى للاختبار"
-                  data-testid="grading-policy-form-max-exam"
-                />
-                <Input
-                  type="number"
-                  step="0.01"
-                  min={0}
-                  value={formState.maxHomeworkScore}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, maxHomeworkScore: event.target.value }))
-                  }
-                  placeholder="الدرجة القصوى للواجب"
-                  data-testid="grading-policy-form-max-homework"
-                />
-                <Input
-                  type="number"
-                  step="0.01"
-                  min={0}
-                  value={formState.maxAttendanceScore}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, maxAttendanceScore: event.target.value }))
-                  }
-                  placeholder="الدرجة القصوى للحضور"
-                  data-testid="grading-policy-form-max-attendance"
-                />
-                <Input
-                  type="number"
-                  step="0.01"
-                  min={0}
-                  value={formState.maxActivityScore}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, maxActivityScore: event.target.value }))
-                  }
-                  placeholder="الدرجة القصوى للنشاط"
-                  data-testid="grading-policy-form-max-activity"
-                />
-                <Input
-                  type="number"
-                  step="0.01"
-                  min={0}
-                  value={formState.maxContributionScore}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      maxContributionScore: event.target.value,
-                    }))
-                  }
-                  placeholder="الدرجة القصوى للمشاركة"
-                  data-testid="grading-policy-form-max-contribution"
-                />
-                <Input
-                  type="number"
-                  step="0.01"
-                  min={0}
-                  max={100}
-                  value={formState.passingScore}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, passingScore: event.target.value }))
-                  }
-                  placeholder="درجة النجاح (0-100)"
-                  data-testid="grading-policy-form-passing"
-                />
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.status}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      status: event.target.value as GradingWorkflowStatus,
-                    }))
-                  }
-                  data-testid="grading-policy-form-status"
-                >
-                  {WORKFLOW_OPTIONS.map((status) => (
-                    <option key={status} value={status}>
-                      {translateGradingWorkflowStatus(status)}
-                    </option>
-                  ))}
-                </select>
-
-                <Input
-                  value={formState.notes}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, notes: event.target.value }))
-                  }
-                  placeholder="ملاحظات (اختياري)"
-                  data-testid="grading-policy-form-notes"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>افتراضي</span>
-                  <input
-                    type="checkbox"
-                    checked={formState.isDefault}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, isDefault: event.target.checked }))
-                    }
-                    data-testid="grading-policy-form-default"
-                  />
-                </label>
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>نشط</span>
-                  <input
-                    type="checkbox"
-                    checked={formState.isActive}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                    }
-                    data-testid="grading-policy-form-active"
-                  />
-                </label>
-              </div>
-
-              {formError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {formError}
-                </div>
-              ) : null}
-
-              {mutationError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {mutationError}
-                </div>
-              ) : null}
-              {actionSuccess ? (
-                <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
-                  {actionSuccess}
-                </div>
-              ) : null}
-
-              <div className="flex gap-2">
+          <FilterDrawer
+            open={isFilterOpen}
+            onClose={() => setIsFilterOpen(false)}
+            title="فلاتر البحث"
+            className="md:w-[460px]"
+            actionButtons={
+              <div className="flex w-full gap-2">
                 <Button
-                  type="submit"
-                  className="flex-1 gap-2"
-                  disabled={isFormSubmitting || (!canCreate && !isEditing)}
-                  data-testid="grading-policy-form-submit"
+                  type="button"
+                  variant="outline"
+                  onClick={clearFilters}
+                  className="flex-1 gap-1.5"
                 >
-                  {isFormSubmitting ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Medal className="h-4 w-4" />
-                  )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء سياسة"}
+                  <Trash2 className="h-4 w-4" />
+                  مسح
                 </Button>
-                {isEditing ? (
-                  <Button type="button" variant="outline" onClick={resetForm}>
-                    إلغاء
-                  </Button>
-                ) : null}
+                <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
+                  تطبيق
+                </Button>
               </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
+            }
+          >
+            <div className="grid gap-3 sm:grid-cols-2">
+              <SelectField
+                icon={<CalendarDays />}
+                value={filterDraft.year}
+                onChange={(event) => {
+                  const nextYear = event.target.value;
+                  setFilterDraft((prev) =>
+                    prev.year === nextYear ? prev : { ...prev, year: nextYear, term: "all" },
+                  );
+                }}
+                data-testid="grading-policy-filter-year"
+              >
+                <option value="all">السنة</option>
+                {yearOptions.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {formatNameCodeLabel(item.name, item.code)}
+                  </option>
+                ))}
+              </SelectField>
+
+              <SelectField
+                icon={<User />}
+                value={filterDraft.grade}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, grade: event.target.value }))
+                }
+                data-testid="grading-policy-filter-grade"
+              >
+                <option value="all">الصف</option>
+                {gradeOptions.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {formatNameCodeLabel(item.name, item.code)}
+                  </option>
+                ))}
+              </SelectField>
+
+              <SelectField
+                icon={<BookOpen />}
+                value={filterDraft.subject}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, subject: event.target.value }))
+                }
+                data-testid="grading-policy-filter-subject"
+              >
+                <option value="all">المادة</option>
+                {subjectOptions.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {formatNameCodeLabel(item.name, item.code)}
+                  </option>
+                ))}
+              </SelectField>
+
+              <SelectField
+                icon={<Layers />}
+                value={filterDraft.term}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, term: event.target.value }))
+                }
+                data-testid="grading-policy-filter-term"
+              >
+                <option value="all">الفصل</option>
+                {(filterTermOptionsQuery.data ?? []).map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {formatNameCodeLabel(item.name, item.code)}
+                  </option>
+                ))}
+              </SelectField>
+
+              <SelectField
+                icon={<CheckCircle2 />}
+                value={filterDraft.assessment}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    assessment: event.target.value as AssessmentType | "all",
+                  }))
+                }
+                data-testid="grading-policy-filter-assessment"
+              >
+                <option value="all">نوع التقييم</option>
+                {ASSESSMENT_OPTIONS.map((assessmentType) => (
+                  <option key={assessmentType} value={assessmentType}>
+                    {assessmentTypeLabel(assessmentType)}
+                  </option>
+                ))}
+              </SelectField>
+
+              <SelectField
+                value={filterDraft.status}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    status: event.target.value as GradingWorkflowStatus | "all",
+                  }))
+                }
+                data-testid="grading-policy-filter-status"
+              >
+                <option value="all">الحالة</option>
+                {WORKFLOW_OPTIONS.map((status) => (
+                  <option key={status} value={status}>
+                    {translateGradingWorkflowStatus(status)}
+                  </option>
+                ))}
+              </SelectField>
+
+              <SelectField
+                value={filterDraft.defaultType}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    defaultType: event.target.value as "all" | "default" | "custom",
+                  }))
+                }
+                data-testid="grading-policy-filter-default"
+              >
+                <option value="all">كل الأنواع</option>
+                <option value="default">افتراضي</option>
+                <option value="custom">مخصص</option>
+              </SelectField>
+
+              <SelectField
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+                data-testid="grading-policy-filter-active"
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">نشط</option>
+                <option value="inactive">غير نشط</option>
+              </SelectField>
+            </div>
+          </FilterDrawer>
 
       <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
@@ -629,145 +708,6 @@ export function GradingPoliciesWorkspace() {
           </div>
           <CardDescription>فلترة متعددة لسياسات التقييم والنشر.</CardDescription>
 
-          <form
-            onSubmit={handleSearchSubmit}
-            className="grid gap-2 md:grid-cols-[1fr_120px_120px_120px_130px_120px_110px_110px_auto]"
-            data-testid="grading-policy-filters-form"
-          >
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث..."
-                className="pr-8"
-                data-testid="grading-policy-filter-search"
-              />
-            </div>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={yearFilter}
-              onChange={(event) => {
-                setPage(1);
-                setYearFilter(event.target.value);
-              }}
-              data-testid="grading-policy-filter-year"
-            >
-              <option value="all">السنة</option>
-              {yearOptions.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {formatNameCodeLabel(item.name, item.code)}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={gradeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setGradeFilter(event.target.value);
-              }}
-              data-testid="grading-policy-filter-grade"
-            >
-              <option value="all">الصف</option>
-              {gradeOptions.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {formatNameCodeLabel(item.name, item.code)}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={subjectFilter}
-              onChange={(event) => {
-                setPage(1);
-                setSubjectFilter(event.target.value);
-              }}
-              data-testid="grading-policy-filter-subject"
-            >
-              <option value="all">المادة</option>
-              {subjectOptions.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {formatNameCodeLabel(item.name, item.code)}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={assessmentFilter}
-              onChange={(event) => {
-                setPage(1);
-                setAssessmentFilter(event.target.value as AssessmentType | "all");
-              }}
-              data-testid="grading-policy-filter-assessment"
-            >
-              <option value="all">نوع التقييم</option>
-              {ASSESSMENT_OPTIONS.map((assessmentType) => (
-                <option key={assessmentType} value={assessmentType}>
-                  {assessmentTypeLabel(assessmentType)}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={statusFilter}
-              onChange={(event) => {
-                setPage(1);
-                setStatusFilter(event.target.value as GradingWorkflowStatus | "all");
-              }}
-              data-testid="grading-policy-filter-status"
-            >
-              <option value="all">الحالة</option>
-              {WORKFLOW_OPTIONS.map((status) => (
-                <option key={status} value={status}>
-                  {translateGradingWorkflowStatus(status)}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={defaultFilter}
-              onChange={(event) => {
-                setPage(1);
-                setDefaultFilter(event.target.value as "all" | "default" | "custom");
-              }}
-              data-testid="grading-policy-filter-default"
-            >
-              <option value="all">كل الأنواع</option>
-              <option value="default">افتراضي</option>
-              <option value="custom">مخصص</option>
-            </select>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={activeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setActiveFilter(event.target.value as "all" | "active" | "inactive");
-              }}
-              data-testid="grading-policy-filter-active"
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">نشط</option>
-              <option value="inactive">غير نشط</option>
-            </select>
-
-            <Button
-              type="submit"
-              variant="outline"
-              className="gap-2"
-              data-testid="grading-policy-filters-submit"
-            >
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
-          </form>
         </CardHeader>
 
         <CardContent className="space-y-3">
@@ -806,8 +746,8 @@ export function GradingPoliciesWorkspace() {
                     {formatNameCodeLabel(policy.academicYear.name, policy.academicYear.code)} / {formatNameCodeLabel(policy.gradeLevel.name, policy.gradeLevel.code)}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    النجاح: {policy.passingScore} | الاختبار: {policy.maxExamScore} | الواجب:{" "}
-                    {policy.maxHomeworkScore} | الحضور: {policy.maxAttendanceScore}
+                    الإجمالي: {policy.totalMaxScore} | النجاح: {policy.passingScore} | المكونات:{" "}
+                    {policy.components.length}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     عدد المكونات: {policy.components.length}
@@ -897,7 +837,239 @@ export function GradingPoliciesWorkspace() {
           </div>
         </CardContent>
       </Card>
-    </div>
+        </div>
+      </PageShell>
+
+      <Fab
+        icon={<Plus className="h-4 w-4" />}
+        label="إنشاء"
+        ariaLabel="إنشاء سياسة تقييم جديدة"
+        onClick={handleStartCreate}
+        disabled={!canCreate}
+      />
+
+      <BottomSheetForm
+        open={isFormOpen}
+        title={isEditing ? "تعديل سياسة درجات" : "إنشاء سياسة درجات"}
+        onClose={resetForm}
+        onSubmit={() => handleSubmitForm()}
+        isSubmitting={isFormSubmitting}
+        submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء سياسة"}
+        showFooter={false}
+      >
+        {!canCreate && !isEditing ? (
+          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+            لا تملك الصلاحية المطلوبة: <code>grading-policies.create</code>.
+          </div>
+        ) : (
+          <div className="space-y-3" data-testid="grading-policy-form">
+            <div className="grid gap-3 md:grid-cols-2">
+              <SelectField
+                icon={<CalendarDays />}
+                value={formState.academicYearId}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, academicYearId: event.target.value }))
+                }
+                data-testid="grading-policy-form-year"
+              >
+                <option value="">السنة الدراسية *</option>
+                {yearOptions.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {formatNameCodeLabel(item.name, item.code)}
+                  </option>
+                ))}
+              </SelectField>
+
+              <SelectField
+                icon={<User />}
+                value={formState.gradeLevelId}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, gradeLevelId: event.target.value }))
+                }
+                data-testid="grading-policy-form-grade"
+              >
+                <option value="">الصف *</option>
+                {gradeOptions.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {formatNameCodeLabel(item.name, item.code)}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <SelectField
+                icon={<BookOpen />}
+                value={formState.subjectId}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, subjectId: event.target.value }))
+                }
+                data-testid="grading-policy-form-subject"
+              >
+                <option value="">المادة *</option>
+                {subjectOptions.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {formatNameCodeLabel(item.name, item.code)}
+                  </option>
+                ))}
+              </SelectField>
+
+              <SelectField
+                icon={<CheckCircle2 />}
+                value={formState.assessmentType}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    assessmentType: event.target.value as AssessmentType,
+                  }))
+                }
+                data-testid="grading-policy-form-assessment"
+              >
+                {ASSESSMENT_OPTIONS.map((assessmentType) => (
+                  <option key={assessmentType} value={assessmentType}>
+                    {assessmentTypeLabel(assessmentType)}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <Input
+                type="number"
+                step="0.01"
+                min={0}
+                value={formState.totalMaxScore}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, totalMaxScore: event.target.value }))
+                }
+                placeholder="الدرجة القصوى الإجمالية"
+                data-testid="grading-policy-form-total-max"
+              />
+              <Input
+                type="number"
+                step="0.01"
+                min={0}
+                value={formState.passingScore}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, passingScore: event.target.value }))
+                }
+                placeholder="درجة النجاح"
+                data-testid="grading-policy-form-passing"
+              />
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <SelectField
+                value={formState.academicTermId}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, academicTermId: event.target.value }))
+                }
+                data-testid="grading-policy-form-term"
+              >
+                <option value="">الفصل الأكاديمي (اختياري)</option>
+                {(termOptionsQuery.data ?? []).map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {formatNameCodeLabel(item.name, item.code)}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <SelectField
+                value={formState.status}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    status: event.target.value as GradingWorkflowStatus,
+                  }))
+                }
+                data-testid="grading-policy-form-status"
+              >
+                {WORKFLOW_OPTIONS.map((status) => (
+                  <option key={status} value={status}>
+                    {translateGradingWorkflowStatus(status)}
+                  </option>
+                ))}
+              </SelectField>
+
+              <Input
+                value={formState.notes}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, notes: event.target.value }))
+                }
+                placeholder="ملاحظات (اختياري)"
+                data-testid="grading-policy-form-notes"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                <span>افتراضي</span>
+                <input
+                  type="checkbox"
+                  checked={formState.isDefault}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, isDefault: event.target.checked }))
+                  }
+                  data-testid="grading-policy-form-default"
+                />
+              </label>
+              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                <span>نشط</span>
+                <input
+                  type="checkbox"
+                  checked={formState.isActive}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                  }
+                  data-testid="grading-policy-form-active"
+                />
+              </label>
+            </div>
+
+            {formError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {formError}
+              </div>
+            ) : null}
+
+            {mutationError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {mutationError}
+              </div>
+            ) : null}
+            {actionSuccess ? (
+              <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
+                {actionSuccess}
+              </div>
+            ) : null}
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                className="flex-1 gap-2"
+                onClick={() => handleSubmitForm()}
+                disabled={isFormSubmitting || (!canCreate && !isEditing)}
+                data-testid="grading-policy-form-submit"
+              >
+                {isFormSubmitting ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Medal className="h-4 w-4" />
+                )}
+                {isEditing ? "حفظ التعديلات" : "إنشاء سياسة"}
+              </Button>
+              {isEditing ? (
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  إلغاء
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        )}
+      </BottomSheetForm>
+    </>
   );
 }
 

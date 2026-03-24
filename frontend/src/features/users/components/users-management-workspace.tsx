@@ -1,17 +1,20 @@
 "use client";
 
 import * as React from "react";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   LoaderCircle,
   PencilLine,
   RefreshCw,
-  Search,
   Trash2,
   UserRoundPlus,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField } from "@/components/ui/select-field";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
   CardContent,
@@ -19,6 +22,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateUserMutation,
@@ -99,10 +105,17 @@ export function UsersManagementWorkspace({
   const [searchInput, setSearchInput] = React.useState(initialSearchQuery);
   const [search, setSearch] = React.useState(initialSearchQuery.trim());
   const [activeFilter, setActiveFilter] = React.useState<
-    "all" | "active" | "inactive"
+    "all" | "active" | "inactive" | "deleted"
   >("all");
+  const [filterDraft, setFilterDraft] = React.useState<
+    "all" | "active" | "inactive" | "deleted"
+  >(
+    "all",
+  );
 
   const [editingUserId, setEditingUserId] = React.useState<string | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] =
     React.useState<UserFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
@@ -115,7 +128,11 @@ export function UsersManagementWorkspace({
     page,
     limit: PAGE_SIZE,
     search: search || undefined,
-    isActive: activeFilter === "all" ? undefined : activeFilter === "active",
+    isActive:
+      activeFilter === "all" || activeFilter === "deleted"
+        ? undefined
+        : activeFilter === "active",
+    deletedOnly: activeFilter === "deleted" ? true : undefined,
   });
 
   const rolesQuery = useRoleOptionsQuery();
@@ -153,6 +170,19 @@ export function UsersManagementWorkspace({
     setPage(1);
   }, [initialSearchQuery]);
 
+  useDebounceEffect(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 400, [searchInput]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setFilterDraft(activeFilter);
+  }, [activeFilter, isFilterOpen]);
+
   React.useEffect(() => {
     if (!isEditing) {
       return;
@@ -166,6 +196,8 @@ export function UsersManagementWorkspace({
     if (!userStillExists) {
       setEditingUserId(null);
       setFormState(DEFAULT_FORM_STATE);
+      setFormError(null);
+      setIsFormOpen(false);
     }
   }, [editingUserId, isEditing, usersQuery.data?.data]);
 
@@ -182,19 +214,19 @@ export function UsersManagementWorkspace({
     setEditingUserId(null);
     setFormError(null);
     setFormState(DEFAULT_FORM_STATE);
+    setIsFormOpen(false);
   };
 
-  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPage(1);
-    setSearch(searchInput.trim());
-  };
+  const handleStartCreate = () => {
+    if (!canCreate) {
+      return;
+    }
 
-  const handleStatusFilterChange = (
-    nextFilter: "all" | "active" | "inactive",
-  ) => {
-    setPage(1);
-    setActiveFilter(nextFilter);
+    setFormError(null);
+    setActionSuccess(null);
+    setEditingUserId(null);
+    setFormState(DEFAULT_FORM_STATE);
+    setIsFormOpen(true);
   };
 
   const handleStartEdit = (user: UserListItem) => {
@@ -206,6 +238,7 @@ export function UsersManagementWorkspace({
     setFormError(null);
     setActionSuccess(null);
     setFormState(toFormState(user));
+    setIsFormOpen(true);
   };
 
   const validateForm = (): boolean => {
@@ -243,8 +276,8 @@ export function UsersManagementWorkspace({
     return true;
   };
 
-  const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
     setActionSuccess(null);
 
     if (!validateForm()) {
@@ -395,497 +428,533 @@ export function UsersManagementWorkspace({
   const isFormSubmitting =
     createUserMutation.isPending || updateUserMutation.isPending;
 
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setActiveFilter("all");
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    setPage(1);
+    setActiveFilter(filterDraft);
+    setIsFilterOpen(false);
+  };
+
+  const activeFiltersCount = React.useMemo(() => {
+    const count = [searchInput.trim() ? 1 : 0, activeFilter !== "all" ? 1 : 0].reduce(
+      (a, b) => a + b,
+      0,
+    );
+    return count;
+  }, [activeFilter, searchInput]);
+
   return (
-    <div className="grid gap-4 xl:grid-cols-[360px_1fr]">
-      <Card className="h-fit border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UserRoundPlus className="h-5 w-5 text-primary" />
-            {isEditing ? "تعديل مستخدم" : "إنشاء مستخدم"}
-          </CardTitle>
-          <CardDescription>
-            {isEditing
-              ? "تحديث بيانات المستخدم والأدوار وربط الموظف."
-              : "إضافة مستخدم جديد مع اختيار الأدوار وربط موظف اختياريًا."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!canCreate && !isEditing ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك الصلاحية المطلوبة: <code>users.create</code>.
-            </div>
-          ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm}>
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="user-email"
-                  className="text-xs font-medium text-muted-foreground"
-                >
-                  البريد الإلكتروني *
-                </label>
-                <Input
-                  id="user-email"
-                  value={formState.email}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      email: event.target.value,
-                    }))
-                  }
-                  placeholder="user@school.local"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="user-username"
-                  className="text-xs font-medium text-muted-foreground"
-                >
-                  اسم المستخدم
-                </label>
-                <Input
-                  id="user-username"
-                  value={formState.username}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      username: event.target.value,
-                    }))
-                  }
-                  placeholder="ahmad_teacher"
-                />
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    الاسم الأول *
-                  </label>
-                  <Input
-                    value={formState.firstName}
-                    onChange={(event) =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        firstName: event.target.value,
-                      }))
-                    }
-                    placeholder="أحمد"
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    الاسم الأخير *
-                  </label>
-                  <Input
-                    value={formState.lastName}
-                    onChange={(event) =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        lastName: event.target.value,
-                      }))
-                    }
-                    placeholder="العواضي"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  {isEditing ? "كلمة مرور جديدة (اختياري)" : "كلمة المرور *"}
-                </label>
-                <Input
-                  type="password"
-                  value={formState.password}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      password: event.target.value,
-                    }))
-                  }
-                  placeholder="StrongPassword123!"
-                  required={!isEditing}
-                  minLength={isEditing ? undefined : 8}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  ربط موظف (اختياري)
-                </label>
-                <select
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  value={formState.employeeId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      employeeId: event.target.value,
-                    }))
-                  }
-                  disabled={!canReadEmployees || employeesQuery.isLoading}
-                >
-                  <option value="">بدون ربط</option>
-                  {(employeesQuery.data ?? []).map((employee) => (
-                    <option key={employee.id} value={employee.id}>
-                      {employee.fullName} ({employee.jobNumber})
-                    </option>
-                  ))}
-                </select>
-                {!canReadEmployees ? (
-                  <p className="text-xs text-muted-foreground">
-                    لا تملك الصلاحية المطلوبة: <code>employees.read</code> لجلب قائمة
-                    الموظفين.
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="space-y-1.5">
-                <p className="text-xs font-medium text-muted-foreground">
-                  الأدوار
-                </p>
-                <div className="max-h-36 space-y-1 overflow-y-auto rounded-md border p-2">
-                  {(rolesQuery.data ?? []).length === 0 ? (
-                    <p className="text-xs text-muted-foreground">
-                      {canReadRoles
-                        ? "لا توجد أدوار متاحة حاليًا."
-                        : "لا تملك الصلاحية المطلوبة: roles.read لعرض قائمة الأدوار."}
-                    </p>
-                  ) : (
-                    (rolesQuery.data ?? []).map((role) => (
-                      <label
-                        key={role.id}
-                        className="flex cursor-pointer items-center justify-between gap-2 rounded-md border border-transparent px-2 py-1 text-sm hover:border-border"
-                      >
-                        <span>
-                          {translateRoleCode(role.code)} ({role.code})
-                        </span>
-                        <input
-                          type="checkbox"
-                          checked={formState.roleIds.includes(role.id)}
-                          onChange={(event) =>
-                            handleRoleToggle(role.id, event.target.checked)
-                          }
-                        />
-                      </label>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>الحالة</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      isActive: event.target.checked,
-                    }))
-                  }
-                />
-              </label>
-
-              {formError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {formError}
-                </div>
-              ) : null}
-
-              {mutationError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {mutationError}
-                </div>
-              ) : null}
-              {actionSuccess ? (
-                <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
-                  {actionSuccess}
-                </div>
-              ) : null}
-
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  className="flex-1 gap-2"
-                  disabled={isFormSubmitting || (!canCreate && !isEditing)}
-                >
-                  {isFormSubmitting ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <UserRoundPlus className="h-4 w-4" />
-                  )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء مستخدم"}
-                </Button>
-                {isEditing ? (
-                  <Button type="button" variant="outline" onClick={resetForm}>
-                    إلغاء
-                  </Button>
-                ) : null}
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>قائمة المستخدمين</CardTitle>
-            <Badge variant="secondary">
-              الإجمالي: {pagination?.total ?? 0}
-            </Badge>
+    <>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
+            <SearchField
+              containerClassName="flex-1"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="ابحث بالاسم، البريد، اسم المستخدم..."
+            />
           </div>
-          <CardDescription>
-            إدارة كاملة للمستخدمين: بحث، فلترة، تعديل، حذف ناعم، وربط موظف.
-          </CardDescription>
-          <form
-            onSubmit={handleSearchSubmit}
-            className="grid gap-2 md:grid-cols-[1fr_160px_auto]"
-          >
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث بالاسم، البريد، اسم المستخدم..."
-                className="pr-8"
-              />
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterTriggerButton
+              count={activeFiltersCount}
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+            />
+          </div>
+        </div>
+
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="خيارات الفلترة"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={clearFilters}
+                className="flex-1 gap-1.5"
+              >
+                <Trash2 className="h-4 w-4" />
+                مسح
+              </Button>
+              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
+                تطبيق
+              </Button>
             </div>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={activeFilter}
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectField
+              value={filterDraft}
               onChange={(event) =>
-                handleStatusFilterChange(
-                  event.target.value as "all" | "active" | "inactive",
+                setFilterDraft(
+                  event.target.value as "all" | "active" | "inactive" | "deleted",
                 )
               }
             >
               <option value="all">كل الحالات</option>
               <option value="active">نشط فقط</option>
               <option value="inactive">غير نشط فقط</option>
-            </select>
-            <Button type="submit" variant="outline" className="gap-2">
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
-          </form>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {usersQuery.isPending ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ تحميل قائمة المستخدمين...
+              <option value="deleted">محذوف فقط</option>
+            </SelectField>
+          </div>
+        </FilterDrawer>
+
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+          <CardHeader className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>قائمة المستخدمين</CardTitle>
+              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
-          ) : null}
+            <CardDescription>
+              إدارة المستخدمين: بحث، فلترة، تعديل، حذف وربط موظف.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {usersQuery.isPending ? (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                جارٍ تحميل المستخدمين...
+              </div>
+            ) : null}
 
-          {usersQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {usersQuery.error instanceof Error
-                ? usersQuery.error.message
-                : "فشل تحميل قائمة المستخدمين"}
-            </div>
-          ) : null}
+            {usersQuery.error ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                {usersQuery.error instanceof Error
+                  ? usersQuery.error.message
+                  : "تعذر تحميل المستخدمين"}
+              </div>
+            ) : null}
 
-          {!usersQuery.isPending && users.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              لا توجد نتائج مطابقة.
-            </div>
-          ) : null}
+            {!usersQuery.isPending && users.length === 0 ? (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                لا توجد نتائج مطابقة.
+              </div>
+            ) : null}
 
-          {users.map((user) => {
-            const hasLinkedEmployee = Boolean(user.employee);
-            const selectableEmployees = (employeesQuery.data ?? []).filter(
-              (employee) =>
-                !linkedEmployeeIds.has(employee.id) ||
-                employee.id === user.employee?.id,
-            );
+            {users.map((user) => {
+              const hasLinkedEmployee = Boolean(user.employee);
+              const selectableEmployees = (employeesQuery.data ?? []).filter(
+                (employee) =>
+                  !linkedEmployeeIds.has(employee.id) ||
+                  employee.id === user.employee?.id,
+              );
 
-            return (
-              <div
-                key={user.id}
-                className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="space-y-1">
-                    <p className="font-medium">
-                      {user.firstName} {user.lastName}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {user.email}
-                    </p>
-                    {user.username ? (
-                      <p className="text-xs text-muted-foreground">
-                        اسم المستخدم: <code>{user.username}</code>
+              return (
+                <div
+                  key={user.id}
+                  className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="space-y-1">
+                      <p className="font-medium">
+                        {user.firstName} {user.lastName}
                       </p>
-                    ) : null}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant={user.isActive ? "default" : "destructive"}>
-                      {user.isActive ? "نشط" : "غير نشط"}
-                    </Badge>
-                    {user.userRoles.length > 0 ? (
-                      <Badge variant="outline">
-                        {user.userRoles
-                          .map((item) => translateRoleCode(item.role.code))
-                          .join("، ")}
+                      <p className="text-xs text-muted-foreground">{user.email}</p>
+                      {user.username ? (
+                        <p className="text-xs text-muted-foreground">
+                          اسم المستخدم: <code>{user.username}</code>
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={user.isActive ? "default" : "destructive"}>
+                        {user.isActive ? "نشط" : "غير نشط"}
                       </Badge>
+                      {user.userRoles.length > 0 ? (
+                        <Badge variant="outline">
+                          {user.userRoles
+                            .map((item) => translateRoleCode(item.role.code))
+                            .join("، ")}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline">بدون أدوار</Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+                    الموظف المرتبط:{" "}
+                    {hasLinkedEmployee ? (
+                      <span>
+                        {user.employee?.fullName} ({user.employee?.jobNumber})
+                      </span>
                     ) : (
-                      <Badge variant="outline">بدون أدوار</Badge>
+                      <span>لا يوجد</span>
                     )}
                   </div>
-                </div>
 
-                <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  الموظف المرتبط:{" "}
-                  {hasLinkedEmployee ? (
-                    <span>
-                      {user.employee?.fullName} ({user.employee?.jobNumber})
-                    </span>
-                  ) : (
-                    <span>لا يوجد</span>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => handleStartEdit(user)}
-                    disabled={!canUpdate || updateUserMutation.isPending}
-                  >
-                    <PencilLine className="h-3.5 w-3.5" />
-                    تعديل
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleToggleActive(user)}
-                    disabled={!canUpdate || updateUserMutation.isPending}
-                  >
-                    {user.isActive ? "تعطيل" : "تفعيل"}
-                  </Button>
-
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => handleDeleteUser(user)}
-                    disabled={!canDelete || deleteUserMutation.isPending}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    حذف
-                  </Button>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed p-2">
-                  {hasLinkedEmployee ? (
+                  <div className="flex flex-wrap items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleUnlinkEmployee(user.id)}
-                      disabled={
-                        !canUpdate || unlinkUserEmployeeMutation.isPending
-                      }
+                      className="gap-1.5"
+                      onClick={() => handleStartEdit(user)}
+                      disabled={!canUpdate || updateUserMutation.isPending}
                     >
-                      فك الربط
+                      <PencilLine className="h-3.5 w-3.5" />
+                      تعديل
                     </Button>
-                  ) : (
-                    <>
-                      <select
-                        className="h-9 min-w-[220px] rounded-md border border-input bg-background px-2 text-sm"
-                        value={employeeSelections[user.id] ?? ""}
-                        onChange={(event) =>
-                          setEmployeeSelections((prev) => ({
-                            ...prev,
-                            [user.id]: event.target.value,
-                          }))
-                        }
-                        disabled={
-                          !canReadEmployees ||
-                          !canUpdate ||
-                          employeesQuery.isLoading ||
-                          selectableEmployees.length === 0
-                        }
-                      >
-                        <option value="">اختر موظف للربط</option>
-                        {selectableEmployees.map((employee) => (
-                          <option key={employee.id} value={employee.id}>
-                            {employee.fullName} ({employee.jobNumber})
-                          </option>
-                        ))}
-                      </select>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleToggleActive(user)}
+                      disabled={!canUpdate || updateUserMutation.isPending}
+                    >
+                      {user.isActive ? "تعطيل" : "تفعيل"}
+                    </Button>
+
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() => handleDeleteUser(user)}
+                      disabled={!canDelete || deleteUserMutation.isPending}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      حذف
+                    </Button>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed p-2">
+                    {hasLinkedEmployee ? (
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleLinkEmployee(user.id)}
-                        disabled={
-                          !canReadEmployees ||
-                          !canUpdate ||
-                          !employeeSelections[user.id] ||
-                          linkUserEmployeeMutation.isPending
-                        }
+                        onClick={() => handleUnlinkEmployee(user.id)}
+                        disabled={!canUpdate || unlinkUserEmployeeMutation.isPending}
                       >
-                        ربط موظف
+                        فك الربط
                       </Button>
-                    </>
-                  )}
+                    ) : (
+                      <>
+                        <select
+                          className="h-9 min-w-[220px] rounded-md border border-input bg-background px-2 text-sm"
+                          value={employeeSelections[user.id] ?? ""}
+                          onChange={(event) =>
+                            setEmployeeSelections((prev) => ({
+                              ...prev,
+                              [user.id]: event.target.value,
+                            }))
+                          }
+                          disabled={
+                            !canReadEmployees ||
+                            !canUpdate ||
+                            employeesQuery.isLoading ||
+                            selectableEmployees.length === 0
+                          }
+                        >
+                          <option value="">اختر موظفًا للربط</option>
+                          {selectableEmployees.map((employee) => (
+                            <option key={employee.id} value={employee.id}>
+                              {employee.fullName} ({employee.jobNumber})
+                            </option>
+                          ))}
+                        </select>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleLinkEmployee(user.id)}
+                          disabled={
+                            !canReadEmployees ||
+                            !canUpdate ||
+                            !employeeSelections[user.id] ||
+                            linkUserEmployeeMutation.isPending
+                          }
+                        >
+                          ربط موظف
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
 
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-            <p className="text-xs text-muted-foreground">
-              صفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={
-                  !pagination || pagination.page <= 1 || usersQuery.isFetching
-                }
-              >
-                السابق
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPage((prev) =>
-                    pagination
-                      ? Math.min(prev + 1, pagination.totalPages)
-                      : prev,
-                  )
-                }
-                disabled={
-                  !pagination ||
-                  pagination.page >= pagination.totalPages ||
-                  usersQuery.isFetching
-                }
-              >
-                التالي
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => void usersQuery.refetch()}
-                disabled={usersQuery.isFetching}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${usersQuery.isFetching ? "animate-spin" : ""}`}
-                />
-                تحديث
-              </Button>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
+              <p className="text-xs text-muted-foreground">
+                صفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={!pagination || pagination.page <= 1 || usersQuery.isFetching}
+                >
+                  السابق
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setPage((prev) =>
+                      pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
+                    )
+                  }
+                  disabled={
+                    !pagination ||
+                    pagination.page >= pagination.totalPages ||
+                    usersQuery.isFetching
+                  }
+                >
+                  التالي
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => void usersQuery.refetch()}
+                  disabled={usersQuery.isFetching}
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${usersQuery.isFetching ? "animate-spin" : ""}`}
+                  />
+                  تحديث
+                </Button>
+              </div>
             </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Fab
+        icon={<UserRoundPlus className="h-4 w-4" />}
+        label="إنشاء"
+        ariaLabel="إنشاء مستخدم"
+        onClick={handleStartCreate}
+        disabled={!canCreate}
+      />
+
+      <BottomSheetForm
+        open={isFormOpen}
+        title={isEditing ? "تعديل مستخدم" : "إنشاء مستخدم"}
+        onClose={resetForm}
+        onSubmit={() => handleSubmitForm()}
+        isSubmitting={isFormSubmitting}
+        submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء مستخدم"}
+        showFooter={false}
+      >
+        {!canCreate && !isEditing ? (
+          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+            ليس لديك الصلاحية المطلوبة: <code>users.create</code>.
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        ) : (
+          <form className="space-y-3" onSubmit={handleSubmitForm}>
+            <div className="space-y-1.5">
+              <label
+                htmlFor="user-email"
+                className="text-xs font-medium text-muted-foreground"
+              >
+                البريد الإلكتروني *
+              </label>
+              <Input
+                id="user-email"
+                value={formState.email}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    email: event.target.value,
+                  }))
+                }
+                placeholder="user@school.local"
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label
+                htmlFor="user-username"
+                className="text-xs font-medium text-muted-foreground"
+              >
+                اسم المستخدم
+              </label>
+              <Input
+                id="user-username"
+                value={formState.username}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    username: event.target.value,
+                  }))
+                }
+                placeholder="ahmad_teacher"
+              />
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  الاسم الأول *
+                </label>
+                <Input
+                  value={formState.firstName}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      firstName: event.target.value,
+                  }))
+                }
+                  placeholder="أحمد"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  الاسم الأخير *
+                </label>
+                <Input
+                  value={formState.lastName}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      lastName: event.target.value,
+                  }))
+                }
+                  placeholder="القحطاني"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                {isEditing ? "تغيير كلمة المرور (اختياري)" : "كلمة المرور *"}
+              </label>
+              <Input
+                type="password"
+                value={formState.password}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    password: event.target.value,
+                  }))
+                }
+                placeholder="StrongPassword123!"
+                required={!isEditing}
+                minLength={isEditing ? undefined : 8}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                ربط موظف (اختياري)
+              </label>
+              <select
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={formState.employeeId}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    employeeId: event.target.value,
+                  }))
+                }
+                disabled={!canReadEmployees || employeesQuery.isLoading}
+              >
+                <option value="">اختر موظفًا</option>
+                {(employeesQuery.data ?? []).map((employee) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.fullName} ({employee.jobNumber})
+                  </option>
+                ))}
+              </select>
+              {!canReadEmployees ? (
+                <p className="text-xs text-muted-foreground">
+                  ليس لديك الصلاحية المطلوبة: <code>employees.read</code> لعرض الموظفين.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground">الأدوار</p>
+              <div className="max-h-36 space-y-1 overflow-y-auto rounded-md border p-2">
+                {(rolesQuery.data ?? []).length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    {canReadRoles
+                      ? "لا توجد أدوار متاحة."
+                      : "ليس لديك الصلاحية المطلوبة: roles.read لعرض الأدوار."}
+                  </p>
+                ) : (
+                  (rolesQuery.data ?? []).map((role) => (
+                    <label
+                      key={role.id}
+                      className="flex cursor-pointer items-center justify-between gap-2 rounded-md border border-transparent px-2 py-1 text-sm hover:border-border"
+                    >
+                      <span>
+                        {translateRoleCode(role.code)} ({role.code})
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={formState.roleIds.includes(role.id)}
+                        onChange={(event) => handleRoleToggle(role.id, event.target.checked)}
+                      />
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+              <span>نشط</span>
+              <input
+                type="checkbox"
+                checked={formState.isActive}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    isActive: event.target.checked,
+                  }))
+                }
+              />
+            </label>
+
+            {formError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {formError}
+              </div>
+            ) : null}
+
+            {mutationError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {mutationError}
+              </div>
+            ) : null}
+            {actionSuccess ? (
+              <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
+                {actionSuccess}
+              </div>
+            ) : null}
+
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                className="flex-1 gap-2"
+                disabled={isFormSubmitting || (!canCreate && !isEditing)}
+              >
+                {isFormSubmitting ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <UserRoundPlus className="h-4 w-4" />
+                )}
+                {isEditing ? "حفظ التعديلات" : "إنشاء مستخدم"}
+              </Button>
+              {isEditing ? (
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  إلغاء
+                </Button>
+              ) : null}
+            </div>
+          </form>
+        )}
+      </BottomSheetForm>
+    </>
   );
 }

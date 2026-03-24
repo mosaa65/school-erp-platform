@@ -37,6 +37,20 @@ export class CreateSectionDto {
   @Max(1000)
   capacity?: number;
 
+  @ApiPropertyOptional({ example: 3 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  buildingLookupId?: number;
+
+  @ApiPropertyOptional({ example: 'A-101' })
+  @IsOptional()
+  @Transform(({ value }: { value: string }) => value?.trim())
+  @IsString()
+  @MaxLength(80)
+  roomLabel?: string;
+
   @ApiPropertyOptional({ example: true })
   @IsOptional()
   @Type(() => Boolean)

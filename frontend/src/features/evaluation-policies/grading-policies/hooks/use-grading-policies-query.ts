@@ -16,6 +16,9 @@ type UseGradingPoliciesQueryOptions = {
   academicYearId?: string;
   gradeLevelId?: string;
   subjectId?: string;
+  sectionId?: string;
+  academicTermId?: string;
+  teacherEmployeeId?: string;
   assessmentType?: AssessmentType;
   status?: GradingWorkflowStatus;
   isDefault?: boolean;
@@ -35,6 +38,9 @@ export function useGradingPoliciesQuery(options: UseGradingPoliciesQueryOptions 
       options.academicYearId ?? "all",
       options.gradeLevelId ?? "all",
       options.subjectId ?? "all",
+      options.sectionId ?? "all",
+      options.academicTermId ?? "all",
+      options.teacherEmployeeId ?? "all",
       options.assessmentType ?? "all",
       options.status ?? "all",
       options.isDefault === undefined ? "all" : options.isDefault ? "default" : "custom",
@@ -50,6 +56,9 @@ export function useGradingPoliciesQuery(options: UseGradingPoliciesQueryOptions 
           academicYearId: options.academicYearId,
           gradeLevelId: options.gradeLevelId,
           subjectId: options.subjectId,
+          sectionId: options.sectionId,
+          academicTermId: options.academicTermId,
+          teacherEmployeeId: options.teacherEmployeeId,
           assessmentType: options.assessmentType,
           status: options.status,
           isDefault: options.isDefault,

@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   ConflictException,
   Injectable,
@@ -60,7 +60,10 @@ export class ParentNotificationsService {
   async create(payload: CreateParentNotificationDto, actorUserId: string) {
     await this.studentsService.ensureStudentExistsAndActive(payload.studentId);
 
-    if (payload.guardianTitleId !== undefined && payload.guardianTitleId !== null) {
+    if (
+      payload.guardianTitleId !== undefined &&
+      payload.guardianTitleId !== null
+    ) {
       await this.ensureRelationshipTypeExists(payload.guardianTitleId);
     }
 
@@ -80,7 +83,9 @@ export class ParentNotificationsService {
             studentId: payload.studentId,
             notificationType: payload.notificationType,
             guardianTitleId:
-              payload.guardianTitleId === undefined ? undefined : payload.guardianTitleId,
+              payload.guardianTitleId === undefined
+                ? undefined
+                : payload.guardianTitleId,
             behaviorType: payload.behaviorType,
             behaviorDescription: payload.behaviorDescription,
             requiredAction: payload.requiredAction,
@@ -233,7 +238,10 @@ export class ParentNotificationsService {
     const resolvedStudentId = payload.studentId ?? existing.studentId;
     await this.studentsService.ensureStudentExistsAndActive(resolvedStudentId);
 
-    if (payload.guardianTitleId !== undefined && payload.guardianTitleId !== null) {
+    if (
+      payload.guardianTitleId !== undefined &&
+      payload.guardianTitleId !== null
+    ) {
       await this.ensureRelationshipTypeExists(payload.guardianTitleId);
     }
 
@@ -368,7 +376,9 @@ export class ParentNotificationsService {
     const isSent = params.isSent ?? false;
 
     if (!isSent && params.sentDate) {
-      throw new BadRequestException('sentDate can only be set when isSent is true');
+      throw new BadRequestException(
+        'sentDate can only be set when isSent is true',
+      );
     }
 
     if (!isSent) {
@@ -417,3 +427,4 @@ export class ParentNotificationsService {
     return 'Unknown error';
   }
 }
+

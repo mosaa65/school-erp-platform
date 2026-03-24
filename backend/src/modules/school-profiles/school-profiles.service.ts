@@ -93,11 +93,12 @@ export class SchoolProfilesService {
   async findAll(query: ListSchoolProfilesDto) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
+    const deletedOnly = query.deletedOnly ?? false;
 
     const where: Prisma.SchoolProfileWhereInput = {
-      deletedAt: null,
+      deletedAt: deletedOnly ? { not: null } : null,
       ownershipTypeId: query.ownershipTypeId,
-      isActive: query.isActive,
+      isActive: deletedOnly ? undefined : query.isActive,
       OR: query.search
         ? [
             {

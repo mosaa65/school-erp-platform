@@ -1,17 +1,18 @@
 "use client";
 
 import * as React from "react";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   ClipboardCheck,
   LoaderCircle,
   PencilLine,
   RefreshCw,
-  Search,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { StudentEnrollmentPickerSheet } from "@/components/ui/student-enrollment-picker-sheet";
 import {
   Card,
   CardContent,
@@ -28,12 +29,12 @@ import {
 import { useStudentHomeworksQuery } from "@/features/assignments/student-homeworks/hooks/use-student-homeworks-query";
 import { useHomeworkOptionsQuery } from "@/features/assignments/student-homeworks/hooks/use-homework-options-query";
 import { useStudentEnrollmentOptionsQuery } from "@/features/assignments/student-homeworks/hooks/use-student-enrollment-options-query";
-import { useStudentOptionsQuery } from "@/features/assignments/student-homeworks/hooks/use-student-options-query";
 import type { StudentHomeworkListItem } from "@/lib/api/client";
 import {
   formatNameCodeLabel,
   formatSectionWithGradeLabel,
 } from "@/lib/option-labels";
+import { toStudentEnrollmentPickerOption } from "@/features/students/lib/student-enrollment-picker";
 
 type StudentHomeworkFormState = {
   homeworkId: string;
@@ -133,25 +134,37 @@ export function StudentHomeworksWorkspace() {
   const canReadStudents = hasPermission("students.read");
 
   const [page, setPage] = React.useState(1);
-  const [searchInput, setSearchInput] = React.useState("");
-  const [search, setSearch] = React.useState("");
-  const [homeworkFilter, setHomeworkFilter] = React.useState("all");
-  const [enrollmentFilter, setEnrollmentFilter] = React.useState("all");
-  const [studentFilter, setStudentFilter] = React.useState("all");
-  const [completedFilter, setCompletedFilter] = React.useState<"all" | "completed" | "pending">(
-    "all",
-  );
-  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
-    "all",
-  );
-  const [fromSubmittedAtInput, setFromSubmittedAtInput] = React.useState("");
-  const [toSubmittedAtInput, setToSubmittedAtInput] = React.useState("");
-  const [fromSubmittedAtFilter, setFromSubmittedAtFilter] = React.useState("");
-  const [toSubmittedAtFilter, setToSubmittedAtFilter] = React.useState("");
+  const [searchInput] = React.useState("");
+  const [search, setSearch] = React.useState("");  const [homeworkFilter] = React.useState("all");
+  const [enrollmentFilter] = React.useState("all");
+  const [studentFilter] = React.useState("all");
+  const [completedFilter] = React.useState<"all" | "completed" | "pending">("all");
+  const [activeFilter] = React.useState<"all" | "active" | "inactive">("all");
+  const [fromSubmittedAtFilter] = React.useState("");
+  const [toSubmittedAtFilter] = React.useState("");
+  const [, setFilterDraft] = React.useState<{
+    homework: string;
+    enrollment: string;
+    student: string;
+    completed: "all" | "completed" | "pending";
+    active: "all" | "active" | "inactive";
+    fromSubmittedAt: string;
+    toSubmittedAt: string;
+  }>({
+    homework: "all",
+    enrollment: "all",
+    student: "all",
+    completed: "all",
+    active: "all",
+    fromSubmittedAt: "",
+    toSubmittedAt: "",
+  });
 
   const [editingStudentHomeworkId, setEditingStudentHomeworkId] = React.useState<string | null>(
     null,
   );
+  const [isFilterOpen] = React.useState(false);
+  const [, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<StudentHomeworkFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
@@ -173,7 +186,6 @@ export function StudentHomeworksWorkspace() {
 
   const homeworksQuery = useHomeworkOptionsQuery();
   const enrollmentsQuery = useStudentEnrollmentOptionsQuery();
-  const studentsQuery = useStudentOptionsQuery();
 
   const createMutation = useCreateStudentHomeworkMutation();
   const updateMutation = useUpdateStudentHomeworkMutation();
@@ -191,22 +203,17 @@ export function StudentHomeworksWorkspace() {
     [formState.homeworkId, homeworksQuery.data],
   );
 
-  const formEnrollmentOptions = React.useMemo(() => {
-    const all = enrollmentsQuery.data ?? [];
-    if (!selectedHomeworkForForm) {
-      return all;
-    }
-    return all.filter(
-      (item) =>
-        item.sectionId === selectedHomeworkForForm.sectionId &&
-        item.academicYearId === selectedHomeworkForForm.academicYearId,
-    );
-  }, [enrollmentsQuery.data, selectedHomeworkForForm]);
-
-  const filteredEnrollmentOptions = React.useMemo(() => {
-    const all = enrollmentsQuery.data ?? [];
-    return all.filter((item) => (studentFilter === "all" ? true : item.studentId === studentFilter));
-  }, [enrollmentsQuery.data, studentFilter]);
+  const selectedEnrollmentForForm = React.useMemo(
+    () =>
+      (enrollmentsQuery.data ?? []).find((item) => item.id === formState.studentEnrollmentId) ??
+      null,
+    [enrollmentsQuery.data, formState.studentEnrollmentId],
+  );
+  const selectedEnrollmentOptionForForm = React.useMemo(
+    () =>
+      selectedEnrollmentForForm ? toStudentEnrollmentPickerOption(selectedEnrollmentForForm) : null,
+    [selectedEnrollmentForForm],
+  );
 
   const mutationError =
     (createMutation.error as Error | null)?.message ??
@@ -224,21 +231,50 @@ export function StudentHomeworksWorkspace() {
       setEditingStudentHomeworkId(null);
       setFormState(DEFAULT_FORM_STATE);
       setFormError(null);
+      setIsFormOpen(false);
     }
   }, [editingStudentHomeworkId, isEditing, records]);
 
-  const resetForm = () => {
+  useDebounceEffect(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 400, [searchInput]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setFilterDraft({
+      homework: homeworkFilter,
+      enrollment: enrollmentFilter,
+      student: studentFilter,
+      completed: completedFilter,
+      active: activeFilter,
+      fromSubmittedAt: fromSubmittedAtFilter,
+      toSubmittedAt: toSubmittedAtFilter,
+    });
+  }, [
+    activeFilter,
+    completedFilter,
+    enrollmentFilter,
+    fromSubmittedAtFilter,
+    homeworkFilter,
+    isFilterOpen,
+    studentFilter,
+    toSubmittedAtFilter,
+  ]);
+
+  const resetFormState = () => {
     setEditingStudentHomeworkId(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
   };
 
-  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPage(1);
-    setSearch(searchInput.trim());
-    setFromSubmittedAtFilter(fromSubmittedAtInput);
-    setToSubmittedAtFilter(toSubmittedAtInput);
+  const resetForm = () => {
+    resetFormState();
+    setIsFormOpen(false);
+    setActionSuccess(null);
   };
 
   const validateForm = (): boolean => {
@@ -267,11 +303,18 @@ export function StudentHomeworksWorkspace() {
       (item) => item.id === formState.studentEnrollmentId,
     );
     if (selectedHomeworkForForm && selectedEnrollment) {
-      if (
-        selectedEnrollment.sectionId !== selectedHomeworkForForm.sectionId ||
-        selectedEnrollment.academicYearId !== selectedHomeworkForForm.academicYearId
-      ) {
+      if (selectedEnrollment.academicYearId !== selectedHomeworkForForm.academicYearId) {
         setFormError("قيد الطالب لا يطابق شعبة/سنة الواجب.");
+        return false;
+      }
+
+      if (!selectedEnrollment.sectionId) {
+        setFormError("قيد الطالب غير موزع على شعبة بعد، ولا يمكن ربطه بهذا الواجب.");
+        return false;
+      }
+
+      if (selectedEnrollment.sectionId !== selectedHomeworkForForm.sectionId) {
+        setFormError("قيد الطالب لا يطابق شعبة الواجب.");
         return false;
       }
     }
@@ -315,7 +358,7 @@ export function StudentHomeworksWorkspace() {
         },
         {
           onSuccess: () => {
-            resetForm();
+            resetFormState();
             setActionSuccess("تم تحديث واجب الطالب بنجاح.");
           },
         },
@@ -330,7 +373,7 @@ export function StudentHomeworksWorkspace() {
 
     createMutation.mutate(payload, {
       onSuccess: () => {
-        resetForm();
+        resetFormState();
         setPage(1);
         setActionSuccess("تم إنشاء واجب الطالب بنجاح.");
       },
@@ -346,6 +389,7 @@ export function StudentHomeworksWorkspace() {
     setActionSuccess(null);
     setEditingStudentHomeworkId(item.id);
     setFormState(toFormState(item));
+    setIsFormOpen(true);
   };
 
   const handleToggleActive = (item: StudentHomeworkListItem) => {
@@ -435,22 +479,23 @@ export function StudentHomeworksWorkspace() {
                 ))}
               </select>
 
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <StudentEnrollmentPickerSheet
                 value={formState.studentEnrollmentId}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, studentEnrollmentId: event.target.value }))
+                selectedOption={selectedEnrollmentOptionForForm}
+                onSelect={(option) =>
+                  setFormState((prev) => ({ ...prev, studentEnrollmentId: option?.id ?? "" }))
                 }
-                disabled={!canReadEnrollments}
-              >
-                <option value="">اختر القيد *</option>
-                {formEnrollmentOptions.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.student.fullName} ({item.student.admissionNo ?? "بدون رقم قيد"}) -{" "}
-                    {formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatSectionWithGradeLabel(item.section)}
-                  </option>
-                ))}
-              </select>
+                scope="assignments.student-homeworks"
+                variant="form"
+                academicYearId={selectedHomeworkForForm?.academicYearId}
+                sectionId={selectedHomeworkForForm?.sectionId ?? undefined}
+                placeholder="اختر القيد *"
+                title="اختيار قيد الطالب"
+                searchPlaceholder="ابحث باسم الطالب أو رقم القيد"
+                emptySelectionLabel="إلغاء اختيار القيد"
+                allowEmptySelection={false}
+                disabled={!canReadEnrollments || !selectedHomeworkForForm}
+              />
 
               <div className="grid gap-3 md:grid-cols-2">
                 <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
@@ -562,103 +607,6 @@ export function StudentHomeworksWorkspace() {
           </div>
           <CardDescription>فلترة ومراجعة حالة إنجاز الواجب لكل طالب.</CardDescription>
 
-          <form
-            onSubmit={handleSearchSubmit}
-            className="grid gap-2 md:grid-cols-[1fr_150px_170px_150px_140px_140px_130px_130px_auto]"
-          >
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث..."
-                className="pr-8"
-              />
-            </div>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={studentFilter}
-              onChange={(event) => {
-                setPage(1);
-                setStudentFilter(event.target.value);
-              }}
-            >
-              <option value="all">كل الطلاب</option>
-              {(studentsQuery.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.fullName} {item.admissionNo ? `(${item.admissionNo})` : ""}
-                </option>
-              ))}
-            </select>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={enrollmentFilter}
-              onChange={(event) => {
-                setPage(1);
-                setEnrollmentFilter(event.target.value);
-              }}
-            >
-              <option value="all">كل القيود</option>
-              {filteredEnrollmentOptions.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.student.fullName} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatSectionWithGradeLabel(item.section)})
-                </option>
-              ))}
-            </select>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={homeworkFilter}
-              onChange={(event) => {
-                setPage(1);
-                setHomeworkFilter(event.target.value);
-              }}
-            >
-              <option value="all">كل الواجبات</option>
-              {(homeworksQuery.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.title} ({formatSectionWithGradeLabel(item.section)})
-                </option>
-              ))}
-            </select>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={completedFilter}
-              onChange={(event) => {
-                setPage(1);
-                setCompletedFilter(event.target.value as "all" | "completed" | "pending");
-              }}
-            >
-              <option value="all">كل الحالات</option>
-              <option value="completed">مكتمل</option>
-              <option value="pending">قيد الإنجاز</option>
-            </select>
-            <Input
-              type="date"
-              value={fromSubmittedAtInput}
-              onChange={(event) => setFromSubmittedAtInput(event.target.value)}
-            />
-            <Input
-              type="date"
-              value={toSubmittedAtInput}
-              onChange={(event) => setToSubmittedAtInput(event.target.value)}
-            />
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={activeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setActiveFilter(event.target.value as "all" | "active" | "inactive");
-              }}
-            >
-              <option value="all">الكل</option>
-              <option value="active">نشط</option>
-              <option value="inactive">غير نشط</option>
-            </select>
-            <Button type="submit" variant="outline" className="gap-2">
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
-          </form>
         </CardHeader>
 
         <CardContent className="space-y-3">

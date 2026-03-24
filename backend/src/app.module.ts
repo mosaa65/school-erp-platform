@@ -4,29 +4,26 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { AcademicMonthsModule } from './modules/academic-months/academic-months.module';
-import { AnnualGradesModule } from './modules/grade-aggregation/annual-grades/annual-grades.module';
-import { AnnualResultsModule } from './modules/results-decisions/annual-results/annual-results.module';
-import { AnnualStatusesModule } from './modules/results-decisions/annual-statuses/annual-statuses.module';
+import { AssignmentsModule } from './modules/assignments/assignments.module';
+import { ExamsModule } from './modules/exams/exams.module';
+import { EvaluationPoliciesModule } from './modules/evaluation-policies/evaluation-policies.module';
+import { GradeAggregationModule } from './modules/grade-aggregation/grade-aggregation.module';
+import { ResultsDecisionsModule } from './modules/results-decisions/results-decisions.module';
 import { AcademicTermsModule } from './modules/academic-terms/academic-terms.module';
 import { AcademicYearsModule } from './modules/academic-years/academic-years.module';
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 import { EmployeeAttendanceModule } from './modules/employee-attendance/employee-attendance.module';
 import { EmployeeCoursesModule } from './modules/employee-courses/employee-courses.module';
 import { EmployeePerformanceEvaluationsModule } from './modules/employee-performance-evaluations/employee-performance-evaluations.module';
-import { EmployeeSectionSupervisionsModule } from './modules/teaching-assignments/employee-section-supervisions/employee-section-supervisions.module';
 import { EmployeeTasksModule } from './modules/employee-tasks/employee-tasks.module';
 import { EmployeeTalentsModule } from './modules/employee-talents/employee-talents.module';
-import { EmployeeTeachingAssignmentsModule } from './modules/teaching-assignments/employee-teaching-assignments/employee-teaching-assignments.module';
 import { EmployeeViolationsModule } from './modules/employee-violations/employee-violations.module';
 import { EmployeesModule } from './modules/employees/employees.module';
-import { DataScopeModule } from './modules/teaching-assignments/data-scope/data-scope.module';
 import { GradeLevelSubjectsModule } from './modules/grade-level-subjects/grade-level-subjects.module';
 import { GradeLevelsModule } from './modules/grade-levels/grade-levels.module';
 import { GlobalSettingsModule } from './modules/global-settings/global-settings.module';
-import { GradingOutcomeRulesModule } from './modules/evaluation-policies/grading-outcome-rules/grading-outcome-rules.module';
-import { HomeworkTypesModule } from './modules/assignments/homework-types/homework-types.module';
-import { HomeworksModule } from './modules/assignments/homeworks/homeworks.module';
 import { HrReportsModule } from './modules/hr-reports/hr-reports.module';
+import { ClassroomsModule } from './modules/classrooms/classrooms.module';
 import { LookupBloodTypesModule } from './modules/lookup-blood-types/lookup-blood-types.module';
 import { LookupEnrollmentStatusesModule } from './modules/lookup-enrollment-statuses/lookup-enrollment-statuses.module';
 import { LookupCatalogModule } from './modules/lookup-catalog/lookup-catalog.module';
@@ -37,34 +34,26 @@ import { LookupActivityTypesModule } from './modules/lookup-activity-types/looku
 import { LookupGradeDescriptionsModule } from './modules/lookup-grade-descriptions/lookup-grade-descriptions.module';
 import { LookupOwnershipTypesModule } from './modules/lookup-ownership-types/lookup-ownership-types.module';
 import { LookupPeriodsModule } from './modules/lookup-periods/lookup-periods.module';
-import { GradingReportsModule } from './modules/results-decisions/grading-reports/grading-reports.module';
-import { MonthlyCustomComponentScoresModule } from './modules/grade-aggregation/monthly-custom-component-scores/monthly-custom-component-scores.module';
-import { MonthlyGradesModule } from './modules/grade-aggregation/monthly-grades/monthly-grades.module';
+import { TalentsModule } from './modules/talents/talents.module';
 import { PermissionsModule } from './modules/permissions/permissions.module';
-import { PromotionDecisionsModule } from './modules/results-decisions/promotion-decisions/promotion-decisions.module';
 import { RolesModule } from './modules/roles/roles.module';
+import { SectionClassroomAssignmentsModule } from './modules/section-classroom-assignments/section-classroom-assignments.module';
 import { SectionsModule } from './modules/sections/sections.module';
-import { SemesterGradesModule } from './modules/grade-aggregation/semester-grades/semester-grades.module';
 import { StudentEnrollmentsModule } from './modules/student-enrollments/student-enrollments.module';
 import { StudentGuardiansModule } from './modules/student-guardians/student-guardians.module';
 import { StudentProblemsModule } from './modules/student-problems/student-problems.module';
+import { HealthVisitsModule } from './modules/health-visits/health-visits.module';
 import { StudentSiblingsModule } from './modules/student-siblings/student-siblings.module';
 import { StudentsModule } from './modules/students/students.module';
 import { StudentAttendanceModule } from './modules/student-attendance/student-attendance.module';
 import { StudentBooksModule } from './modules/student-books/student-books.module';
-import { StudentHomeworksModule } from './modules/assignments/student-homeworks/student-homeworks.module';
 import { StudentTalentsModule } from './modules/student-talents/student-talents.module';
 import { SubjectsModule } from './modules/subjects/subjects.module';
-import { GradingPoliciesModule } from './modules/evaluation-policies/grading-policies/grading-policies.module';
-import { GradingPolicyComponentsModule } from './modules/evaluation-policies/grading-policy-components/grading-policy-components.module';
-import { ExamPeriodsModule } from './modules/exams/exam-periods/exam-periods.module';
-import { ExamAssessmentsModule } from './modules/exams/exam-assessments/exam-assessments.module';
-import { StudentExamScoresModule } from './modules/exams/student-exam-scores/student-exam-scores.module';
 import { TimetableEntriesModule } from './modules/timetable-entries/timetable-entries.module';
+import { TeachingAssignmentsModule } from './modules/teaching-assignments/teaching-assignments.module';
 import { TermSubjectOfferingsModule } from './modules/term-subject-offerings/term-subject-offerings.module';
-import { TalentsModule } from './modules/talents/talents.module';
-import { RemindersTickerModule } from './modules/reminders-ticker/reminders-ticker.module';
 import { SystemSettingsModule } from './modules/system-settings/system-settings.module';
+import { RemindersTickerModule } from './modules/reminders-ticker/reminders-ticker.module';
 import { UserPermissionsModule } from './modules/user-permissions/user-permissions.module';
 import { UsersModule } from './modules/users/users.module';
 import { GuardiansModule } from './modules/guardians/guardians.module';
@@ -115,12 +104,10 @@ import { CommunityContributionsModule } from './modules/finance/community-contri
     AcademicYearsModule,
     AcademicTermsModule,
     AcademicMonthsModule,
-    AnnualStatusesModule,
-    PromotionDecisionsModule,
-    GradingOutcomeRulesModule,
-    GradingReportsModule,
+    ResultsDecisionsModule,
     GradeLevelSubjectsModule,
     GradeLevelsModule,
+    ClassroomsModule,
     SectionsModule,
     SubjectsModule,
     StudentsModule,
@@ -132,20 +119,12 @@ import { CommunityContributionsModule } from './modules/finance/community-contri
     StudentTalentsModule,
     StudentSiblingsModule,
     StudentProblemsModule,
+    HealthVisitsModule,
     ParentNotificationsModule,
-    GradingPoliciesModule,
-    GradingPolicyComponentsModule,
-    ExamPeriodsModule,
-    ExamAssessmentsModule,
-    StudentExamScoresModule,
-    MonthlyGradesModule,
-    MonthlyCustomComponentScoresModule,
-    SemesterGradesModule,
-    AnnualGradesModule,
-    AnnualResultsModule,
-    HomeworkTypesModule,
-    HomeworksModule,
-    StudentHomeworksModule,
+    EvaluationPoliciesModule,
+    ExamsModule,
+    GradeAggregationModule,
+    AssignmentsModule,
     HrReportsModule,
     EmployeesModule,
     TalentsModule,
@@ -153,14 +132,14 @@ import { CommunityContributionsModule } from './modules/finance/community-contri
     EmployeeTalentsModule,
     EmployeeCoursesModule,
     EmployeeViolationsModule,
-    EmployeeTeachingAssignmentsModule,
-    EmployeeSectionSupervisionsModule,
+    TeachingAssignmentsModule,
     EmployeeAttendanceModule,
     EmployeePerformanceEvaluationsModule,
     TimetableEntriesModule,
     TermSubjectOfferingsModule,
     UsersModule,
     RolesModule,
+    SectionClassroomAssignmentsModule,
     PermissionsModule,
     AuditLogsModule,
     GlobalSettingsModule,
@@ -178,7 +157,6 @@ import { CommunityContributionsModule } from './modules/finance/community-contri
     RemindersTickerModule,
     UserPermissionsModule,
     SchoolProfilesModule,
-    DataScopeModule,
     BranchesModule,
     CurrenciesModule,
     CurrencyExchangeRatesModule,

@@ -88,10 +88,11 @@ export class LookupOwnershipTypesService {
   async findAll(query: ListLookupOwnershipTypesDto) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
+    const deletedOnly = query.deletedOnly ?? false;
 
     const where: Prisma.LookupOwnershipTypeWhereInput = {
-      deletedAt: null,
-      isActive: query.isActive,
+      deletedAt: deletedOnly ? { not: null } : null,
+      isActive: deletedOnly ? undefined : query.isActive,
       OR: query.search
         ? [
             {

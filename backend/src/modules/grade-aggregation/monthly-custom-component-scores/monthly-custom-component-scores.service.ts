@@ -554,9 +554,14 @@ export class MonthlyCustomComponentScoresService {
       );
     }
 
+    const sectionId = this.requireAssignedSectionId(
+      monthlyGrade.studentEnrollment.sectionId,
+      'لا يمكن تسجيل مكوّن شهري مخصص لقيد غير موزع على شعبة',
+    );
+
     return {
       monthlyGradeId: monthlyGrade.id,
-      sectionId: monthlyGrade.studentEnrollment.sectionId,
+      sectionId,
       subjectId: monthlyGrade.subjectId,
       academicYearId: monthlyGrade.academicYearId,
       gradingPolicyId: monthlyGrade.gradingPolicyId,
@@ -569,7 +574,7 @@ export class MonthlyCustomComponentScoresService {
     monthlyGradeId: string,
     actorUserId: string,
   ) {
-    const [monthlyGrade, customSum] = await this.prisma.$transaction([
+    const [monthlyGrade, customSum, autoComponents] = await this.prisma.$transaction([
       this.prisma.monthlyGrade.findFirst({
         where: {
           id: monthlyGradeId,
@@ -578,11 +583,6 @@ export class MonthlyCustomComponentScoresService {
         select: {
           id: true,
           gradingPolicyId: true,
-          attendanceScore: true,
-          homeworkScore: true,
-          activityScore: true,
-          contributionScore: true,
-          examScore: true,
         },
       }),
       this.prisma.monthlyCustomComponentScore.aggregate({
@@ -595,6 +595,23 @@ export class MonthlyCustomComponentScoresService {
           score: true,
         },
       }),
+      this.prisma.periodGradeComponent.findMany({
+        where: {
+          monthlyGradeId,
+          deletedAt: null,
+          gradingPolicyComponent: {
+            deletedAt: null,
+            isActive: true,
+            includeInMonthly: true,
+            calculationMode: {
+              not: 'MANUAL',
+            },
+          },
+        },
+        select: {
+          score: true,
+        },
+      }),
     ]);
 
     if (!monthlyGrade) {
@@ -603,14 +620,10 @@ export class MonthlyCustomComponentScoresService {
 
     const customComponentsScore =
       this.decimalToNumber(customSum._sum.score) ?? 0;
-    const monthlyTotal = this.round2(
-      (this.decimalToNumber(monthlyGrade.attendanceScore) ?? 0) +
-        (this.decimalToNumber(monthlyGrade.homeworkScore) ?? 0) +
-        (this.decimalToNumber(monthlyGrade.activityScore) ?? 0) +
-        (this.decimalToNumber(monthlyGrade.contributionScore) ?? 0) +
-        customComponentsScore +
-        (this.decimalToNumber(monthlyGrade.examScore) ?? 0),
-    );
+    const autoTotal = autoComponents.reduce((sum, item) => {
+      return sum + (this.decimalToNumber(item.score) ?? 0);
+    }, 0);
+    const monthlyTotal = this.round2(autoTotal + customComponentsScore);
 
     await this.prisma.monthlyGrade.update({
       where: {
@@ -622,6 +635,14 @@ export class MonthlyCustomComponentScoresService {
         updatedById: actorUserId,
       },
     });
+  }
+
+  private requireAssignedSectionId(sectionId: string | null, message: string) {
+    if (!sectionId) {
+      throw new BadRequestException(message);
+    }
+
+    return sectionId;
   }
 
   private validateScore(score: number, maxScore: number) {

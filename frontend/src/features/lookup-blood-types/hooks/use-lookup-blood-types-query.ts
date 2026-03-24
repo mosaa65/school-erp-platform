@@ -9,6 +9,7 @@ type UseLookupBloodTypesQueryOptions = {
   limit?: number;
   search?: string;
   isActive?: boolean;
+  deletedOnly?: boolean;
 };
 
 export function useLookupBloodTypesQuery(
@@ -23,7 +24,13 @@ export function useLookupBloodTypesQuery(
       options.page ?? 1,
       options.limit ?? 12,
       options.search ?? "",
-      options.isActive === undefined ? "all" : options.isActive ? "active" : "inactive",
+      options.deletedOnly
+        ? "deleted"
+        : options.isActive === undefined
+          ? "all"
+          : options.isActive
+            ? "active"
+            : "inactive",
     ],
     enabled: auth.isHydrated && auth.isAuthenticated,
     queryFn: async () => {
@@ -33,6 +40,7 @@ export function useLookupBloodTypesQuery(
           limit: options.limit ?? 12,
           search: options.search,
           isActive: options.isActive,
+          deletedOnly: options.deletedOnly ? true : undefined,
         });
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) {

@@ -1,17 +1,21 @@
 "use client";
 
 import * as React from "react";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   Building,
   LoaderCircle,
   PencilLine,
   RefreshCw,
-  Search,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PhoneContactInput } from "@/components/ui/phone-contact-input";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField } from "@/components/ui/select-field";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
   CardContent,
@@ -19,6 +23,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateSchoolProfileMutation,
@@ -89,11 +96,19 @@ export function SchoolProfilesWorkspace() {
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
-  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
+  const [activeFilter, setActiveFilter] = React.useState<
+    "all" | "active" | "inactive" | "deleted"
+  >(
     "all",
   );
   const [ownershipFilter, setOwnershipFilter] = React.useState<string>("all");
+  const [activeFilterDraft, setActiveFilterDraft] = React.useState<
+    "all" | "active" | "inactive" | "deleted"
+  >("all");
+  const [ownershipFilterDraft, setOwnershipFilterDraft] = React.useState<string>("all");
   const [editingSchoolProfileId, setEditingSchoolProfileId] = React.useState<string | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<SchoolProfileFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
 
@@ -102,7 +117,11 @@ export function SchoolProfilesWorkspace() {
     limit: PAGE_SIZE,
     search: search || undefined,
     ownershipTypeId: ownershipFilter === "all" ? undefined : Number(ownershipFilter),
-    isActive: activeFilter === "all" ? undefined : activeFilter === "active",
+    isActive:
+      activeFilter === "all" || activeFilter === "deleted"
+        ? undefined
+        : activeFilter === "active",
+    deletedOnly: activeFilter === "deleted" ? true : undefined,
   });
   const ownershipTypeOptionsQuery = useOwnershipTypeOptionsQuery();
 
@@ -134,19 +153,40 @@ export function SchoolProfilesWorkspace() {
       setEditingSchoolProfileId(null);
       setFormState(DEFAULT_FORM_STATE);
       setFormError(null);
+      setIsFormOpen(false);
     }
   }, [editingSchoolProfileId, isEditing, schoolProfiles]);
+
+  useDebounceEffect(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 400, [searchInput]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setActiveFilterDraft(activeFilter);
+    setOwnershipFilterDraft(ownershipFilter);
+  }, [activeFilter, isFilterOpen, ownershipFilter]);
 
   const resetForm = () => {
     setEditingSchoolProfileId(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
+    setIsFormOpen(false);
   };
 
-  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPage(1);
-    setSearch(searchInput.trim());
+  const handleStartCreate = () => {
+    if (!canCreate) {
+      return;
+    }
+
+    setFormError(null);
+    setEditingSchoolProfileId(null);
+    setFormState(DEFAULT_FORM_STATE);
+    setIsFormOpen(true);
   };
 
   const validateForm = (): boolean => {
@@ -191,8 +231,8 @@ export function SchoolProfilesWorkspace() {
     return true;
   };
 
-  const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
 
     if (!validateForm()) {
       return;
@@ -250,6 +290,7 @@ export function SchoolProfilesWorkspace() {
     setFormError(null);
     setEditingSchoolProfileId(item.id);
     setFormState(toFormState(item));
+    setIsFormOpen(true);
   };
 
   const handleDelete = (item: SchoolProfileListItem) => {
@@ -278,25 +319,275 @@ export function SchoolProfilesWorkspace() {
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
 
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setActiveFilter("all");
+    setOwnershipFilter("all");
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    setPage(1);
+    setActiveFilter(activeFilterDraft);
+    setOwnershipFilter(ownershipFilterDraft);
+    setIsFilterOpen(false);
+  };
+
+  const activeFiltersCount = React.useMemo(() => {
+    const count = [
+      searchInput.trim() ? 1 : 0,
+      activeFilter !== "all" ? 1 : 0,
+      ownershipFilter !== "all" ? 1 : 0,
+    ].reduce((a, b) => a + b, 0);
+    return count;
+  }, [activeFilter, ownershipFilter, searchInput]);
+
   return (
-    <div className="grid gap-4 xl:grid-cols-[420px_1fr]">
-      <Card className="h-fit border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building className="h-5 w-5 text-primary" />
-            {isEditing ? "تعديل ملف مدرسة" : "إنشاء ملف مدرسة"}
-          </CardTitle>
-          <CardDescription>
-            {isEditing ? "تحديث بيانات ملف المدرسة." : "إضافة ملف مدرسة جديد."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!canCreate && !isEditing ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك الصلاحية المطلوبة: <code>school-profiles.create</code>.
+    <>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
+            <SearchField
+              containerClassName="flex-1"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="ابحث بالاسم/الكود..."
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterTriggerButton
+              count={activeFiltersCount}
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+            />
+          </div>
+        </div>
+
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="خيارات الفلترة"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={clearFilters}
+                className="flex-1 gap-1.5"
+              >
+                <Trash2 className="h-4 w-4" />
+                مسح
+              </Button>
+              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
+                تطبيق
+              </Button>
             </div>
-          ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm}>
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectField
+              value={ownershipFilterDraft}
+              onChange={(event) => setOwnershipFilterDraft(event.target.value)}
+            >
+              <option value="all">كل الملكيات</option>
+              {ownershipTypeOptions.map((option) => (
+                <option key={option.id} value={String(option.id)}>
+                  {option.nameAr}
+                </option>
+              ))}
+            </SelectField>
+
+            <SelectField
+              value={activeFilterDraft}
+              onChange={(event) =>
+                setActiveFilterDraft(
+                  event.target.value as "all" | "active" | "inactive" | "deleted",
+                )
+              }
+            >
+              <option value="all">كل الحالات</option>
+              <option value="active">نشط</option>
+              <option value="inactive">غير نشط</option>
+              <option value="deleted">محذوف فقط</option>
+            </SelectField>
+          </div>
+        </FilterDrawer>
+
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+          <CardHeader className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>قائمة ملفات المدارس</CardTitle>
+              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+            </div>
+            <CardDescription>إدارة البيانات الأساسية للمدارس.</CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-3">
+            {schoolProfilesQuery.isPending ? (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                جارٍ تحميل المدارس...
+              </div>
+            ) : null}
+
+            {schoolProfilesQuery.error ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                {schoolProfilesQuery.error instanceof Error
+                  ? schoolProfilesQuery.error.message
+                  : "تعذر تحميل المدارس"}
+              </div>
+            ) : null}
+
+            {!schoolProfilesQuery.isPending && schoolProfiles.length === 0 ? (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                لا توجد مدارس مطابقة.
+              </div>
+            ) : null}
+
+            {schoolProfiles.map((item) => (
+              <div
+                key={item.id}
+                className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+                data-testid="school-profile-card"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="space-y-1">
+                    <p className="font-medium">{item.nameAr}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {item.code}
+                      {item.nameEn ? ` • ${item.nameEn}` : ""}
+                    </p>
+                    {item.addressText ? (
+                      <p className="text-xs text-muted-foreground">{item.addressText}</p>
+                    ) : null}
+                    {item.ownershipType ? (
+                      <Badge variant="outline">{item.ownershipType.nameAr}</Badge>
+                    ) : null}
+                  </div>
+                  <Badge variant={item.isActive ? "default" : "outline"}>
+                    {item.isActive ? "نشط" : "غير نشط"}
+                  </Badge>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleStartEdit(item)}
+                    disabled={!canUpdate || updateMutation.isPending}
+                  >
+                    <PencilLine className="h-3.5 w-3.5" />
+                    تعديل
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleDelete(item)}
+                    disabled={!canDelete || deleteMutation.isPending}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    حذف
+                  </Button>
+                </div>
+              </div>
+            ))}
+
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
+              <p className="text-xs text-muted-foreground">
+                صفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={!pagination || pagination.page <= 1 || schoolProfilesQuery.isFetching}
+                >
+                  السابق
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setPage((prev) =>
+                      pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
+                    )
+                  }
+                  disabled={
+                    !pagination ||
+                    pagination.page >= pagination.totalPages ||
+                    schoolProfilesQuery.isFetching
+                  }
+                >
+                  التالي
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => void schoolProfilesQuery.refetch()}
+                  disabled={schoolProfilesQuery.isFetching}
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${schoolProfilesQuery.isFetching ? "animate-spin" : ""}`}
+                  />
+                  تحديث
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Fab
+        icon={<Building className="h-4 w-4" />}
+        label="إنشاء"
+        ariaLabel="إنشاء ملف مدرسة"
+        onClick={handleStartCreate}
+        disabled={!canCreate}
+      />
+
+      <BottomSheetForm
+        open={isFormOpen}
+        title={isEditing ? "تعديل ملف مدرسة" : "إنشاء ملف مدرسة"}
+        onClose={resetForm}
+        onSubmit={() => handleSubmitForm()}
+        isSubmitting={isFormSubmitting}
+        submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء ملف"}
+        showFooter={false}
+      >
+        {!canCreate && !isEditing ? (
+          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+            ليس لديك الصلاحية المطلوبة: <code>school-profiles.create</code>.
+          </div>
+        ) : (
+          <form className="space-y-3" onSubmit={handleSubmitForm}>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الاسم العربي *</label>
+              <Input
+                value={formState.nameAr}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, nameAr: event.target.value }))
+                }
+                placeholder="اسم المدرسة بالعربية"
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الاسم الإنجليزي</label>
+              <Input
+                value={formState.nameEn}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, nameEn: event.target.value }))
+                }
+                placeholder="اسم المدرسة بالإنجليزية"
+              />
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">الكود *</label>
                 <Input
@@ -304,330 +595,111 @@ export function SchoolProfilesWorkspace() {
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, code: event.target.value }))
                   }
-                  placeholder="default_school"
+                  placeholder="SCH-001"
                   required
                 />
               </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الاسم العربي *</label>
-                <Input
-                  value={formState.nameAr}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, nameAr: event.target.value }))
-                  }
-                  placeholder="مدرسة النجاح"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  الاسم الإنجليزي
-                </label>
-                <Input
-                  value={formState.nameEn}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, nameEn: event.target.value }))
-                  }
-                  placeholder="Al-Najah School"
-                />
-              </div>
-
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">نوع الملكية</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                <SelectField
                   value={formState.ownershipTypeId}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, ownershipTypeId: event.target.value }))
                   }
-                  disabled={!canReadOwnershipTypes || ownershipTypeOptionsQuery.isLoading}
+                  disabled={!canReadOwnershipTypes}
                 >
-                  <option value="">بدون نوع ملكية</option>
+                  <option value="">اختر نوع الملكية</option>
                   {ownershipTypeOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.nameAr} ({option.code})
+                    <option key={option.id} value={String(option.id)}>
+                      {option.nameAr}
                     </option>
                   ))}
-                </select>
-                {!canReadOwnershipTypes ? (
-                  <p className="text-xs text-muted-foreground">
-                    لا تملك الصلاحية المطلوبة: <code>lookup-ownership-types.read</code> لقراءة الأنواع.
-                  </p>
-                ) : null}
+                </SelectField>
               </div>
+            </div>
 
-              <div className="grid gap-2 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">الهاتف</label>
-                  <Input
-                    value={formState.phone}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, phone: event.target.value }))
-                    }
-                    placeholder="+967777111222"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">البريد الإلكتروني</label>
-                  <Input
-                    value={formState.email}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, email: event.target.value }))
-                    }
-                    placeholder="info@school.local"
-                  />
-                </div>
-              </div>
-
+            <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">العنوان</label>
-                  <Input
-                    value={formState.addressText}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, addressText: event.target.value }))
-                    }
-                    placeholder="صنعاء - الحي الأول"
-                  />
-                </div>
-
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشط</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                <label className="text-xs font-medium text-muted-foreground">الهاتف</label>
+                <PhoneContactInput
+                  value={formState.phone}
+                  onValueChange={(value) =>
+                    setFormState((prev) => ({ ...prev, phone: value }))
                   }
+                  placeholder="رقم الهاتف"
+                  className="h-10"
+                  buttonTestId="school-profile-phone-contact-picker"
                 />
-              </label>
-
-              {formError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {formError}
-                </div>
-              ) : null}
-
-              {mutationError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {mutationError}
-                </div>
-              ) : null}
-
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  className="flex-1 gap-2"
-                  disabled={isFormSubmitting || (!canCreate && !isEditing)}
-                >
-                  {isFormSubmitting ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Building className="h-4 w-4" />
-                  )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء ملف مدرسة"}
-                </Button>
-                {isEditing ? (
-                  <Button type="button" variant="outline" onClick={resetForm}>
-                    إلغاء
-                  </Button>
-                ) : null}
               </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">البريد الإلكتروني</label>
+                <Input
+                  value={formState.email}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, email: event.target.value }))
+                  }
+                  placeholder="school@example.com"
+                  type="email"
+                />
+              </div>
+            </div>
 
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>ملفات المدارس</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
-          </div>
-          <CardDescription>إدارة ملفات المدرسة والبحث والفلترة.</CardDescription>
-
-          <form
-            onSubmit={handleSearchSubmit}
-            className="grid gap-2 md:grid-cols-[1fr_150px_130px_auto]"
-          >
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">العنوان</label>
               <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث بالاسم/الكود..."
-                className="pr-8"
+                value={formState.addressText}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, addressText: event.target.value }))
+                }
+                placeholder="عنوان المدرسة"
               />
             </div>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={ownershipFilter}
-              onChange={(event) => {
-                setPage(1);
-                setOwnershipFilter(event.target.value);
-              }}
-              disabled={!canReadOwnershipTypes || ownershipTypeOptionsQuery.isLoading}
-            >
-              <option value="all">كل أنواع الملكية</option>
-              {ownershipTypeOptions.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.nameAr}
-                </option>
-              ))}
-            </select>
+            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+              <span>نشط</span>
+              <input
+                type="checkbox"
+                checked={formState.isActive}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                }
+              />
+            </label>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={activeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setActiveFilter(event.target.value as "all" | "active" | "inactive");
-              }}
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">نشط فقط</option>
-              <option value="inactive">غير نشط فقط</option>
-            </select>
+            {formError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {formError}
+              </div>
+            ) : null}
 
-            <Button type="submit" variant="outline" className="gap-2">
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
+            {mutationError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {mutationError}
+              </div>
+            ) : null}
+
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                className="flex-1 gap-2"
+                disabled={isFormSubmitting || (!canCreate && !isEditing)}
+              >
+                {isFormSubmitting ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Building className="h-4 w-4" />
+                )}
+                {isEditing ? "حفظ التعديلات" : "إنشاء ملف"}
+              </Button>
+              {isEditing ? (
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  إلغاء
+                </Button>
+              ) : null}
+            </div>
           </form>
-        </CardHeader>
-
-        <CardContent className="space-y-3">
-          {schoolProfilesQuery.isPending ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ تحميل ملفات المدارس...
-            </div>
-          ) : null}
-
-          {schoolProfilesQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {schoolProfilesQuery.error instanceof Error
-                ? schoolProfilesQuery.error.message
-                : "فشل تحميل ملفات المدارس"}
-            </div>
-          ) : null}
-
-          {!schoolProfilesQuery.isPending && schoolProfiles.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              لا توجد نتائج مطابقة.
-            </div>
-          ) : null}
-
-          {schoolProfiles.map((item) => (
-            <div
-              key={item.id}
-              className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <p className="font-medium">
-                    {item.nameAr}{" "}
-                    <span className="text-xs text-muted-foreground">({item.code})</span>
-                  </p>
-                  {item.nameEn ? (
-                    <p className="text-xs text-muted-foreground">{item.nameEn}</p>
-                  ) : null}
-                  <p className="text-xs text-muted-foreground">
-                    النوع: {item.ownershipType?.nameAr ?? "غير محدد"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    الهاتف: {item.phone ?? "-"} | البريد: {item.email ?? "-"}
-                  </p>
-                  {item.addressText ? (
-                    <p className="text-xs text-muted-foreground">{item.addressText}</p>
-                  ) : null}
-                </div>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {item.code === "default_school" ? (
-                    <Badge variant="outline">الملف الافتراضي</Badge>
-                  ) : null}
-                  <Badge variant={item.isActive ? "default" : "outline"}>
-                    {item.isActive ? "نشط" : "غير نشط"}
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleStartEdit(item)}
-                  disabled={!canUpdate || updateMutation.isPending}
-                >
-                  <PencilLine className="h-3.5 w-3.5" />
-                  تعديل
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleDelete(item)}
-                  disabled={!canDelete || deleteMutation.isPending || item.code === "default_school"}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  حذف
-                </Button>
-              </div>
-            </div>
-          ))}
-
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-            <p className="text-xs text-muted-foreground">
-              صفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={!pagination || pagination.page <= 1 || schoolProfilesQuery.isFetching}
-              >
-                السابق
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPage((prev) =>
-                    pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                  )
-                }
-                disabled={
-                  !pagination ||
-                  pagination.page >= pagination.totalPages ||
-                  schoolProfilesQuery.isFetching
-                }
-              >
-                التالي
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => void schoolProfilesQuery.refetch()}
-                disabled={schoolProfilesQuery.isFetching}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${schoolProfilesQuery.isFetching ? "animate-spin" : ""}`}
-                />
-                تحديث
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+        )}
+      </BottomSheetForm>
+    </>
   );
 }
-
-
-
-
-

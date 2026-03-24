@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { StudentPickerSheet } from "@/components/ui/student-picker-sheet";
 import {
   Card,
   CardContent,
@@ -20,7 +21,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
-import { useStudentOptionsQuery } from "@/features/student-books/hooks/use-student-options-query";
 import { useRelationshipTypeOptionsQuery } from "@/features/student-guardians/hooks/use-relationship-type-options-query";
 import {
   useCreateParentNotificationMutation,
@@ -28,6 +28,7 @@ import {
   useUpdateParentNotificationMutation,
 } from "@/features/parent-notifications/hooks/use-parent-notifications-mutations";
 import { useParentNotificationsQuery } from "@/features/parent-notifications/hooks/use-parent-notifications-query";
+import type { StudentPickerOption } from "@/features/students/lib/student-picker";
 import type {
   ParentNotificationListItem,
   ParentNotificationSendMethod,
@@ -131,6 +132,20 @@ function toFormState(item: ParentNotificationListItem): ParentNotificationFormSt
   };
 }
 
+function buildStudentPickerOptionFromNotification(
+  item: ParentNotificationListItem,
+): StudentPickerOption {
+  return {
+    id: item.studentId,
+    title: item.student.fullName,
+    subtitle: item.student.admissionNo
+      ? `رقم الطالب ${item.student.admissionNo}`
+      : "بدون رقم طالب",
+    meta: null,
+    groupLabel: "الطالب المحدد",
+  };
+}
+
 export function ParentNotificationsWorkspace() {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("parent-notifications.create");
@@ -156,6 +171,11 @@ export function ParentNotificationsWorkspace() {
     DEFAULT_FORM_STATE,
   );
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [selectedFormStudent, setSelectedFormStudent] = React.useState<StudentPickerOption | null>(
+    null,
+  );
+  const [selectedFilterStudentOption, setSelectedFilterStudentOption] =
+    React.useState<StudentPickerOption | null>(null);
 
   const notificationsQuery = useParentNotificationsQuery({
     page,
@@ -167,7 +187,6 @@ export function ParentNotificationsWorkspace() {
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
   });
 
-  const studentsQuery = useStudentOptionsQuery();
   const relationshipTypeOptionsQuery = useRelationshipTypeOptionsQuery();
 
   const createMutation = useCreateParentNotificationMutation();
@@ -197,6 +216,7 @@ export function ParentNotificationsWorkspace() {
       setEditingNotificationId(null);
       setFormState(DEFAULT_FORM_STATE);
       setFormError(null);
+      setSelectedFormStudent(null);
     }
   }, [editingNotificationId, isEditing, notifications]);
 
@@ -204,6 +224,7 @@ export function ParentNotificationsWorkspace() {
     setEditingNotificationId(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
+    setSelectedFormStudent(null);
   };
 
   const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -317,6 +338,7 @@ export function ParentNotificationsWorkspace() {
     setFormError(null);
     setEditingNotificationId(item.id);
     setFormState(toFormState(item));
+    setSelectedFormStudent(buildStudentPickerOptionFromNotification(item));
   };
 
   const handleDelete = (item: ParentNotificationListItem) => {
@@ -366,22 +388,18 @@ export function ParentNotificationsWorkspace() {
             <form className="space-y-3" onSubmit={handleSubmitForm}>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">الطالب *</label>
-                <select
-                  data-testid="parent-notification-form-student"
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                <StudentPickerSheet
+                  scope="parent-notifications"
+                  variant="form"
                   value={formState.studentId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, studentId: event.target.value }))
-                  }
+                  selectedOption={selectedFormStudent}
+                  onSelect={(option) => {
+                    setSelectedFormStudent(option);
+                    setFormState((prev) => ({ ...prev, studentId: option?.id ?? "" }));
+                  }}
                   disabled={!canReadStudents}
-                >
-                  <option value="">اختر الطالب</option>
-                  {(studentsQuery.data ?? []).map((student) => (
-                    <option key={student.id} value={student.id}>
-                      {student.fullName} ({student.admissionNo ?? "بدون رقم"})
-                    </option>
-                  ))}
-                </select>
+                  triggerTestId="parent-notification-form-student"
+                />
               </div>
 
               <div className="grid gap-3 md:grid-cols-2">
@@ -603,7 +621,7 @@ export function ParentNotificationsWorkspace() {
 
           <form
             onSubmit={handleSearchSubmit}
-            className="grid gap-2 md:grid-cols-[1fr_170px_130px_130px_130px_auto]"
+            className="grid gap-2 md:grid-cols-[1fr_minmax(220px,260px)_130px_130px_130px_auto]"
           >
             <div className="relative">
               <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -615,21 +633,18 @@ export function ParentNotificationsWorkspace() {
               />
             </div>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            <StudentPickerSheet
+              scope="parent-notifications"
+              variant="filter"
               value={studentFilter}
-              onChange={(event) => {
+              selectedOption={selectedFilterStudentOption}
+              onSelect={(option) => {
                 setPage(1);
-                setStudentFilter(event.target.value);
+                setStudentFilter(option?.id ?? "all");
+                setSelectedFilterStudentOption(option);
               }}
-            >
-              <option value="all">كل الطلاب</option>
-              {(studentsQuery.data ?? []).map((student) => (
-                <option key={student.id} value={student.id}>
-                  {student.fullName} ({student.admissionNo ?? "بدون رقم"})
-                </option>
-              ))}
-            </select>
+              disabled={!canReadStudents}
+            />
 
             <select
               className="h-10 rounded-md border border-input bg-background px-3 text-sm"

@@ -1,17 +1,20 @@
 "use client";
 
 import * as React from "react";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   LoaderCircle,
   PencilLine,
   RefreshCw,
-  Search,
   ScrollText,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField } from "@/components/ui/select-field";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
   CardContent,
@@ -19,6 +22,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateReminderTickerMutation,
@@ -90,6 +96,25 @@ function ensureDateRange(startDate: string, endDate: string): string | null {
   return null;
 }
 
+function formatDateTime(value: string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  return date.toLocaleString("ar-SA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export function RemindersTickerWorkspace() {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("reminders-ticker.create");
@@ -99,12 +124,22 @@ export function RemindersTickerWorkspace() {
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
-  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
+  const [activeFilter, setActiveFilter] = React.useState<
+    "all" | "active" | "inactive" | "deleted"
+  >(
     "all",
   );
   const [typeFilter, setTypeFilter] = React.useState<ReminderTickerType | "all">("all");
+  const [activeFilterDraft, setActiveFilterDraft] = React.useState<
+    "all" | "active" | "inactive" | "deleted"
+  >("all");
+  const [typeFilterDraft, setTypeFilterDraft] = React.useState<
+    ReminderTickerType | "all"
+  >("all");
 
   const [editingItemId, setEditingItemId] = React.useState<number | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<ReminderTickerFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
 
@@ -113,7 +148,11 @@ export function RemindersTickerWorkspace() {
     limit: PAGE_SIZE,
     search: search || undefined,
     tickerType: typeFilter === "all" ? undefined : typeFilter,
-    isActive: activeFilter === "all" ? undefined : activeFilter === "active",
+    isActive:
+      activeFilter === "all" || activeFilter === "deleted"
+        ? undefined
+        : activeFilter === "active",
+    deletedOnly: activeFilter === "deleted" ? true : undefined,
   });
 
   const createMutation = useCreateReminderTickerMutation();
@@ -143,19 +182,40 @@ export function RemindersTickerWorkspace() {
       setEditingItemId(null);
       setFormState(DEFAULT_FORM_STATE);
       setFormError(null);
+      setIsFormOpen(false);
     }
   }, [editingItemId, isEditing, reminders]);
+
+  useDebounceEffect(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 400, [searchInput]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setActiveFilterDraft(activeFilter);
+    setTypeFilterDraft(typeFilter);
+  }, [activeFilter, isFilterOpen, typeFilter]);
 
   const resetForm = () => {
     setEditingItemId(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
+    setIsFormOpen(false);
   };
 
-  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPage(1);
-    setSearch(searchInput.trim());
+  const handleStartCreate = () => {
+    if (!canCreate) {
+      return;
+    }
+
+    setFormError(null);
+    setEditingItemId(null);
+    setFormState(DEFAULT_FORM_STATE);
+    setIsFormOpen(true);
   };
 
   const handleStartEdit = (item: ReminderTickerListItem) => {
@@ -166,6 +226,7 @@ export function RemindersTickerWorkspace() {
     setEditingItemId(item.id);
     setFormState(toFormState(item));
     setFormError(null);
+    setIsFormOpen(true);
   };
 
   const validateForm = (): boolean => {
@@ -185,8 +246,8 @@ export function RemindersTickerWorkspace() {
     return true;
   };
 
-  const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
 
     if (!validateForm()) {
       return;
@@ -255,182 +316,79 @@ export function RemindersTickerWorkspace() {
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
 
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setActiveFilter("all");
+    setTypeFilter("all");
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    setPage(1);
+    setActiveFilter(activeFilterDraft);
+    setTypeFilter(typeFilterDraft);
+    setIsFilterOpen(false);
+  };
+
+  const activeFiltersCount = React.useMemo(() => {
+    const count = [
+      searchInput.trim() ? 1 : 0,
+      activeFilter !== "all" ? 1 : 0,
+      typeFilter !== "all" ? 1 : 0,
+    ].reduce((a, b) => a + b, 0);
+    return count;
+  }, [activeFilter, searchInput, typeFilter]);
+
   return (
-    <div className="grid gap-4 xl:grid-cols-[380px_1fr]">
-      <Card className="h-fit border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ScrollText className="h-5 w-5 text-primary" />
-            {isEditing ? "تعديل تذكير" : "إضافة تذكير"}
-          </CardTitle>
-          <CardDescription>
-            إدارة محتوى الشريط المتحرك (أذكار، تنبيهات، إعلانات).
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!canCreate && !isEditing ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك الصلاحية المطلوبة: <code>reminders-ticker.create</code>.
-            </div>
-          ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="reminder-form">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">المحتوى *</label>
-                <textarea
-                  className="min-h-[100px] w-full rounded-md border border-input bg-background p-3 text-sm"
-                  value={formState.content}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, content: event.target.value }))
-                  }
-                  placeholder="اكتب نص التذكير أو الإعلان..."
-                  required
-                  data-testid="reminder-form-content"
-                />
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">النوع</label>
-                  <select
-                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    value={formState.tickerType}
-                    onChange={(event) =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        tickerType: event.target.value as ReminderTickerType,
-                      }))
-                    }
-                    data-testid="reminder-form-type"
-                  >
-                    {TICKER_TYPE_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">ترتيب العرض</label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={formState.displayOrder}
-                    onChange={(event) =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        displayOrder: Number(event.target.value || "0"),
-                      }))
-                    }
-                    data-testid="reminder-form-order"
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">تاريخ البداية</label>
-                  <Input
-                    type="date"
-                    value={formState.startDate}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, startDate: event.target.value }))
-                    }
-                    data-testid="reminder-form-start-date"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">تاريخ النهاية</label>
-                  <Input
-                    type="date"
-                    value={formState.endDate}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, endDate: event.target.value }))
-                    }
-                    data-testid="reminder-form-end-date"
-                  />
-                </div>
-              </div>
-
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشط</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                  data-testid="reminder-form-active"
-                />
-              </label>
-
-              {formError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {formError}
-                </div>
-              ) : null}
-
-              {mutationError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {mutationError}
-                </div>
-              ) : null}
-
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  className="flex-1 gap-2"
-                  disabled={isFormSubmitting || (!canCreate && !isEditing)}
-                  data-testid="reminder-form-submit"
-                >
-                  {isFormSubmitting ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <ScrollText className="h-4 w-4" />
-                  )}
-                  {isEditing ? "حفظ التعديلات" : "إضافة عنصر"}
-                </Button>
-                {isEditing ? (
-                  <Button type="button" variant="outline" onClick={resetForm}>
-                    إلغاء
-                  </Button>
-                ) : null}
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>عناصر الشريط المتحرك</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+    <>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
+            <SearchField
+              containerClassName="flex-1"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="ابحث في المحتوى..."
+              data-testid="reminder-filter-search"
+            />
           </div>
-          <CardDescription>بحث وفلترة وإدارة العناصر المعروضة في الواجهة.</CardDescription>
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterTriggerButton
+              count={activeFiltersCount}
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+            />
+          </div>
+        </div>
 
-          <form
-            onSubmit={handleSearchSubmit}
-            className="grid gap-2 md:grid-cols-[1fr_140px_130px_auto]"
-            data-testid="reminder-filters-form"
-          >
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث في المحتوى..."
-                className="pr-8"
-                data-testid="reminder-filter-search"
-              />
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="خيارات الفلترة"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={clearFilters}
+                className="flex-1 gap-1.5"
+              >
+                <Trash2 className="h-4 w-4" />
+                مسح
+              </Button>
+              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
+                تطبيق
+              </Button>
             </div>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={typeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setTypeFilter(event.target.value as ReminderTickerType | "all");
-              }}
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectField
+              value={typeFilterDraft}
+              onChange={(event) =>
+                setTypeFilterDraft(event.target.value as ReminderTickerType | "all")
+              }
               data-testid="reminder-filter-type"
             >
               <option value="all">كل الأنواع</option>
@@ -439,145 +397,278 @@ export function RemindersTickerWorkspace() {
                   {option.label}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={activeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setActiveFilter(event.target.value as "all" | "active" | "inactive");
-              }}
+            <SelectField
+              value={activeFilterDraft}
+              onChange={(event) =>
+                setActiveFilterDraft(
+                  event.target.value as "all" | "active" | "inactive" | "deleted",
+                )
+              }
               data-testid="reminder-filter-active"
             >
               <option value="all">كل الحالات</option>
               <option value="active">نشط</option>
               <option value="inactive">غير نشط</option>
-            </select>
+              <option value="deleted">محذوف فقط</option>
+            </SelectField>
+          </div>
+        </FilterDrawer>
 
-            <Button type="submit" variant="outline" className="gap-2">
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
-          </form>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {remindersTickerQuery.isPending ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ تحميل العناصر...
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+          <CardHeader className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>قائمة شريط التذكير</CardTitle>
+              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
-          ) : null}
+            <CardDescription>رسائل تظهر كشريط متحرك داخل النظام.</CardDescription>
+          </CardHeader>
 
-          {remindersTickerQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {remindersTickerQuery.error instanceof Error
-                ? remindersTickerQuery.error.message
-                : "فشل تحميل العناصر"}
-            </div>
-          ) : null}
+          <CardContent className="space-y-3">
+            {remindersTickerQuery.isPending ? (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                جارٍ تحميل الرسائل...
+              </div>
+            ) : null}
 
-          {!remindersTickerQuery.isPending && reminders.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              لا توجد نتائج مطابقة.
-            </div>
-          ) : null}
+            {remindersTickerQuery.error ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                {remindersTickerQuery.error instanceof Error
+                  ? remindersTickerQuery.error.message
+                  : "تعذر تحميل الرسائل"}
+              </div>
+            ) : null}
 
-          {reminders.map((item) => (
-            <div
-              key={item.id}
-              className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-              data-testid="reminder-card"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <p className="whitespace-pre-wrap text-sm">{item.content}</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    <Badge variant="outline">{getTickerTypeLabel(item.tickerType)}</Badge>
-                    <Badge variant="secondary">الترتيب: {item.displayOrder}</Badge>
-                    <Badge variant={item.isActive ? "default" : "outline"}>
-                      {item.isActive ? "نشط" : "غير نشط"}
-                    </Badge>
-                  </div>
-                  {(item.startDate || item.endDate) && (
+            {!remindersTickerQuery.isPending && reminders.length === 0 ? (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                لا توجد رسائل مطابقة.
+              </div>
+            ) : null}
+
+            {reminders.map((item) => (
+              <div
+                key={item.id}
+                className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+                data-testid="reminder-card"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="space-y-1">
+                    <p className="font-medium">{item.content}</p>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge variant="outline">{getTickerTypeLabel(item.tickerType)}</Badge>
+                      <Badge variant={item.isActive ? "default" : "outline"}>
+                        {item.isActive ? "نشط" : "غير نشط"}
+                      </Badge>
+                    </div>
                     <p className="text-xs text-muted-foreground">
-                      {item.startDate ? `من ${item.startDate.slice(0, 10)}` : "بدون تاريخ بداية"}
-                      {" - "}
-                      {item.endDate ? `إلى ${item.endDate.slice(0, 10)}` : "بدون تاريخ نهاية"}
+                      من {formatDateTime(item.startDate)} إلى {formatDateTime(item.endDate)}
                     </p>
-                  )}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleStartEdit(item)}
+                    disabled={!canUpdate || updateMutation.isPending}
+                  >
+                    <PencilLine className="h-3.5 w-3.5" />
+                    تعديل
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleDelete(item)}
+                    disabled={!canDelete || deleteMutation.isPending}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    حذف
+                  </Button>
                 </div>
               </div>
+            ))}
 
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
+              <p className="text-xs text-muted-foreground">
+                صفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
+              </p>
+              <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleStartEdit(item)}
-                  disabled={!canUpdate || updateMutation.isPending}
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={!pagination || pagination.page <= 1 || remindersTickerQuery.isFetching}
                 >
-                  <PencilLine className="h-3.5 w-3.5" />
-                  تعديل
+                  السابق
                 </Button>
                 <Button
-                  variant="destructive"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setPage((prev) =>
+                      pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
+                    )
+                  }
+                  disabled={
+                    !pagination ||
+                    pagination.page >= pagination.totalPages ||
+                    remindersTickerQuery.isFetching
+                  }
+                >
+                  التالي
+                </Button>
+                <Button
+                  variant="ghost"
                   size="sm"
                   className="gap-1.5"
-                  onClick={() => handleDelete(item)}
-                  disabled={!canDelete || deleteMutation.isPending}
+                  onClick={() => void remindersTickerQuery.refetch()}
+                  disabled={remindersTickerQuery.isFetching}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  حذف
+                  <RefreshCw
+                    className={`h-4 w-4 ${remindersTickerQuery.isFetching ? "animate-spin" : ""}`}
+                  />
+                  تحديث
                 </Button>
               </div>
             </div>
-          ))}
+          </CardContent>
+        </Card>
+      </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-            <p className="text-xs text-muted-foreground">
-              صفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={!pagination || pagination.page <= 1 || remindersTickerQuery.isFetching}
-              >
-                السابق
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPage((prev) =>
-                    pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                  )
-                }
-                disabled={
-                  !pagination ||
-                  pagination.page >= pagination.totalPages ||
-                  remindersTickerQuery.isFetching
-                }
-              >
-                التالي
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => void remindersTickerQuery.refetch()}
-                disabled={remindersTickerQuery.isFetching}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${remindersTickerQuery.isFetching ? "animate-spin" : ""}`}
-                />
-                تحديث
-              </Button>
-            </div>
+      <Fab
+        icon={<ScrollText className="h-4 w-4" />}
+        label="إنشاء"
+        ariaLabel="إنشاء رسالة شريط"
+        onClick={handleStartCreate}
+        disabled={!canCreate}
+      />
+
+      <BottomSheetForm
+        open={isFormOpen}
+        title={isEditing ? "تعديل رسالة" : "إنشاء رسالة"}
+        onClose={resetForm}
+        onSubmit={() => handleSubmitForm()}
+        isSubmitting={isFormSubmitting}
+        submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء رسالة"}
+        showFooter={false}
+      >
+        {!canCreate && !isEditing ? (
+          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+            ليس لديك الصلاحية المطلوبة: <code>reminders-ticker.create</code>.
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        ) : (
+          <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="reminder-form">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الرسالة *</label>
+              <Input
+                value={formState.content}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, content: event.target.value }))
+                }
+                placeholder="نص التذكير الذي سيظهر"
+                required
+                data-testid="reminder-form-message"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">نوع الرسالة</label>
+              <SelectField
+                value={formState.tickerType}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    tickerType: event.target.value as ReminderTickerType,
+                  }))
+                }
+                data-testid="reminder-form-type"
+              >
+                {TICKER_TYPE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">تاريخ البداية *</label>
+                <Input
+                  type="datetime-local"
+                  value={formState.startDate}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, startDate: event.target.value }))
+                  }
+                  required
+                  data-testid="reminder-form-start"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">تاريخ النهاية *</label>
+                <Input
+                  type="datetime-local"
+                  value={formState.endDate}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, endDate: event.target.value }))
+                  }
+                  required
+                  data-testid="reminder-form-end"
+                />
+              </div>
+            </div>
+
+            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+              <span>نشط</span>
+              <input
+                type="checkbox"
+                checked={formState.isActive}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                }
+                data-testid="reminder-form-active"
+              />
+            </label>
+
+            {formError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {formError}
+              </div>
+            ) : null}
+
+            {mutationError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {mutationError}
+              </div>
+            ) : null}
+
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                className="flex-1 gap-2"
+                disabled={isFormSubmitting || (!canCreate && !isEditing)}
+                data-testid="reminder-form-submit"
+              >
+                {isFormSubmitting ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ScrollText className="h-4 w-4" />
+                )}
+                {isEditing ? "حفظ التعديلات" : "إنشاء رسالة"}
+              </Button>
+              {isEditing ? (
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  إلغاء
+                </Button>
+              ) : null}
+            </div>
+          </form>
+        )}
+      </BottomSheetForm>
+    </>
   );
 }

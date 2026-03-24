@@ -1,17 +1,21 @@
 "use client";
 
 import * as React from "react";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   CalendarClock,
   LoaderCircle,
   PencilLine,
+  Plus,
   RefreshCw,
-  Search,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField } from "@/components/ui/select-field";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
   CardContent,
@@ -19,6 +23,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateAcademicMonthMutation,
@@ -131,8 +138,23 @@ export function AcademicMonthsWorkspace() {
     "all",
   );
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">("all");
+  const [filterDraft, setFilterDraft] = React.useState<{
+    year: string;
+    term: string;
+    status: GradingWorkflowStatus | "all";
+    current: "all" | "current" | "not-current";
+    active: "all" | "active" | "inactive";
+  }>({
+    year: "all",
+    term: "all",
+    status: "all",
+    current: "all",
+    active: "all",
+  });
 
   const [editingMonthId, setEditingMonthId] = React.useState<string | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<AcademicMonthFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
 
@@ -149,8 +171,10 @@ export function AcademicMonthsWorkspace() {
   });
 
   const yearOptionsQuery = useAcademicYearOptionsQuery();
+  const draftYearForTerms = isFilterOpen ? filterDraft.year : yearFilter;
   const termOptionsQuery = useAcademicTermOptionsQuery(
-    formState.academicYearId || (yearFilter !== "all" ? yearFilter : undefined),
+    formState.academicYearId ||
+      (draftYearForTerms !== "all" ? draftYearForTerms : undefined),
   );
 
   const createMutation = useCreateAcademicMonthMutation();
@@ -179,19 +203,56 @@ export function AcademicMonthsWorkspace() {
       setEditingMonthId(null);
       setFormState(DEFAULT_FORM_STATE);
       setFormError(null);
+      setIsFormOpen(false);
     }
   }, [editingMonthId, isEditing, months]);
+
+  useDebounceEffect(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 400, [searchInput]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setFilterDraft({
+      year: yearFilter,
+      term: termFilter,
+      status: statusFilter,
+      current: currentFilter,
+      active: activeFilter,
+    });
+  }, [activeFilter, currentFilter, isFilterOpen, statusFilter, termFilter, yearFilter]);
+
+  React.useEffect(() => {
+    if (!formState.academicTermId) {
+      return;
+    }
+
+    const exists = termOptions.some((term) => term.id === formState.academicTermId);
+    if (!exists) {
+      setFormState((prev) => ({ ...prev, academicTermId: "" }));
+    }
+  }, [formState.academicTermId, termOptions]);
 
   const resetForm = () => {
     setEditingMonthId(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
+    setIsFormOpen(false);
   };
 
-  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPage(1);
-    setSearch(searchInput.trim());
+  const handleStartCreate = () => {
+    if (!canCreate) {
+      return;
+    }
+
+    setFormError(null);
+    setEditingMonthId(null);
+    setFormState(DEFAULT_FORM_STATE);
+    setIsFormOpen(true);
   };
 
   const validateForm = (): boolean => {
@@ -245,8 +306,8 @@ export function AcademicMonthsWorkspace() {
     return true;
   };
 
-  const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
 
     if (!validateForm()) {
       return;
@@ -306,6 +367,7 @@ export function AcademicMonthsWorkspace() {
     setFormError(null);
     setEditingMonthId(month.id);
     setFormState(toFormState(month));
+    setIsFormOpen(true);
   };
 
   const handleDelete = (month: AcademicMonthListItem) => {
@@ -329,279 +391,96 @@ export function AcademicMonthsWorkspace() {
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
 
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setYearFilter("all");
+    setTermFilter("all");
+    setStatusFilter("all");
+    setCurrentFilter("all");
+    setActiveFilter("all");
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    setPage(1);
+    setYearFilter(filterDraft.year);
+    setTermFilter(filterDraft.term);
+    setStatusFilter(filterDraft.status);
+    setCurrentFilter(filterDraft.current);
+    setActiveFilter(filterDraft.active);
+    setIsFilterOpen(false);
+  };
+
+  const activeFiltersCount = React.useMemo(() => {
+    return [
+      searchInput.trim() ? 1 : 0,
+      yearFilter !== "all" ? 1 : 0,
+      termFilter !== "all" ? 1 : 0,
+      statusFilter !== "all" ? 1 : 0,
+      currentFilter !== "all" ? 1 : 0,
+      activeFilter !== "all" ? 1 : 0,
+    ].reduce((acc, value) => acc + value, 0);
+  }, [activeFilter, currentFilter, searchInput, statusFilter, termFilter, yearFilter]);
+
   return (
-    <div className="grid gap-4 xl:grid-cols-[420px_1fr]">
-      <Card className="h-fit border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CalendarClock className="h-5 w-5 text-primary" />
-            {isEditing ? "تعديل شهر أكاديمي" : "إنشاء شهر أكاديمي"}
-          </CardTitle>
-          <CardDescription>
-            إدارة الأشهر الأكاديمية وربطها بالسنة والفصل.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!canCreate && !isEditing ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك الصلاحية المطلوبة: <code>academic-months.create</code>.
-            </div>
-          ) : (
-            <form
-              className="space-y-3"
-              onSubmit={handleSubmitForm}
-              data-testid="academic-month-form"
-            >
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    السنة الأكاديمية *
-                  </label>
-                  <select
-                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    value={formState.academicYearId}
-                    onChange={(event) => {
-                      const academicYearId = event.target.value;
-                      setFormState((prev) => ({
-                        ...prev,
-                        academicYearId,
-                        academicTermId: "",
-                      }));
-                    }}
-                    data-testid="academic-month-form-year"
-                  >
-                    <option value="">اختر السنة</option>
-                    {yearOptions.map((year) => (
-                      <option key={year.id} value={year.id}>
-                        {year.code}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    الفصل الأكاديمي *
-                  </label>
-                  <select
-                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    value={formState.academicTermId}
-                    onChange={(event) =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        academicTermId: event.target.value,
-                      }))
-                    }
-                    data-testid="academic-month-form-term"
-                  >
-                    <option value="">اختر الفصل</option>
-                    {termOptions.map((term) => (
-                      <option key={term.id} value={term.id}>
-                        {term.code}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-[1fr_110px]">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">الكود *</label>
-                  <Input
-                    value={formState.code}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, code: event.target.value }))
-                    }
-                    placeholder="M1"
-                    required
-                    data-testid="academic-month-form-code"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    الترتيب *
-                  </label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={24}
-                    value={formState.sequence}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, sequence: event.target.value }))
-                    }
-                    required
-                    data-testid="academic-month-form-sequence"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
-                <Input
-                  value={formState.name}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, name: event.target.value }))
-                  }
-                  placeholder="الشهر الأول - سبتمبر"
-                  required
-                  data-testid="academic-month-form-name"
-                />
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    تاريخ البداية *
-                  </label>
-                  <Input
-                    type="date"
-                    value={formState.startDate}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, startDate: event.target.value }))
-                    }
-                    required
-                    data-testid="academic-month-form-start-date"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    تاريخ النهاية *
-                  </label>
-                  <Input
-                    type="date"
-                    value={formState.endDate}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, endDate: event.target.value }))
-                    }
-                    required
-                    data-testid="academic-month-form-end-date"
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">الحالة *</label>
-                  <select
-                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    value={formState.status}
-                    onChange={(event) =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        status: event.target.value as GradingWorkflowStatus,
-                      }))
-                    }
-                    data-testid="academic-month-form-status"
-                  >
-                    {WORKFLOW_OPTIONS.map((status) => (
-                      <option key={status} value={status}>
-                        {translateGradingWorkflowStatus(status)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">الخيارات</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <label className="flex items-center justify-between rounded-md border px-3 py-2 text-xs">
-                      <span>الحالي</span>
-                      <input
-                        type="checkbox"
-                        checked={formState.isCurrent}
-                        onChange={(event) =>
-                          setFormState((prev) => ({ ...prev, isCurrent: event.target.checked }))
-                        }
-                        data-testid="academic-month-form-current"
-                      />
-                    </label>
-                    <label className="flex items-center justify-between rounded-md border px-3 py-2 text-xs">
-                      <span>نشط</span>
-                      <input
-                        type="checkbox"
-                        checked={formState.isActive}
-                        onChange={(event) =>
-                          setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                        }
-                        data-testid="academic-month-form-active"
-                      />
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              {formError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {formError}
-                </div>
-              ) : null}
-
-              {mutationError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {mutationError}
-                </div>
-              ) : null}
-
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  className="flex-1 gap-2"
-                  disabled={isFormSubmitting || (!canCreate && !isEditing)}
-                  data-testid="academic-month-form-submit"
-                >
-                  {isFormSubmitting ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <CalendarClock className="h-4 w-4" />
-                  )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء شهر أكاديمي"}
-                </Button>
-                {isEditing ? (
-                  <Button type="button" variant="outline" onClick={resetForm}>
-                    إلغاء
-                  </Button>
-                ) : null}
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>قائمة الأشهر الأكاديمية</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+    <>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-1 flex-wrap items-center gap-2 min-w-0 sm:min-w-[240px] max-w-lg">
+            <SearchField
+              containerClassName="flex-1"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="بحث..."
+              data-testid="academic-month-filter-search"
+            />
           </div>
-          <CardDescription>
-            فلترة حسب السنة/الفصل/الحالة مع متابعة ارتباط الدرجات الشهرية.
-          </CardDescription>
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterTriggerButton
+              count={activeFiltersCount}
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+            />
+          </div>
+        </div>
 
-          <form
-            onSubmit={handleSearchSubmit}
-            className="grid gap-2 md:grid-cols-[1fr_140px_140px_150px_130px_130px_auto]"
-            data-testid="academic-month-filters-form"
-          >
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث..."
-                className="pr-8"
-                data-testid="academic-month-filter-search"
-              />
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="فلاتر الأشهر الأكاديمية"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={clearFilters}
+                className="flex-1 gap-1.5"
+              >
+                <Trash2 className="h-4 w-4" />
+                مسح
+              </Button>
+              <Button
+                type="button"
+                onClick={applyFilters}
+                className="flex-1 gap-1.5"
+                data-testid="academic-month-filters-submit"
+              >
+                تطبيق
+              </Button>
             </div>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={yearFilter}
-              onChange={(event) => {
-                setPage(1);
-                const value = event.target.value;
-                setYearFilter(value);
-                setTermFilter("all");
-              }}
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectField
+              value={filterDraft.year}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  year: event.target.value,
+                  term: "all",
+                }))
+              }
               data-testid="academic-month-filter-year"
             >
               <option value="all">كل السنوات</option>
@@ -610,15 +489,13 @@ export function AcademicMonthsWorkspace() {
                   {year.code}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={termFilter}
-              onChange={(event) => {
-                setPage(1);
-                setTermFilter(event.target.value);
-              }}
+            <SelectField
+              value={filterDraft.term}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, term: event.target.value }))
+              }
               data-testid="academic-month-filter-term"
             >
               <option value="all">كل الفصول</option>
@@ -627,15 +504,16 @@ export function AcademicMonthsWorkspace() {
                   {term.code}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={statusFilter}
-              onChange={(event) => {
-                setPage(1);
-                setStatusFilter(event.target.value as GradingWorkflowStatus | "all");
-              }}
+            <SelectField
+              value={filterDraft.status}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  status: event.target.value as GradingWorkflowStatus | "all",
+                }))
+              }
               data-testid="academic-month-filter-status"
             >
               <option value="all">كل الحالات</option>
@@ -644,177 +522,423 @@ export function AcademicMonthsWorkspace() {
                   {translateGradingWorkflowStatus(status)}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={currentFilter}
-              onChange={(event) => {
-                setPage(1);
-                setCurrentFilter(event.target.value as "all" | "current" | "not-current");
-              }}
+            <SelectField
+              value={filterDraft.current}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  current: event.target.value as "all" | "current" | "not-current",
+                }))
+              }
               data-testid="academic-month-filter-current"
             >
               <option value="all">الكل</option>
               <option value="current">الحالي فقط</option>
               <option value="not-current">غير الحالي</option>
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={activeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setActiveFilter(event.target.value as "all" | "active" | "inactive");
-              }}
+            <SelectField
+              value={filterDraft.active}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  active: event.target.value as "all" | "active" | "inactive",
+                }))
+              }
               data-testid="academic-month-filter-active"
             >
               <option value="all">كل الحالات</option>
               <option value="active">النشطة فقط</option>
               <option value="inactive">غير النشطة فقط</option>
-            </select>
+            </SelectField>
+          </div>
+        </FilterDrawer>
 
-            <Button
-              type="submit"
-              variant="outline"
-              className="gap-2"
-              data-testid="academic-month-filters-submit"
-            >
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
-          </form>
-        </CardHeader>
-
-        <CardContent className="space-y-3">
-          {monthsQuery.isPending ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ تحميل الأشهر الأكاديمية...
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+          <CardHeader className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>قائمة الأشهر الأكاديمية</CardTitle>
+              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
-          ) : null}
+            <CardDescription>
+              فلترة حسب السنة/الفصل/الحالة مع متابعة ارتباط الدرجات الشهرية.
+            </CardDescription>
+          </CardHeader>
 
-          {monthsQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {monthsQuery.error instanceof Error
-                ? monthsQuery.error.message
-                : "فشل تحميل الأشهر الأكاديمية"}
-            </div>
-          ) : null}
+          <CardContent className="space-y-3">
+            {monthsQuery.isPending ? (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                جارٍ تحميل الأشهر الأكاديمية...
+              </div>
+            ) : null}
 
-          {!monthsQuery.isPending && months.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              لا توجد أشهر مطابقة.
-            </div>
-          ) : null}
+            {monthsQuery.error ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                {monthsQuery.error instanceof Error
+                  ? monthsQuery.error.message
+                  : "فشل تحميل الأشهر الأكاديمية"}
+              </div>
+            ) : null}
 
-          {months.map((month) => (
-            <div
-              key={month.id}
-              className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-              data-testid="academic-month-card"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <p className="font-medium">{month.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    <code>{month.code}</code> - الترتيب: {month.sequence}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(month.startDate).toLocaleDateString()} -{" "}
-                    {new Date(month.endDate).toLocaleDateString()}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {month.academicYear.code} / {month.academicTerm.code} - الدرجات الشهرية:{" "}
-                    {month._count.monthlyGrades}
-                  </p>
+            {!monthsQuery.isPending && months.length === 0 ? (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                لا توجد أشهر مطابقة.
+              </div>
+            ) : null}
+
+            {months.map((month) => (
+              <div
+                key={month.id}
+                className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+                data-testid="academic-month-card"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="space-y-1">
+                    <p className="font-medium">{month.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      <code>{month.code}</code> - الترتيب: {month.sequence}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(month.startDate).toLocaleDateString()} -{" "}
+                      {new Date(month.endDate).toLocaleDateString()}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {month.academicYear.code} / {month.academicTerm.code} - الدرجات الشهرية:{" "}
+                      {month._count.monthlyGrades}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge variant={statusBadgeVariant(month.status)}>
+                      {translateGradingWorkflowStatus(month.status)}
+                    </Badge>
+                    <Badge variant={month.isCurrent ? "secondary" : "outline"}>
+                      {month.isCurrent ? "حالي" : "غير حالي"}
+                    </Badge>
+                    <Badge variant={month.isActive ? "default" : "outline"}>
+                      {month.isActive ? "نشط" : "غير نشط"}
+                    </Badge>
+                  </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant={statusBadgeVariant(month.status)}>
-                    {translateGradingWorkflowStatus(month.status)}
-                  </Badge>
-                  <Badge variant={month.isCurrent ? "secondary" : "outline"}>
-                    {month.isCurrent ? "حالي" : "غير حالي"}
-                  </Badge>
-                  <Badge variant={month.isActive ? "default" : "outline"}>
-                    {month.isActive ? "نشط" : "غير نشط"}
-                  </Badge>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleStartEdit(month)}
+                    disabled={!canUpdate || updateMutation.isPending}
+                  >
+                    <PencilLine className="h-3.5 w-3.5" />
+                    تعديل
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleDelete(month)}
+                    disabled={!canDelete || deleteMutation.isPending}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    حذف
+                  </Button>
                 </div>
               </div>
+            ))}
 
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
+              <p className="text-xs text-muted-foreground">
+                صفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
+              </p>
+              <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleStartEdit(month)}
-                  disabled={!canUpdate || updateMutation.isPending}
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={!pagination || pagination.page <= 1 || monthsQuery.isFetching}
                 >
-                  <PencilLine className="h-3.5 w-3.5" />
-                  تعديل
+                  السابق
                 </Button>
                 <Button
-                  variant="destructive"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setPage((prev) =>
+                      pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
+                    )
+                  }
+                  disabled={
+                    !pagination ||
+                    pagination.page >= pagination.totalPages ||
+                    monthsQuery.isFetching
+                  }
+                >
+                  التالي
+                </Button>
+                <Button
+                  variant="ghost"
                   size="sm"
                   className="gap-1.5"
-                  onClick={() => handleDelete(month)}
-                  disabled={!canDelete || deleteMutation.isPending}
+                  onClick={() => void monthsQuery.refetch()}
+                  disabled={monthsQuery.isFetching}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  حذف
+                  <RefreshCw
+                    className={`h-4 w-4 ${monthsQuery.isFetching ? "animate-spin" : ""}`}
+                  />
+                  تحديث
                 </Button>
               </div>
             </div>
-          ))}
+          </CardContent>
+        </Card>
+      </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-            <p className="text-xs text-muted-foreground">
-              صفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={!pagination || pagination.page <= 1 || monthsQuery.isFetching}
-              >
-                السابق
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPage((prev) =>
-                    pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                  )
-                }
-                disabled={
-                  !pagination || pagination.page >= pagination.totalPages || monthsQuery.isFetching
-                }
-              >
-                التالي
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => void monthsQuery.refetch()}
-                disabled={monthsQuery.isFetching}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${monthsQuery.isFetching ? "animate-spin" : ""}`}
-                />
-                تحديث
-              </Button>
-            </div>
+      <Fab
+        icon={<Plus className="h-4 w-4" />}
+        label="إنشاء"
+        ariaLabel="إنشاء شهر أكاديمي"
+        onClick={handleStartCreate}
+        disabled={!canCreate}
+      />
+
+      <BottomSheetForm
+        open={isFormOpen}
+        title={isEditing ? "تعديل شهر أكاديمي" : "إنشاء شهر أكاديمي"}
+        onClose={resetForm}
+        onSubmit={() => handleSubmitForm()}
+        isSubmitting={isFormSubmitting}
+        submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء شهر أكاديمي"}
+        showFooter={false}
+      >
+        {!canCreate && !isEditing ? (
+          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+            لا تملك الصلاحية المطلوبة: <code>academic-months.create</code>.
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        ) : (
+          <form
+            className="space-y-3"
+            onSubmit={handleSubmitForm}
+            data-testid="academic-month-form"
+          >
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  السنة الأكاديمية *
+                </label>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={formState.academicYearId}
+                  onChange={(event) => {
+                    const academicYearId = event.target.value;
+                    setFormState((prev) => ({
+                      ...prev,
+                      academicYearId,
+                      academicTermId: "",
+                    }));
+                  }}
+                  data-testid="academic-month-form-year"
+                >
+                  <option value="">اختر السنة</option>
+                  {yearOptions.map((year) => (
+                    <option key={year.id} value={year.id}>
+                      {year.code}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  الفصل الأكاديمي *
+                </label>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={formState.academicTermId}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      academicTermId: event.target.value,
+                    }))
+                  }
+                  data-testid="academic-month-form-term"
+                >
+                  <option value="">اختر الفصل</option>
+                  {termOptions.map((term) => (
+                    <option key={term.id} value={term.id}>
+                      {term.code}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-[1fr_110px]">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">الكود *</label>
+                <Input
+                  value={formState.code}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, code: event.target.value }))
+                  }
+                  placeholder="M1"
+                  required
+                  data-testid="academic-month-form-code"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">الترتيب *</label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={24}
+                  value={formState.sequence}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, sequence: event.target.value }))
+                  }
+                  required
+                  data-testid="academic-month-form-sequence"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
+              <Input
+                value={formState.name}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, name: event.target.value }))
+                }
+                placeholder="الشهر الأول - سبتمبر"
+                required
+                data-testid="academic-month-form-name"
+              />
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  تاريخ البداية *
+                </label>
+                <Input
+                  type="date"
+                  value={formState.startDate}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, startDate: event.target.value }))
+                  }
+                  required
+                  data-testid="academic-month-form-start-date"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  تاريخ النهاية *
+                </label>
+                <Input
+                  type="date"
+                  value={formState.endDate}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, endDate: event.target.value }))
+                  }
+                  required
+                  data-testid="academic-month-form-end-date"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">الحالة *</label>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={formState.status}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      status: event.target.value as GradingWorkflowStatus,
+                    }))
+                  }
+                  data-testid="academic-month-form-status"
+                >
+                  {WORKFLOW_OPTIONS.map((status) => (
+                    <option key={status} value={status}>
+                      {translateGradingWorkflowStatus(status)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">الخيارات</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="flex items-center justify-between rounded-md border px-3 py-2 text-xs">
+                    <span>الحالي</span>
+                    <input
+                      type="checkbox"
+                      checked={formState.isCurrent}
+                      onChange={(event) =>
+                        setFormState((prev) => ({
+                          ...prev,
+                          isCurrent: event.target.checked,
+                        }))
+                      }
+                      data-testid="academic-month-form-current"
+                    />
+                  </label>
+                  <label className="flex items-center justify-between rounded-md border px-3 py-2 text-xs">
+                    <span>نشط</span>
+                    <input
+                      type="checkbox"
+                      checked={formState.isActive}
+                      onChange={(event) =>
+                        setFormState((prev) => ({
+                          ...prev,
+                          isActive: event.target.checked,
+                        }))
+                      }
+                      data-testid="academic-month-form-active"
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {formError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {formError}
+              </div>
+            ) : null}
+
+            {mutationError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {mutationError}
+              </div>
+            ) : null}
+
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                className="flex-1 gap-2"
+                disabled={isFormSubmitting || (!canCreate && !isEditing)}
+                data-testid="academic-month-form-submit"
+              >
+                {isFormSubmitting ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CalendarClock className="h-4 w-4" />
+                )}
+                {isEditing ? "حفظ التعديلات" : "إنشاء شهر أكاديمي"}
+              </Button>
+              {isEditing ? (
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  إلغاء
+                </Button>
+              ) : null}
+            </div>
+          </form>
+        )}
+      </BottomSheetForm>
+    </>
   );
 }
-
-
-
-
-

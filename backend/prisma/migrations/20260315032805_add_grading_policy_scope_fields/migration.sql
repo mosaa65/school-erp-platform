@@ -1,0 +1,7 @@
+-- This migration is intentionally left as a no-op.
+-- The original version attempted to create scoped indexes/foreign keys for
+-- `grading_policies` before the required columns existed, which broke
+-- production deploys.
+--
+-- The actual schema alignment now lives in:
+-- `20260318014500_fix_grading_policy_schema_alignment`

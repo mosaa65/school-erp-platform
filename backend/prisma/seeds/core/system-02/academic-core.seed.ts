@@ -5,6 +5,7 @@
   SubjectCategory,
   type PrismaClient,
 } from '@prisma/client';
+import { processInBatches } from '../shared/batch';
 
 type GradeLevelSeedItem = {
   code: string;
@@ -458,7 +459,7 @@ async function deactivateDemoAcademicArtifacts(prisma: PrismaClient) {
 export async function seedSystem02AcademicCore(prisma: PrismaClient) {
   await deactivateDemoAcademicArtifacts(prisma);
 
-  for (const item of DEFAULT_GRADE_LEVELS) {
+  await processInBatches(DEFAULT_GRADE_LEVELS, 4, async (item) => {
     await prisma.gradeLevel.upsert({
       where: { code: item.code },
       update: {
@@ -477,9 +478,9 @@ export async function seedSystem02AcademicCore(prisma: PrismaClient) {
         isActive: true,
       },
     });
-  }
+  });
 
-  for (const item of DEFAULT_SUBJECTS) {
+  await processInBatches(DEFAULT_SUBJECTS, 4, async (item) => {
     await prisma.subject.upsert({
       where: { code: item.code },
       update: {
@@ -498,7 +499,7 @@ export async function seedSystem02AcademicCore(prisma: PrismaClient) {
         isActive: true,
       },
     });
-  }
+  });
 
   const academicYear = await prisma.academicYear.upsert({
     where: {
@@ -539,7 +540,7 @@ export async function seedSystem02AcademicCore(prisma: PrismaClient) {
 
   const termByCode = new Map<string, { id: string; code: string }>();
 
-  for (const term of CORE_ACADEMIC_TERMS) {
+  await processInBatches(CORE_ACADEMIC_TERMS, 2, async (term) => {
     const record = await prisma.academicTerm.upsert({
       where: {
         academicYearId_code: {
@@ -574,13 +575,13 @@ export async function seedSystem02AcademicCore(prisma: PrismaClient) {
     });
 
     termByCode.set(record.code, record);
-  }
+  });
 
-  for (const month of CORE_ACADEMIC_MONTHS) {
+  await processInBatches(CORE_ACADEMIC_MONTHS, 4, async (month) => {
     const term = termByCode.get(month.termCode);
 
     if (!term) {
-      continue;
+      return;
     }
 
     await prisma.academicMonth.upsert({
@@ -613,7 +614,7 @@ export async function seedSystem02AcademicCore(prisma: PrismaClient) {
         isActive: true,
       },
     });
-  }
+  });
 
   const gradeLevels = await prisma.gradeLevel.findMany({
     where: {
@@ -632,7 +633,7 @@ export async function seedSystem02AcademicCore(prisma: PrismaClient) {
     },
   });
 
-  for (const gradeLevel of gradeLevels) {
+  await processInBatches(gradeLevels, 4, async (gradeLevel) => {
     for (const section of DEFAULT_SECTIONS) {
       await prisma.section.upsert({
         where: {
@@ -657,7 +658,7 @@ export async function seedSystem02AcademicCore(prisma: PrismaClient) {
         },
       });
     }
-  }
+  });
 
   const subjects = await prisma.subject.findMany({
     where: {
@@ -675,7 +676,7 @@ export async function seedSystem02AcademicCore(prisma: PrismaClient) {
   const subjectIdByCode = new Map(subjects.map((item) => [item.code, item.id]));
   const desiredGradeLevelSubjectKeys = new Set<string>();
 
-  for (const gradeLevel of gradeLevels) {
+  await processInBatches(gradeLevels, 4, async (gradeLevel) => {
     const subjectCodes = getSubjectCodesForGradeSequence(gradeLevel.sequence);
 
     for (const [index, subjectCode] of subjectCodes.entries()) {
@@ -714,7 +715,7 @@ export async function seedSystem02AcademicCore(prisma: PrismaClient) {
         },
       });
     }
-  }
+  });
 
   const existingGradeLevelSubjects = await prisma.gradeLevelSubject.findMany({
     where: {
@@ -728,11 +729,11 @@ export async function seedSystem02AcademicCore(prisma: PrismaClient) {
     },
   });
 
-  for (const item of existingGradeLevelSubjects) {
+  await processInBatches(existingGradeLevelSubjects, 10, async (item) => {
     const key = `${item.gradeLevelId}|${item.subjectId}`;
 
     if (desiredGradeLevelSubjectKeys.has(key)) {
-      continue;
+      return;
     }
 
     await prisma.gradeLevelSubject.update({
@@ -745,7 +746,7 @@ export async function seedSystem02AcademicCore(prisma: PrismaClient) {
         updatedById: null,
       },
     });
-  }
+  });
 
   const activeGradeLevelSubjects = await prisma.gradeLevelSubject.findMany({
     where: {
@@ -778,7 +779,7 @@ export async function seedSystem02AcademicCore(prisma: PrismaClient) {
     ],
   });
 
-  for (const term of termByCode.values()) {
+  await processInBatches(Array.from(termByCode.values()), 2, async (term) => {
     for (const item of activeGradeLevelSubjects) {
       await prisma.termSubjectOffering.upsert({
         where: {
@@ -803,5 +804,5 @@ export async function seedSystem02AcademicCore(prisma: PrismaClient) {
         },
       });
     }
-  }
+  });
 }

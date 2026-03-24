@@ -5,6 +5,7 @@ import { LoaderCircle, PencilLine, RefreshCw, Search, Trash2, Users } from "luci
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PhoneContactInput } from "@/components/ui/phone-contact-input";
 import {
   Card,
   CardContent,
@@ -678,12 +679,15 @@ export function GuardiansWorkspace() {
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">الهاتف الأساسي</label>
-                  <Input
+                  <PhoneContactInput
                     value={formState.phonePrimary}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, phonePrimary: event.target.value }))
+                    onValueChange={(value) =>
+                      setFormState((prev) => ({ ...prev, phonePrimary: value }))
                     }
                     placeholder="+967777111222"
+                    autoComplete="tel"
+                    inputMode="tel"
+                    buttonTestId="guardian-phone-primary-contact-picker"
                   />
                 </div>
               </div>
@@ -813,27 +817,33 @@ export function GuardiansWorkspace() {
                   <label className="text-xs font-medium text-muted-foreground">
                     الهاتف الاحتياطي
                   </label>
-                  <Input
+                  <PhoneContactInput
                     value={formState.phoneSecondary}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, phoneSecondary: event.target.value }))
+                    onValueChange={(value) =>
+                      setFormState((prev) => ({ ...prev, phoneSecondary: value }))
                     }
                     placeholder="+967733444555"
+                    autoComplete="tel"
+                    inputMode="tel"
+                    buttonTestId="guardian-phone-secondary-contact-picker"
                   />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">
                     رقم واتساب
                   </label>
-                  <Input
+                  <PhoneContactInput
                     value={formState.whatsappNumber}
-                    onChange={(event) =>
+                    onValueChange={(value) =>
                       setFormState((prev) => ({
                         ...prev,
-                        whatsappNumber: event.target.value,
+                        whatsappNumber: value,
                       }))
                     }
                     placeholder="+967777111222"
+                    autoComplete="tel"
+                    inputMode="tel"
+                    buttonTestId="guardian-whatsapp-contact-picker"
                   />
                 </div>
               </div>

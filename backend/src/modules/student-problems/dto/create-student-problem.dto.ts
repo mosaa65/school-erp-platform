@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+﻿import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDateString,
@@ -28,7 +28,9 @@ export class CreateStudentProblemDto {
   @MaxLength(1000)
   problemDescription!: string;
 
-  @ApiPropertyOptional({ example: 'تم التواصل مع ولي الأمر وإشعاره بالخطة العلاجية' })
+  @ApiPropertyOptional({
+    example: 'تم التواصل مع ولي الأمر وإشعاره بالخطة العلاجية',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(1000)
@@ -52,3 +54,4 @@ export class CreateStudentProblemDto {
   @IsBoolean()
   isActive?: boolean;
 }
+

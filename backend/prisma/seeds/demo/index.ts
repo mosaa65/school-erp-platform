@@ -1,10 +1,11 @@
-import type { PrismaClient } from '@prisma/client';
+﻿import type { PrismaClient } from '@prisma/client';
 import { seedDemoAcademicFoundation } from './academic-foundation.seed';
 import { seedDemoEmployees } from './employee.seed';
 import { seedDemoEmployeeTalents } from './employee-talents.seed';
 import { seedDemoStudentData } from './student.seed';
 import { seedDemoStudentExtensions } from './student-extensions.seed';
 import { seedDemoSubject } from './subject.seed';
+import { seedDemoHealthVisits } from './health-visits.seed';
 import { seedDemoTeachingGrades } from './teaching-grades.seed';
 import { seedDemoTimetable } from './timetable.seed';
 
@@ -15,8 +16,8 @@ export async function runDemoSeed(prisma: PrismaClient) {
   const employeeTalents = await seedDemoEmployeeTalents(prisma, employee);
   const student = await seedDemoStudentData(prisma, academic);
   const studentExtensions = await seedDemoStudentExtensions(prisma, academic);
+  const healthVisits = await seedDemoHealthVisits(prisma);
   const teachingGrades = await seedDemoTeachingGrades(prisma, academic);
-  await seedDemoTimetable(prisma, academic);
 
   return {
     academicYearCode: academic.academicYearCode,
@@ -59,5 +60,7 @@ export async function runDemoSeed(prisma: PrismaClient) {
     ],
     sampleStudentAdmissions: student.sampleStudentAdmissions,
     talentsUsed: employeeTalents.talentsUsed,
+    healthVisitsRecorded: healthVisits.created,
   };
 }
+

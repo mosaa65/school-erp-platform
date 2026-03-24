@@ -148,6 +148,12 @@ enum StudentEnrollmentStatus {
   SUSPENDED
 }
 
+enum EnrollmentDistributionStatus {
+  PENDING_DISTRIBUTION
+  ASSIGNED
+  TRANSFERRED
+}
+
 enum StudentAttendanceStatus {
   PRESENT
   ABSENT
@@ -274,6 +280,24 @@ enum AssessmentType {
   ORAL
   PRACTICAL
   PROJECT
+}
+
+/// Lookup table for assessment types, allowing schools to define custom types.
+model AssessmentTypeLookup {
+  id          String    @id @default(cuid()) @db.VarChar(191)
+  code        String    @unique @db.VarChar(50)
+  name        String    @db.VarChar(120)
+  description String?   @db.VarChar(255)
+  category    String    @default("PERIOD") @db.VarChar(50) // PERIOD | EXAM | COMPONENT
+  isSystem    Boolean   @default(false) @map("is_system")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  gradingPolicies GradingPolicy[]
+  examPeriods     ExamPeriod[]
+
+  @@map("lookup_assessment_types")
 }
 
 enum GradingComponentCalculationMode {
@@ -429,6 +453,8 @@ model User {
   maritalStatusesUpdated              LookupMaritalStatus[]           @relation("lookup_marital_status_updated_by")
   healthStatusesCreated               LookupHealthStatus[]            @relation("lookup_health_status_created_by")
   healthStatusesUpdated               LookupHealthStatus[]            @relation("lookup_health_status_updated_by")
+  healthVisitsCreated                StudentHealthVisit[]            @relation("health_visit_created_by")
+  healthVisitsUpdated                StudentHealthVisit[]            @relation("health_visit_updated_by")
   relationshipTypesCreated            LookupRelationshipType[]        @relation("lookup_relationship_type_created_by")
   relationshipTypesUpdated            LookupRelationshipType[]        @relation("lookup_relationship_type_updated_by")
   lookupTalentsCreated                LookupTalent[]                  @relation("lookup_talent_created_by")
@@ -465,6 +491,10 @@ model User {
   termSubjectOfferingsUpdated         TermSubjectOffering[]           @relation("term_subject_offering_updated_by")
   timetableEntriesCreated             TimetableEntry[]                @relation("timetable_entry_created_by")
   timetableEntriesUpdated             TimetableEntry[]                @relation("timetable_entry_updated_by")
+  classroomsCreated                   Classroom[]                     @relation("classroom_created_by")
+  classroomsUpdated                   Classroom[]                     @relation("classroom_updated_by")
+  sectionClassroomAssignmentsCreated  SectionClassroomAssignment[]    @relation("section_classroom_assignment_created_by")
+  sectionClassroomAssignmentsUpdated  SectionClassroomAssignment[]    @relation("section_classroom_assignment_updated_by")
   employeesCreated                    Employee[]                      @relation("employee_created_by")
   employeesUpdated                    Employee[]                      @relation("employee_updated_by")
   employeeTasksCreated                EmployeeTask[]                  @relation("employee_task_created_by")
@@ -1152,6 +1182,7 @@ model LookupHealthStatus {
   updatedBy User? @relation("lookup_health_status_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
 
   studentsByHealthStatus Student[] @relation("student_health_status_lookup")
+  healthVisits StudentHealthVisit[] @relation("health_visit_status")
 
   @@index([requiresDetails, deletedAt], map: "lhs_details_del_idx")
   @@index([isActive, deletedAt], map: "lhs_active_del_idx")
@@ -1174,8 +1205,8 @@ model LookupRelationshipType {
   createdBy User? @relation("lookup_relationship_type_created_by", fields: [createdById], references: [id], onDelete: SetNull)
   updatedBy User? @relation("lookup_relationship_type_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
 
-  studentGuardianRelations StudentGuardian[]    @relation("student_guardian_relationship_lookup")
-  parentNotificationTitles ParentNotification[] @relation("parent_notification_guardian_title_lookup")
+  studentGuardianRelations   StudentGuardian[]   @relation("student_guardian_relationship_lookup")
+  parentNotificationTitles   ParentNotification[] @relation("parent_notification_guardian_title_lookup")
 
   @@index([gender, deletedAt], map: "lrt_gender_del_idx")
   @@index([isActive, deletedAt], map: "lrt_active_del_idx")
@@ -1263,6 +1294,8 @@ model LookupBuilding {
 
   createdBy User? @relation("lookup_building_created_by", fields: [createdById], references: [id], onDelete: SetNull)
   updatedBy User? @relation("lookup_building_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+  sections  Section[] @relation("section_building_lookup")
+  classrooms Classroom[] @relation("classroom_building_lookup")
 
   @@index([isActive, deletedAt], map: "lbd_active_del_idx")
   @@index([deletedAt], map: "lbd_deleted_at_idx")
@@ -1526,6 +1559,15 @@ model SystemSetting {
   @@map("system_settings")
 }
 
+model SequenceCounter {
+  key          String   @id @db.VarChar(100)
+  currentValue Int      @default(0) @map("current_value")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("sequence_counters")
+}
+
 model ReminderTicker {
   id           Int                @id @default(autoincrement())
   content      String             @db.Text
@@ -1671,6 +1713,7 @@ model AcademicYear {
   studentInvoices                StudentInvoice[]
   discountRules                  DiscountRule[]
   communityContributions         CommunityContribution[]
+  sectionClassroomAssignments    SectionClassroomAssignment[]
 
   @@index([status, deletedAt])
   @@index([isCurrent, deletedAt])
@@ -1709,6 +1752,7 @@ model AcademicTerm {
   semesterGrades       SemesterGrade[]
   AnnualGradeTerm      AnnualGradeTerm[]
   communityContributions CommunityContribution[]
+  gradingPolicies      GradingPolicy[]
 
   @@unique([academicYearId, code])
   @@unique([academicYearId, sequence])
@@ -1774,6 +1818,7 @@ model GradeLevel {
   updatedBy User? @relation("grade_level_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
 
   sections            Section[]
+  studentEnrollments  StudentEnrollment[]
   gradeLevelSubjects  GradeLevelSubject[]
   gradingPolicies     GradingPolicy[]
   gradingOutcomeRules GradingOutcomeRule[]
@@ -1786,19 +1831,22 @@ model GradeLevel {
 }
 
 model Section {
-  id           String    @id @default(cuid()) @db.VarChar(191)
-  gradeLevelId String    @map("grade_level_id") @db.VarChar(191)
-  code         String    @db.VarChar(40)
-  name         String    @db.VarChar(120)
-  capacity     Int?
-  isActive     Boolean   @default(true) @map("is_active")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
-  deletedAt    DateTime? @map("deleted_at")
-  createdById  String?   @map("created_by") @db.VarChar(191)
-  updatedById  String?   @map("updated_by") @db.VarChar(191)
+  id               String    @id @default(cuid()) @db.VarChar(191)
+  gradeLevelId     String    @map("grade_level_id") @db.VarChar(191)
+  buildingLookupId Int?      @map("building_lookup_id")
+  code             String    @db.VarChar(40)
+  name             String    @db.VarChar(120)
+  capacity         Int?
+  roomLabel        String?   @map("room_label") @db.VarChar(80)
+  isActive         Boolean   @default(true) @map("is_active")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  deletedAt        DateTime? @map("deleted_at")
+  createdById      String?   @map("created_by") @db.VarChar(191)
+  updatedById      String?   @map("updated_by") @db.VarChar(191)
 
-  gradeLevel GradeLevel @relation(fields: [gradeLevelId], references: [id], onDelete: Restrict)
+  gradeLevel GradeLevel    @relation(fields: [gradeLevelId], references: [id], onDelete: Restrict)
+  building   LookupBuilding? @relation("section_building_lookup", fields: [buildingLookupId], references: [id], onDelete: SetNull)
 
   createdBy User? @relation("section_created_by", fields: [createdById], references: [id], onDelete: SetNull)
   updatedBy User? @relation("section_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
@@ -1808,14 +1856,74 @@ model Section {
   employeeTeachingAssignments EmployeeTeachingAssignment[]
   employeeSectionSupervisions EmployeeSectionSupervision[]
   studentEnrollments          StudentEnrollment[]
+  classroomAssignments        SectionClassroomAssignment[]
   examAssessments             ExamAssessment[]
   homeworks                   Homework[]
+  gradingPolicies             GradingPolicy[]
 
   @@unique([gradeLevelId, code])
+  @@index([buildingLookupId, deletedAt])
   @@index([gradeLevelId, deletedAt])
   @@index([isActive, deletedAt])
   @@index([deletedAt])
   @@map("sections")
+}
+
+model Classroom {
+  id          String    @id @default(cuid()) @db.VarChar(191)
+  code        String    @unique @db.VarChar(40)
+  name        String    @db.VarChar(120)
+  buildingLookupId Int? @map("building_lookup_id")
+  capacity    Int?
+  notes       String?   @db.VarChar(255)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("classroom_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("classroom_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+  building  LookupBuilding? @relation("classroom_building_lookup", fields: [buildingLookupId], references: [id], onDelete: SetNull)
+
+  timetableEntries     TimetableEntry[]
+  classroomAssignments SectionClassroomAssignment[]
+
+  @@index([buildingLookupId, deletedAt])
+  @@index([isActive, deletedAt])
+  @@index([deletedAt])
+  @@map("classrooms")
+}
+
+model SectionClassroomAssignment {
+  id            String    @id @default(cuid()) @db.VarChar(191)
+  sectionId     String    @map("section_id") @db.VarChar(191)
+  classroomId   String    @map("classroom_id") @db.VarChar(191)
+  academicYearId String   @map("academic_year_id") @db.VarChar(191)
+  effectiveFrom DateTime? @map("effective_from")
+  effectiveTo   DateTime? @map("effective_to")
+  notes         String?   @db.VarChar(255)
+  isPrimary     Boolean   @default(false) @map("is_primary")
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+  createdById   String?   @map("created_by") @db.VarChar(191)
+  updatedById   String?   @map("updated_by") @db.VarChar(191)
+
+  section      Section      @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  classroom    Classroom    @relation(fields: [classroomId], references: [id], onDelete: Restrict)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("section_classroom_assignment_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("section_classroom_assignment_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([academicYearId, sectionId, deletedAt])
+  @@index([academicYearId, classroomId, deletedAt])
+  @@index([isActive, deletedAt])
+  @@index([deletedAt])
+  @@map("section_classroom_assignments")
 }
 
 model Subject {
@@ -1916,6 +2024,7 @@ model TimetableEntry {
   id                    String       @id @default(cuid()) @db.VarChar(191)
   academicTermId        String       @map("academic_term_id") @db.VarChar(191)
   sectionId             String       @map("section_id") @db.VarChar(191)
+  classroomId           String?      @map("classroom_id") @db.VarChar(191)
   termSubjectOfferingId String       @map("term_subject_offering_id") @db.VarChar(191)
   dayOfWeek             TimetableDay @map("day_of_week")
   periodIndex           Int          @map("period_index")
@@ -1930,6 +2039,7 @@ model TimetableEntry {
 
   academicTerm        AcademicTerm        @relation(fields: [academicTermId], references: [id], onDelete: Restrict)
   section             Section             @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  classroom           Classroom?          @relation(fields: [classroomId], references: [id], onDelete: SetNull)
   termSubjectOffering TermSubjectOffering @relation(fields: [termSubjectOfferingId], references: [id], onDelete: Restrict)
 
   createdBy User? @relation("timetable_entry_created_by", fields: [createdById], references: [id], onDelete: SetNull)
@@ -1938,6 +2048,7 @@ model TimetableEntry {
   @@unique([academicTermId, sectionId, dayOfWeek, periodIndex], map: "tte_term_section_slot_uq")
   @@index([termSubjectOfferingId, deletedAt], map: "tte_tso_del_idx")
   @@index([academicTermId, sectionId, deletedAt], map: "tte_term_section_del_idx")
+  @@index([classroomId, deletedAt], map: "tte_classroom_del_idx")
   @@index([isActive, deletedAt], map: "tte_active_del_idx")
   @@index([deletedAt], map: "tte_deleted_at_idx")
   @@map("timetable_entries")
@@ -1987,6 +2098,7 @@ model Employee {
   locality            Locality?            @relation(fields: [localityId], references: [id], onDelete: SetNull)
 
   tasks                  EmployeeTask[]
+  healthVisits           StudentHealthVisit[] @relation("employee_health_visits")
   teachingAssignments    EmployeeTeachingAssignment[]
   sectionSupervisions    EmployeeSectionSupervision[]
   attendanceRecords      EmployeeAttendance[]
@@ -1999,6 +2111,7 @@ model Employee {
   journalEntryLines      JournalEntryLine[]             @relation("journal_entry_line_employee")
   communityContributionsReceived CommunityContribution[]
   managedCostCenters              CostCenter[]
+  gradingPolicies        GradingPolicy[]
 
   @@index([fullName, deletedAt], map: "emp_name_del_idx")
   @@index([genderId, deletedAt], map: "emp_gender_id_del_idx")
@@ -2303,6 +2416,7 @@ model Student {
   genderLookup       LookupGender?       @relation("student_gender_lookup", fields: [genderId], references: [id], onDelete: SetNull)
   orphanStatusLookup LookupOrphanStatus? @relation("student_orphan_status_lookup", fields: [orphanStatusId], references: [id], onDelete: SetNull)
   healthStatusLookup LookupHealthStatus? @relation("student_health_status_lookup", fields: [healthStatusId], references: [id], onDelete: SetNull)
+  healthVisits       StudentHealthVisit[] @relation("student_health_visit_student")
 
   guardians           StudentGuardian[]
   enrollments         StudentEnrollment[]
@@ -2324,6 +2438,35 @@ model Student {
   @@index([orphanStatusId, deletedAt], map: "stu_orphan_id_del_idx")
   @@index([deletedAt], map: "stu_deleted_at_idx")
   @@map("students")
+}
+
+model StudentHealthVisit {
+  id              String               @id @default(cuid()) @db.VarChar(191)
+  studentId       String               @map("student_id") @db.VarChar(191)
+  nurseId         String?              @map("nurse_id") @db.VarChar(191)
+  healthStatusId  Int?                 @map("health_status_id")
+  visitDate       DateTime             @map("visit_date")
+  notes           String?              @db.VarChar(1000)
+  followUpRequired Boolean              @default(false) @map("follow_up_required")
+  followUpNotes   String?              @map("follow_up_notes") @db.VarChar(1000)
+  isActive        Boolean              @default(true) @map("is_active")
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+  deletedAt       DateTime?            @map("deleted_at")
+  createdById     String?              @map("created_by") @db.VarChar(191)
+  updatedById     String?              @map("updated_by") @db.VarChar(191)
+
+  student      Student             @relation("student_health_visit_student", fields: [studentId], references: [id], onDelete: Cascade)
+  nurse        Employee?           @relation("employee_health_visits", fields: [nurseId], references: [id], onDelete: SetNull)
+  healthStatus LookupHealthStatus? @relation("health_visit_status", fields: [healthStatusId], references: [id], onDelete: SetNull)
+  createdBy    User?               @relation("health_visit_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy    User?               @relation("health_visit_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([studentId, visitDate], map: "shv_student_visit_date_idx")
+  @@index([healthStatusId], map: "shv_health_status_idx")
+  @@index([nurseId], map: "shv_nurse_idx")
+  @@index([deletedAt], map: "shv_deleted_at_idx")
+  @@map("student_health_visits")
 }
 
 model Guardian {
@@ -2399,23 +2542,29 @@ model StudentGuardian {
 }
 
 model StudentEnrollment {
-  id             String                  @id @default(cuid()) @db.VarChar(191)
-  studentId      String                  @map("student_id") @db.VarChar(191)
-  academicYearId String                  @map("academic_year_id") @db.VarChar(191)
-  sectionId      String                  @map("section_id") @db.VarChar(191)
-  enrollmentDate DateTime?               @map("enrollment_date")
-  status         StudentEnrollmentStatus @default(ACTIVE)
-  notes          String?                 @db.VarChar(255)
-  isActive       Boolean                 @default(true) @map("is_active")
-  createdAt      DateTime                @default(now()) @map("created_at")
-  updatedAt      DateTime                @updatedAt @map("updated_at")
-  deletedAt      DateTime?               @map("deleted_at")
-  createdById    String?                 @map("created_by") @db.VarChar(191)
-  updatedById    String?                 @map("updated_by") @db.VarChar(191)
+  id                 String                        @id @default(cuid()) @db.VarChar(191)
+  studentId          String                        @map("student_id") @db.VarChar(191)
+  academicYearId     String                        @map("academic_year_id") @db.VarChar(191)
+  gradeLevelId       String?                       @map("grade_level_id") @db.VarChar(191)
+  sectionId          String?                       @map("section_id") @db.VarChar(191)
+  yearlyEnrollmentNo String?                       @map("yearly_enrollment_no") @db.VarChar(40)
+  distributionStatus EnrollmentDistributionStatus  @default(ASSIGNED) @map("distribution_status")
+  gradeNameSnapshot  String?                       @map("grade_name_snapshot") @db.VarChar(120)
+  sectionNameSnapshot String?                      @map("section_name_snapshot") @db.VarChar(120)
+  enrollmentDate     DateTime?                     @map("enrollment_date")
+  status             StudentEnrollmentStatus       @default(ACTIVE)
+  notes              String?                       @db.VarChar(255)
+  isActive           Boolean                       @default(true) @map("is_active")
+  createdAt          DateTime                      @default(now()) @map("created_at")
+  updatedAt          DateTime                      @updatedAt @map("updated_at")
+  deletedAt          DateTime?                     @map("deleted_at")
+  createdById        String?                       @map("created_by") @db.VarChar(191)
+  updatedById        String?                       @map("updated_by") @db.VarChar(191)
 
   student      Student      @relation(fields: [studentId], references: [id], onDelete: Restrict)
   academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
-  section      Section      @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  gradeLevel   GradeLevel?  @relation(fields: [gradeLevelId], references: [id], onDelete: SetNull)
+  section      Section?     @relation(fields: [sectionId], references: [id], onDelete: Restrict)
 
   createdBy User? @relation("student_enrollment_created_by", fields: [createdById], references: [id], onDelete: SetNull)
   updatedBy User? @relation("student_enrollment_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
@@ -2434,7 +2583,10 @@ model StudentEnrollment {
   creditDebitNotes       CreditDebitNote[]
 
   @@unique([studentId, academicYearId], map: "sen_student_year_uq")
+  @@unique([academicYearId, yearlyEnrollmentNo], map: "sen_year_enrollment_no_uq")
+  @@index([academicYearId, gradeLevelId, deletedAt], map: "sen_year_grade_del_idx")
   @@index([academicYearId, sectionId, deletedAt], map: "sen_year_section_del_idx")
+  @@index([distributionStatus, deletedAt], map: "sen_distribution_del_idx")
   @@index([status, deletedAt], map: "sen_status_del_idx")
   @@index([isActive, deletedAt], map: "sen_active_del_idx")
   @@index([deletedAt], map: "sen_deleted_at_idx")
@@ -2622,30 +2774,35 @@ model ParentNotification {
 }
 
 model GradingPolicy {
-  id                   String                @id @default(cuid()) @db.VarChar(191)
-  academicYearId       String                @map("academic_year_id") @db.VarChar(191)
-  gradeLevelId         String                @map("grade_level_id") @db.VarChar(191)
-  subjectId            String                @map("subject_id") @db.VarChar(191)
-  assessmentType       AssessmentType        @default(MONTHLY) @map("assessment_type")
-  maxExamScore         Decimal               @default(20.00) @map("max_exam_score") @db.Decimal(6, 2)
-  maxHomeworkScore     Decimal               @default(5.00) @map("max_homework_score") @db.Decimal(6, 2)
-  maxAttendanceScore   Decimal               @default(5.00) @map("max_attendance_score") @db.Decimal(6, 2)
-  maxActivityScore     Decimal               @default(5.00) @map("max_activity_score") @db.Decimal(6, 2)
-  maxContributionScore Decimal               @default(0.00) @map("max_contribution_score") @db.Decimal(6, 2)
-  passingScore         Decimal               @default(50.00) @map("passing_score") @db.Decimal(6, 2)
-  isDefault            Boolean               @default(false) @map("is_default")
-  status               GradingWorkflowStatus @default(DRAFT)
-  notes                String?               @db.VarChar(255)
-  isActive             Boolean               @default(true) @map("is_active")
-  createdAt            DateTime              @default(now()) @map("created_at")
-  updatedAt            DateTime              @updatedAt @map("updated_at")
-  deletedAt            DateTime?             @map("deleted_at")
-  createdById          String?               @map("created_by") @db.VarChar(191)
-  updatedById          String?               @map("updated_by") @db.VarChar(191)
+  id                String                @id @default(cuid()) @db.VarChar(191)
+  academicYearId    String                @map("academic_year_id") @db.VarChar(191)
+  gradeLevelId      String                @map("grade_level_id") @db.VarChar(191)
+  subjectId         String                @map("subject_id") @db.VarChar(191)
+  assessmentType    AssessmentType        @default(MONTHLY) @map("assessment_type")
+  assessmentTypeLookupId String?        @map("assessment_type_lookup_id") @db.VarChar(191)
+  sectionId         String?               @map("section_id") @db.VarChar(191)
+  academicTermId    String?               @map("academic_term_id") @db.VarChar(191)
+  teacherEmployeeId String?               @map("teacher_employee_id") @db.VarChar(191)
+  version           Int                   @default(1)
+  totalMaxScore     Decimal               @default(100.00) @map("total_max_score") @db.Decimal(7, 2)
+  passingScore      Decimal               @default(50.00) @map("passing_score") @db.Decimal(6, 2)
+  isDefault         Boolean               @default(false) @map("is_default")
+  status            GradingWorkflowStatus @default(DRAFT)
+  notes             String?               @db.VarChar(255)
+  isActive          Boolean               @default(true) @map("is_active")
+  createdAt         DateTime              @default(now()) @map("created_at")
+  updatedAt         DateTime              @updatedAt @map("updated_at")
+  deletedAt         DateTime?             @map("deleted_at")
+  createdById       String?               @map("created_by") @db.VarChar(191)
+  updatedById       String?               @map("updated_by") @db.VarChar(191)
 
-  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
-  gradeLevel   GradeLevel   @relation(fields: [gradeLevelId], references: [id], onDelete: Restrict)
-  subject      Subject      @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  academicYear    AcademicYear  @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  gradeLevel      GradeLevel    @relation(fields: [gradeLevelId], references: [id], onDelete: Restrict)
+  subject         Subject       @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  section         Section?      @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  academicTerm    AcademicTerm? @relation(fields: [academicTermId], references: [id], onDelete: Restrict)
+  teacherEmployee Employee?     @relation(fields: [teacherEmployeeId], references: [id], onDelete: Restrict)
+  assessmentTypeLookup AssessmentTypeLookup? @relation(fields: [assessmentTypeLookupId], references: [id])
 
   createdBy User? @relation("grading_policy_created_by", fields: [createdById], references: [id], onDelete: SetNull)
   updatedBy User? @relation("grading_policy_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
@@ -2653,7 +2810,7 @@ model GradingPolicy {
   components    GradingPolicyComponent[]
   monthlyGrades MonthlyGrade[]
 
-  @@unique([academicYearId, gradeLevelId, subjectId, assessmentType], map: "grp_year_grade_subject_type_uq")
+  @@unique([academicYearId, gradeLevelId, subjectId, assessmentType, sectionId, academicTermId, teacherEmployeeId, version], name: "grp_scope_uq", map: "grp_scope_uq")
   @@index([assessmentType, deletedAt], map: "grp_type_del_idx")
   @@index([status, deletedAt], map: "grp_status_del_idx")
   @@index([isDefault, deletedAt], map: "grp_default_del_idx")
@@ -2671,6 +2828,9 @@ model GradingPolicyComponent {
   calculationMode   GradingComponentCalculationMode @default(MANUAL) @map("calculation_mode")
   includeInMonthly  Boolean                         @default(true) @map("include_in_monthly")
   includeInSemester Boolean                         @default(true) @map("include_in_semester")
+  weight            Decimal?                        @db.Decimal(5, 2)
+  autoSourceType    String?                         @map("auto_source_type") @db.VarChar(50)
+  isRequired        Boolean                         @default(true) @map("is_required")
   sortOrder         Int                             @default(1) @map("sort_order")
   isActive          Boolean                         @default(true) @map("is_active")
   createdAt         DateTime                        @default(now()) @map("created_at")
@@ -2684,7 +2844,7 @@ model GradingPolicyComponent {
   createdBy User? @relation("grading_policy_component_created_by", fields: [createdById], references: [id], onDelete: SetNull)
   updatedBy User? @relation("grading_policy_component_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
 
-  monthlyCustomScores   MonthlyCustomComponentScore[]
+  monthlyCustomScores MonthlyCustomComponentScore[]
   periodGradeComponents PeriodGradeComponent[]
 
   @@unique([gradingPolicyId, code], map: "gpc_policy_code_uq")
@@ -2699,6 +2859,7 @@ model ExamPeriod {
   academicTermId String                @map("academic_term_id") @db.VarChar(191)
   name           String                @db.VarChar(120)
   assessmentType AssessmentType        @default(MONTHLY) @map("assessment_type")
+  assessmentTypeLookupId String?       @map("assessment_type_lookup_id") @db.VarChar(191)
   startDate      DateTime?             @map("start_date")
   endDate        DateTime?             @map("end_date")
   status         GradingWorkflowStatus @default(DRAFT)
@@ -2714,6 +2875,7 @@ model ExamPeriod {
 
   academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
   academicTerm AcademicTerm @relation(fields: [academicTermId], references: [id], onDelete: Restrict)
+  assessmentTypeLookup AssessmentTypeLookup? @relation(fields: [assessmentTypeLookupId], references: [id])
   lockedByUser User?        @relation("exam_period_locked_by", fields: [lockedByUserId], references: [id], onDelete: SetNull)
   createdBy    User?        @relation("exam_period_created_by", fields: [createdById], references: [id], onDelete: SetNull)
   updatedBy    User?        @relation("exam_period_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
@@ -2898,12 +3060,12 @@ model MonthlyGrade {
   academicTermId        String                @map("academic_term_id") @db.VarChar(191)
   academicYearId        String                @map("academic_year_id") @db.VarChar(191)
   gradingPolicyId       String                @map("grading_policy_id") @db.VarChar(191)
-  attendanceScore       Decimal               @default(0.00) @map("attendance_score") @db.Decimal(6, 2)
-  homeworkScore         Decimal               @default(0.00) @map("homework_score") @db.Decimal(6, 2)
-  activityScore         Decimal               @default(0.00) @map("activity_score") @db.Decimal(6, 2)
-  contributionScore     Decimal               @default(0.00) @map("contribution_score") @db.Decimal(6, 2)
-  customComponentsScore Decimal               @default(0.00) @map("custom_components_score") @db.Decimal(6, 2)
-  examScore             Decimal               @default(0.00) @map("exam_score") @db.Decimal(6, 2)
+  attendanceScore       Decimal?              @default(0.00) @map("attendance_score") @db.Decimal(6, 2)
+  homeworkScore         Decimal?              @default(0.00) @map("homework_score") @db.Decimal(6, 2)
+  activityScore         Decimal?              @default(0.00) @map("activity_score") @db.Decimal(6, 2)
+  contributionScore     Decimal?              @default(0.00) @map("contribution_score") @db.Decimal(6, 2)
+  customComponentsScore Decimal?              @default(0.00) @map("custom_components_score") @db.Decimal(6, 2)
+  examScore             Decimal?              @default(0.00) @map("exam_score") @db.Decimal(6, 2)
   monthlyTotal          Decimal               @default(0.00) @map("monthly_total") @db.Decimal(7, 2)
   status                GradingWorkflowStatus @default(DRAFT)
   isLocked              Boolean               @default(false) @map("is_locked")
@@ -3120,8 +3282,8 @@ model AnnualGrade {
   studentEnrollmentId String                @map("student_enrollment_id") @db.VarChar(191)
   subjectId           String                @map("subject_id") @db.VarChar(191)
   academicYearId      String                @map("academic_year_id") @db.VarChar(191)
-  semester1Total      Decimal               @default(0.00) @map("semester1_total") @db.Decimal(7, 2)
-  semester2Total      Decimal               @default(0.00) @map("semester2_total") @db.Decimal(7, 2)
+  semester1Total      Decimal?              @map("semester1_total") @db.Decimal(7, 2)
+  semester2Total      Decimal?              @map("semester2_total") @db.Decimal(7, 2)
   annualTotal         Decimal               @default(0.00) @map("annual_total") @db.Decimal(8, 2)
   annualPercentage    Decimal?              @map("annual_percentage") @db.Decimal(5, 2)
   finalStatusId       String                @map("final_status_id") @db.VarChar(191)

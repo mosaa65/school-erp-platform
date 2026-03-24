@@ -10,6 +10,7 @@ type UseSchoolProfilesQueryOptions = {
   search?: string;
   ownershipTypeId?: number;
   isActive?: boolean;
+  deletedOnly?: boolean;
 };
 
 export function useSchoolProfilesQuery(options: UseSchoolProfilesQueryOptions = {}) {
@@ -23,7 +24,13 @@ export function useSchoolProfilesQuery(options: UseSchoolProfilesQueryOptions = 
       options.limit ?? 12,
       options.search ?? "",
       options.ownershipTypeId ?? "all",
-      options.isActive === undefined ? "all" : options.isActive ? "active" : "inactive",
+      options.deletedOnly
+        ? "deleted"
+        : options.isActive === undefined
+          ? "all"
+          : options.isActive
+            ? "active"
+            : "inactive",
     ],
     enabled: auth.isHydrated && auth.isAuthenticated,
     queryFn: async () => {
@@ -34,6 +41,7 @@ export function useSchoolProfilesQuery(options: UseSchoolProfilesQueryOptions = 
           search: options.search,
           ownershipTypeId: options.ownershipTypeId,
           isActive: options.isActive,
+          deletedOnly: options.deletedOnly ? true : undefined,
         });
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) {

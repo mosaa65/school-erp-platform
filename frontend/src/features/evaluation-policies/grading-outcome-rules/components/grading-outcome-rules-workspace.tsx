@@ -1,17 +1,21 @@
 "use client";
 
 import * as React from "react";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   LoaderCircle,
   Medal,
   PencilLine,
+  Plus,
   RefreshCw,
-  Search,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField } from "@/components/ui/select-field";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
   CardContent,
@@ -19,6 +23,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useAcademicYearOptionsQuery } from "@/features/grade-aggregation/annual-grades/hooks/use-academic-year-options-query";
 import { useGradeLevelOptionsQuery } from "@/features/results-decisions/annual-results/hooks/use-grade-level-options-query";
@@ -94,7 +101,21 @@ export function GradingOutcomeRulesWorkspace() {
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
     "all",
   );
+  const [filterDraft, setFilterDraft] = React.useState<{
+    year: string;
+    grade: string;
+    strategy: "all" | TieBreakStrategy;
+    active: "all" | "active" | "inactive";
+  }>({
+    year: "all",
+    grade: "all",
+    strategy: "all",
+    active: "all",
+  });
+
   const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [form, setForm] = React.useState<FormState>(DEFAULT_FORM);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
@@ -117,7 +138,7 @@ export function GradingOutcomeRulesWorkspace() {
   const updateMutation = useUpdateGradingOutcomeRuleMutation();
   const deleteMutation = useDeleteGradingOutcomeRuleMutation();
 
-  const records = rulesQuery.data?.data ?? [];
+  const records = React.useMemo(() => rulesQuery.data?.data ?? [], [rulesQuery.data?.data]);
   const pagination = rulesQuery.data?.pagination;
   const isEditing = editingId !== null;
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
@@ -127,10 +148,48 @@ export function GradingOutcomeRulesWorkspace() {
     (deleteMutation.error as Error | null)?.message ??
     null;
 
-  const resetForm = () => {
+  React.useEffect(() => {
+    if (!isEditing) {
+      return;
+    }
+
+    const stillExists = records.some((item) => item.id === editingId);
+    if (!stillExists) {
+      setEditingId(null);
+      setForm(DEFAULT_FORM);
+      setFormError(null);
+      setIsFormOpen(false);
+    }
+  }, [editingId, isEditing, records]);
+
+  useDebounceEffect(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 400, [searchInput]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setFilterDraft({
+      year: yearFilter,
+      grade: gradeFilter,
+      strategy: strategyFilter,
+      active: activeFilter,
+    });
+  }, [activeFilter, gradeFilter, isFilterOpen, strategyFilter, yearFilter]);
+
+  const resetFormState = () => {
     setEditingId(null);
     setForm(DEFAULT_FORM);
     setFormError(null);
+  };
+
+  const resetForm = () => {
+    resetFormState();
+    setIsFormOpen(false);
+    setActionSuccess(null);
   };
 
   const validateForm = (): boolean => {
@@ -161,257 +220,110 @@ export function GradingOutcomeRulesWorkspace() {
     return true;
   };
 
+  const handleStartCreate = () => {
+    if (!canCreate) {
+      return;
+    }
+
+    setFormError(null);
+    setActionSuccess(null);
+    setEditingId(null);
+    setForm(DEFAULT_FORM);
+    setIsFormOpen(true);
+  };
+
+  const handleStartEdit = (item: GradingOutcomeRuleListItem) => {
+    if (!canUpdate) {
+      return;
+    }
+
+    setFormError(null);
+    setActionSuccess(null);
+    setEditingId(item.id);
+    setForm(toFormState(item));
+    setIsFormOpen(true);
+  };
+
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setYearFilter("all");
+    setGradeFilter("all");
+    setStrategyFilter("all");
+    setActiveFilter("all");
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    setPage(1);
+    setYearFilter(filterDraft.year);
+    setGradeFilter(filterDraft.grade);
+    setStrategyFilter(filterDraft.strategy);
+    setActiveFilter(filterDraft.active);
+    setIsFilterOpen(false);
+  };
+
+  const activeFiltersCount = React.useMemo(() => {
+    const count = [
+      searchInput.trim() ? 1 : 0,
+      yearFilter !== "all" ? 1 : 0,
+      gradeFilter !== "all" ? 1 : 0,
+      strategyFilter !== "all" ? 1 : 0,
+      activeFilter !== "all" ? 1 : 0,
+    ].reduce((acc, value) => acc + value, 0);
+
+    return count;
+  }, [activeFilter, gradeFilter, searchInput, strategyFilter, yearFilter]);
+
   return (
-    <div className="grid gap-4 xl:grid-cols-[430px_1fr]">
-      <Card className="h-fit border-border/70 bg-card/80">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Medal className="h-5 w-5 text-primary" />
-            {isEditing ? "تعديل قاعدة نتائج" : "إنشاء قاعدة نتائج"}
-          </CardTitle>
-          <CardDescription>
-            قواعد تحديد القرار النهائي والترتيب عند التساوي.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!canCreate && !isEditing ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك الصلاحية المطلوبة: <code>grading-outcome-rules.create</code>.
-            </div>
-          ) : (
-            <form
-              className="space-y-3"
-              onSubmit={(event) => {
-                event.preventDefault();
-                setActionSuccess(null);
-                if (!validateForm()) {
-                  return;
-                }
-                const promoted = parseIntValue(form.promotedMaxFailedSubjects) ?? 0;
-                const conditional = parseIntValue(form.conditionalMaxFailedSubjects) ?? 0;
-
-                const payload = {
-                  academicYearId: form.academicYearId,
-                  gradeLevelId: form.gradeLevelId,
-                  promotedMaxFailedSubjects: promoted,
-                  conditionalMaxFailedSubjects: conditional,
-                  conditionalDecisionId: form.conditionalDecisionId,
-                  retainedDecisionId: form.retainedDecisionId,
-                  tieBreakStrategy: form.tieBreakStrategy,
-                  isActive: form.isActive,
-                };
-
-                if (isEditing && editingId) {
-                  if (!canUpdate) {
-                    setFormError("لا تملك الصلاحية المطلوبة: grading-outcome-rules.update.");
-                    return;
-                  }
-                  updateMutation.mutate(
-                    { gradingOutcomeRuleId: editingId, payload },
-                    {
-                      onSuccess: () => {
-                        resetForm();
-                        setActionSuccess("تم تحديث قاعدة المخرجات بنجاح.");
-                      },
-                    },
-                  );
-                  return;
-                }
-
-                createMutation.mutate(payload, {
-                  onSuccess: () => {
-                    resetForm();
-                    setPage(1);
-                    setActionSuccess("تم إنشاء قاعدة المخرجات بنجاح.");
-                  },
-                });
-              }}
-            >
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={form.academicYearId}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, academicYearId: event.target.value }))
-                }
-              >
-                <option value="">السنة الأكاديمية *</option>
-                {(yearsQuery.data ?? []).map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {formatNameCodeLabel(item.name, item.code)}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={form.gradeLevelId}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, gradeLevelId: event.target.value }))
-                }
-              >
-                <option value="">الصف الدراسي *</option>
-                {(gradeLevelsQuery.data ?? []).map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {formatNameCodeLabel(item.name, item.code)}
-                  </option>
-                ))}
-              </select>
-
-              <div className="grid gap-2 md:grid-cols-2">
-                <Input
-                  type="number"
-                  min={0}
-                  max={20}
-                  step={1}
-                  value={form.promotedMaxFailedSubjects}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      promotedMaxFailedSubjects: event.target.value,
-                    }))
-                  }
-                  placeholder="الحد الأقصى للترفيع (مواد راسبة) *"
-                />
-                <Input
-                  type="number"
-                  min={0}
-                  max={20}
-                  step={1}
-                  value={form.conditionalMaxFailedSubjects}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      conditionalMaxFailedSubjects: event.target.value,
-                    }))
-                  }
-                  placeholder="الحد الأقصى للقرار الشرطي (مواد راسبة) *"
-                />
-              </div>
-
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={form.conditionalDecisionId}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, conditionalDecisionId: event.target.value }))
-                }
-              >
-                <option value="">قرار الشرطي *</option>
-                {(promotionDecisionsQuery.data ?? []).map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {formatNameCodeLabel(item.name, item.code)}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={form.retainedDecisionId}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, retainedDecisionId: event.target.value }))
-                }
-              >
-                <option value="">قرار الإبقاء *</option>
-                {(promotionDecisionsQuery.data ?? []).map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {formatNameCodeLabel(item.name, item.code)}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={form.tieBreakStrategy}
-                onChange={(event) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    tieBreakStrategy: event.target.value as TieBreakStrategy,
-                  }))
-                }
-              >
-                <option value="PERCENTAGE_ONLY">
-                  {translateTieBreakStrategy("PERCENTAGE_ONLY")}
-                </option>
-                <option value="PERCENTAGE_THEN_TOTAL">
-                  {translateTieBreakStrategy("PERCENTAGE_THEN_TOTAL")}
-                </option>
-                <option value="PERCENTAGE_THEN_NAME">
-                  {translateTieBreakStrategy("PERCENTAGE_THEN_NAME")}
-                </option>
-              </select>
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشط</span>
-                <input
-                  type="checkbox"
-                  checked={form.isActive}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                />
-              </label>
-
-              {formError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {formError}
-                </div>
-              ) : null}
-              {mutationError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {mutationError}
-                </div>
-              ) : null}
-              {actionSuccess ? (
-                <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
-                  {actionSuccess}
-                </div>
-              ) : null}
-
-              <div className="flex gap-2">
-                <Button type="submit" className="flex-1 gap-2" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Medal className="h-4 w-4" />
-                  )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء قاعدة"}
-                </Button>
-                {isEditing ? (
-                  <Button type="button" variant="outline" onClick={resetForm}>
-                    إلغاء
-                  </Button>
-                ) : null}
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-card/80">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>قواعد مخرجات الدرجات</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+    <>
+      <div className="space-y-4">
+        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+          <div className="min-w-0">
+            <SearchField
+              containerClassName="min-w-0"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="بحث بالعام/الصف/الاستراتيجية..."
+            />
           </div>
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              setPage(1);
-              setSearch(searchInput.trim());
-            }}
-            className="grid gap-2 md:grid-cols-[1fr_140px_140px_200px_110px_auto]"
-          >
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث..."
-                className="pr-8"
-              />
+          <div className="flex items-center justify-end gap-2">
+            <FilterTriggerButton
+              count={activeFiltersCount}
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+              className="h-11 w-11 justify-center px-0 sm:w-auto sm:px-4 sm:justify-start [&>span:nth-child(2)]:hidden sm:[&>span:nth-child(2)]:inline [&>span:nth-child(3)]:hidden sm:[&>span:nth-child(3)]:inline"
+            />
+          </div>
+        </div>
+
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="فلاتر مخرجات الدرجات"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={clearFilters}
+                className="flex-1 gap-1.5"
+              >
+                <Trash2 className="h-4 w-4" />
+                مسح
+              </Button>
+              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
+                تطبيق
+              </Button>
             </div>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={yearFilter}
-              onChange={(event) => {
-                setPage(1);
-                setYearFilter(event.target.value);
-              }}
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectField
+              value={filterDraft.year}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, year: event.target.value }))
+              }
             >
               <option value="all">كل السنوات</option>
               {(yearsQuery.data ?? []).map((item) => (
@@ -419,14 +331,13 @@ export function GradingOutcomeRulesWorkspace() {
                   {formatNameCodeLabel(item.name, item.code)}
                 </option>
               ))}
-            </select>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={gradeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setGradeFilter(event.target.value);
-              }}
+            </SelectField>
+
+            <SelectField
+              value={filterDraft.grade}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, grade: event.target.value }))
+              }
             >
               <option value="all">كل الصفوف</option>
               {(gradeLevelsQuery.data ?? []).map((item) => (
@@ -434,14 +345,16 @@ export function GradingOutcomeRulesWorkspace() {
                   {formatNameCodeLabel(item.name, item.code)}
                 </option>
               ))}
-            </select>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={strategyFilter}
-              onChange={(event) => {
-                setPage(1);
-                setStrategyFilter(event.target.value as "all" | TieBreakStrategy);
-              }}
+            </SelectField>
+
+            <SelectField
+              value={filterDraft.strategy}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  strategy: event.target.value as "all" | TieBreakStrategy,
+                }))
+              }
             >
               <option value="all">كل الاستراتيجيات</option>
               <option value="PERCENTAGE_ONLY">
@@ -453,26 +366,35 @@ export function GradingOutcomeRulesWorkspace() {
               <option value="PERCENTAGE_THEN_NAME">
                 {translateTieBreakStrategy("PERCENTAGE_THEN_NAME")}
               </option>
-            </select>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={activeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setActiveFilter(event.target.value as "all" | "active" | "inactive");
-              }}
+            </SelectField>
+
+            <SelectField
+              value={filterDraft.active}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  active: event.target.value as "all" | "active" | "inactive",
+                }))
+              }
             >
-              <option value="all">الكل</option>
-              <option value="active">نشط</option>
-              <option value="inactive">غير نشط</option>
-            </select>
-            <Button type="submit" variant="outline" className="gap-2">
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
-          </form>
-        </CardHeader>
-        <CardContent className="space-y-3">
+              <option value="all">كل الحالات</option>
+              <option value="active">النشطة فقط</option>
+              <option value="inactive">غير النشطة فقط</option>
+            </SelectField>
+          </div>
+        </FilterDrawer>
+
+        <Card className="border-border/70 bg-card/80">
+          <CardHeader className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>قواعد مخرجات الدرجات</CardTitle>
+              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+            </div>
+            <CardDescription>
+              قواعد تحديد القرار النهائي والترتيب عند التساوي.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
           {rulesQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
               جارٍ تحميل البيانات...
@@ -520,15 +442,7 @@ export function GradingOutcomeRulesWorkspace() {
                   variant="outline"
                   size="sm"
                   className="gap-1.5"
-                  onClick={() => {
-                    if (!canUpdate) {
-                      return;
-                    }
-                    setEditingId(item.id);
-                    setForm(toFormState(item));
-                    setFormError(null);
-                    setActionSuccess(null);
-                  }}
+                  onClick={() => handleStartEdit(item)}
                   disabled={!canUpdate || updateMutation.isPending}
                 >
                   <PencilLine className="h-3.5 w-3.5" />
@@ -602,8 +516,233 @@ export function GradingOutcomeRulesWorkspace() {
             </div>
           </div>
         </CardContent>
-      </Card>
-    </div>
+        </Card>
+      </div>
+
+      <Fab
+        icon={<Plus className="h-4 w-4" />}
+        label="إنشاء"
+        ariaLabel="إنشاء قاعدة مخرجات"
+        onClick={handleStartCreate}
+        disabled={!canCreate}
+      />
+
+      <BottomSheetForm
+        open={isFormOpen}
+        title={isEditing ? "تعديل قاعدة نتائج" : "إنشاء قاعدة نتائج"}
+        onClose={resetForm}
+        onSubmit={() => undefined}
+        isSubmitting={isSubmitting}
+        submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء قاعدة"}
+        showFooter={false}
+      >
+        {!canCreate && !isEditing ? (
+          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+            لا تملك الصلاحية المطلوبة: <code>grading-outcome-rules.create</code>.
+          </div>
+        ) : (
+          <form
+            className="space-y-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              setActionSuccess(null);
+              if (!validateForm()) {
+                return;
+              }
+              const promoted = parseIntValue(form.promotedMaxFailedSubjects) ?? 0;
+              const conditional = parseIntValue(form.conditionalMaxFailedSubjects) ?? 0;
+
+              const payload = {
+                academicYearId: form.academicYearId,
+                gradeLevelId: form.gradeLevelId,
+                promotedMaxFailedSubjects: promoted,
+                conditionalMaxFailedSubjects: conditional,
+                conditionalDecisionId: form.conditionalDecisionId,
+                retainedDecisionId: form.retainedDecisionId,
+                tieBreakStrategy: form.tieBreakStrategy,
+                isActive: form.isActive,
+              };
+
+              if (isEditing && editingId) {
+                if (!canUpdate) {
+                  setFormError("لا تملك الصلاحية المطلوبة: grading-outcome-rules.update.");
+                  return;
+                }
+                updateMutation.mutate(
+                  { gradingOutcomeRuleId: editingId, payload },
+                  {
+                    onSuccess: () => {
+                      resetFormState();
+                      setActionSuccess("تم تحديث قاعدة المخرجات بنجاح.");
+                    },
+                  },
+                );
+                return;
+              }
+
+              createMutation.mutate(payload, {
+                onSuccess: () => {
+                  resetFormState();
+                  setPage(1);
+                  setActionSuccess("تم إنشاء قاعدة المخرجات بنجاح.");
+                },
+              });
+            }}
+          >
+            <select
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              value={form.academicYearId}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, academicYearId: event.target.value }))
+              }
+            >
+              <option value="">السنة الأكاديمية *</option>
+              {(yearsQuery.data ?? []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {formatNameCodeLabel(item.name, item.code)}
+                </option>
+              ))}
+            </select>
+            <select
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              value={form.gradeLevelId}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, gradeLevelId: event.target.value }))
+              }
+            >
+              <option value="">الصف الدراسي *</option>
+              {(gradeLevelsQuery.data ?? []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {formatNameCodeLabel(item.name, item.code)}
+                </option>
+              ))}
+            </select>
+
+            <div className="grid gap-2 md:grid-cols-2">
+              <Input
+                type="number"
+                min={0}
+                max={20}
+                step={1}
+                value={form.promotedMaxFailedSubjects}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    promotedMaxFailedSubjects: event.target.value,
+                  }))
+                }
+                placeholder="الحد الأقصى للترفيع (مواد راسبة) *"
+              />
+              <Input
+                type="number"
+                min={0}
+                max={20}
+                step={1}
+                value={form.conditionalMaxFailedSubjects}
+                onChange={(event) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    conditionalMaxFailedSubjects: event.target.value,
+                  }))
+                }
+                placeholder="الحد الأقصى للقرار الشرطي (مواد راسبة) *"
+              />
+            </div>
+
+            <select
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              value={form.conditionalDecisionId}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, conditionalDecisionId: event.target.value }))
+              }
+            >
+              <option value="">قرار الشرطي *</option>
+              {(promotionDecisionsQuery.data ?? []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {formatNameCodeLabel(item.name, item.code)}
+                </option>
+              ))}
+            </select>
+            <select
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              value={form.retainedDecisionId}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, retainedDecisionId: event.target.value }))
+              }
+            >
+              <option value="">قرار الإبقاء *</option>
+              {(promotionDecisionsQuery.data ?? []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {formatNameCodeLabel(item.name, item.code)}
+                </option>
+              ))}
+            </select>
+            <select
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              value={form.tieBreakStrategy}
+              onChange={(event) =>
+                setForm((prev) => ({
+                  ...prev,
+                  tieBreakStrategy: event.target.value as TieBreakStrategy,
+                }))
+              }
+            >
+              <option value="PERCENTAGE_ONLY">
+                {translateTieBreakStrategy("PERCENTAGE_ONLY")}
+              </option>
+              <option value="PERCENTAGE_THEN_TOTAL">
+                {translateTieBreakStrategy("PERCENTAGE_THEN_TOTAL")}
+              </option>
+              <option value="PERCENTAGE_THEN_NAME">
+                {translateTieBreakStrategy("PERCENTAGE_THEN_NAME")}
+              </option>
+            </select>
+            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+              <span>نشط</span>
+              <input
+                type="checkbox"
+                checked={form.isActive}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, isActive: event.target.checked }))
+                }
+              />
+            </label>
+
+            {formError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {formError}
+              </div>
+            ) : null}
+            {mutationError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {mutationError}
+              </div>
+            ) : null}
+            {actionSuccess ? (
+              <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
+                {actionSuccess}
+              </div>
+            ) : null}
+
+            <div className="flex gap-2">
+              <Button type="submit" className="flex-1 gap-2" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Medal className="h-4 w-4" />
+                )}
+                {isEditing ? "حفظ التعديلات" : "إنشاء قاعدة"}
+              </Button>
+              {isEditing ? (
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  إلغاء
+                </Button>
+              ) : null}
+            </div>
+          </form>
+        )}
+      </BottomSheetForm>
+    </>
   );
 }
 

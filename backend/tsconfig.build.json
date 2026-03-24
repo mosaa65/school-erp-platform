@@ -1,4 +1,28 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
+  "exclude": [
+    "node_modules",
+    "test",
+    "dist",
+    "**/*spec.ts",
+    "src/modules/annual-grades/**/*",
+    "src/modules/annual-results/**/*",
+    "src/modules/annual-statuses/**/*",
+    "src/modules/data-scope/**/*",
+    "src/modules/employee-section-supervisions/**/*",
+    "src/modules/employee-teaching-assignments/**/*",
+    "src/modules/exam-assessments/**/*",
+    "src/modules/exam-periods/**/*",
+    "src/modules/grading-outcome-rules/**/*",
+    "src/modules/grading-policies/**/*",
+    "src/modules/grading-reports/**/*",
+    "src/modules/homework-types/**/*",
+    "src/modules/homeworks/**/*",
+    "src/modules/monthly-custom-component-scores/**/*",
+    "src/modules/monthly-grades/**/*",
+    "src/modules/promotion-decisions/**/*",
+    "src/modules/semester-grades/**/*",
+    "src/modules/student-exam-scores/**/*",
+    "src/modules/student-homeworks/**/*"
+  ]
 }

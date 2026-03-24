@@ -1,0 +1,37 @@
+
+> frontend@0.1.0 predev
+> node scripts/swc-workaround.cjs
+
+
+> frontend@0.1.0 dev
+> next dev -p 3001
+
+  ▲ Next.js 14.2.28
+  - Local:        http://localhost:3001
+
+ ✓ Starting...
+ ✓ Ready in 4.5s
+ ○ Compiling / ...
+ ✓ Compiled / in 11s (644 modules)
+ GET / 307 in 11870ms
+ ○ Compiling /auth/login ...
+ ✓ Compiled /auth/login in 9.8s (834 modules)
+ GET /auth/login 200 in 9602ms
+ ✓ Compiled /favicon.ico in 435ms (465 modules)
+ GET /favicon.ico 200 in 578ms
+ ○ Compiling /app ...
+ ✓ Compiled /app in 3.8s (964 modules)
+ ✓ Compiled in 943ms (479 modules)
+ ○ Compiling /app/roles ...
+ ✓ Compiled /app/roles in 1947ms (1003 modules)
+ ○ Compiling /app/annual-results ...
+ ✓ Compiled /app/annual-results in 2.6s (1009 modules)
+ ✓ Compiled in 1571ms (924 modules)
+ ✓ Compiled in 660ms (910 modules)
+ ✓ Compiled in 794ms (910 modules)
+ ✓ Compiled in 557ms (507 modules)
+ ✓ Compiled in 372ms (508 modules)
+ ✓ Compiled /app/annual-results in 467ms (503 modules)
+ GET /app/annual-results 200 in 796ms
+ ✓ Compiled /favicon.ico in 500ms (535 modules)
+ GET /favicon.ico 200 in 612ms

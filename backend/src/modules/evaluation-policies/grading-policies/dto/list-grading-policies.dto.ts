@@ -47,6 +47,26 @@ export class ListGradingPoliciesDto {
   @IsString()
   subjectId?: string;
 
+  @ApiPropertyOptional({ example: 'cmabc123section' })
+  @IsOptional()
+  @IsString()
+  sectionId?: string;
+
+  @ApiPropertyOptional({ example: 'cmabc123term' })
+  @IsOptional()
+  @IsString()
+  academicTermId?: string;
+
+  @ApiPropertyOptional({ example: 'cmabc123teacher' })
+  @IsOptional()
+  @IsString()
+  teacherEmployeeId?: string;
+
+  @ApiPropertyOptional({ example: 'cmabc123assessmentTypeLookup' })
+  @IsOptional()
+  @IsString()
+  assessmentTypeLookupId?: string;
+
   @ApiPropertyOptional({ enum: AssessmentType })
   @IsOptional()
   @IsEnum(AssessmentType)

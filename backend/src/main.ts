@@ -1,5 +1,6 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { NextFunction, Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { json } from 'express';
@@ -15,6 +16,47 @@ import { StructuredLogger } from './common/logger/structured-logger.service';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
+  });
+
+  app.use((req: Request, _res: Response, next: NextFunction) => {
+    const coerceBoolean = (value: unknown): unknown => {
+      if (typeof value !== 'string') {
+        return value;
+      }
+
+      const normalized = value.trim().toLowerCase();
+      if (normalized === 'true' || normalized === '1') {
+        return true;
+      }
+      if (normalized === 'false' || normalized === '0') {
+        return false;
+      }
+
+      return value;
+    };
+
+    const coerceQueryBooleans = (value: unknown): unknown => {
+      if (Array.isArray(value)) {
+        return value.map(coerceQueryBooleans);
+      }
+      if (value && typeof value === 'object') {
+        const entries = Object.entries(value as Record<string, unknown>);
+        for (const [key, nested] of entries) {
+          (value as Record<string, unknown>)[key] = coerceQueryBooleans(nested);
+        }
+        return value;
+      }
+
+      return coerceBoolean(value);
+    };
+
+    if (req.query && typeof req.query === 'object') {
+      for (const [key, value] of Object.entries(req.query)) {
+        req.query[key] = coerceQueryBooleans(value) as string | string[];
+      }
+    }
+
+    next();
   });
 
   const logger = new StructuredLogger();
@@ -58,6 +100,8 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
+  app.enableCors({ origin: true, methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS", credentials: true });
+
   const configService = app.get(ConfigService);
   const swaggerPath = (
     configService.get<string>('SWAGGER_PATH') ?? 'api/docs'
@@ -70,7 +114,7 @@ async function bootstrap() {
   });
 
   const port = configService.get<number>('PORT') ?? 3000;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 
   logger.log(`API is running on http://localhost:${port}`);
   logger.log(

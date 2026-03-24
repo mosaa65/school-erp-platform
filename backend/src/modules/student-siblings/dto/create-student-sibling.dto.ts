@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+﻿import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsEnum,
@@ -18,7 +18,10 @@ export class CreateStudentSiblingDto {
   @IsString()
   siblingId!: string;
 
-  @ApiProperty({ enum: StudentSiblingRelationship, example: StudentSiblingRelationship.BROTHER })
+  @ApiProperty({
+    enum: StudentSiblingRelationship,
+    example: StudentSiblingRelationship.BROTHER,
+  })
   @IsEnum(StudentSiblingRelationship)
   relationship!: StudentSiblingRelationship;
 
@@ -34,3 +37,4 @@ export class CreateStudentSiblingDto {
   @IsBoolean()
   isActive?: boolean;
 }
+

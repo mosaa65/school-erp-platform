@@ -1,17 +1,22 @@
 "use client";
 
 import * as React from "react";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   AlertTriangle,
   LoaderCircle,
   PencilLine,
+  Plus,
   RefreshCw,
-  Search,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField } from "@/components/ui/select-field";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
+import { StudentPickerSheet } from "@/components/ui/student-picker-sheet";
 import {
   Card,
   CardContent,
@@ -19,14 +24,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
-import { useStudentOptionsQuery } from "@/features/student-books/hooks/use-student-options-query";
 import {
   useCreateStudentProblemMutation,
   useDeleteStudentProblemMutation,
   useUpdateStudentProblemMutation,
 } from "@/features/student-problems/hooks/use-student-problems-mutations";
 import { useStudentProblemsQuery } from "@/features/student-problems/hooks/use-student-problems-query";
+import type { StudentPickerOption } from "@/features/students/lib/student-picker";
 import type { StudentProblemListItem } from "@/lib/api/client";
 
 type StudentProblemFormState = {
@@ -101,6 +109,20 @@ function toFormState(item: StudentProblemListItem): StudentProblemFormState {
   };
 }
 
+function buildStudentPickerOptionFromProblem(
+  item: StudentProblemListItem,
+): StudentPickerOption {
+  return {
+    id: item.studentId,
+    title: item.student.fullName,
+    subtitle: item.student.admissionNo
+      ? `رقم الطالب ${item.student.admissionNo}`
+      : "بدون رقم طالب",
+    meta: null,
+    groupLabel: "الطالب المحدد",
+  };
+}
+
 export function StudentProblemsWorkspace() {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("student-problems.create");
@@ -115,17 +137,36 @@ export function StudentProblemsWorkspace() {
   const [statusFilter, setStatusFilter] = React.useState<"all" | "resolved" | "open">(
     "all",
   );
-  const [fromDateInput, setFromDateInput] = React.useState("");
-  const [toDateInput, setToDateInput] = React.useState("");
   const [fromDateFilter, setFromDateFilter] = React.useState("");
   const [toDateFilter, setToDateFilter] = React.useState("");
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
     "all",
   );
+  const [filterDraft, setFilterDraft] = React.useState<{
+    student: string;
+    status: "all" | "resolved" | "open";
+    fromDate: string;
+    toDate: string;
+    active: "all" | "active" | "inactive";
+  }>({
+    student: "all",
+    status: "all",
+    fromDate: "",
+    toDate: "",
+    active: "all",
+  });
 
   const [editingProblemId, setEditingProblemId] = React.useState<string | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<StudentProblemFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [selectedFormStudent, setSelectedFormStudent] =
+    React.useState<StudentPickerOption | null>(null);
+  const [selectedStudentFilterOption, setSelectedStudentFilterOption] =
+    React.useState<StudentPickerOption | null>(null);
+  const [filterDraftStudentOption, setFilterDraftStudentOption] =
+    React.useState<StudentPickerOption | null>(null);
 
   const problemsQuery = useStudentProblemsQuery({
     page,
@@ -138,8 +179,6 @@ export function StudentProblemsWorkspace() {
     toProblemDate: toDateFilter ? toDateIso(toDateFilter) : undefined,
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
   });
-
-  const studentsQuery = useStudentOptionsQuery();
 
   const createMutation = useCreateStudentProblemMutation();
   const updateMutation = useUpdateStudentProblemMutation();
@@ -165,21 +204,57 @@ export function StudentProblemsWorkspace() {
       setEditingProblemId(null);
       setFormState(DEFAULT_FORM_STATE);
       setFormError(null);
+      setSelectedFormStudent(null);
+      setIsFormOpen(false);
     }
   }, [editingProblemId, isEditing, problems]);
+
+  useDebounceEffect(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 400, [searchInput]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setFilterDraft({
+      student: studentFilter,
+      status: statusFilter,
+      fromDate: fromDateFilter,
+      toDate: toDateFilter,
+      active: activeFilter,
+    });
+    setFilterDraftStudentOption(selectedStudentFilterOption);
+  }, [
+    activeFilter,
+    fromDateFilter,
+    isFilterOpen,
+    selectedStudentFilterOption,
+    statusFilter,
+    studentFilter,
+    toDateFilter,
+  ]);
 
   const resetForm = () => {
     setEditingProblemId(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
+    setSelectedFormStudent(null);
+    setIsFormOpen(false);
   };
 
-  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPage(1);
-    setSearch(searchInput.trim());
-    setFromDateFilter(fromDateInput);
-    setToDateFilter(toDateInput);
+  const handleStartCreate = () => {
+    if (!canCreate) {
+      return;
+    }
+
+    setFormError(null);
+    setEditingProblemId(null);
+    setFormState(DEFAULT_FORM_STATE);
+    setSelectedFormStudent(null);
+    setIsFormOpen(true);
   };
 
   const validateForm = (): boolean => {
@@ -207,8 +282,8 @@ export function StudentProblemsWorkspace() {
     return true;
   };
 
-  const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
 
     if (!validateForm()) {
       return;
@@ -266,6 +341,8 @@ export function StudentProblemsWorkspace() {
     setFormError(null);
     setEditingProblemId(item.id);
     setFormState(toFormState(item));
+    setSelectedFormStudent(buildStudentPickerOptionFromProblem(item));
+    setIsFormOpen(true);
   };
 
   const handleDelete = (item: StudentProblemListItem) => {
@@ -291,255 +368,159 @@ export function StudentProblemsWorkspace() {
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
 
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setStudentFilter("all");
+    setStatusFilter("all");
+    setFromDateFilter("");
+    setToDateFilter("");
+    setActiveFilter("all");
+    setSelectedStudentFilterOption(null);
+    setFilterDraftStudentOption(null);
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    setPage(1);
+    setStudentFilter(filterDraft.student);
+    setStatusFilter(filterDraft.status);
+    setFromDateFilter(filterDraft.fromDate);
+    setToDateFilter(filterDraft.toDate);
+    setActiveFilter(filterDraft.active);
+    setSelectedStudentFilterOption(filterDraftStudentOption);
+    setIsFilterOpen(false);
+  };
+
+  const activeFiltersCount = React.useMemo(() => {
+    const count = [
+      searchInput.trim() ? 1 : 0,
+      studentFilter !== "all" ? 1 : 0,
+      statusFilter !== "all" ? 1 : 0,
+      fromDateFilter ? 1 : 0,
+      toDateFilter ? 1 : 0,
+      activeFilter !== "all" ? 1 : 0,
+    ].reduce((acc, value) => acc + value, 0);
+    return count;
+  }, [activeFilter, fromDateFilter, searchInput, statusFilter, studentFilter, toDateFilter]);
+
   return (
-    <div className="grid gap-4 xl:grid-cols-[450px_1fr]">
-      <Card className="h-fit border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-primary" />
-            {isEditing ? "تعديل مشكلة طالب" : "إضافة مشكلة طالب"}
-          </CardTitle>
-          <CardDescription>
-            {isEditing
-              ? "تحديث سجل المشكلة والإجراءات المتخذة."
-              : "توثيق مشكلة طالب ومتابعة معالجتها."}
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent>
-          {!canCreate && !isEditing ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك الصلاحية المطلوبة: <code>student-problems.create</code>.
-            </div>
-          ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm}>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الطالب *</label>
-                <select
-                  data-testid="student-problem-form-student"
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.studentId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, studentId: event.target.value }))
-                  }
-                  disabled={!canReadStudents}
-                >
-                  <option value="">اختر الطالب</option>
-                  {(studentsQuery.data ?? []).map((student) => (
-                    <option key={student.id} value={student.id}>
-                      {student.fullName} ({student.admissionNo ?? "بدون رقم"})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">تاريخ المشكلة *</label>
-                  <Input
-                    data-testid="student-problem-form-date"
-                    type="date"
-                    value={formState.problemDate}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, problemDate: event.target.value }))
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">نوع المشكلة</label>
-                  <Input
-                    data-testid="student-problem-form-type"
-                    value={formState.problemType}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, problemType: event.target.value }))
-                    }
-                    placeholder="مثال: سلوكي"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">وصف المشكلة *</label>
-                <textarea
-                  data-testid="student-problem-form-description"
-                  className="min-h-[96px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  value={formState.problemDescription}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, problemDescription: event.target.value }))
-                  }
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الإجراءات المتخذة</label>
-                <textarea
-                  data-testid="student-problem-form-actions"
-                  className="min-h-[86px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  value={formState.actionsTaken}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, actionsTaken: event.target.value }))
-                  }
-                />
-              </div>
-
-              <div className="grid gap-2 md:grid-cols-3">
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>محضر</span>
-                  <input
-                    data-testid="student-problem-form-has-minutes"
-                    type="checkbox"
-                    checked={formState.hasMinutes}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, hasMinutes: event.target.checked }))
-                    }
-                  />
-                </label>
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>تم الحل</span>
-                  <input
-                    data-testid="student-problem-form-resolved"
-                    type="checkbox"
-                    checked={formState.isResolved}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, isResolved: event.target.checked }))
-                    }
-                  />
-                </label>
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>نشط</span>
-                  <input
-                    data-testid="student-problem-form-active"
-                    type="checkbox"
-                    checked={formState.isActive}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                    }
-                  />
-                </label>
-              </div>
-
-              {formError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {formError}
-                </div>
-              ) : null}
-
-              {mutationError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {mutationError}
-                </div>
-              ) : null}
-
-              <div className="flex gap-2">
-                <Button
-                  data-testid="student-problem-form-submit"
-                  type="submit"
-                  className="flex-1 gap-2"
-                  disabled={isFormSubmitting || (!canCreate && !isEditing)}
-                >
-                  {isFormSubmitting ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <AlertTriangle className="h-4 w-4" />
-                  )}
-                  {isEditing ? "حفظ التعديلات" : "إضافة المشكلة"}
-                </Button>
-                {isEditing ? (
-                  <Button type="button" variant="outline" onClick={resetForm}>
-                    إلغاء
-                  </Button>
-                ) : null}
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>مشكلات الطلاب</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+    <>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
+            <SearchField
+              containerClassName="flex-1"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="بحث بالطالب/الوصف..."
+            />
           </div>
-          <CardDescription>متابعة المشكلات الطلابية والإجراءات التصحيحية.</CardDescription>
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterTriggerButton
+              count={activeFiltersCount}
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+            />
+          </div>
+        </div>
 
-          <form
-            onSubmit={handleSearchSubmit}
-            className="grid gap-2 md:grid-cols-[1fr_170px_130px_150px_150px_130px_auto]"
-          >
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث بالطالب/الوصف..."
-                className="pr-8"
-              />
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="فلاتر المشكلات"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={clearFilters}
+                className="flex-1 gap-1.5"
+              >
+                <Trash2 className="h-4 w-4" />
+                مسح
+              </Button>
+              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
+                تطبيق
+              </Button>
             </div>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={studentFilter}
-              onChange={(event) => {
-                setPage(1);
-                setStudentFilter(event.target.value);
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <StudentPickerSheet
+              scope="student-problems"
+              variant="filter"
+              value={filterDraft.student}
+              selectedOption={filterDraftStudentOption}
+              onSelect={(option) => {
+                setFilterDraft((prev) => ({ ...prev, student: option?.id ?? "all" }));
+                setFilterDraftStudentOption(option);
               }}
-            >
-              <option value="all">كل الطلاب</option>
-              {(studentsQuery.data ?? []).map((student) => (
-                <option key={student.id} value={student.id}>
-                  {student.fullName} ({student.admissionNo ?? "بدون رقم"})
-                </option>
-              ))}
-            </select>
+              disabled={!canReadStudents}
+            />
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={statusFilter}
-              onChange={(event) => {
-                setPage(1);
-                setStatusFilter(event.target.value as "all" | "resolved" | "open");
-              }}
+            <SelectField
+              value={filterDraft.status}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  status: event.target.value as "all" | "resolved" | "open",
+                }))
+              }
             >
               <option value="all">كل الحالات</option>
               <option value="resolved">محلولة</option>
               <option value="open">غير محلولة</option>
-            </select>
+            </SelectField>
 
-            <Input
-              type="date"
-              value={fromDateInput}
-              onChange={(event) => setFromDateInput(event.target.value)}
-            />
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">من تاريخ</label>
+              <Input
+                type="date"
+                value={filterDraft.fromDate}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, fromDate: event.target.value }))
+                }
+              />
+            </div>
 
-            <Input
-              type="date"
-              value={toDateInput}
-              onChange={(event) => setToDateInput(event.target.value)}
-            />
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">إلى تاريخ</label>
+              <Input
+                type="date"
+                value={filterDraft.toDate}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, toDate: event.target.value }))
+                }
+              />
+            </div>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={activeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setActiveFilter(event.target.value as "all" | "active" | "inactive");
-              }}
+            <SelectField
+              value={filterDraft.active}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  active: event.target.value as "all" | "active" | "inactive",
+                }))
+              }
             >
               <option value="all">كل الحالات</option>
               <option value="active">النشطة فقط</option>
               <option value="inactive">غير النشطة فقط</option>
-            </select>
+            </SelectField>
+          </div>
+        </FilterDrawer>
 
-            <Button type="submit" variant="outline" className="gap-2">
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
-          </form>
-        </CardHeader>
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+          <CardHeader className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>مشكلات الطلاب</CardTitle>
+              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+            </div>
+            <CardDescription>متابعة المشكلات الطلابية والإجراءات التصحيحية.</CardDescription>
+          </CardHeader>
 
-        <CardContent className="space-y-3">
+          <CardContent className="space-y-3">
           {problemsQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
               جارٍ تحميل البيانات...
@@ -660,7 +641,169 @@ export function StudentProblemsWorkspace() {
             </div>
           </div>
         </CardContent>
-      </Card>
-    </div>
+        </Card>
+      </div>
+
+      <Fab
+        icon={<Plus className="h-4 w-4" />}
+        label="إنشاء"
+        ariaLabel="إضافة مشكلة طالب"
+        onClick={handleStartCreate}
+        disabled={!canCreate}
+      />
+
+      <BottomSheetForm
+        open={isFormOpen}
+        title={isEditing ? "تعديل مشكلة طالب" : "إضافة مشكلة طالب"}
+        onClose={resetForm}
+        onSubmit={() => handleSubmitForm()}
+        isSubmitting={isFormSubmitting}
+        submitLabel={isEditing ? "حفظ التعديلات" : "إضافة المشكلة"}
+        showFooter={false}
+      >
+        {!canCreate && !isEditing ? (
+          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+            لا تملك الصلاحية المطلوبة: <code>student-problems.create</code>.
+          </div>
+        ) : (
+          <form className="space-y-3" onSubmit={handleSubmitForm}>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الطالب *</label>
+              <StudentPickerSheet
+                scope="student-problems"
+                variant="form"
+                value={formState.studentId}
+                selectedOption={selectedFormStudent}
+                onSelect={(option) => {
+                  setSelectedFormStudent(option);
+                  setFormState((prev) => ({ ...prev, studentId: option?.id ?? "" }));
+                }}
+                disabled={!canReadStudents}
+                triggerTestId="student-problem-form-student"
+              />
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">تاريخ المشكلة *</label>
+                <Input
+                  data-testid="student-problem-form-date"
+                  type="date"
+                  value={formState.problemDate}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, problemDate: event.target.value }))
+                  }
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">نوع المشكلة</label>
+                <Input
+                  data-testid="student-problem-form-type"
+                  value={formState.problemType}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, problemType: event.target.value }))
+                  }
+                  placeholder="مثال: سلوكي"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">وصف المشكلة *</label>
+              <textarea
+                data-testid="student-problem-form-description"
+                className="min-h-[96px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={formState.problemDescription}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, problemDescription: event.target.value }))
+                }
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الإجراءات المتخذة</label>
+              <textarea
+                data-testid="student-problem-form-actions"
+                className="min-h-[86px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={formState.actionsTaken}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, actionsTaken: event.target.value }))
+                }
+              />
+            </div>
+
+            <div className="grid gap-2 md:grid-cols-3">
+              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                <span>محضر</span>
+                <input
+                  data-testid="student-problem-form-has-minutes"
+                  type="checkbox"
+                  checked={formState.hasMinutes}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, hasMinutes: event.target.checked }))
+                  }
+                />
+              </label>
+              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                <span>تم الحل</span>
+                <input
+                  data-testid="student-problem-form-resolved"
+                  type="checkbox"
+                  checked={formState.isResolved}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, isResolved: event.target.checked }))
+                  }
+                />
+              </label>
+              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                <span>نشط</span>
+                <input
+                  data-testid="student-problem-form-active"
+                  type="checkbox"
+                  checked={formState.isActive}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                  }
+                />
+              </label>
+            </div>
+
+            {formError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {formError}
+              </div>
+            ) : null}
+
+            {mutationError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {mutationError}
+              </div>
+            ) : null}
+
+            <div className="flex gap-2">
+              <Button
+                data-testid="student-problem-form-submit"
+                type="submit"
+                className="flex-1 gap-2"
+                disabled={isFormSubmitting || (!canCreate && !isEditing)}
+              >
+                {isFormSubmitting ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <AlertTriangle className="h-4 w-4" />
+                )}
+                {isEditing ? "حفظ التعديلات" : "إضافة المشكلة"}
+              </Button>
+              {isEditing ? (
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  إلغاء
+                </Button>
+              ) : null}
+            </div>
+          </form>
+        )}
+      </BottomSheetForm>
+    </>
   );
 }

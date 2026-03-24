@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   ConflictException,
   Injectable,
@@ -35,7 +35,10 @@ export class LookupGradeDescriptionsService {
 
   async create(payload: CreateLookupGradeDescriptionDto, actorUserId: string) {
     this.validateRange(payload.minPercentage, payload.maxPercentage);
-    const normalizedNameAr = this.normalizeRequiredText(payload.nameAr, 'nameAr');
+    const normalizedNameAr = this.normalizeRequiredText(
+      payload.nameAr,
+      'nameAr',
+    );
     const normalizedNameEn = this.normalizeOptionalText(payload.nameEn);
     const normalizedColorCode = this.normalizeOptionalText(payload.colorCode);
 
@@ -88,10 +91,11 @@ export class LookupGradeDescriptionsService {
   async findAll(query: ListLookupGradeDescriptionsDto) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
+    const deletedOnly = query.deletedOnly ?? false;
 
     const where: Prisma.LookupGradeDescriptionWhereInput = {
-      deletedAt: null,
-      isActive: query.isActive,
+      deletedAt: deletedOnly ? { not: null } : null,
+      isActive: deletedOnly ? undefined : query.isActive,
       OR: query.search
         ? [
             {
@@ -153,8 +157,10 @@ export class LookupGradeDescriptionsService {
   ) {
     const current = await this.ensureLookupItemExists(id);
 
-    const minPercentage = payload.minPercentage ?? Number(current.minPercentage);
-    const maxPercentage = payload.maxPercentage ?? Number(current.maxPercentage);
+    const minPercentage =
+      payload.minPercentage ?? Number(current.minPercentage);
+    const maxPercentage =
+      payload.maxPercentage ?? Number(current.maxPercentage);
     this.validateRange(minPercentage, maxPercentage);
 
     const normalizedNameAr =
@@ -293,3 +299,4 @@ export class LookupGradeDescriptionsService {
     return 'Unknown error';
   }
 }
+

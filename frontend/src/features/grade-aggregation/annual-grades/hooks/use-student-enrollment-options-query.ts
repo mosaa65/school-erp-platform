@@ -2,6 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { ApiError, apiClient } from "@/lib/api/client";
+import type { StudentEnrollmentListItem } from "@/lib/api/client";
+import { sortStudentEnrollmentOptions } from "@/lib/student-enrollment-display";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 
 type Params = {
@@ -13,7 +15,7 @@ type Params = {
 export function useStudentEnrollmentOptionsQuery(params: Params = {}) {
   const auth = useAuth();
 
-  return useQuery({
+  return useQuery<StudentEnrollmentListItem[]>({
     queryKey: [
       "student-enrollments",
       "options",
@@ -48,6 +50,7 @@ export function useStudentEnrollmentOptionsQuery(params: Params = {}) {
         throw error;
       }
     },
+    select: (items) => sortStudentEnrollmentOptions(items),
   });
 }
 

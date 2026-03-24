@@ -1,10 +1,21 @@
 "use client";
 
 import * as React from "react";
-import { LoaderCircle, PencilLine, RefreshCw, Search, Trash2, Users } from "lucide-react";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
+import {
+  LoaderCircle,
+  PencilLine,
+  Plus,
+  RefreshCw,
+  Trash2,
+  Users,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField } from "@/components/ui/select-field";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
   CardContent,
@@ -12,6 +23,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useGeographyOptionsQuery } from "@/features/lookup-catalog/hooks/use-geography-options-query";
 import {
@@ -35,6 +49,7 @@ import {
   translateStudentHealthStatus,
   translateStudentOrphanStatus,
 } from "@/lib/i18n/ar";
+import { formatNameCodeLabel } from "@/lib/option-labels";
 import type {
   StudentGender,
   StudentHealthStatus,
@@ -143,6 +158,45 @@ function formatDate(isoDate: string | null): string {
   return date.toLocaleDateString();
 }
 
+type StudentEnrollmentLabelInput = {
+  academicYear: {
+    name: string;
+    code: string;
+  };
+  gradeLevel?: {
+    name: string;
+    code: string;
+  } | null;
+  section?: {
+    name?: string | null;
+    code?: string | null;
+    gradeLevel?: {
+      name: string;
+      code: string;
+    } | null;
+  } | null;
+};
+
+function formatStudentEnrollmentPlacementLabel(
+  enrollment: StudentEnrollmentLabelInput,
+): string {
+  const yearLabel = formatNameCodeLabel(enrollment.academicYear.name, enrollment.academicYear.code);
+  const gradeLabel = enrollment.gradeLevel
+    ? formatNameCodeLabel(enrollment.gradeLevel.name, enrollment.gradeLevel.code)
+    : enrollment.section?.gradeLevel
+      ? formatNameCodeLabel(
+          enrollment.section.gradeLevel.name,
+          enrollment.section.gradeLevel.code,
+        )
+      : "";
+
+  if (enrollment.section) {
+    return `${yearLabel} / ${gradeLabel || "غير موزع"} / ${formatNameCodeLabel(enrollment.section.name, enrollment.section.code)}`;
+  }
+
+  return gradeLabel ? `${yearLabel} / ${gradeLabel} / غير موزع` : `${yearLabel} / غير موزع`;
+}
+
 type LocalityLabelInput = {
   id: number;
   nameAr?: string;
@@ -216,8 +270,23 @@ export function StudentsWorkspace() {
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
     "all",
   );
+  const [filterDraft, setFilterDraft] = React.useState<{
+    gender: string;
+    bloodType: string;
+    locality: string;
+    orphan: string;
+    active: "all" | "active" | "inactive";
+  }>({
+    gender: "all",
+    bloodType: "all",
+    locality: "all",
+    orphan: "all",
+    active: "all",
+  });
 
   const [editingStudentId, setEditingStudentId] = React.useState<string | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<StudentFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
@@ -389,8 +458,28 @@ export function StudentsWorkspace() {
       setEditingStudentId(null);
       setFormState(DEFAULT_FORM_STATE);
       setFormError(null);
+      setIsFormOpen(false);
     }
   }, [editingStudentId, isEditing, students]);
+
+  useDebounceEffect(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 400, [searchInput]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setFilterDraft({
+      gender: genderFilter,
+      bloodType: bloodTypeFilter,
+      locality: localityFilter,
+      orphan: orphanFilter,
+      active: activeFilter,
+    });
+  }, [activeFilter, bloodTypeFilter, genderFilter, isFilterOpen, localityFilter, orphanFilter]);
 
   React.useEffect(() => {
     if (isEditing || formState.genderId || !canReadGenders) {
@@ -474,12 +563,23 @@ export function StudentsWorkspace() {
     setFormDirectorateId("");
     setFormSubDistrictId("");
     setFormVillageId("");
+    setIsFormOpen(false);
   };
 
-  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPage(1);
-    setSearch(searchInput.trim());
+  const handleStartCreate = () => {
+    if (!canCreate) {
+      return;
+    }
+
+    setActionSuccess(null);
+    setFormError(null);
+    setEditingStudentId(null);
+    setFormState(DEFAULT_FORM_STATE);
+    setFormGovernorateId("");
+    setFormDirectorateId("");
+    setFormSubDistrictId("");
+    setFormVillageId("");
+    setIsFormOpen(true);
   };
 
   const handleGovernorateChange = (value: string) => {
@@ -528,11 +628,6 @@ export function StudentsWorkspace() {
       return false;
     }
 
-    if (formState.admissionNo.trim().length > 40) {
-      setFormError("رقم القيد يجب ألا يتجاوز 40 حرفًا.");
-      return false;
-    }
-
     if (formState.fullName.trim().length > 150) {
       setFormError("الاسم الكامل يجب ألا يتجاوز 150 حرفًا.");
       return false;
@@ -547,8 +642,8 @@ export function StudentsWorkspace() {
     return true;
   };
 
-  const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
     setActionSuccess(null);
 
     if (!validateForm()) {
@@ -580,7 +675,6 @@ export function StudentsWorkspace() {
         : undefined;
 
     const payload = {
-      admissionNo: toOptionalString(formState.admissionNo),
       fullName: formState.fullName.trim(),
       gender: mappedGender,
       genderId: formState.genderId ? Number(formState.genderId) : undefined,
@@ -700,6 +794,7 @@ export function StudentsWorkspace() {
     }
 
     setFormState(nextState);
+    setIsFormOpen(true);
   };
 
   const handleToggleActive = (student: StudentListItem) => {
@@ -750,377 +845,95 @@ export function StudentsWorkspace() {
   const getOrphanStatusLabel = (value: StudentOrphanStatus) =>
     orphanStatusLabels.get(value) ?? translateStudentOrphanStatus(value);
 
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setGenderFilter("all");
+    setBloodTypeFilter("all");
+    setLocalityFilter("all");
+    setOrphanFilter("all");
+    setActiveFilter("all");
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    setPage(1);
+    setGenderFilter(filterDraft.gender);
+    setBloodTypeFilter(filterDraft.bloodType);
+    setLocalityFilter(filterDraft.locality);
+    setOrphanFilter(filterDraft.orphan);
+    setActiveFilter(filterDraft.active);
+    setIsFilterOpen(false);
+  };
+
+  const activeFiltersCount = React.useMemo(() => {
+    const count = [
+      searchInput.trim() ? 1 : 0,
+      genderFilter !== "all" ? 1 : 0,
+      bloodTypeFilter !== "all" ? 1 : 0,
+      localityFilter !== "all" ? 1 : 0,
+      orphanFilter !== "all" ? 1 : 0,
+      activeFilter !== "all" ? 1 : 0,
+    ].reduce((acc, value) => acc + value, 0);
+    return count;
+  }, [
+    activeFilter,
+    bloodTypeFilter,
+    genderFilter,
+    localityFilter,
+    orphanFilter,
+    searchInput,
+  ]);
+
+
   return (
-    <div className="grid gap-4 xl:grid-cols-[390px_1fr]">
-      <Card className="h-fit border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-primary" />
-            {isEditing ? "تعديل طالب" : "إنشاء طالب"}
-          </CardTitle>
-          <CardDescription>
-            {isEditing
-              ? "تحديث بيانات الطالب الأساسية."
-              : "إضافة طالب جديد ضمن نظام إدارة الطلاب."}
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent>
-          {!canCreate && !isEditing ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك الصلاحية المطلوبة: <code>students.create</code>.
-            </div>
-          ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm}>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">رقم القيد</label>
-                <Input
-                  value={formState.admissionNo}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, admissionNo: event.target.value }))
-                  }
-                  placeholder="ق-2026-00123"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الاسم الكامل *</label>
-                <Input
-                  value={formState.fullName}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, fullName: event.target.value }))
-                  }
-                  placeholder="محمد أحمد علي"
-                  required
-                />
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">الجنس *</label>
-                  <select
-                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    value={formState.genderId}
-                    onChange={(event) =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        genderId: event.target.value,
-                      }))
-                    }
-                    disabled={!canReadGenders || genderOptionsQuery.isLoading}
-                  >
-                    <option value="">اختر الجنس</option>
-                    {genderOptions.map((option) => {
-                      const translated =
-                        option.code && isStudentGenderCode(option.code)
-                          ? translateStudentGender(option.code)
-                          : option.nameAr ?? option.name ?? option.code ?? String(option.id);
-
-                      return (
-                        <option key={option.id} value={option.id}>
-                          {option.nameAr ?? translated}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">تاريخ الميلاد</label>
-                  <Input
-                    type="date"
-                    value={formState.birthDate}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, birthDate: event.target.value }))
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">فصيلة الدم</label>
-                  <select
-                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    value={formState.bloodTypeId}
-                    onChange={(event) =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        bloodTypeId: event.target.value,
-                      }))
-                    }
-                    disabled={!canReadBloodTypes || bloodTypeOptionsQuery.isLoading}
-                  >
-                    <option value="">غير محدد</option>
-                    {bloodTypeOptions.map((bloodType) => (
-                      <option key={bloodType.id} value={bloodType.id}>
-                        {bloodType.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">الحالة الصحية</label>
-                  <select
-                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    value={formState.healthStatusId}
-                    onChange={(event) =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        healthStatusId: event.target.value,
-                      }))
-                    }
-                    disabled={!canReadHealthStatuses || healthStatusOptionsQuery.isLoading}
-                  >
-                    <option value="">غير محدد</option>
-                    {healthStatusOptions.map((status) => (
-                      <option key={status.id} value={status.id}>
-                        {status.nameAr ??
-                          (status.code && isStudentHealthStatusCode(status.code)
-                            ? translateStudentHealthStatus(status.code)
-                            : status.code ?? String(status.id))}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">حالة اليتم *</label>
-                  <select
-                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    value={formState.orphanStatusId}
-                    onChange={(event) =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        orphanStatusId: event.target.value,
-                      }))
-                    }
-                    disabled={!canReadOrphanStatuses || orphanStatusesQuery.isLoading}
-                  >
-                    <option value="">اختر حالة اليتم</option>
-                    {orphanStatusOptions.map((orphanStatus) => (
-                      <option key={orphanStatus.id} value={orphanStatus.id}>
-                        {orphanStatus.nameAr}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground">
-                  الموقع الجغرافي (هرمي)
-                </label>
-                {hasGeographyHierarchy ? (
-                  <div className="grid gap-2 md:grid-cols-2">
-                    <select
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                      value={formGovernorateId}
-                      onChange={(event) => handleGovernorateChange(event.target.value)}
-                      disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
-                    >
-                      <option value="">اختر المحافظة</option>
-                      {governorateOptions.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.nameAr ?? item.name ?? `محافظة #${item.id}`}
-                        </option>
-                      ))}
-                    </select>
-
-                    <select
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                      value={formDirectorateId}
-                      onChange={(event) => handleDirectorateChange(event.target.value)}
-                      disabled={
-                        !canReadLocalities ||
-                        geographyOptionsQuery.isLoading ||
-                        !formGovernorateId
-                      }
-                    >
-                      <option value="">اختر المديرية</option>
-                      {filteredDirectorates.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.nameAr ?? item.name ?? `مديرية #${item.id}`}
-                        </option>
-                      ))}
-                    </select>
-
-                    <select
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                      value={formSubDistrictId}
-                      onChange={(event) => handleSubDistrictChange(event.target.value)}
-                      disabled={
-                        !canReadLocalities ||
-                        geographyOptionsQuery.isLoading ||
-                        !formDirectorateId
-                      }
-                    >
-                      <option value="">اختر العزلة</option>
-                      {filteredSubDistricts.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.nameAr ?? item.name ?? `عزلة #${item.id}`}
-                        </option>
-                      ))}
-                    </select>
-
-                    <select
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                      value={formVillageId}
-                      onChange={(event) => handleVillageChange(event.target.value)}
-                      disabled={
-                        !canReadLocalities ||
-                        geographyOptionsQuery.isLoading ||
-                        !formSubDistrictId
-                      }
-                    >
-                      <option value="">اختر القرية (اختياري للحضر)</option>
-                      {filteredVillages.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.nameAr ?? item.name ?? `قرية #${item.id}`}
-                        </option>
-                      ))}
-                    </select>
-
-                    <div className="md:col-span-2">
-                      <select
-                        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                        value={formState.localityId}
-                        onChange={(event) => handleLocalityChange(event.target.value)}
-                        disabled={
-                          !canReadLocalities ||
-                          geographyOptionsQuery.isLoading ||
-                          !formDirectorateId
-                        }
-                      >
-                        <option value="">اختر المحلة</option>
-                        {filteredLocalities.map((locality) => (
-                          <option key={locality.id} value={locality.id}>
-                            {formatLocalityHierarchyLabel(locality, geographyMaps)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <p className="text-xs text-muted-foreground md:col-span-2">
-                      {formSelectedLocality
-                        ? `المحدد: ${formatLocalityHierarchyLabel(
-                            formSelectedLocality,
-                            geographyMaps,
-                          )}`
-                        : "يمكن اختيار محلة حضرية بعد تحديد المديرية، أو محلة ريفية بعد اختيار العزلة والقرية."}
-                    </p>
-                  </div>
-                ) : (
-                  <select
-                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    value={formState.localityId}
-                    onChange={(event) => handleLocalityChange(event.target.value)}
-                    disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
-                  >
-                    <option value="">غير محدد</option>
-                    {localityOptions.map((locality) => (
-                      <option key={locality.id} value={locality.id}>
-                        {formatLocalityHierarchyLabel(locality, geographyMaps)}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">ملاحظات صحية</label>
-                <textarea
-                  className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  value={formState.healthNotes}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, healthNotes: event.target.value }))
-                  }
-                  placeholder="ملاحظات صحية إضافية (اختياري)"
-                />
-              </div>
-
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشط</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                />
-              </label>
-
-              {formError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {formError}
-                </div>
-              ) : null}
-
-              {mutationError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {mutationError}
-                </div>
-              ) : null}
-              {actionSuccess ? (
-                <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
-                  {actionSuccess}
-                </div>
-              ) : null}
-
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  className="flex-1 gap-2"
-                  disabled={isFormSubmitting || (!canCreate && !isEditing)}
-                >
-                  {isFormSubmitting ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Users className="h-4 w-4" />
-                  )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء طالب"}
-                </Button>
-                {isEditing ? (
-                  <Button type="button" variant="outline" onClick={resetForm}>
-                    إلغاء
-                  </Button>
-                ) : null}
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>قائمة الطلاب</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+    <>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
+            <SearchField
+              containerClassName="flex-1"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="بحث بالاسم أو رقم الطالب..."
+            />
           </div>
-          <CardDescription>إدارة الطلاب مع الفلترة حسب النوع الاجتماعي وحالة اليتم.</CardDescription>
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterTriggerButton
+              count={activeFiltersCount}
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+            />
+          </div>
+        </div>
 
-          <form
-            onSubmit={handleSearchSubmit}
-            className="grid gap-2 md:grid-cols-[1fr_150px_170px_210px_190px_130px_auto]"
-          >
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث بالاسم أو رقم القيد..."
-                className="pr-8"
-              />
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="فلاتر الطلاب"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={clearFilters}
+                className="flex-1 gap-1.5"
+              >
+                <Trash2 className="h-4 w-4" />
+                مسح
+              </Button>
+              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
+                تطبيق
+              </Button>
             </div>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={genderFilter}
-              onChange={(event) => {
-                setPage(1);
-                setGenderFilter(event.target.value);
-              }}
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectField
+              value={filterDraft.gender}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, gender: event.target.value }))
+              }
               disabled={!canReadGenders || genderOptionsQuery.isLoading}
             >
               <option value="all">كل الأجناس</option>
@@ -1136,15 +949,13 @@ export function StudentsWorkspace() {
                   </option>
                 );
               })}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={bloodTypeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setBloodTypeFilter(event.target.value);
-              }}
+            <SelectField
+              value={filterDraft.bloodType}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, bloodType: event.target.value }))
+              }
               disabled={!canReadBloodTypes || bloodTypeOptionsQuery.isLoading}
             >
               <option value="all">كل الفصائل</option>
@@ -1153,15 +964,13 @@ export function StudentsWorkspace() {
                   {bloodType.name}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={localityFilter}
-              onChange={(event) => {
-                setPage(1);
-                setLocalityFilter(event.target.value);
-              }}
+            <SelectField
+              value={filterDraft.locality}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, locality: event.target.value }))
+              }
               disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
             >
               <option value="all">كل المحلات</option>
@@ -1170,15 +979,13 @@ export function StudentsWorkspace() {
                   {formatLocalityHierarchyLabel(locality, geographyMaps)}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={orphanFilter}
-              onChange={(event) => {
-                setPage(1);
-                setOrphanFilter(event.target.value);
-              }}
+            <SelectField
+              value={filterDraft.orphan}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, orphan: event.target.value }))
+              }
               disabled={!canReadOrphanStatuses || orphanStatusesQuery.isLoading}
             >
               <option value="all">كل حالات اليتم</option>
@@ -1187,191 +994,539 @@ export function StudentsWorkspace() {
                   {orphanStatus.nameAr}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={activeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setActiveFilter(event.target.value as "all" | "active" | "inactive");
-              }}
+            <SelectField
+              value={filterDraft.active}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  active: event.target.value as "all" | "active" | "inactive",
+                }))
+              }
             >
               <option value="all">كل الحالات</option>
               <option value="active">نشط فقط</option>
               <option value="inactive">غير نشط فقط</option>
-            </select>
+            </SelectField>
+          </div>
+        </FilterDrawer>
 
-            <Button type="submit" variant="outline" className="gap-2">
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
-          </form>
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+                <CardHeader className="space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <CardTitle>قائمة الطلاب</CardTitle>
+                    <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+                  </div>
+                  <CardDescription>إدارة الطلاب مع الفلترة حسب النوع الاجتماعي وحالة اليتم.</CardDescription>
         </CardHeader>
 
-        <CardContent className="space-y-3">
-          {studentsQuery.isPending ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ تحميل قائمة الطلاب...
-            </div>
-          ) : null}
+                <CardContent className="space-y-3">
+                  {studentsQuery.isPending ? (
+                    <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                      جارٍ تحميل قائمة الطلاب...
+                    </div>
+                  ) : null}
 
-          {studentsQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {studentsQuery.error instanceof Error
-                ? studentsQuery.error.message
-                : "فشل تحميل قائمة الطلاب"}
-            </div>
-          ) : null}
+                  {studentsQuery.error ? (
+                    <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                      {studentsQuery.error instanceof Error
+                        ? studentsQuery.error.message
+                        : "فشل تحميل قائمة الطلاب"}
+                    </div>
+                  ) : null}
 
-          {!studentsQuery.isPending && students.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              لا توجد سجلات مطابقة.
-            </div>
-          ) : null}
+                  {!studentsQuery.isPending && students.length === 0 ? (
+                    <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                      لا توجد سجلات مطابقة.
+                    </div>
+                  ) : null}
 
-          {students.map((student) => {
-            const latestEnrollment = student.enrollments[0];
+                  {students.map((student) => {
+                    const latestEnrollment = student.enrollments[0];
 
-            return (
-              <div
-                key={student.id}
-                className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="space-y-1">
-                    <p className="font-medium">{student.fullName}</p>
+                    return (
+                      <div
+                        key={student.id}
+                        className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="space-y-1">
+                            <p className="font-medium">{student.fullName}</p>
+                            <p className="text-xs text-muted-foreground">
+                              رقم الطالب: {student.admissionNo ?? "-"} | الميلاد: {formatDate(student.birthDate)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              أولياء الأمور: {student.guardians.length} | القيود: {student.enrollments.length}
+                            </p>
+                            {latestEnrollment ? (
+                              <p className="text-xs text-muted-foreground">
+                                آخر قيد: {formatStudentEnrollmentPlacementLabel(latestEnrollment)} (
+                                {translateStudentEnrollmentStatus(latestEnrollment.status)})
+                              </p>
+                            ) : null}
+                            <p className="text-xs text-muted-foreground">
+                              الموقع:{" "}
+                              {student.locality
+                                ? formatLocalityHierarchyLabel(
+                                    (geographyMaps.localityById.get(student.locality.id) ??
+                                      student.locality) as LocalityLabelInput,
+                                    geographyMaps,
+                                  )
+                                : "غير محدد"}
+                            </p>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <Badge variant="outline">
+                              {student.genderLookup?.nameAr ?? translateStudentGender(student.gender)}
+                            </Badge>
+                            <Badge variant="outline">
+                              {student.bloodType ? student.bloodType.name : "بدون فصيلة"}
+                            </Badge>
+                            <Badge variant={orphanBadgeVariant(student.orphanStatus)}>
+                              {student.orphanStatusLookup?.nameAr ?? getOrphanStatusLabel(student.orphanStatus)}
+                            </Badge>
+                            <Badge variant={healthBadgeVariant(student.healthStatus)}>
+                              {student.healthStatusLookup?.nameAr ??
+                                (student.healthStatus
+                                  ? translateStudentHealthStatus(student.healthStatus)
+                                  : "غير محدد")}
+                            </Badge>
+                            <Badge variant={student.isActive ? "default" : "outline"}>
+                              {student.isActive ? "نشط" : "غير نشط"}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5"
+                            onClick={() => handleStartEdit(student)}
+                            disabled={!canUpdate || updateMutation.isPending}
+                          >
+                            <PencilLine className="h-3.5 w-3.5" />
+                            تعديل
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleToggleActive(student)}
+                            disabled={!canUpdate || updateMutation.isPending}
+                          >
+                            {student.isActive ? "تعطيل" : "تفعيل"}
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="gap-1.5"
+                            onClick={() => handleDelete(student)}
+                            disabled={!canDelete || deleteMutation.isPending}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            حذف
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
                     <p className="text-xs text-muted-foreground">
-                      رقم القيد: {student.admissionNo ?? "-"} | الميلاد: {formatDate(student.birthDate)}
+                      صفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      أولياء الأمور: {student.guardians.length} | القيود: {student.enrollments.length}
-                    </p>
-                    {latestEnrollment ? (
-                      <p className="text-xs text-muted-foreground">
-                        آخر قيد: {latestEnrollment.academicYear.code} /{" "}
-                        {latestEnrollment.section.code} (
-                        {translateStudentEnrollmentStatus(latestEnrollment.status)})
-                      </p>
-                    ) : null}
-                    <p className="text-xs text-muted-foreground">
-                      الموقع:{" "}
-                      {student.locality
-                        ? formatLocalityHierarchyLabel(
-                            (geographyMaps.localityById.get(student.locality.id) ??
-                              student.locality) as LocalityLabelInput,
-                            geographyMaps,
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                        disabled={!pagination || pagination.page <= 1 || studentsQuery.isFetching}
+                      >
+                        السابق
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setPage((prev) =>
+                            pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
                           )
-                        : "غير محدد"}
-                    </p>
+                        }
+                        disabled={
+                          !pagination ||
+                          pagination.page >= pagination.totalPages ||
+                          studentsQuery.isFetching
+                        }
+                      >
+                        التالي
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={() => void studentsQuery.refetch()}
+                        disabled={studentsQuery.isFetching}
+                      >
+                        <RefreshCw
+                          className={`h-4 w-4 ${studentsQuery.isFetching ? "animate-spin" : ""}`}
+                        />
+                        تحديث
+                      </Button>
+                    </div>
                   </div>
+                </CardContent>
+              </Card>
+      </div>
 
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge variant="outline">
-                      {student.genderLookup?.nameAr ?? translateStudentGender(student.gender)}
-                    </Badge>
-                    <Badge variant="outline">
-                      {student.bloodType ? student.bloodType.name : "بدون فصيلة"}
-                    </Badge>
-                    <Badge variant={orphanBadgeVariant(student.orphanStatus)}>
-                      {student.orphanStatusLookup?.nameAr ?? getOrphanStatusLabel(student.orphanStatus)}
-                    </Badge>
-                    <Badge variant={healthBadgeVariant(student.healthStatus)}>
-                      {student.healthStatusLookup?.nameAr ??
-                        (student.healthStatus
-                          ? translateStudentHealthStatus(student.healthStatus)
-                          : "غير محدد")}
-                    </Badge>
-                    <Badge variant={student.isActive ? "default" : "outline"}>
-                      {student.isActive ? "نشط" : "غير نشط"}
-                    </Badge>
-                  </div>
-                </div>
+      <Fab
+        icon={<Plus className="h-4 w-4" />}
+        label="إنشاء"
+        ariaLabel="إنشاء طالب"
+        onClick={handleStartCreate}
+        disabled={!canCreate}
+      />
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => handleStartEdit(student)}
-                    disabled={!canUpdate || updateMutation.isPending}
-                  >
-                    <PencilLine className="h-3.5 w-3.5" />
-                    تعديل
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleToggleActive(student)}
-                    disabled={!canUpdate || updateMutation.isPending}
-                  >
-                    {student.isActive ? "تعطيل" : "تفعيل"}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => handleDelete(student)}
-                    disabled={!canDelete || deleteMutation.isPending}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    حذف
-                  </Button>
-                </div>
-              </div>
-            );
-          })}
-
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-            <p className="text-xs text-muted-foreground">
-              صفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={!pagination || pagination.page <= 1 || studentsQuery.isFetching}
-              >
-                السابق
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPage((prev) =>
-                    pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                  )
-                }
-                disabled={
-                  !pagination ||
-                  pagination.page >= pagination.totalPages ||
-                  studentsQuery.isFetching
-                }
-              >
-                التالي
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => void studentsQuery.refetch()}
-                disabled={studentsQuery.isFetching}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${studentsQuery.isFetching ? "animate-spin" : ""}`}
-                />
-                تحديث
-              </Button>
-            </div>
+      <BottomSheetForm
+        open={isFormOpen}
+        title={isEditing ? "تعديل طالب" : "إنشاء طالب"}
+        onClose={resetForm}
+        onSubmit={() => handleSubmitForm()}
+        isSubmitting={isFormSubmitting}
+        submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء طالب"}
+        showFooter={false}
+      >
+        {!canCreate && !isEditing ? (
+          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+            لا تملك الصلاحية المطلوبة: <code>students.create</code>.
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        ) : (
+          <form className="space-y-3" onSubmit={handleSubmitForm}>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">رقم الطالب</label>
+              {isEditing ? (
+                <Input
+                  value={formState.admissionNo}
+                  readOnly
+                  placeholder="سيتم توليده تلقائيًا"
+                  className="bg-muted/40"
+                />
+              ) : (
+                <div className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                  سيُولد رقم الطالب تلقائيًا بعد الحفظ.
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الاسم الكامل *</label>
+              <Input
+                value={formState.fullName}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, fullName: event.target.value }))
+                }
+                placeholder="محمد أحمد علي"
+                required
+              />
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">الجنس *</label>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={formState.genderId}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      genderId: event.target.value,
+                    }))
+                  }
+                  disabled={!canReadGenders || genderOptionsQuery.isLoading}
+                >
+                  <option value="">اختر الجنس</option>
+                  {genderOptions.map((option) => {
+                    const translated =
+                      option.code && isStudentGenderCode(option.code)
+                        ? translateStudentGender(option.code)
+                        : option.nameAr ?? option.name ?? option.code ?? String(option.id);
+
+                    return (
+                      <option key={option.id} value={option.id}>
+                        {option.nameAr ?? translated}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">تاريخ الميلاد</label>
+                <Input
+                  type="date"
+                  value={formState.birthDate}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, birthDate: event.target.value }))
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">فصيلة الدم</label>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={formState.bloodTypeId}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      bloodTypeId: event.target.value,
+                    }))
+                  }
+                  disabled={!canReadBloodTypes || bloodTypeOptionsQuery.isLoading}
+                >
+                  <option value="">غير محدد</option>
+                  {bloodTypeOptions.map((bloodType) => (
+                    <option key={bloodType.id} value={bloodType.id}>
+                      {bloodType.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">الحالة الصحية</label>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={formState.healthStatusId}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      healthStatusId: event.target.value,
+                    }))
+                  }
+                  disabled={!canReadHealthStatuses || healthStatusOptionsQuery.isLoading}
+                >
+                  <option value="">غير محدد</option>
+                  {healthStatusOptions.map((status) => (
+                    <option key={status.id} value={status.id}>
+                      {status.nameAr ??
+                        (status.code && isStudentHealthStatusCode(status.code)
+                          ? translateStudentHealthStatus(status.code)
+                          : status.code ?? String(status.id))}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">حالة اليتم *</label>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={formState.orphanStatusId}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      orphanStatusId: event.target.value,
+                    }))
+                  }
+                  disabled={!canReadOrphanStatuses || orphanStatusesQuery.isLoading}
+                >
+                  <option value="">اختر حالة اليتم</option>
+                  {orphanStatusOptions.map((orphanStatus) => (
+                    <option key={orphanStatus.id} value={orphanStatus.id}>
+                      {orphanStatus.nameAr}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground">
+                الموقع الجغرافي (هرمي)
+              </label>
+              {hasGeographyHierarchy ? (
+                <div className="grid gap-2 md:grid-cols-2">
+                  <select
+                    className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                    value={formGovernorateId}
+                    onChange={(event) => handleGovernorateChange(event.target.value)}
+                    disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
+                  >
+                    <option value="">اختر المحافظة</option>
+                    {governorateOptions.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.nameAr ?? item.name ?? `محافظة #${item.id}`}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                    value={formDirectorateId}
+                    onChange={(event) => handleDirectorateChange(event.target.value)}
+                    disabled={
+                      !canReadLocalities ||
+                      geographyOptionsQuery.isLoading ||
+                      !formGovernorateId
+                    }
+                  >
+                    <option value="">اختر المديرية</option>
+                    {filteredDirectorates.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.nameAr ?? item.name ?? `مديرية #${item.id}`}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                    value={formSubDistrictId}
+                    onChange={(event) => handleSubDistrictChange(event.target.value)}
+                    disabled={
+                      !canReadLocalities ||
+                      geographyOptionsQuery.isLoading ||
+                      !formDirectorateId
+                    }
+                  >
+                    <option value="">اختر العزلة</option>
+                    {filteredSubDistricts.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.nameAr ?? item.name ?? `عزلة #${item.id}`}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                    value={formVillageId}
+                    onChange={(event) => handleVillageChange(event.target.value)}
+                    disabled={
+                      !canReadLocalities ||
+                      geographyOptionsQuery.isLoading ||
+                      !formSubDistrictId
+                    }
+                  >
+                    <option value="">اختر القرية (اختياري للحضر)</option>
+                    {filteredVillages.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.nameAr ?? item.name ?? `قرية #${item.id}`}
+                      </option>
+                    ))}
+                  </select>
+
+                  <div className="md:col-span-2">
+                    <select
+                      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                      value={formState.localityId}
+                      onChange={(event) => handleLocalityChange(event.target.value)}
+                      disabled={
+                        !canReadLocalities ||
+                        geographyOptionsQuery.isLoading ||
+                        !formDirectorateId
+                      }
+                    >
+                      <option value="">اختر المحلة</option>
+                      {filteredLocalities.map((locality) => (
+                        <option key={locality.id} value={locality.id}>
+                          {formatLocalityHierarchyLabel(locality, geographyMaps)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground md:col-span-2">
+                    {formSelectedLocality
+                      ? `المحدد: ${formatLocalityHierarchyLabel(
+                          formSelectedLocality,
+                          geographyMaps,
+                        )}`
+                      : "يمكن اختيار محلة حضرية بعد تحديد المديرية، أو محلة ريفية بعد اختيار العزلة والقرية."}
+                  </p>
+                </div>
+              ) : (
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={formState.localityId}
+                  onChange={(event) => handleLocalityChange(event.target.value)}
+                  disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
+                >
+                  <option value="">غير محدد</option>
+                  {localityOptions.map((locality) => (
+                    <option key={locality.id} value={locality.id}>
+                      {formatLocalityHierarchyLabel(locality, geographyMaps)}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">ملاحظات صحية</label>
+              <textarea
+                className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={formState.healthNotes}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, healthNotes: event.target.value }))
+                }
+                placeholder="ملاحظات صحية إضافية (اختياري)"
+              />
+            </div>
+
+            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+              <span>نشط</span>
+              <input
+                type="checkbox"
+                checked={formState.isActive}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                }
+              />
+            </label>
+
+            {formError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {formError}
+              </div>
+            ) : null}
+
+            {mutationError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {mutationError}
+              </div>
+            ) : null}
+            {actionSuccess ? (
+              <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
+                {actionSuccess}
+              </div>
+            ) : null}
+
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                className="flex-1 gap-2"
+                disabled={isFormSubmitting || (!canCreate && !isEditing)}
+              >
+                {isFormSubmitting ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Users className="h-4 w-4" />
+                )}
+                {isEditing ? "حفظ التعديلات" : "إنشاء طالب"}
+              </Button>
+              {isEditing ? (
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  إلغاء
+                </Button>
+              ) : null}
+            </div>
+          </form>
+        )}
+      </BottomSheetForm>
+    </>
   );
+
 }
-
-
-
-
-

@@ -71,11 +71,6 @@ const HOMEWORK_TYPE_DEFINITIONS = [
 const GRADING_POLICY_TEMPLATES = [
   {
     assessmentType: AssessmentType.MONTHLY,
-    maxExamScore: 40,
-    maxHomeworkScore: 20,
-    maxAttendanceScore: 10,
-    maxActivityScore: 10,
-    maxContributionScore: 20,
     passingScore: 50,
     isDefault: true,
     components: [
@@ -128,11 +123,6 @@ const GRADING_POLICY_TEMPLATES = [
   },
   {
     assessmentType: AssessmentType.MIDTERM,
-    maxExamScore: 30,
-    maxHomeworkScore: 0,
-    maxAttendanceScore: 0,
-    maxActivityScore: 0,
-    maxContributionScore: 0,
     passingScore: 15,
     isDefault: false,
     components: [
@@ -149,11 +139,6 @@ const GRADING_POLICY_TEMPLATES = [
   },
   {
     assessmentType: AssessmentType.FINAL,
-    maxExamScore: 60,
-    maxHomeworkScore: 0,
-    maxAttendanceScore: 0,
-    maxActivityScore: 0,
-    maxContributionScore: 0,
     passingScore: 30,
     isDefault: false,
     components: [
@@ -350,49 +335,61 @@ export async function seedDemoTeachingGrades(
   for (const [gradeLevelId, subjects] of selectedSubjectsByGrade.entries()) {
     for (const subject of subjects) {
       for (const template of GRADING_POLICY_TEMPLATES) {
-        const policy = await prisma.gradingPolicy.upsert({
+        let componentSum = 0;
+        for (const c of template.components) {
+          componentSum += c.maxScore;
+        }
+
+        let policy = await prisma.gradingPolicy.findFirst({
           where: {
-            academicYearId_gradeLevelId_subjectId_assessmentType: {
-              academicYearId: context.academicYearId,
-              gradeLevelId,
-              subjectId: subject.subjectId,
-              assessmentType: template.assessmentType,
-            },
-          },
-          update: {
-            maxExamScore: toDecimal(template.maxExamScore),
-            maxHomeworkScore: toDecimal(template.maxHomeworkScore),
-            maxAttendanceScore: toDecimal(template.maxAttendanceScore),
-            maxActivityScore: toDecimal(template.maxActivityScore),
-            maxContributionScore: toDecimal(template.maxContributionScore),
-            passingScore: toDecimal(template.passingScore),
-            isDefault: template.isDefault,
-            status: GradingWorkflowStatus.APPROVED,
-            notes: 'سياسة تقييم تجريبية للنظام التعليمي.',
-            isActive: true,
-            deletedAt: null,
-            updatedById: null,
-          },
-          create: {
             academicYearId: context.academicYearId,
             gradeLevelId,
             subjectId: subject.subjectId,
             assessmentType: template.assessmentType,
-            maxExamScore: toDecimal(template.maxExamScore),
-            maxHomeworkScore: toDecimal(template.maxHomeworkScore),
-            maxAttendanceScore: toDecimal(template.maxAttendanceScore),
-            maxActivityScore: toDecimal(template.maxActivityScore),
-            maxContributionScore: toDecimal(template.maxContributionScore),
-            passingScore: toDecimal(template.passingScore),
-            isDefault: template.isDefault,
-            status: GradingWorkflowStatus.APPROVED,
-            notes: 'سياسة تقييم تجريبية للنظام التعليمي.',
-            isActive: true,
+            sectionId: null,
+            academicTermId: null,
+            teacherEmployeeId: null,
+            version: 1,
           },
-          select: {
-            id: true,
-          },
+          select: { id: true },
         });
+
+        if (policy) {
+          policy = await prisma.gradingPolicy.update({
+            where: { id: policy.id },
+            data: {
+              totalMaxScore: toDecimal(componentSum),
+              passingScore: toDecimal(template.passingScore),
+              isDefault: template.isDefault,
+              status: GradingWorkflowStatus.APPROVED,
+              notes: 'سياسة تقييم تجريبية للنظام التعليمي.',
+              isActive: true,
+              deletedAt: null,
+              updatedById: null,
+            },
+            select: { id: true },
+          });
+        } else {
+          policy = await prisma.gradingPolicy.create({
+            data: {
+              academicYearId: context.academicYearId,
+              gradeLevelId,
+              subjectId: subject.subjectId,
+              assessmentType: template.assessmentType,
+              sectionId: null,
+              academicTermId: null,
+              teacherEmployeeId: null,
+              version: 1,
+              totalMaxScore: toDecimal(componentSum),
+              passingScore: toDecimal(template.passingScore),
+              isDefault: template.isDefault,
+              status: GradingWorkflowStatus.APPROVED,
+              notes: 'سياسة تقييم تجريبية للنظام التعليمي.',
+              isActive: true,
+            },
+            select: { id: true },
+          });
+        }
 
         gradingPoliciesTotal += 1;
 
@@ -621,6 +618,10 @@ export async function seedDemoTeachingGrades(
 
   const enrollmentsBySection = new Map<string, Array<{ id: string }>>();
   for (const enrollment of enrollmentRows) {
+    if (!enrollment.sectionId) {
+      continue;
+    }
+
     const bucket = enrollmentsBySection.get(enrollment.sectionId) ?? [];
     if (bucket.length < DEFAULT_STUDENTS_PER_SECTION) {
       bucket.push({ id: enrollment.id });

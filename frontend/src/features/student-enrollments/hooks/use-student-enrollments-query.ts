@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ApiError,
   apiClient,
+  type StudentEnrollmentDistributionStatus,
   type StudentEnrollmentStatus,
 } from "@/lib/api/client";
 import { useAuth } from "@/features/auth/providers/auth-provider";
@@ -14,8 +15,10 @@ type UseStudentEnrollmentsQueryOptions = {
   search?: string;
   studentId?: string;
   academicYearId?: string;
+  gradeLevelId?: string;
   sectionId?: string;
   status?: StudentEnrollmentStatus;
+  distributionStatus?: StudentEnrollmentDistributionStatus;
   isActive?: boolean;
 };
 
@@ -33,8 +36,10 @@ export function useStudentEnrollmentsQuery(
       options.search ?? "",
       options.studentId ?? "all",
       options.academicYearId ?? "all",
+      options.gradeLevelId ?? "all",
       options.sectionId ?? "all",
       options.status ?? "all",
+      options.distributionStatus ?? "all",
       options.isActive === undefined ? "all" : options.isActive ? "active" : "inactive",
     ],
     enabled: auth.isHydrated && auth.isAuthenticated,
@@ -46,8 +51,10 @@ export function useStudentEnrollmentsQuery(
           search: options.search,
           studentId: options.studentId,
           academicYearId: options.academicYearId,
+          gradeLevelId: options.gradeLevelId,
           sectionId: options.sectionId,
           status: options.status,
+          distributionStatus: options.distributionStatus,
           isActive: options.isActive,
         });
       } catch (error) {

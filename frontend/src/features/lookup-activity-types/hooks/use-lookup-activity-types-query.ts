@@ -9,6 +9,7 @@ type UseLookupActivityTypesQueryOptions = {
   limit?: number;
   search?: string;
   isActive?: boolean;
+  deletedOnly?: boolean;
 };
 
 export function useLookupActivityTypesQuery(options: UseLookupActivityTypesQueryOptions = {}) {
@@ -21,7 +22,13 @@ export function useLookupActivityTypesQuery(options: UseLookupActivityTypesQuery
       options.page ?? 1,
       options.limit ?? 12,
       options.search ?? "",
-      options.isActive === undefined ? "all" : options.isActive ? "active" : "inactive",
+      options.deletedOnly
+        ? "deleted"
+        : options.isActive === undefined
+          ? "all"
+          : options.isActive
+            ? "active"
+            : "inactive",
     ],
     enabled: auth.isHydrated && auth.isAuthenticated,
     queryFn: async () => {
@@ -31,6 +38,7 @@ export function useLookupActivityTypesQuery(options: UseLookupActivityTypesQuery
           limit: options.limit ?? 12,
           search: options.search,
           isActive: options.isActive,
+          deletedOnly: options.deletedOnly ? true : undefined,
         });
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) {

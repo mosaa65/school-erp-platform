@@ -12,3 +12,8 @@ _tmp_docker_diag/
 # env
 **/.env
 **/.env.local
+
+# local frontend logs
+frontend/frontend-stdout.log
+frontend/frontend-stderr.log
+

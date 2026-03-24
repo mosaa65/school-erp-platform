@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   ConflictException,
   Injectable,
@@ -206,7 +206,11 @@ export class StudentSiblingsService {
 
     await this.studentsService.ensureStudentExistsAndActive(resolvedStudentId);
     await this.studentsService.ensureStudentExistsAndActive(resolvedSiblingId);
-    await this.ensureNoInverseDuplicate(resolvedStudentId, resolvedSiblingId, id);
+    await this.ensureNoInverseDuplicate(
+      resolvedStudentId,
+      resolvedSiblingId,
+      id,
+    );
 
     try {
       const studentSibling = await this.prisma.studentSibling.update({
@@ -282,7 +286,9 @@ export class StudentSiblingsService {
 
   private ensureDistinctStudents(studentId: string, siblingId: string) {
     if (studentId === siblingId) {
-      throw new BadRequestException('studentId and siblingId cannot be the same');
+      throw new BadRequestException(
+        'studentId and siblingId cannot be the same',
+      );
     }
   }
 
@@ -319,7 +325,9 @@ export class StudentSiblingsService {
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === 'P2002'
     ) {
-      throw new ConflictException('Student-sibling relationship must be unique');
+      throw new ConflictException(
+        'Student-sibling relationship must be unique',
+      );
     }
 
     throw error;
@@ -333,3 +341,4 @@ export class StudentSiblingsService {
     return 'Unknown error';
   }
 }
+

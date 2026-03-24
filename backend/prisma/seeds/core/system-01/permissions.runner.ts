@@ -1,10 +1,13 @@
 ﻿import type { PrismaClient } from '@prisma/client';
 import { DEFAULT_PERMISSION_CODES } from './permissions.seed';
+import { processInBatches } from '../shared/batch';
 
 export async function seedSystem01Permissions(prisma: PrismaClient) {
   const permissions = [] as Array<{ id: string; code: string }>;
 
-  for (const code of DEFAULT_PERMISSION_CODES) {
+  const uniqueCodes = Array.from(new Set(DEFAULT_PERMISSION_CODES));
+
+  await processInBatches(uniqueCodes, 20, async (code) => {
     const [resource, action] = code.split('.', 2);
 
     const permission = await prisma.permission.upsert({
@@ -31,7 +34,7 @@ export async function seedSystem01Permissions(prisma: PrismaClient) {
     });
 
     permissions.push(permission);
-  }
+  });
 
   return permissions;
 }

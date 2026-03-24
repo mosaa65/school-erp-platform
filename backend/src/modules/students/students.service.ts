@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
@@ -16,6 +16,10 @@ import {
 import { DataScopeService } from '../teaching-assignments/data-scope/data-scope.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import {
+  formatStudentAdmissionNo,
+  parseStudentAdmissionNoSequence,
+} from '../../common/utils/student-numbering';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { ListStudentsDto } from './dto/list-students.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
@@ -102,6 +106,8 @@ const studentInclude: Prisma.StudentInclude = {
     },
     select: {
       id: true,
+      yearlyEnrollmentNo: true,
+      distributionStatus: true,
       status: true,
       enrollmentDate: true,
       academicYear: {
@@ -111,6 +117,15 @@ const studentInclude: Prisma.StudentInclude = {
           name: true,
           status: true,
           isCurrent: true,
+        },
+      },
+      gradeLevel: {
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          stage: true,
+          sequence: true,
         },
       },
       section: {
@@ -153,7 +168,7 @@ export class StudentsService {
 
   async create(payload: CreateStudentDto, actorUserId: string) {
     const fullName = payload.fullName.trim();
-    const admissionNo = payload.admissionNo?.trim().toUpperCase();
+    const admissionNoInput = payload.admissionNo?.trim().toUpperCase();
 
     if (payload.bloodTypeId !== undefined && payload.bloodTypeId !== null) {
       await this.ensureBloodTypeExists(payload.bloodTypeId);
@@ -168,27 +183,32 @@ export class StudentsService {
     const orphanStatus = await this.resolveOrphanStatusOnCreate(payload);
 
     try {
-      const student = await this.prisma.student.create({
-        data: {
-          admissionNo,
-          fullName,
-          gender: gender.gender,
-          genderId: gender.genderId,
-          birthDate: payload.birthDate,
-          bloodTypeId:
-            payload.bloodTypeId === null ? null : payload.bloodTypeId,
-          localityId:
-            payload.localityId === null ? null : payload.localityId,
-          healthStatus: healthStatus.healthStatus,
-          healthStatusId: healthStatus.healthStatusId,
-          healthNotes: payload.healthNotes,
-          orphanStatus: orphanStatus.orphanStatus,
-          orphanStatusId: orphanStatus.orphanStatusId,
-          isActive: payload.isActive ?? true,
-          createdById: actorUserId,
-          updatedById: actorUserId,
-        },
-        include: studentInclude,
+      const student = await this.prisma.$transaction(async (tx) => {
+        const admissionNo =
+          admissionNoInput ?? (await this.generateStudentAdmissionNo(tx));
+
+        return tx.student.create({
+          data: {
+            admissionNo,
+            fullName,
+            gender: gender.gender,
+            genderId: gender.genderId,
+            birthDate: payload.birthDate,
+            bloodTypeId:
+              payload.bloodTypeId === null ? null : payload.bloodTypeId,
+            localityId:
+              payload.localityId === null ? null : payload.localityId,
+            healthStatus: healthStatus.healthStatus,
+            healthStatusId: healthStatus.healthStatusId,
+            healthNotes: payload.healthNotes,
+            orphanStatus: orphanStatus.orphanStatus,
+            orphanStatusId: orphanStatus.orphanStatusId,
+            isActive: payload.isActive ?? true,
+            createdById: actorUserId,
+            updatedById: actorUserId,
+          },
+          include: studentInclude,
+        });
       });
 
       await this.auditLogsService.record({
@@ -210,7 +230,7 @@ export class StudentsService {
         resource: 'students',
         status: AuditStatus.FAILURE,
         details: {
-          admissionNo,
+          admissionNo: admissionNoInput ?? '(auto-generated)',
           fullName,
           reason: this.extractErrorMessage(error),
         },
@@ -256,7 +276,7 @@ export class StudentsService {
     });
 
     if (!scope.isPrivileged) {
-      if (scope.grants.length === 0) {
+      if (scope.grants.length === 0 && scope.gradeGrants.length === 0) {
         return {
           data: [],
           pagination: {
@@ -268,13 +288,20 @@ export class StudentsService {
         };
       }
 
-      const scopedEnrollments: Prisma.StudentEnrollmentWhereInput[] =
-        scope.grants.map((grant) => ({
+      const scopedEnrollments: Prisma.StudentEnrollmentWhereInput[] = [
+        ...scope.grants.map((grant) => ({
           sectionId: grant.sectionId,
           academicYearId: grant.academicYearId,
           deletedAt: null,
           isActive: true,
-        }));
+        })),
+        ...scope.gradeGrants.map((grant) => ({
+          gradeLevelId: grant.gradeLevelId,
+          academicYearId: grant.academicYearId,
+          deletedAt: null,
+          isActive: true,
+        })),
+      ];
 
       where.AND = [
         {
@@ -319,23 +346,32 @@ export class StudentsService {
     });
 
     if (!student) {
-      throw new NotFoundException('Student not found');
+      throw new NotFoundException('الطالب غير موجود');
     }
 
     const scope = await this.dataScopeService.getStudentSectionYearGrants({
       actorUserId,
     });
     if (!scope.isPrivileged) {
-      const grantSet = new Set(
+      const sectionGrantSet = new Set(
         scope.grants.map((item) => `${item.sectionId}|${item.academicYearId}`),
       );
+      const gradeGrantSet = new Set(
+        scope.gradeGrants.map(
+          (item) => `${item.gradeLevelId}|${item.academicYearId}`,
+        ),
+      );
       const isAllowed = student.enrollments.some((enrollment) =>
-        grantSet.has(`${enrollment.sectionId}|${enrollment.academicYearId}`),
+        this.enrollmentHasScope(
+          enrollment,
+          sectionGrantSet,
+          gradeGrantSet,
+        ),
       );
 
       if (!isAllowed) {
         throw new ForbiddenException(
-          'You are not allowed to access this student profile',
+          'ليست لديك صلاحية للوصول إلى ملف هذا الطالب',
         );
       }
     }
@@ -377,8 +413,7 @@ export class StudentsService {
           birthDate: payload.birthDate,
           bloodTypeId:
             payload.bloodTypeId === null ? null : payload.bloodTypeId,
-          localityId:
-            payload.localityId === null ? null : payload.localityId,
+          localityId: payload.localityId === null ? null : payload.localityId,
           healthStatus: healthStatus.healthStatus,
           healthStatusId: healthStatus.healthStatusId,
           healthNotes: payload.healthNotes,
@@ -444,7 +479,7 @@ export class StudentsService {
     });
 
     if (!student) {
-      throw new NotFoundException('Student not found');
+      throw new NotFoundException('الطالب غير موجود');
     }
 
     if (!student.isActive) {
@@ -463,10 +498,37 @@ export class StudentsService {
     });
 
     if (!student) {
-      throw new NotFoundException('Student not found');
+      throw new NotFoundException('الطالب غير موجود');
     }
 
     return student;
+  }
+
+  private enrollmentHasScope(
+    enrollment: {
+      sectionId: string | null;
+      academicYearId: string;
+      gradeLevel?: { id: string } | null;
+      section?: { gradeLevel?: { id: string } | null } | null;
+    },
+    sectionGrantSet: Set<string>,
+    gradeGrantSet: Set<string>,
+  ) {
+    const sectionKey = `${enrollment.sectionId ?? ''}|${enrollment.academicYearId}`;
+    if (sectionGrantSet.has(sectionKey)) {
+      return true;
+    }
+
+    const gradeLevelId =
+      enrollment.gradeLevel?.id ??
+      enrollment.section?.gradeLevel?.id ??
+      null;
+
+    if (!gradeLevelId) {
+      return false;
+    }
+
+    return gradeGrantSet.has(`${gradeLevelId}|${enrollment.academicYearId}`);
   }
 
   private async ensureBloodTypeExists(bloodTypeId: number) {
@@ -887,6 +949,76 @@ export class StudentsService {
     throw error;
   }
 
+  private async generateStudentAdmissionNo(tx: Prisma.TransactionClient) {
+    const existingMax = await this.findCurrentStudentAdmissionSequence(tx);
+    const nextValue = await this.nextSequenceValue(
+      tx,
+      'student_admission_no',
+      existingMax,
+    );
+    return formatStudentAdmissionNo(nextValue);
+  }
+
+  private async nextSequenceValue(
+    tx: Prisma.TransactionClient,
+    key: string,
+    minimumValue = 0,
+  ) {
+    await tx.sequenceCounter.upsert({
+      where: { key },
+      update: {},
+      create: { key },
+    });
+
+    if (minimumValue > 0) {
+      await tx.sequenceCounter.updateMany({
+        where: {
+          key,
+          currentValue: {
+            lt: minimumValue,
+          },
+        },
+        data: {
+          currentValue: minimumValue,
+        },
+      });
+    }
+
+    const counter = await tx.sequenceCounter.update({
+      where: { key },
+      data: {
+        currentValue: {
+          increment: 1,
+        },
+      },
+      select: {
+        currentValue: true,
+      },
+    });
+
+    return counter.currentValue;
+  }
+
+  private async findCurrentStudentAdmissionSequence(
+    tx: Prisma.TransactionClient,
+  ) {
+    const latestStudent = await tx.student.findFirst({
+      where: {
+        admissionNo: {
+          startsWith: 'STU-',
+        },
+      },
+      orderBy: {
+        admissionNo: 'desc',
+      },
+      select: {
+        admissionNo: true,
+      },
+    });
+
+    return parseStudentAdmissionNoSequence(latestStudent?.admissionNo) ?? 0;
+  }
+
   private extractErrorMessage(error: unknown): string {
     if (error instanceof Error) {
       return error.message;
@@ -895,3 +1027,4 @@ export class StudentsService {
     return 'Unknown error';
   }
 }
+

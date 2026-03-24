@@ -9,6 +9,7 @@ type UseLookupOrphanStatusesQueryOptions = {
   limit?: number;
   search?: string;
   isActive?: boolean;
+  deletedOnly?: boolean;
   enabled?: boolean;
 };
 
@@ -22,7 +23,13 @@ export function useLookupOrphanStatusesQuery(options: UseLookupOrphanStatusesQue
       options.page ?? 1,
       options.limit ?? 12,
       options.search ?? "",
-      options.isActive === undefined ? "all" : options.isActive ? "active" : "inactive",
+      options.deletedOnly
+        ? "deleted"
+        : options.isActive === undefined
+          ? "all"
+          : options.isActive
+            ? "active"
+            : "inactive",
     ],
     enabled: auth.isHydrated && auth.isAuthenticated && (options.enabled ?? true),
     queryFn: async () => {
@@ -32,6 +39,7 @@ export function useLookupOrphanStatusesQuery(options: UseLookupOrphanStatusesQue
           limit: options.limit ?? 12,
           search: options.search,
           isActive: options.isActive,
+          deletedOnly: options.deletedOnly ? true : undefined,
         });
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) {

@@ -69,11 +69,8 @@ type GradingPolicyFormValues = {
   gradeLevelId?: string;
   subjectId?: string;
   assessmentType?: string;
-  maxExamScore?: string;
-  maxHomeworkScore?: string;
-  maxAttendanceScore?: string;
-  maxActivityScore?: string;
-  maxContributionScore?: string;
+  totalMaxScore?: string;
+  academicTermId?: string;
   passingScore?: string;
   status?: string;
   notes?: string;
@@ -313,31 +310,16 @@ export async function fillGradingPolicyForm(
       .getByTestId("grading-policy-form-assessment")
       .selectOption(values.assessmentType);
   }
-  if (values.maxExamScore !== undefined) {
-    await page.getByTestId("grading-policy-form-max-exam").fill(values.maxExamScore);
-  }
-  if (values.maxHomeworkScore !== undefined) {
+  if (values.totalMaxScore !== undefined) {
     await page
-      .getByTestId("grading-policy-form-max-homework")
-      .fill(values.maxHomeworkScore);
-  }
-  if (values.maxAttendanceScore !== undefined) {
-    await page
-      .getByTestId("grading-policy-form-max-attendance")
-      .fill(values.maxAttendanceScore);
-  }
-  if (values.maxActivityScore !== undefined) {
-    await page
-      .getByTestId("grading-policy-form-max-activity")
-      .fill(values.maxActivityScore);
-  }
-  if (values.maxContributionScore !== undefined) {
-    await page
-      .getByTestId("grading-policy-form-max-contribution")
-      .fill(values.maxContributionScore);
+      .getByTestId("grading-policy-form-total-max")
+      .fill(values.totalMaxScore);
   }
   if (values.passingScore !== undefined) {
     await page.getByTestId("grading-policy-form-passing").fill(values.passingScore);
+  }
+  if (values.academicTermId !== undefined) {
+    await page.getByTestId("grading-policy-form-term").selectOption(values.academicTermId);
   }
   if (values.status !== undefined) {
     await page.getByTestId("grading-policy-form-status").selectOption(values.status);

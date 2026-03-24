@@ -1,4 +1,4 @@
-import {
+﻿import {
   ConflictException,
   Injectable,
   NotFoundException,
@@ -54,7 +54,9 @@ export class StudentTalentsService {
 
   async create(payload: CreateStudentTalentDto, actorUserId: string) {
     try {
-      await this.studentsService.ensureStudentExistsAndActive(payload.studentId);
+      await this.studentsService.ensureStudentExistsAndActive(
+        payload.studentId,
+      );
       await this.talentsService.ensureTalentExistsAndActive(payload.talentId);
 
       const studentTalent = await this.prisma.studentTalent.create({
@@ -291,3 +293,4 @@ export class StudentTalentsService {
     return 'Unknown error';
   }
 }
+

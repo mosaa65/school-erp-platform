@@ -10,6 +10,7 @@ type UseRemindersTickerQueryOptions = {
   search?: string;
   tickerType?: ReminderTickerType;
   isActive?: boolean;
+  deletedOnly?: boolean;
 };
 
 export function useRemindersTickerQuery(options: UseRemindersTickerQueryOptions = {}) {
@@ -23,7 +24,13 @@ export function useRemindersTickerQuery(options: UseRemindersTickerQueryOptions 
       options.limit ?? 12,
       options.search ?? "",
       options.tickerType ?? "all",
-      options.isActive === undefined ? "all" : options.isActive ? "active" : "inactive",
+      options.deletedOnly
+        ? "deleted"
+        : options.isActive === undefined
+          ? "all"
+          : options.isActive
+            ? "active"
+            : "inactive",
     ],
     enabled: auth.isHydrated && auth.isAuthenticated,
     queryFn: async () => {
@@ -34,6 +41,7 @@ export function useRemindersTickerQuery(options: UseRemindersTickerQueryOptions 
           search: options.search,
           tickerType: options.tickerType,
           isActive: options.isActive,
+          deletedOnly: options.deletedOnly ? true : undefined,
         });
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) {

@@ -1,17 +1,22 @@
 "use client";
 
 import * as React from "react";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   BookText,
   LoaderCircle,
   PencilLine,
+  Plus,
   RefreshCw,
-  Search,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField } from "@/components/ui/select-field";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
+import { StudentPickerSheet } from "@/components/ui/student-picker-sheet";
 import {
   Card,
   CardContent,
@@ -19,6 +24,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateStudentBookMutation,
@@ -26,13 +34,14 @@ import {
   useUpdateStudentBookMutation,
 } from "@/features/student-books/hooks/use-student-books-mutations";
 import { useStudentBooksQuery } from "@/features/student-books/hooks/use-student-books-query";
-import { useStudentOptionsQuery } from "@/features/student-books/hooks/use-student-options-query";
 import { useStudentEnrollmentOptionsQuery } from "@/features/student-books/hooks/use-student-enrollment-options-query";
 import { useSubjectOptionsQuery } from "@/features/student-books/hooks/use-subject-options-query";
+import type { StudentPickerOption } from "@/features/students/lib/student-picker";
 import type {
   StudentBookListItem,
   StudentBookStatus,
 } from "@/lib/api/client";
+import { formatNameCodeLabel } from "@/lib/option-labels";
 import { translateStudentBookStatus } from "@/lib/i18n/ar";
 
 type StudentBookFormState = {
@@ -98,6 +107,45 @@ function formatDate(value: string | null): string {
   return date.toLocaleDateString("ar-YE");
 }
 
+type EnrollmentPlacementLabelInput = {
+  academicYear: {
+    name: string;
+    code: string;
+  };
+  gradeLevel?: {
+    name: string;
+    code: string;
+  } | null;
+  section?: {
+    name?: string | null;
+    code?: string | null;
+    gradeLevel?: {
+      name: string;
+      code: string;
+    } | null;
+  } | null;
+};
+
+function formatEnrollmentPlacementLabel(
+  enrollment: EnrollmentPlacementLabelInput,
+): string {
+  const yearLabel = formatNameCodeLabel(enrollment.academicYear.name, enrollment.academicYear.code);
+  const gradeLabel = enrollment.gradeLevel
+    ? formatNameCodeLabel(enrollment.gradeLevel.name, enrollment.gradeLevel.code)
+    : enrollment.section?.gradeLevel
+      ? formatNameCodeLabel(
+          enrollment.section.gradeLevel.name,
+          enrollment.section.gradeLevel.code,
+        )
+      : "";
+
+  if (enrollment.section) {
+    return `${yearLabel} / ${gradeLabel || "غير موزع"} / ${formatNameCodeLabel(enrollment.section.name, enrollment.section.code)}`;
+  }
+
+  return gradeLabel ? `${yearLabel} / ${gradeLabel} / غير موزع` : `${yearLabel} / غير موزع`;
+}
+
 function toFormState(item: StudentBookListItem): StudentBookFormState {
   return {
     studentEnrollmentId: item.studentEnrollmentId,
@@ -109,6 +157,18 @@ function toFormState(item: StudentBookListItem): StudentBookFormState {
     status: item.status,
     notes: item.notes ?? "",
     isActive: item.isActive,
+  };
+}
+
+function buildStudentPickerOptionFromBook(item: StudentBookListItem): StudentPickerOption {
+  return {
+    id: item.studentEnrollment.student.id,
+    title: item.studentEnrollment.student.fullName,
+    subtitle: item.studentEnrollment.student.admissionNo
+      ? `رقم الطالب ${item.studentEnrollment.student.admissionNo}`
+      : "بدون رقم طالب",
+    meta: formatEnrollmentPlacementLabel(item.studentEnrollment),
+    groupLabel: "الطالب المحدد",
   };
 }
 
@@ -128,19 +188,43 @@ export function StudentBooksWorkspace() {
   const [enrollmentFilter, setEnrollmentFilter] = React.useState("all");
   const [subjectFilter, setSubjectFilter] = React.useState("all");
   const [statusFilter, setStatusFilter] = React.useState<StudentBookStatus | "all">("all");
-  const [fromIssuedDateInput, setFromIssuedDateInput] = React.useState("");
-  const [toIssuedDateInput, setToIssuedDateInput] = React.useState("");
   const [fromIssuedDateFilter, setFromIssuedDateFilter] = React.useState("");
   const [toIssuedDateFilter, setToIssuedDateFilter] = React.useState("");
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
     "all",
   );
+  const [filterDraft, setFilterDraft] = React.useState<{
+    student: string;
+    enrollment: string;
+    subject: string;
+    status: StudentBookStatus | "all";
+    fromIssuedDate: string;
+    toIssuedDate: string;
+    active: "all" | "active" | "inactive";
+  }>({
+    student: "all",
+    enrollment: "all",
+    subject: "all",
+    status: "all",
+    fromIssuedDate: "",
+    toIssuedDate: "",
+    active: "all",
+  });
 
   const [editingStudentBookId, setEditingStudentBookId] = React.useState<string | null>(
     null,
   );
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<StudentBookFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [selectedFilterStudentOption, setSelectedFilterStudentOption] =
+    React.useState<StudentPickerOption | null>(null);
+  const [filterDraftStudentOption, setFilterDraftStudentOption] =
+    React.useState<StudentPickerOption | null>(null);
+  const [selectedFormStudent, setSelectedFormStudent] = React.useState<StudentPickerOption | null>(
+    null,
+  );
 
   const studentBooksQuery = useStudentBooksQuery({
     page,
@@ -155,7 +239,6 @@ export function StudentBooksWorkspace() {
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
   });
 
-  const studentsQuery = useStudentOptionsQuery();
   const enrollmentsQuery = useStudentEnrollmentOptionsQuery();
   const subjectsQuery = useSubjectOptionsQuery();
 
@@ -167,15 +250,28 @@ export function StudentBooksWorkspace() {
   const pagination = studentBooksQuery.data?.pagination;
   const isEditing = editingStudentBookId !== null;
 
-  const enrollmentOptions = React.useMemo(
-    () =>
-      (enrollmentsQuery.data ?? []).filter((item) =>
-        formState.studentEnrollmentId
-          ? true
-          : studentFilter === "all" || item.student.id === studentFilter,
-      ),
-    [enrollmentsQuery.data, formState.studentEnrollmentId, studentFilter],
-  );
+  const enrollmentOptions = React.useMemo(() => {
+    const selectedStudent = isFilterOpen ? filterDraft.student : studentFilter;
+
+    return (enrollmentsQuery.data ?? []).filter((item) =>
+      formState.studentEnrollmentId
+        ? true
+        : selectedStudent === "all" || item.student.id === selectedStudent,
+    );
+  }, [
+    enrollmentsQuery.data,
+    filterDraft.student,
+    formState.studentEnrollmentId,
+    isFilterOpen,
+    studentFilter,
+  ]);
+  const formEnrollmentOptions = React.useMemo(() => {
+    const selectedStudentId = selectedFormStudent?.id;
+
+    return (enrollmentsQuery.data ?? []).filter((item) =>
+      selectedStudentId ? item.student.id === selectedStudentId : true,
+    );
+  }, [enrollmentsQuery.data, selectedFormStudent?.id]);
 
   const mutationError =
     (createMutation.error as Error | null)?.message ??
@@ -193,21 +289,61 @@ export function StudentBooksWorkspace() {
       setEditingStudentBookId(null);
       setFormState(DEFAULT_FORM_STATE);
       setFormError(null);
+      setSelectedFormStudent(null);
+      setIsFormOpen(false);
     }
   }, [books, editingStudentBookId, isEditing]);
+
+  useDebounceEffect(() => {
+      setPage(1);
+      setSearch(searchInput.trim());
+    }, 400, [searchInput]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setFilterDraft({
+      student: studentFilter,
+      enrollment: enrollmentFilter,
+      subject: subjectFilter,
+      status: statusFilter,
+      fromIssuedDate: fromIssuedDateFilter,
+      toIssuedDate: toIssuedDateFilter,
+      active: activeFilter,
+    });
+    setFilterDraftStudentOption(selectedFilterStudentOption);
+  }, [
+    activeFilter,
+    enrollmentFilter,
+    selectedFilterStudentOption,
+    fromIssuedDateFilter,
+    isFilterOpen,
+    statusFilter,
+    studentFilter,
+    subjectFilter,
+    toIssuedDateFilter,
+  ]);
 
   const resetForm = () => {
     setEditingStudentBookId(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
+    setSelectedFormStudent(null);
+    setIsFormOpen(false);
   };
 
-  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPage(1);
-    setSearch(searchInput.trim());
-    setFromIssuedDateFilter(fromIssuedDateInput);
-    setToIssuedDateFilter(toIssuedDateInput);
+  const handleStartCreate = () => {
+    if (!canCreate) {
+      return;
+    }
+
+    setFormError(null);
+    setEditingStudentBookId(null);
+    setFormState(DEFAULT_FORM_STATE);
+    setSelectedFormStudent(null);
+    setIsFormOpen(true);
   };
 
   const validateForm = (): boolean => {
@@ -253,8 +389,8 @@ export function StudentBooksWorkspace() {
     return true;
   };
 
-  const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
 
     if (!validateForm()) {
       return;
@@ -313,6 +449,8 @@ export function StudentBooksWorkspace() {
     setFormError(null);
     setEditingStudentBookId(item.id);
     setFormState(toFormState(item));
+    setSelectedFormStudent(buildStudentPickerOptionFromBook(item));
+    setIsFormOpen(true);
   };
 
   const handleToggleActive = (item: StudentBookListItem) => {
@@ -352,281 +490,136 @@ export function StudentBooksWorkspace() {
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
   const hasDependenciesReadPermissions = canReadStudentEnrollments && canReadSubjects;
 
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setStudentFilter("all");
+    setEnrollmentFilter("all");
+    setSubjectFilter("all");
+    setStatusFilter("all");
+    setFromIssuedDateFilter("");
+    setToIssuedDateFilter("");
+    setActiveFilter("all");
+    setSelectedFilterStudentOption(null);
+    setFilterDraftStudentOption(null);
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    setPage(1);
+    setStudentFilter(filterDraft.student);
+    setEnrollmentFilter(filterDraft.enrollment);
+    setSubjectFilter(filterDraft.subject);
+    setStatusFilter(filterDraft.status);
+    setFromIssuedDateFilter(filterDraft.fromIssuedDate);
+    setToIssuedDateFilter(filterDraft.toIssuedDate);
+    setActiveFilter(filterDraft.active);
+    setSelectedFilterStudentOption(filterDraftStudentOption);
+    setIsFilterOpen(false);
+  };
+
+  const activeFiltersCount = React.useMemo(() => {
+    const count = [
+      searchInput.trim() ? 1 : 0,
+      studentFilter !== "all" ? 1 : 0,
+      enrollmentFilter !== "all" ? 1 : 0,
+      subjectFilter !== "all" ? 1 : 0,
+      statusFilter !== "all" ? 1 : 0,
+      fromIssuedDateFilter ? 1 : 0,
+      toIssuedDateFilter ? 1 : 0,
+      activeFilter !== "all" ? 1 : 0,
+    ].reduce((acc, value) => acc + value, 0);
+    return count;
+  }, [
+    activeFilter,
+    enrollmentFilter,
+    fromIssuedDateFilter,
+    searchInput,
+    statusFilter,
+    studentFilter,
+    subjectFilter,
+    toIssuedDateFilter,
+  ]);
+
   return (
-    <div className="grid gap-4 xl:grid-cols-[430px_1fr]">
-      <Card className="h-fit border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BookText className="h-5 w-5 text-primary" />
-            {isEditing ? "تعديل سجل كتاب طالب" : "إنشاء سجل كتاب طالب"}
-          </CardTitle>
-          <CardDescription>
-            {isEditing ? "تحديث سجل الكتاب للطالب." : "إضافة سجل كتاب جديد للطالب."}
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent>
-          {!canCreate && !isEditing ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك الصلاحية المطلوبة: <code>student-books.create</code>.
-            </div>
-          ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm}>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  القيد الطلابي *
-                </label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.studentEnrollmentId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      studentEnrollmentId: event.target.value,
-                    }))
-                  }
-                  disabled={!canReadStudentEnrollments}
-                >
-                  <option value="">اختر القيد</option>
-                  {(enrollmentsQuery.data ?? []).map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.student.fullName} ({item.student.admissionNo ?? "غير متوفر"}) -{" "}
-                      {item.academicYear.code} / {item.section.code}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">المادة *</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.subjectId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, subjectId: event.target.value }))
-                  }
-                  disabled={!canReadSubjects}
-                >
-                  <option value="">اختر المادة</option>
-                  {(subjectsQuery.data ?? []).map((subject) => (
-                    <option key={subject.id} value={subject.id}>
-                      {subject.name} ({subject.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">جزء الكتاب</label>
-                <Input
-                  value={formState.bookPart}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, bookPart: event.target.value }))
-                  }
-                  placeholder="مثال: الجزء الأول"
-                />
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    تاريخ التسليم *
-                  </label>
-                  <Input
-                    type="date"
-                    value={formState.issuedDate}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, issuedDate: event.target.value }))
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    تاريخ الاستحقاق
-                  </label>
-                  <Input
-                    type="date"
-                    value={formState.dueDate}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, dueDate: event.target.value }))
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    تاريخ الإرجاع
-                  </label>
-                  <Input
-                    type="date"
-                    value={formState.returnedDate}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, returnedDate: event.target.value }))
-                    }
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">الحالة *</label>
-                  <select
-                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    value={formState.status}
-                    onChange={(event) =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        status: event.target.value as StudentBookStatus,
-                      }))
-                    }
-                  >
-                    {STATUS_OPTIONS.map((status) => (
-                      <option key={status} value={status}>
-                        {translateStudentBookStatus(status)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
-                <Input
-                  value={formState.notes}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, notes: event.target.value }))
-                  }
-                  placeholder="مثال: تم الاستلام بحالة جيدة"
-                />
-              </div>
-
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشط</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                />
-              </label>
-
-              {formError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {formError}
-                </div>
-              ) : null}
-
-              {mutationError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {mutationError}
-                </div>
-              ) : null}
-
-              {!hasDependenciesReadPermissions ? (
-                <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يتطلب هذا الجزء صلاحيات القراءة: <code>student-enrollments.read</code> و{" "}
-                  <code>subjects.read</code>.
-                </div>
-              ) : null}
-
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  className="flex-1 gap-2"
-                  disabled={
-                    isFormSubmitting ||
-                    (!canCreate && !isEditing) ||
-                    !hasDependenciesReadPermissions
-                  }
-                >
-                  {isFormSubmitting ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <BookText className="h-4 w-4" />
-                  )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء سجل كتاب"}
-                </Button>
-                {isEditing ? (
-                  <Button type="button" variant="outline" onClick={resetForm}>
-                    إلغاء
-                  </Button>
-                ) : null}
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>سجلات كتب الطلاب</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+    <>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
+            <SearchField
+              containerClassName="flex-1"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="بحث بالطالب/المادة/الجزء..."
+            />
           </div>
-          <CardDescription>
-            إدارة تسليم الكتب للطلاب مع تتبع حالة الكتاب وتواريخ التسليم والإرجاع.
-          </CardDescription>
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterTriggerButton
+              count={activeFiltersCount}
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+            />
+          </div>
+        </div>
 
-          <form
-            onSubmit={handleSearchSubmit}
-            className="grid gap-2 md:grid-cols-[1fr_150px_190px_170px_150px_150px_150px_130px_auto]"
-          >
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث بالطالب/المادة/الجزء..."
-                className="pr-8"
-              />
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="فلاتر الكتب"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={clearFilters}
+                className="flex-1 gap-1.5"
+              >
+                <Trash2 className="h-4 w-4" />
+                مسح
+              </Button>
+              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
+                تطبيق
+              </Button>
             </div>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={studentFilter}
-              onChange={(event) => {
-                setPage(1);
-                setStudentFilter(event.target.value);
-                if (event.target.value !== "all") {
-                  setEnrollmentFilter("all");
-                }
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <StudentPickerSheet
+              scope="student-books"
+              variant="filter"
+              value={filterDraft.student}
+              selectedOption={filterDraftStudentOption}
+              onSelect={(option) => {
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  student: option?.id ?? "all",
+                  enrollment: option ? "all" : prev.enrollment,
+                }));
+                setFilterDraftStudentOption(option);
               }}
               disabled={!canReadStudents}
-            >
-              <option value="all">كل الطلاب</option>
-              {(studentsQuery.data ?? []).map((student) => (
-                <option key={student.id} value={student.id}>
-                  {student.admissionNo ?? student.fullName}
-                </option>
-              ))}
-            </select>
+            />
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={enrollmentFilter}
-              onChange={(event) => {
-                setPage(1);
-                setEnrollmentFilter(event.target.value);
-              }}
+            <SelectField
+              value={filterDraft.enrollment}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, enrollment: event.target.value }))
+              }
               disabled={!canReadStudentEnrollments}
             >
               <option value="all">كل القيود</option>
               {enrollmentOptions.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.student.fullName} ({item.student.admissionNo ?? "غير متوفر"}) -{" "}
-                  {item.academicYear.code} / {item.section.code}
+                  {item.displayLabel}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={subjectFilter}
-              onChange={(event) => {
-                setPage(1);
-                setSubjectFilter(event.target.value);
-              }}
+            <SelectField
+              value={filterDraft.subject}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, subject: event.target.value }))
+              }
               disabled={!canReadSubjects}
             >
               <option value="all">كل المواد</option>
@@ -635,15 +628,16 @@ export function StudentBooksWorkspace() {
                   {subject.code}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={statusFilter}
-              onChange={(event) => {
-                setPage(1);
-                setStatusFilter(event.target.value as StudentBookStatus | "all");
-              }}
+            <SelectField
+              value={filterDraft.status}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  status: event.target.value as StudentBookStatus | "all",
+                }))
+              }
             >
               <option value="all">كل الحالات</option>
               {STATUS_OPTIONS.map((status) => (
@@ -651,41 +645,64 @@ export function StudentBooksWorkspace() {
                   {translateStudentBookStatus(status)}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
-            <Input
-              type="date"
-              value={fromIssuedDateInput}
-              onChange={(event) => setFromIssuedDateInput(event.target.value)}
-            />
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">من تاريخ التسليم</label>
+              <Input
+                type="date"
+                value={filterDraft.fromIssuedDate}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    fromIssuedDate: event.target.value,
+                  }))
+                }
+              />
+            </div>
 
-            <Input
-              type="date"
-              value={toIssuedDateInput}
-              onChange={(event) => setToIssuedDateInput(event.target.value)}
-            />
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">إلى تاريخ التسليم</label>
+              <Input
+                type="date"
+                value={filterDraft.toIssuedDate}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    toIssuedDate: event.target.value,
+                  }))
+                }
+              />
+            </div>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={activeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setActiveFilter(event.target.value as "all" | "active" | "inactive");
-              }}
+            <SelectField
+              value={filterDraft.active}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  active: event.target.value as "all" | "active" | "inactive",
+                }))
+              }
             >
               <option value="all">كل الحالات</option>
               <option value="active">النشطة فقط</option>
               <option value="inactive">غير النشطة فقط</option>
-            </select>
+            </SelectField>
+          </div>
+        </FilterDrawer>
 
-            <Button type="submit" variant="outline" className="gap-2">
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
-          </form>
-        </CardHeader>
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+          <CardHeader className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>سجلات كتب الطلاب</CardTitle>
+              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+            </div>
+            <CardDescription>
+              إدارة تسليم الكتب للطلاب مع تتبع حالة الكتاب وتواريخ التسليم والإرجاع.
+            </CardDescription>
+          </CardHeader>
 
-        <CardContent className="space-y-3">
+          <CardContent className="space-y-3">
           {studentBooksQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
               جارٍ تحميل البيانات...
@@ -718,8 +735,7 @@ export function StudentBooksWorkspace() {
                     {item.studentEnrollment.student.admissionNo ?? "غير متوفر"}) - {item.subject.name}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    القيد: {item.studentEnrollment.academicYear.code} /{" "}
-                    {item.studentEnrollment.section.code}
+                    القيد: {formatEnrollmentPlacementLabel(item.studentEnrollment)}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     جزء الكتاب: {item.bookPart} | سُلّم: {formatDate(item.issuedDate)} | الاستحقاق:{" "}
@@ -816,8 +832,264 @@ export function StudentBooksWorkspace() {
             </div>
           </div>
         </CardContent>
-      </Card>
-    </div>
+        </Card>
+      </div>
+
+      <Fab
+        icon={<Plus className="h-4 w-4" />}
+        label="إنشاء"
+        ariaLabel="إنشاء سجل كتاب"
+        onClick={handleStartCreate}
+        disabled={!canCreate}
+      />
+
+      <BottomSheetForm
+        open={isFormOpen}
+        title={isEditing ? "تعديل سجل كتاب طالب" : "إنشاء سجل كتاب طالب"}
+        onClose={resetForm}
+        onSubmit={() => handleSubmitForm()}
+        isSubmitting={isFormSubmitting}
+        submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء سجل كتاب"}
+        showFooter={false}
+      >
+        {!canCreate && !isEditing ? (
+          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+            لا تملك الصلاحية المطلوبة: <code>student-books.create</code>.
+          </div>
+        ) : (
+          <form className="space-y-3" onSubmit={handleSubmitForm}>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الطالب</label>
+              <StudentPickerSheet
+                scope="student-books"
+                variant="narrow"
+                value={selectedFormStudent?.id ?? ""}
+                selectedOption={selectedFormStudent}
+                onSelect={(option) => {
+                  const nextStudentId = option?.id;
+                  setSelectedFormStudent(option);
+                  setFormState((prev) => ({
+                    ...prev,
+                    studentEnrollmentId:
+                      nextStudentId &&
+                      (enrollmentsQuery.data ?? []).some(
+                        (item) =>
+                          item.id === prev.studentEnrollmentId && item.student.id === nextStudentId,
+                      )
+                        ? prev.studentEnrollmentId
+                        : "",
+                  }));
+                }}
+                disabled={!canReadStudents}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                القيد الطلابي *
+              </label>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={formState.studentEnrollmentId}
+                onChange={(event) => {
+                  const nextEnrollmentId = event.target.value;
+                  const selectedEnrollment = (enrollmentsQuery.data ?? []).find(
+                    (item) => item.id === nextEnrollmentId,
+                  );
+
+                  setFormState((prev) => ({
+                    ...prev,
+                    studentEnrollmentId: nextEnrollmentId,
+                  }));
+
+                  if (selectedEnrollment) {
+                    setSelectedFormStudent({
+                      id: selectedEnrollment.student.id,
+                      title: selectedEnrollment.student.fullName,
+                      subtitle: selectedEnrollment.student.admissionNo
+                        ? `رقم الطالب ${selectedEnrollment.student.admissionNo}`
+                        : "بدون رقم طالب",
+                      meta: formatEnrollmentPlacementLabel(selectedEnrollment),
+                      groupLabel: "الطالب المحدد",
+                    });
+                  }
+                }}
+                disabled={!canReadStudentEnrollments}
+              >
+                <option value="">اختر القيد</option>
+                {formEnrollmentOptions.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.displayLabel}
+                  </option>
+                ))}
+              </select>
+              {selectedFormStudent ? (
+                <p className="text-[11px] text-muted-foreground">
+                  تم تقليص القيود بحسب الطالب المحدد.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">المادة *</label>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={formState.subjectId}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, subjectId: event.target.value }))
+                }
+                disabled={!canReadSubjects}
+              >
+                <option value="">اختر المادة</option>
+                {(subjectsQuery.data ?? []).map((subject) => (
+                  <option key={subject.id} value={subject.id}>
+                    {subject.name} ({subject.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">جزء الكتاب</label>
+              <Input
+                value={formState.bookPart}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, bookPart: event.target.value }))
+                }
+                placeholder="مثال: الجزء الأول"
+              />
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  تاريخ التسليم *
+                </label>
+                <Input
+                  type="date"
+                  value={formState.issuedDate}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, issuedDate: event.target.value }))
+                  }
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  تاريخ الاستحقاق
+                </label>
+                <Input
+                  type="date"
+                  value={formState.dueDate}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, dueDate: event.target.value }))
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  تاريخ الإرجاع
+                </label>
+                <Input
+                  type="date"
+                  value={formState.returnedDate}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, returnedDate: event.target.value }))
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">الحالة *</label>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={formState.status}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      status: event.target.value as StudentBookStatus,
+                    }))
+                  }
+                >
+                  {STATUS_OPTIONS.map((status) => (
+                    <option key={status} value={status}>
+                      {translateStudentBookStatus(status)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
+              <Input
+                value={formState.notes}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, notes: event.target.value }))
+                }
+                placeholder="مثال: تم الاستلام بحالة جيدة"
+              />
+            </div>
+
+            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+              <span>نشط</span>
+              <input
+                type="checkbox"
+                checked={formState.isActive}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                }
+              />
+            </label>
+
+            {formError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {formError}
+              </div>
+            ) : null}
+
+            {mutationError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {mutationError}
+              </div>
+            ) : null}
+
+            {!hasDependenciesReadPermissions ? (
+              <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+                يتطلب هذا الجزء صلاحيات القراءة: <code>student-enrollments.read</code> و{" "}
+                <code>subjects.read</code>.
+              </div>
+            ) : null}
+
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                className="flex-1 gap-2"
+                disabled={
+                  isFormSubmitting ||
+                  (!canCreate && !isEditing) ||
+                  !hasDependenciesReadPermissions
+                }
+              >
+                {isFormSubmitting ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <BookText className="h-4 w-4" />
+                )}
+                {isEditing ? "حفظ التعديلات" : "إنشاء سجل كتاب"}
+              </Button>
+              {isEditing ? (
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  إلغاء
+                </Button>
+              ) : null}
+            </div>
+          </form>
+        )}
+      </BottomSheetForm>
+    </>
   );
 }
 

@@ -1,4 +1,4 @@
-import {
+﻿import {
   Body,
   Controller,
   Delete,
@@ -55,9 +55,17 @@ export class ParentNotificationsController {
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'search', required: false, type: String })
   @ApiQuery({ name: 'studentId', required: false, type: String })
-  @ApiQuery({ name: 'notificationType', required: false, enum: ParentNotificationType })
+  @ApiQuery({
+    name: 'notificationType',
+    required: false,
+    enum: ParentNotificationType,
+  })
   @ApiQuery({ name: 'guardianTitleId', required: false, type: Number })
-  @ApiQuery({ name: 'sendMethod', required: false, enum: ParentNotificationSendMethod })
+  @ApiQuery({
+    name: 'sendMethod',
+    required: false,
+    enum: ParentNotificationSendMethod,
+  })
   @ApiQuery({ name: 'isSent', required: false, type: Boolean })
   @ApiQuery({ name: 'fromSentDate', required: false, type: String })
   @ApiQuery({ name: 'toSentDate', required: false, type: String })
@@ -91,3 +99,4 @@ export class ParentNotificationsController {
     return this.parentNotificationsService.remove(id, user.userId);
   }
 }
+

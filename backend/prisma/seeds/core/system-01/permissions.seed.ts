@@ -104,6 +104,10 @@ const DEFAULT_PERMISSION_CODES = [
   'sections.read',
   'sections.update',
   'sections.delete',
+  'classrooms.create',
+  'classrooms.read',
+  'classrooms.update',
+  'classrooms.delete',
   'subjects.create',
   'subjects.read',
   'subjects.update',
@@ -198,6 +202,10 @@ const DEFAULT_PERMISSION_CODES = [
   'student-problems.read',
   'student-problems.update',
   'student-problems.delete',
+  'health-visits.create',
+  'health-visits.read',
+  'health-visits.update',
+  'health-visits.delete',
   'parent-notifications.create',
   'parent-notifications.read',
   'parent-notifications.update',
@@ -465,3 +473,4 @@ const DEFAULT_PERMISSION_CODES = [
 ];
 
 export { DEFAULT_PERMISSION_CODES };
+
