@@ -2,8 +2,9 @@ const fs = require("fs");
 const path = require("path");
 
 const isWindowsX64 = process.platform === "win32" && process.arch === "x64";
+const shouldDisable = process.env.NEXT_SWC_WORKAROUND === "1";
 
-if (!isWindowsX64) {
+if (!isWindowsX64 || !shouldDisable) {
   process.exit(0);
 }
 

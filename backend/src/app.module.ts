@@ -71,6 +71,38 @@ import { GuardiansModule } from './modules/guardians/guardians.module';
 import { ParentNotificationsModule } from './modules/parent-notifications/parent-notifications.module';
 import { SchoolProfilesModule } from './modules/school-profiles/school-profiles.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { PaymentGatewaysModule } from './modules/finance/payment-gateways/payment-gateways.module';
+import { PaymentTransactionsModule } from './modules/finance/payment-transactions/payment-transactions.module';
+import { PaymentWebhooksModule } from './modules/finance/payment-webhooks/payment-webhooks.module';
+import { BankReconciliationsModule } from './modules/finance/bank-reconciliations/bank-reconciliations.module';
+import { BranchesModule } from './modules/finance/branches/branches.module';
+import { CurrenciesModule } from './modules/finance/currencies/currencies.module';
+import { CurrencyExchangeRatesModule } from './modules/finance/currency-exchange-rates/currency-exchange-rates.module';
+import { FiscalYearsModule } from './modules/finance/fiscal-years/fiscal-years.module';
+import { FiscalPeriodsModule } from './modules/finance/fiscal-periods/fiscal-periods.module';
+import { ChartOfAccountsModule } from './modules/finance/chart-of-accounts/chart-of-accounts.module';
+import { JournalEntriesModule } from './modules/finance/journal-entries/journal-entries.module';
+import { FinancialReportsModule } from './modules/finance/financial-reports/financial-reports.module';
+import { FeeStructuresModule } from './modules/finance/fee-structures/fee-structures.module';
+import { DiscountRulesModule } from './modules/finance/discount-rules/discount-rules.module';
+import { StudentInvoicesModule } from './modules/finance/student-invoices/student-invoices.module';
+import { InvoiceInstallmentsModule } from './modules/finance/invoice-installments/invoice-installments.module';
+import { TaxConfigurationsModule } from './modules/finance/tax-configurations/tax-configurations.module';
+import { DocumentSequencesModule } from './modules/finance/document-sequences/document-sequences.module';
+import { BillingEngineModule } from './modules/finance/billing-engine/billing-engine.module';
+import { CostCentersModule } from './modules/finance/cost-centers/cost-centers.module';
+import { BudgetsModule } from './modules/finance/budgets/budgets.module';
+import { CreditDebitNotesModule } from './modules/finance/credit-debit-notes/credit-debit-notes.module';
+import { RecurringJournalsModule } from './modules/finance/recurring-journals/recurring-journals.module';
+import { HrIntegrationsModule } from './modules/finance/hr-integrations/hr-integrations.module';
+import { ProcurementIntegrationsModule } from './modules/finance/procurement-integrations/procurement-integrations.module';
+import { TransportIntegrationsModule } from './modules/finance/transport-integrations/transport-integrations.module';
+import { AuditTrailModule } from './modules/finance/audit-trail/audit-trail.module';
+import { FinancialFundsModule } from './modules/finance/financial-funds/financial-funds.module';
+import { FinancialCategoriesModule } from './modules/finance/financial-categories/financial-categories.module';
+import { RevenuesModule } from './modules/finance/revenues/revenues.module';
+import { ExpensesModule } from './modules/finance/expenses/expenses.module';
+import { CommunityContributionsModule } from './modules/finance/community-contributions/community-contributions.module';
 
 @Module({
   imports: [
@@ -147,6 +179,38 @@ import { PrismaModule } from './prisma/prisma.module';
     UserPermissionsModule,
     SchoolProfilesModule,
     DataScopeModule,
+    BranchesModule,
+    CurrenciesModule,
+    CurrencyExchangeRatesModule,
+    FiscalYearsModule,
+    FiscalPeriodsModule,
+    ChartOfAccountsModule,
+    JournalEntriesModule,
+    PaymentGatewaysModule,
+    PaymentTransactionsModule,
+    PaymentWebhooksModule,
+    BankReconciliationsModule,
+    FinancialReportsModule,
+    FeeStructuresModule,
+    DiscountRulesModule,
+    DocumentSequencesModule,
+    StudentInvoicesModule,
+    InvoiceInstallmentsModule,
+    TaxConfigurationsModule,
+    BillingEngineModule,
+    CostCentersModule,
+    BudgetsModule,
+    CreditDebitNotesModule,
+    RecurringJournalsModule,
+    HrIntegrationsModule,
+    ProcurementIntegrationsModule,
+    TransportIntegrationsModule,
+    AuditTrailModule,
+    FinancialFundsModule,
+    FinancialCategoriesModule,
+    RevenuesModule,
+    ExpensesModule,
+    CommunityContributionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

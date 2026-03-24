@@ -180,6 +180,85 @@ enum ParentNotificationSendMethod {
   OTHER
 }
 
+enum PaymentGatewayType {
+  ONLINE
+  OFFLINE
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  BANK_TRANSFER
+  MOBILE_WALLET
+  CHEQUE
+}
+
+enum PaymentTransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum PaymentWebhookEventType {
+  SUCCESS
+  FAILURE
+  REFUND
+}
+
+enum PaymentWebhookEventStatus {
+  RECEIVED
+  PROCESSED
+  IGNORED
+  FAILED
+}
+
+enum BankReconciliationStatus {
+  OPEN
+  IN_PROGRESS
+  RECONCILED
+}
+
+enum ReconciliationItemType {
+  MATCHED
+  UNMATCHED_BANK
+  UNMATCHED_BOOK
+}
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum NormalBalance {
+  DEBIT
+  CREDIT
+}
+
+enum FiscalPeriodType {
+  MONTHLY
+  QUARTERLY
+  CUSTOM
+}
+
+enum FiscalPeriodStatus {
+  OPEN
+  CLOSING
+  CLOSED
+  REOPENED
+}
+
+enum JournalEntryStatus {
+  DRAFT
+  APPROVED
+  POSTED
+  REVERSED
+}
+
 enum GradingWorkflowStatus {
   DRAFT
   IN_REVIEW
@@ -478,6 +557,41 @@ model User {
   annualGradeTermsUpdated             AnnualGradeTerm[]               @relation("annual_grade_term_updated_by")
   periodGradeComponentsCreated        PeriodGradeComponent[]          @relation("period_grade_component_created_by")
   periodGradeComponentsUpdated        PeriodGradeComponent[]          @relation("period_grade_component_updated_by")
+  branchesCreated                     Branch[]                       @relation("branch_created_by")
+  branchesUpdated                     Branch[]                       @relation("branch_updated_by")
+  currenciesCreated                   Currency[]                     @relation("currency_created_by")
+  currenciesUpdated                   Currency[]                     @relation("currency_updated_by")
+  exchangeRatesCreated                CurrencyExchangeRate[]          @relation("currency_exchange_rate_created_by")
+  exchangeRatesUpdated                CurrencyExchangeRate[]          @relation("currency_exchange_rate_updated_by")
+  fiscalYearsCreated                  FiscalYear[]                   @relation("fiscal_year_created_by")
+  fiscalYearsUpdated                  FiscalYear[]                   @relation("fiscal_year_updated_by")
+  fiscalYearsClosed                   FiscalYear[]                   @relation("fiscal_year_closed_by")
+  fiscalPeriodsCreated                FiscalPeriod[]                 @relation("fiscal_period_created_by")
+  fiscalPeriodsUpdated                FiscalPeriod[]                 @relation("fiscal_period_updated_by")
+  fiscalPeriodsClosed                 FiscalPeriod[]                 @relation("fiscal_period_closed_by")
+  fiscalPeriodsReopened               FiscalPeriod[]                 @relation("fiscal_period_reopened_by")
+  chartOfAccountsCreated              ChartOfAccount[]               @relation("chart_of_account_created_by")
+  chartOfAccountsUpdated              ChartOfAccount[]               @relation("chart_of_account_updated_by")
+  journalEntriesCreated               JournalEntry[]                 @relation("journal_entry_created_by")
+  journalEntriesUpdated               JournalEntry[]                 @relation("journal_entry_updated_by")
+  journalEntriesApproved              JournalEntry[]                 @relation("journal_entry_approved_by")
+  journalEntriesPosted                JournalEntry[]                 @relation("journal_entry_posted_by")
+  journalEntriesReversed              JournalEntry[]                 @relation("journal_entry_reversed_by")
+  journalEntryLinesCreated            JournalEntryLine[]             @relation("journal_entry_line_created_by")
+  journalEntryLinesUpdated            JournalEntryLine[]             @relation("journal_entry_line_updated_by")
+  paymentTransactionsCreated          PaymentTransaction[]           @relation("payment_transaction_created_by")
+  bankReconciliationsReconciled       BankReconciliation[]           @relation("bank_reconciliation_reconciled_by_user")
+  studentInvoicesCreated              StudentInvoice[]               @relation("student_invoice_created_by_user")
+  revenuesCreated                     Revenue[]                      @relation("revenue_created_by_user")
+  expensesApproved                    Expense[]                      @relation("expense_approved_by_user")
+  expensesCreated                     Expense[]                      @relation("expense_created_by_user")
+  communityContributionsCreated       CommunityContribution[]        @relation("community_contribution_created_by_user")
+  auditTrailEntries                   AuditTrail[]                   @relation("audit_trail_user")
+  budgetsApproved                     Budget[]                       @relation("budget_approved_by_user")
+  budgetsCreated                      Budget[]                       @relation("budget_created_by_user")
+  creditDebitNotesCreated             CreditDebitNote[]              @relation("credit_debit_note_created_by_user")
+  creditDebitNotesApproved            CreditDebitNote[]              @relation("credit_debit_note_approved_by_user")
+  recurringJournalTemplatesCreated    RecurringJournalTemplate[]     @relation("recurring_template_created_by_user")
 
   @@index([deletedAt])
   @@index([isActive, deletedAt])
@@ -1128,6 +1242,7 @@ model LookupWeek {
 
   createdBy User? @relation("lookup_week_created_by", fields: [createdById], references: [id], onDelete: SetNull)
   updatedBy User? @relation("lookup_week_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+  communityContributions CommunityContribution[]
 
   @@index([orderNum, deletedAt], map: "lwk_order_del_idx")
   @@index([isActive, deletedAt], map: "lwk_active_del_idx")
@@ -1551,6 +1666,11 @@ model AcademicYear {
   annualGrades                   AnnualGrade[]
   annualResults                  AnnualResult[]
   calendarDays                   CalendarMaster[]
+  fiscalYears                    FiscalYear[]
+  feeStructures                  FeeStructure[]
+  studentInvoices                StudentInvoice[]
+  discountRules                  DiscountRule[]
+  communityContributions         CommunityContribution[]
 
   @@index([status, deletedAt])
   @@index([isCurrent, deletedAt])
@@ -1588,6 +1708,7 @@ model AcademicTerm {
   homeworks            Homework[]
   semesterGrades       SemesterGrade[]
   AnnualGradeTerm      AnnualGradeTerm[]
+  communityContributions CommunityContribution[]
 
   @@unique([academicYearId, code])
   @@unique([academicYearId, sequence])
@@ -1622,6 +1743,7 @@ model AcademicMonth {
   updatedBy User? @relation("academic_month_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
 
   monthlyGrades MonthlyGrade[]
+  communityContributions CommunityContribution[]
 
   @@unique([academicTermId, code], map: "acm_term_code_uq")
   @@unique([academicTermId, sequence], map: "acm_term_sequence_uq")
@@ -1655,6 +1777,7 @@ model GradeLevel {
   gradeLevelSubjects  GradeLevelSubject[]
   gradingPolicies     GradingPolicy[]
   gradingOutcomeRules GradingOutcomeRule[]
+  feeStructures       FeeStructure[]
 
   @@unique([stage, sequence])
   @@index([isActive, deletedAt])
@@ -1873,6 +1996,9 @@ model Employee {
   violationsReported     EmployeeViolation[]             @relation("employee_violation_reported_by")
   performanceEvaluations EmployeePerformanceEvaluation[] @relation("employee_performance_employee")
   evaluationsConducted   EmployeePerformanceEvaluation[] @relation("employee_performance_evaluator")
+  journalEntryLines      JournalEntryLine[]             @relation("journal_entry_line_employee")
+  communityContributionsReceived CommunityContribution[]
+  managedCostCenters              CostCenter[]
 
   @@index([fullName, deletedAt], map: "emp_name_del_idx")
   @@index([genderId, deletedAt], map: "emp_gender_id_del_idx")
@@ -2185,6 +2311,7 @@ model Student {
   asSiblingIn         StudentSibling[]     @relation("student_sibling_sibling")
   problems            StudentProblem[]
   parentNotifications ParentNotification[]
+  journalEntryLines   JournalEntryLine[]   @relation("journal_entry_line_student")
 
   @@index([fullName, deletedAt], map: "stu_name_del_idx")
   @@index([isActive, deletedAt], map: "stu_active_del_idx")
@@ -2301,6 +2428,10 @@ model StudentEnrollment {
   semesterGrades    SemesterGrade[]
   annualGrades      AnnualGrade[]
   annualResults     AnnualResult[]
+  paymentTransactions PaymentTransaction[]
+  studentInvoices     StudentInvoice[]
+  communityContributions CommunityContribution[]
+  creditDebitNotes       CreditDebitNote[]
 
   @@unique([studentId, academicYearId], map: "sen_student_year_uq")
   @@index([academicYearId, sectionId, deletedAt], map: "sen_year_section_del_idx")
@@ -3103,4 +3234,1111 @@ model AnnualResult {
   @@index([isActive, deletedAt], map: "anr_active_del_idx")
   @@index([deletedAt], map: "anr_deleted_at_idx")
   @@map("annual_results")
+}
+
+model PaymentGateway {
+  id                  Int                @id @default(autoincrement()) @db.UnsignedSmallInt
+  nameAr              String             @map("name_ar") @db.VarChar(50)
+  nameEn              String             @map("name_en") @db.VarChar(50)
+  providerCode        String             @unique @map("provider_code") @db.VarChar(20)
+  gatewayType         PaymentGatewayType @map("gateway_type")
+  apiEndpoint         String?            @map("api_endpoint") @db.VarChar(255)
+  merchantId          String?            @map("merchant_id") @db.VarChar(100)
+  settlementAccountId Int?               @map("settlement_account_id")
+  isActive            Boolean            @default(true) @map("is_active")
+
+  settlementAccount ChartOfAccount? @relation(fields: [settlementAccountId], references: [id], onDelete: SetNull)
+  transactions      PaymentTransaction[]
+  webhookEvents PaymentWebhookEvent[]
+
+  @@map("payment_gateways")
+}
+
+model PaymentTransaction {
+  id                  BigInt                   @id @default(autoincrement()) @db.UnsignedBigInt
+  transactionNumber   String                   @unique @map("transaction_number") @db.VarChar(30)
+  gatewayId           Int                      @map("gateway_id")
+  gatewayTransactionId String?                 @map("gateway_transaction_id") @db.VarChar(100)
+  invoiceId           BigInt?                  @map("invoice_id") @db.UnsignedBigInt
+  installmentId       BigInt?                  @map("installment_id") @db.UnsignedBigInt
+  enrollmentId        String?                  @map("enrollment_id") @db.VarChar(191)
+  amount              Decimal                  @db.Decimal(15, 2)
+  currencyId          Int?                     @map("currency_id")
+  paymentMethod       PaymentMethod            @map("payment_method")
+  status              PaymentTransactionStatus @default(PENDING)
+  paidAt              DateTime?                @map("paid_at")
+  receiptNumber       String?                  @map("receipt_number") @db.VarChar(50)
+  payerName           String?                  @map("payer_name") @db.VarChar(150)
+  payerPhone          String?                  @map("payer_phone") @db.VarChar(20)
+  journalEntryId      String?                  @map("journal_entry_id") @db.VarChar(191)
+  notes               String?                  @db.Text
+  createdByUserId     String?                  @map("created_by_user_id") @db.VarChar(191)
+  createdAt           DateTime                 @default(now()) @map("created_at")
+  updatedAt           DateTime?                @updatedAt @map("updated_at")
+
+  gateway        PaymentGateway      @relation(fields: [gatewayId], references: [id], onDelete: Restrict)
+  invoice        StudentInvoice?     @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  installment   InvoiceInstallment? @relation("ptx_installment", fields: [installmentId], references: [id], onDelete: SetNull)
+  enrollment    StudentEnrollment?  @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
+  currency      Currency?           @relation(fields: [currencyId], references: [id], onDelete: SetNull)
+  journalEntry  JournalEntry?       @relation("payment_transaction_journal_entry", fields: [journalEntryId], references: [id], onDelete: SetNull)
+  createdBy     User?               @relation("payment_transaction_created_by", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  reconciliationItems ReconciliationItem[] @relation("reconciliation_item_payment_transaction")
+  webhookEvents    PaymentWebhookEvent[] @relation("payment_webhook_event_transaction")
+
+  @@index([gatewayId], map: "ptx_gateway_idx")
+  @@index([invoiceId], map: "ptx_invoice_idx")
+  @@index([status], map: "ptx_status_idx")
+  @@index([paidAt], map: "ptx_paid_at_idx")
+  @@map("payment_transactions")
+}
+
+model PaymentWebhookEvent {
+  id              String                    @id @default(cuid()) @db.VarChar(191)
+  eventId         String                    @unique @map("event_id") @db.VarChar(100)
+  eventType       PaymentWebhookEventType   @map("event_type")
+  status          PaymentWebhookEventStatus @default(RECEIVED)
+  idempotencyKey  String?                   @map("idempotency_key") @db.VarChar(100)
+  gatewayId       Int?                      @map("gateway_id")
+  transactionId   BigInt?                   @map("transaction_id") @db.UnsignedBigInt
+  payload         Json                      @map("payload")
+  errorMessage    String?                   @map("error_message") @db.Text
+  processedAt     DateTime?                 @map("processed_at")
+  createdAt       DateTime                  @default(now()) @map("created_at")
+  updatedAt       DateTime                  @updatedAt @map("updated_at")
+
+  gateway           PaymentGateway?     @relation(fields: [gatewayId], references: [id], onDelete: SetNull)
+  paymentTransaction PaymentTransaction? @relation("payment_webhook_event_transaction", fields: [transactionId], references: [id], onDelete: SetNull)
+
+  @@index([eventType], map: "pwe_event_type_idx")
+  @@index([status], map: "pwe_status_idx")
+  @@index([gatewayId], map: "pwe_gateway_idx")
+  @@index([transactionId], map: "pwe_transaction_idx")
+  @@map("payment_webhook_events")
+}
+
+model BankReconciliation {
+  id                 BigInt                   @id @default(autoincrement()) @db.UnsignedBigInt
+  bankAccountId      Int                      @map("bank_account_id")
+  statementDate      DateTime                 @map("statement_date") @db.Date
+  statementReference String?                  @map("statement_reference") @db.VarChar(50)
+  bankBalance        Decimal                  @map("bank_balance") @db.Decimal(18, 2)
+  bookBalance        Decimal                  @map("book_balance") @db.Decimal(18, 2)
+  difference         Decimal                  @map("difference") @db.Decimal(18, 2) @default(dbgenerated("(bank_balance - book_balance)"))
+  status             BankReconciliationStatus @default(OPEN)
+  reconciledByUserId String?                  @map("reconciled_by_user_id") @db.VarChar(191)
+  reconciledAt       DateTime?                @map("reconciled_at")
+  notes              String?                  @db.Text
+  createdAt          DateTime                 @default(now()) @map("created_at")
+
+  bankAccount     ChartOfAccount @relation(fields: [bankAccountId], references: [id], onDelete: Restrict)
+  reconciledByUser User?         @relation("bank_reconciliation_reconciled_by_user", fields: [reconciledByUserId], references: [id], onDelete: SetNull)
+
+  items ReconciliationItem[]
+
+  @@index([bankAccountId], map: "br_bank_account_idx")
+  @@index([statementDate], map: "br_statement_date_idx")
+  @@map("bank_reconciliation")
+}
+
+model ReconciliationItem {
+  id               BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
+  reconciliationId BigInt                 @map("reconciliation_id") @db.UnsignedBigInt
+  transactionId    BigInt?                @map("transaction_id") @db.UnsignedBigInt
+  journalEntryId   String?                @map("journal_entry_id") @db.VarChar(191)
+  bankReference    String?                @map("bank_reference") @db.VarChar(100)
+  amount           Decimal                @db.Decimal(18, 2)
+  itemType         ReconciliationItemType @map("item_type")
+  matchedAt        DateTime?              @map("matched_at")
+
+  reconciliation     BankReconciliation  @relation(fields: [reconciliationId], references: [id], onDelete: Cascade)
+  paymentTransaction PaymentTransaction? @relation("reconciliation_item_payment_transaction", fields: [transactionId], references: [id], onDelete: SetNull)
+  journalEntry       JournalEntry?       @relation("reconciliation_item_journal_entry", fields: [journalEntryId], references: [id], onDelete: SetNull)
+  @@map("reconciliation_items")
+}
+
+model Branch {
+  id             Int       @id @default(autoincrement())
+  code           String    @unique @db.VarChar(10)
+  nameAr         String    @map("name_ar") @db.VarChar(100)
+  nameEn         String?   @map("name_en") @db.VarChar(100)
+  address        String?   @db.Text
+  phone          String?   @db.VarChar(20)
+  isHeadquarters Boolean   @default(false) @map("is_headquarters")
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+  createdById    String?   @map("created_by") @db.VarChar(191)
+  updatedById    String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("branch_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("branch_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  chartOfAccounts   ChartOfAccount[]   @relation("chart_of_account_branch")
+  journalEntries    JournalEntry[]     @relation("journal_entry_branch")
+  journalEntryLines JournalEntryLine[] @relation("journal_entry_line_branch")
+  studentInvoices   StudentInvoice[]
+  budgets           Budget[]
+  documentSequences DocumentSequence[]
+  recurringJournalTemplates RecurringJournalTemplate[]
+  costCenters       CostCenter[]
+
+  @@index([isActive, deletedAt], map: "br_active_del_idx")
+  @@index([deletedAt], map: "br_deleted_at_idx")
+  @@map("branches")
+}
+
+model Currency {
+  id            Int       @id @default(autoincrement())
+  code          String    @unique @db.VarChar(3)
+  nameAr        String    @map("name_ar") @db.VarChar(50)
+  symbol        String    @db.VarChar(5)
+  decimalPlaces Int       @default(2) @map("decimal_places")
+  isBase        Boolean   @default(false) @map("is_base")
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+  createdById   String?   @map("created_by") @db.VarChar(191)
+  updatedById   String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("currency_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("currency_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  exchangeRatesFrom CurrencyExchangeRate[] @relation("exchange_rate_from_currency")
+  exchangeRatesTo   CurrencyExchangeRate[] @relation("exchange_rate_to_currency")
+  chartOfAccounts   ChartOfAccount[]       @relation("chart_of_account_currency")
+  journalEntries    JournalEntry[]         @relation("journal_entry_currency")
+  feeStructures     FeeStructure[]
+  paymentTransactions PaymentTransaction[]
+  studentInvoices     StudentInvoice[]
+  recurringJournalTemplates RecurringJournalTemplate[]
+
+  @@index([isActive, deletedAt], map: "cur_active_del_idx")
+  @@index([deletedAt], map: "cur_deleted_at_idx")
+  @@map("currencies")
+}
+
+model CurrencyExchangeRate {
+  id             Int       @id @default(autoincrement())
+  fromCurrencyId Int       @map("from_currency_id")
+  toCurrencyId   Int       @map("to_currency_id")
+  rate           Decimal   @db.Decimal(15, 6)
+  effectiveDate  DateTime  @map("effective_date") @db.Date
+  source         String?   @db.VarChar(50)
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+  createdById    String?   @map("created_by") @db.VarChar(191)
+  updatedById    String?   @map("updated_by") @db.VarChar(191)
+
+  fromCurrency Currency @relation("exchange_rate_from_currency", fields: [fromCurrencyId], references: [id], onDelete: Restrict)
+  toCurrency   Currency @relation("exchange_rate_to_currency", fields: [toCurrencyId], references: [id], onDelete: Restrict)
+  createdBy    User?    @relation("currency_exchange_rate_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy    User?    @relation("currency_exchange_rate_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([fromCurrencyId, toCurrencyId, effectiveDate], map: "cer_rate_uq")
+  @@index([effectiveDate], map: "cer_effective_date_idx")
+  @@index([isActive, deletedAt], map: "cer_active_del_idx")
+  @@index([deletedAt], map: "cer_deleted_at_idx")
+  @@map("currency_exchange_rates")
+}
+
+model FiscalYear {
+  id             Int       @id @default(autoincrement())
+  nameAr         String    @map("name_ar") @db.VarChar(50)
+  startDate      DateTime  @map("start_date") @db.Date
+  endDate        DateTime  @map("end_date") @db.Date
+  academicYearId String?   @map("academic_year_id") @db.VarChar(191)
+  isClosed       Boolean   @default(false) @map("is_closed")
+  closedAt       DateTime? @map("closed_at")
+  closedByUserId String?   @map("closed_by_user_id") @db.VarChar(191)
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+  createdById    String?   @map("created_by") @db.VarChar(191)
+  updatedById    String?   @map("updated_by") @db.VarChar(191)
+
+  academicYear AcademicYear? @relation(fields: [academicYearId], references: [id], onDelete: SetNull)
+  closedByUser User?         @relation("fiscal_year_closed_by", fields: [closedByUserId], references: [id], onDelete: SetNull)
+  createdBy    User?         @relation("fiscal_year_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy    User?         @relation("fiscal_year_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  periods        FiscalPeriod[]
+  journalEntries JournalEntry[]
+  budgets        Budget[]
+  documentSequences DocumentSequence[]
+
+  @@unique([startDate, endDate], map: "fy_dates_uq")
+  @@index([academicYearId, deletedAt], map: "fy_year_del_idx")
+  @@index([isActive, deletedAt], map: "fy_active_del_idx")
+  @@index([deletedAt], map: "fy_deleted_at_idx")
+  @@map("fiscal_years")
+}
+
+model FiscalPeriod {
+  id               Int                @id @default(autoincrement())
+  fiscalYearId     Int                @map("fiscal_year_id")
+  periodNumber     Int                @map("period_number")
+  nameAr           String             @map("name_ar") @db.VarChar(50)
+  periodType       FiscalPeriodType   @default(MONTHLY) @map("period_type")
+  startDate        DateTime           @map("start_date") @db.Date
+  endDate          DateTime           @map("end_date") @db.Date
+  status           FiscalPeriodStatus @default(OPEN)
+  closedAt         DateTime?          @map("closed_at")
+  closedByUserId   String?            @map("closed_by_user_id") @db.VarChar(191)
+  closeNotes       String?            @map("close_notes") @db.Text
+  reopenedAt       DateTime?          @map("reopened_at")
+  reopenedByUserId String?            @map("reopened_by_user_id") @db.VarChar(191)
+  reopenReason     String?            @map("reopen_reason") @db.Text
+  reopenDeadline   DateTime?          @map("reopen_deadline") @db.Date
+  isActive         Boolean            @default(true) @map("is_active")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  deletedAt        DateTime?          @map("deleted_at")
+  createdById      String?            @map("created_by") @db.VarChar(191)
+  updatedById      String?            @map("updated_by") @db.VarChar(191)
+
+  fiscalYear    FiscalYear @relation(fields: [fiscalYearId], references: [id], onDelete: Restrict)
+  closedByUser  User?      @relation("fiscal_period_closed_by", fields: [closedByUserId], references: [id], onDelete: SetNull)
+  reopenedByUser User?     @relation("fiscal_period_reopened_by", fields: [reopenedByUserId], references: [id], onDelete: SetNull)
+  createdBy     User?      @relation("fiscal_period_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy     User?      @relation("fiscal_period_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  journalEntries JournalEntry[]
+
+  @@unique([fiscalYearId, periodNumber], map: "fp_period_uq")
+  @@index([status], map: "fp_status_idx")
+  @@index([startDate, endDate], map: "fp_dates_idx")
+  @@index([isActive, deletedAt], map: "fp_active_del_idx")
+  @@index([deletedAt], map: "fp_deleted_at_idx")
+  @@map("fiscal_periods")
+}
+
+model ChartOfAccount {
+  id                Int           @id @default(autoincrement())
+  accountCode       String        @unique @map("account_code") @db.VarChar(20)
+  nameAr            String        @map("name_ar") @db.VarChar(150)
+  nameEn            String?       @map("name_en") @db.VarChar(150)
+  accountType       AccountType   @map("account_type")
+  parentId          Int?          @map("parent_id")
+  hierarchyLevel    Int           @default(1) @map("hierarchy_level")
+  isHeader          Boolean       @default(false) @map("is_header")
+  isBankAccount     Boolean       @default(false) @map("is_bank_account")
+  defaultCurrencyId Int?          @map("default_currency_id")
+  branchId          Int?          @map("branch_id")
+  normalBalance     NormalBalance @map("normal_balance")
+  currentBalance    Decimal       @default(0.00) @map("current_balance") @db.Decimal(18, 2)
+  isSystem          Boolean       @default(false) @map("is_system")
+  isActive          Boolean       @default(true) @map("is_active")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+  deletedAt         DateTime?     @map("deleted_at")
+  createdById       String?       @map("created_by") @db.VarChar(191)
+  updatedById       String?       @map("updated_by") @db.VarChar(191)
+
+  parent          ChartOfAccount?   @relation("chart_of_account_parent", fields: [parentId], references: [id], onDelete: Restrict)
+  children        ChartOfAccount[]  @relation("chart_of_account_parent")
+  defaultCurrency Currency?         @relation("chart_of_account_currency", fields: [defaultCurrencyId], references: [id], onDelete: SetNull)
+  branch          Branch?           @relation("chart_of_account_branch", fields: [branchId], references: [id], onDelete: SetNull)
+  createdBy       User?             @relation("chart_of_account_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy       User?             @relation("chart_of_account_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  journalEntryLines    JournalEntryLine[]
+  bankReconciliations  BankReconciliation[]
+  invoiceLineItems     InvoiceLineItem[] @relation("invoice_line_account")
+  invoiceDiscountLines InvoiceLineItem[] @relation("invoice_line_discount_gl")
+  paymentGatewaysSettlement PaymentGateway[]
+  taxCodesOutput       TaxCode[]         @relation("tax_code_output_gl")
+  taxCodesInput        TaxCode[]         @relation("tax_code_input_gl")
+  discountRulesGl      DiscountRule[]    @relation("discount_rule_gl_account")
+  discountRulesContra  DiscountRule[]    @relation("discount_rule_contra_account")
+  financialCategories  FinancialCategory[] @relation("financial_category_coa")
+  financialFunds       FinancialFund[]     @relation("financial_fund_coa")
+  budgetLines          BudgetLine[]
+  recurringTemplateLines RecurringTemplateLine[]
+
+  @@index([parentId], map: "coa_parent_idx")
+  @@index([accountType], map: "coa_type_idx")
+  @@index([accountCode], map: "coa_code_idx")
+  @@index([isActive, deletedAt], map: "coa_active_del_idx")
+  @@index([deletedAt], map: "coa_deleted_at_idx")
+  @@map("chart_of_accounts")
+}
+
+model JournalEntry {
+  id            String            @id @default(cuid()) @db.VarChar(191)
+  entryNumber   String            @unique @map("entry_number") @db.VarChar(30)
+  entryDate     DateTime          @map("entry_date") @db.Date
+  fiscalYearId  Int               @map("fiscal_year_id")
+  fiscalPeriodId Int?             @map("fiscal_period_id")
+  branchId      Int?              @map("branch_id")
+  description   String            @db.Text
+  referenceType String?           @map("reference_type") @db.VarChar(30)
+  referenceId   String?           @map("reference_id") @db.VarChar(191)
+  status        JournalEntryStatus @default(DRAFT)
+  totalDebit    Decimal           @default(0.00) @map("total_debit") @db.Decimal(18, 2)
+  totalCredit   Decimal           @default(0.00) @map("total_credit") @db.Decimal(18, 2)
+  currencyId    Int?              @map("currency_id")
+  exchangeRate  Decimal           @default(1.000000) @map("exchange_rate") @db.Decimal(10, 6)
+  createdById   String            @map("created_by") @db.VarChar(191)
+  approvedById  String?           @map("approved_by") @db.VarChar(191)
+  approvedAt    DateTime?         @map("approved_at")
+  postedById    String?           @map("posted_by") @db.VarChar(191)
+  postedAt      DateTime?         @map("posted_at")
+  isReversal    Boolean           @default(false) @map("is_reversal")
+  reversalOfId  String?           @map("reversal_of_id") @db.VarChar(191)
+  reversedById  String?           @map("reversed_by_id") @db.VarChar(191)
+  reversalReason String?          @map("reversal_reason") @db.Text
+  isActive      Boolean           @default(true) @map("is_active")
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+  deletedAt     DateTime?         @map("deleted_at")
+  updatedById   String?           @map("updated_by") @db.VarChar(191)
+
+  fiscalYear   FiscalYear   @relation(fields: [fiscalYearId], references: [id], onDelete: Restrict)
+  fiscalPeriod FiscalPeriod? @relation(fields: [fiscalPeriodId], references: [id], onDelete: Restrict)
+  branch       Branch?      @relation("journal_entry_branch", fields: [branchId], references: [id], onDelete: SetNull)
+  currency     Currency?    @relation("journal_entry_currency", fields: [currencyId], references: [id], onDelete: SetNull)
+  createdBy    User         @relation("journal_entry_created_by", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy    User?        @relation("journal_entry_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+  approvedBy   User?        @relation("journal_entry_approved_by", fields: [approvedById], references: [id], onDelete: SetNull)
+  postedBy     User?        @relation("journal_entry_posted_by", fields: [postedById], references: [id], onDelete: SetNull)
+  reversedBy   User?        @relation("journal_entry_reversed_by", fields: [reversedById], references: [id], onDelete: SetNull)
+
+  reversalOf JournalEntry? @relation("journal_entry_reversal_of", fields: [reversalOfId], references: [id], onDelete: SetNull)
+  reversalChildren JournalEntry[] @relation("journal_entry_reversal_of")
+
+  lines JournalEntryLine[]
+  paymentTransactions PaymentTransaction[] @relation("payment_transaction_journal_entry")
+  reconciliationItems ReconciliationItem[] @relation("reconciliation_item_journal_entry")
+  revenues            Revenue[]           @relation("revenue_journal_entry")
+  expenses            Expense[]           @relation("expense_journal_entry")
+  communityContributions CommunityContribution[] @relation("community_contribution_journal_entry")
+  creditDebitNotes     CreditDebitNote[]  @relation("credit_debit_note_journal_entry")
+  recurringJournalTemplatesLastGenerated RecurringJournalTemplate[] @relation("recurring_last_generated_je")
+
+  @@index([entryDate], map: "je_date_idx")
+  @@index([status], map: "je_status_idx")
+  @@index([fiscalYearId], map: "je_fiscal_year_idx")
+  @@index([fiscalPeriodId], map: "je_fiscal_period_idx")
+  @@index([isActive, deletedAt], map: "je_active_del_idx")
+  @@index([deletedAt], map: "je_deleted_at_idx")
+  @@map("journal_entries")
+}
+
+model JournalEntryLine {
+  id             String    @id @default(cuid()) @db.VarChar(191)
+  journalEntryId String    @map("journal_entry_id") @db.VarChar(191)
+  lineNumber     Int       @map("line_number")
+  accountId      Int       @map("account_id")
+  description    String?   @db.VarChar(255)
+  debitAmount    Decimal   @default(0.00) @map("debit_amount") @db.Decimal(18, 2)
+  creditAmount   Decimal   @default(0.00) @map("credit_amount") @db.Decimal(18, 2)
+  costCenter     String?   @map("cost_center") @db.VarChar(50)
+  costCenterId   Int?      @map("cost_center_id") @db.UnsignedInt
+  studentId      String?   @map("student_id") @db.VarChar(191)
+  employeeId     String?   @map("employee_id") @db.VarChar(191)
+  branchId       Int?      @map("branch_id")
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+  createdById    String?   @map("created_by") @db.VarChar(191)
+  updatedById    String?   @map("updated_by") @db.VarChar(191)
+
+  journalEntry JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account      ChartOfAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  costCenterRef CostCenter?   @relation("journal_entry_line_cost_center", fields: [costCenterId], references: [id], onDelete: SetNull)
+  student      Student?       @relation("journal_entry_line_student", fields: [studentId], references: [id], onDelete: SetNull)
+  employee     Employee?      @relation("journal_entry_line_employee", fields: [employeeId], references: [id], onDelete: SetNull)
+  branch       Branch?        @relation("journal_entry_line_branch", fields: [branchId], references: [id], onDelete: SetNull)
+  createdBy    User?          @relation("journal_entry_line_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy    User?          @relation("journal_entry_line_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([journalEntryId, lineNumber], map: "jel_line_uq")
+  @@index([accountId], map: "jel_account_idx")
+  @@index([studentId], map: "jel_student_idx")
+  @@index([employeeId], map: "jel_employee_idx")
+  @@index([branchId], map: "jel_branch_idx")
+  @@index([isActive, deletedAt], map: "jel_active_del_idx")
+  @@index([deletedAt], map: "jel_deleted_at_idx")
+  @@map("journal_entry_lines")
+}
+
+// ==========================================
+// Billing & Fees Engine Models (Sprint 2)
+// ==========================================
+
+enum FeeType {
+  TUITION
+  TRANSPORT
+  UNIFORM
+  REGISTRATION
+  ACTIVITY
+  PENALTY
+  OTHER
+}
+
+enum DiscountType {
+  SIBLING
+  ORPHAN
+  EMPLOYEE_CHILD
+  SCHOLARSHIP
+  HARDSHIP
+  CUSTOM
+}
+
+enum DiscountCalculationMethod {
+  PERCENTAGE
+  FIXED
+}
+
+enum DiscountAppliesToFeeType {
+  TUITION
+  TRANSPORT
+  ALL
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIAL
+  PAID
+  CANCELLED
+  CREDITED
+}
+
+enum InstallmentStatus {
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum FinancialCategoryType {
+  REVENUE
+  EXPENSE
+}
+
+enum FinancialFundType {
+  MAIN @map("رئيسي")
+  SUB  @map("فرعي")
+}
+
+enum RevenueSourceType {
+  STUDENT   @map("طالب")
+  EMPLOYEE  @map("موظف")
+  DONOR     @map("متبرع")
+  OTHER     @map("أخرى")
+}
+
+enum AuditTrailAction {
+  INSERT
+  UPDATE
+  DELETE
+  APPROVE
+  POST
+  REVERSE
+  CLOSE
+  REOPEN
+}
+
+enum BudgetType {
+  ANNUAL
+  SEMESTER
+  QUARTERLY
+  MONTHLY
+  PROJECT
+}
+
+enum BudgetStatus {
+  DRAFT
+  APPROVED
+  ACTIVE
+  CLOSED
+  REVISED
+}
+
+enum CreditDebitNoteType {
+  CREDIT
+  DEBIT
+}
+
+enum CreditDebitNoteReason {
+  WITHDRAWAL
+  OVERCHARGE
+  SCHOLARSHIP
+  FEE_ADJUSTMENT
+  REFUND
+  PENALTY
+  OTHER
+}
+
+enum CreditDebitNoteStatus {
+  DRAFT
+  APPROVED
+  APPLIED
+  CANCELLED
+}
+
+enum DocumentType {
+  JOURNAL_ENTRY
+  INVOICE
+  PAYMENT
+  CREDIT_NOTE
+  DEBIT_NOTE
+  RECEIPT
+}
+
+enum RecurringFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  SEMI_ANNUAL
+  ANNUAL
+}
+
+enum TaxType {
+  OUTPUT
+  INPUT
+  EXEMPT
+  ZERO_RATED
+}
+
+model TaxCode {
+  id               Int       @id @default(autoincrement()) @db.UnsignedSmallInt
+  taxCode          String    @unique @map("tax_code") @db.VarChar(10)
+  taxNameAr        String    @map("tax_name_ar") @db.VarChar(80)
+  taxNameEn        String?   @map("tax_name_en") @db.VarChar(80)
+  rate             Decimal   @db.Decimal(5, 2)
+  taxType          TaxType   @map("tax_type")
+  isInclusive      Boolean   @default(false) @map("is_inclusive")
+  outputGlAccountId Int?     @map("output_gl_account_id")
+  inputGlAccountId  Int?     @map("input_gl_account_id")
+  effectiveFrom    DateTime  @map("effective_from") @db.Date
+  effectiveTo      DateTime? @map("effective_to") @db.Date
+  isActive         Boolean   @default(true) @map("is_active")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime? @updatedAt @map("updated_at")
+
+  outputGlAccount ChartOfAccount? @relation("tax_code_output_gl", fields: [outputGlAccountId], references: [id], onDelete: SetNull)
+  inputGlAccount  ChartOfAccount? @relation("tax_code_input_gl", fields: [inputGlAccountId], references: [id], onDelete: SetNull)
+
+  invoiceLineItems InvoiceLineItem[]
+
+  @@map("fin_tax_codes")
+}
+
+model FeeStructure {
+  id             Int      @id @default(autoincrement()) @db.UnsignedInt
+  nameAr         String   @map("name_ar") @db.VarChar(100)
+  academicYearId String   @map("academic_year_id") @db.VarChar(191)
+  gradeLevelId   String?  @map("grade_level_id") @db.VarChar(191)
+  feeType        FeeType  @map("fee_type")
+  amount         Decimal  @db.Decimal(15, 2)
+  currencyId     Int?     @map("currency_id")
+  vatRate        Decimal  @default(0.00) @map("vat_rate") @db.Decimal(5, 2)
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  gradeLevel   GradeLevel?  @relation(fields: [gradeLevelId], references: [id], onDelete: SetNull)
+  currency     Currency?    @relation(fields: [currencyId], references: [id], onDelete: SetNull)
+  invoiceLineItems InvoiceLineItem[]
+
+  @@index([academicYearId], map: "fs_year_idx")
+  @@index([feeType], map: "fs_type_idx")
+  @@map("fee_structures")
+}
+
+model DiscountRule {
+  id                   Int                         @id @default(autoincrement()) @db.UnsignedInt
+  nameAr               String                      @map("name_ar") @db.VarChar(100)
+  discountType         DiscountType                @map("discount_type")
+  calculationMethod    DiscountCalculationMethod   @map("calculation_method")
+  value                Decimal                     @db.Decimal(10, 2)
+  appliesToFeeType     DiscountAppliesToFeeType    @map("applies_to_fee_type")
+  siblingOrderFrom     Int?                        @map("sibling_order_from") @db.UnsignedSmallInt
+  maxDiscountPercentage Decimal                    @default(100.00) @map("max_discount_percentage") @db.Decimal(5, 2)
+  requiresApproval     Boolean                     @default(false) @map("requires_approval")
+  discountGlAccountId  Int?                        @map("discount_gl_account_id")
+  contraGlAccountId    Int?                        @map("contra_gl_account_id")
+  academicYearId       String?                     @map("academic_year_id") @db.VarChar(191)
+  isActive             Boolean                     @default(true) @map("is_active")
+  createdAt            DateTime                    @default(now()) @map("created_at")
+
+  academicYear     AcademicYear?  @relation(fields: [academicYearId], references: [id], onDelete: SetNull)
+  discountGlAccount ChartOfAccount? @relation("discount_rule_gl_account", fields: [discountGlAccountId], references: [id], onDelete: SetNull)
+  contraGlAccount   ChartOfAccount? @relation("discount_rule_contra_account", fields: [contraGlAccountId], references: [id], onDelete: SetNull)
+  invoiceLineItems  InvoiceLineItem[]
+
+  @@index([discountType], map: "dr_type_idx")
+  @@index([isActive], map: "dr_active_idx")
+  @@map("discount_rules")
+}
+
+model StudentInvoice {
+  id             BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
+  invoiceNumber  String       @unique @map("invoice_number") @db.VarChar(30)
+  enrollmentId   String       @map("enrollment_id") @db.VarChar(191)
+  academicYearId String       @map("academic_year_id") @db.VarChar(191)
+  branchId       Int?         @map("branch_id")
+  invoiceDate    DateTime     @map("invoice_date") @db.Date
+  dueDate        DateTime     @map("due_date") @db.Date
+  subtotal       Decimal      @default(0.00) @map("subtotal") @db.Decimal(15, 2)
+  discountAmount Decimal      @default(0.00) @map("discount_amount") @db.Decimal(15, 2)
+  vatAmount      Decimal      @default(0.00) @map("vat_amount") @db.Decimal(15, 2)
+  totalAmount    Decimal      @default(0.00) @map("total_amount") @db.Decimal(15, 2)
+  paidAmount     Decimal      @default(0.00) @map("paid_amount") @db.Decimal(15, 2)
+  balanceDue     Decimal      @map("balance_due") @db.Decimal(15, 2) @default(dbgenerated("(total_amount - paid_amount)"))
+  currencyId     Int?         @map("currency_id")
+  status         InvoiceStatus @default(DRAFT)
+  notes          String?      @db.Text
+  createdByUserId String?     @map("created_by_user_id") @db.VarChar(191)
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime?    @updatedAt @map("updated_at")
+
+  enrollment   StudentEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  academicYear AcademicYear      @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  branch       Branch?           @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  currency     Currency?         @relation(fields: [currencyId], references: [id], onDelete: SetNull)
+  createdByUser User?            @relation("student_invoice_created_by_user", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  lines        InvoiceLineItem[]
+  installments InvoiceInstallment[]
+  payments     PaymentTransaction[]
+  communityContributions CommunityContribution[]
+  creditDebitNotes        CreditDebitNote[]
+
+  @@index([enrollmentId], map: "inv_enrollment_idx")
+  @@index([status], map: "inv_status_idx")
+  @@index([invoiceDate], map: "inv_date_idx")
+  @@map("student_invoices")
+}
+
+model InvoiceLineItem {
+  id                  BigInt  @id @default(autoincrement()) @db.UnsignedBigInt
+  invoiceId           BigInt  @map("invoice_id") @db.UnsignedBigInt
+  feeStructureId      Int?    @map("fee_structure_id")
+  descriptionAr       String  @map("description_ar") @db.VarChar(200)
+  feeType             FeeType @map("fee_type")
+  quantity            Decimal @default(1.00) @db.Decimal(10, 2)
+  unitPrice           Decimal @map("unit_price") @db.Decimal(15, 2)
+  discountAmount      Decimal @default(0.00) @map("discount_amount") @db.Decimal(15, 2)
+  discountRuleId      Int?    @map("discount_rule_id")
+  discountGlAccountId Int?    @map("discount_gl_account_id")
+  taxCodeId           Int?    @map("tax_code_id") @db.UnsignedSmallInt
+  vatRate             Decimal @default(0.00) @map("vat_rate") @db.Decimal(5, 2)
+  vatAmount           Decimal @default(0.00) @map("vat_amount") @db.Decimal(15, 2)
+  lineTotal           Decimal @map("line_total") @db.Decimal(15, 2)
+  accountId           Int?    @map("account_id")
+
+  invoice           StudentInvoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  feeStructure      FeeStructure?    @relation(fields: [feeStructureId], references: [id], onDelete: SetNull)
+  discountRule      DiscountRule?    @relation(fields: [discountRuleId], references: [id], onDelete: SetNull)
+  discountGlAccount ChartOfAccount?  @relation("invoice_line_discount_gl", fields: [discountGlAccountId], references: [id], onDelete: SetNull)
+  taxCode           TaxCode?         @relation(fields: [taxCodeId], references: [id], onDelete: SetNull)
+  account           ChartOfAccount?  @relation("invoice_line_account", fields: [accountId], references: [id], onDelete: SetNull)
+
+  @@map("invoice_line_items")
+}
+
+
+model InvoiceInstallment {
+  id                BigInt            @id @default(autoincrement()) @db.UnsignedBigInt
+  invoiceId         BigInt            @map("invoice_id") @db.UnsignedBigInt
+  installmentNumber Int               @map("installment_number") @db.UnsignedSmallInt
+  dueDate           DateTime          @map("due_date") @db.Date
+  amount            Decimal           @db.Decimal(15, 2)
+  paidAmount        Decimal           @default(0.00) @map("paid_amount") @db.Decimal(15, 2)
+  paymentDate       DateTime?         @map("payment_date") @db.Date
+  status            InstallmentStatus @default(PENDING)
+  lateFee           Decimal           @default(0.00) @map("late_fee") @db.Decimal(10, 2)
+  notes             String?           @db.VarChar(255)
+
+  invoice  StudentInvoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  payments PaymentTransaction[] @relation("ptx_installment")
+
+  @@unique([invoiceId, installmentNumber], map: "uk_installment")
+  @@index([dueDate], map: "idx_due")
+  @@index([status], map: "idx_status")
+  @@map("invoice_installments")
+}
+
+
+
+model LookupExemptionReason {
+  id        Int     @id @default(autoincrement()) @db.UnsignedSmallInt
+  nameAr    String  @map("name_ar") @db.VarChar(50)
+  code      String  @unique @db.VarChar(20)
+  isActive  Boolean @default(true) @map("is_active")
+  sortOrder Int     @default(0) @map("sort_order") @db.UnsignedSmallInt
+
+  communityContributions CommunityContribution[]
+
+  @@map("lookup_exemption_reasons")
+}
+
+model LookupExemptionAuthority {
+  id     Int    @id @default(autoincrement()) @db.UnsignedSmallInt
+  nameAr String @map("name_ar") @db.VarChar(50)
+  code   String @unique @db.VarChar(20)
+
+  communityContributions CommunityContribution[]
+
+  @@map("lookup_exemption_authorities")
+}
+
+model LookupContributionAmount {
+  id          Int     @id @default(autoincrement()) @db.UnsignedSmallInt
+  nameAr      String  @map("name_ar") @db.VarChar(50)
+  amountValue Decimal @map("amount_value") @db.Decimal(10, 2)
+  isActive    Boolean @default(true) @map("is_active")
+
+  communityContributions CommunityContribution[]
+
+  @@map("lookup_contribution_amounts")
+}
+
+model FinancialCategory {
+  id           Int                   @id @default(autoincrement()) @db.UnsignedInt
+  nameAr       String                @map("name_ar") @db.VarChar(100)
+  categoryType FinancialCategoryType @map("category_type")
+  code         String?               @db.VarChar(30)
+  parentId     Int?                  @map("parent_id") @db.UnsignedInt
+  isActive     Boolean               @default(true) @map("is_active")
+  coaAccountId Int?                  @map("coa_account_id")
+
+  parent   FinancialCategory? @relation("financial_category_parent", fields: [parentId], references: [id], onDelete: SetNull)
+  children FinancialCategory[] @relation("financial_category_parent")
+  coaAccount ChartOfAccount?   @relation("financial_category_coa", fields: [coaAccountId], references: [id], onDelete: SetNull)
+
+  revenues Revenue[]
+  expenses Expense[]
+
+  @@map("financial_categories")
+}
+
+model FinancialFund {
+  id             Int               @id @default(autoincrement()) @db.UnsignedInt
+  nameAr         String            @map("name_ar") @db.VarChar(100)
+  code           String?           @unique @db.VarChar(30)
+  fundType       FinancialFundType @map("fund_type")
+  currentBalance Decimal           @default(0.00) @map("current_balance") @db.Decimal(15, 2)
+  isActive       Boolean           @default(true) @map("is_active")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  coaAccountId   Int?              @map("coa_account_id")
+
+  coaAccount ChartOfAccount? @relation("financial_fund_coa", fields: [coaAccountId], references: [id], onDelete: SetNull)
+
+  revenues Revenue[]
+  expenses Expense[]
+
+  @@map("financial_funds")
+}
+
+model Revenue {
+  id             Int              @id @default(autoincrement()) @db.UnsignedInt
+  fundId         Int              @map("fund_id") @db.UnsignedInt
+  categoryId     Int              @map("category_id") @db.UnsignedInt
+  amount         Decimal          @db.Decimal(15, 2)
+  revenueDate    DateTime         @map("revenue_date") @db.Date
+  sourceType     RevenueSourceType @map("source_type")
+  sourceId       String?          @map("source_id") @db.VarChar(191)
+  receiptNumber  String?          @map("receipt_number") @db.VarChar(50)
+  description    String?          @db.Text
+  createdAt      DateTime         @default(now()) @map("created_at")
+  createdByUserId String?         @map("created_by_user_id") @db.VarChar(191)
+  journalEntryId String?          @map("journal_entry_id") @db.VarChar(191)
+
+  fund        FinancialFund     @relation(fields: [fundId], references: [id], onDelete: Restrict)
+  category    FinancialCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  createdByUser User?           @relation("revenue_created_by_user", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  journalEntry JournalEntry?    @relation("revenue_journal_entry", fields: [journalEntryId], references: [id], onDelete: SetNull)
+
+  @@map("revenues")
+}
+
+model Expense {
+  id              Int              @id @default(autoincrement()) @db.UnsignedInt
+  fundId          Int              @map("fund_id") @db.UnsignedInt
+  categoryId      Int              @map("category_id") @db.UnsignedInt
+  amount          Decimal          @db.Decimal(15, 2)
+  expenseDate     DateTime         @map("expense_date") @db.Date
+  vendorName      String?          @map("vendor_name") @db.VarChar(200)
+  invoiceNumber   String?          @map("invoice_number") @db.VarChar(50)
+  isApproved      Boolean          @default(false) @map("is_approved")
+  approvedByUserId String?         @map("approved_by_user_id") @db.VarChar(191)
+  description     String?          @db.Text
+  createdAt       DateTime         @default(now()) @map("created_at")
+  createdByUserId String?          @map("created_by_user_id") @db.VarChar(191)
+  journalEntryId  String?          @map("journal_entry_id") @db.VarChar(191)
+
+  fund         FinancialFund     @relation(fields: [fundId], references: [id], onDelete: Restrict)
+  category     FinancialCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  approvedByUser User?           @relation("expense_approved_by_user", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  createdByUser  User?           @relation("expense_created_by_user", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  journalEntry  JournalEntry?    @relation("expense_journal_entry", fields: [journalEntryId], references: [id], onDelete: SetNull)
+
+  @@map("expenses")
+}
+
+model CommunityContribution {
+  id                   BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  enrollmentId         String   @map("enrollment_id") @db.VarChar(191)
+  academicYearId       String   @map("academic_year_id") @db.VarChar(191)
+  semesterId           String   @map("semester_id") @db.VarChar(191)
+  monthId              String   @map("month_id") @db.VarChar(191)
+  weekId               Int?     @map("week_id") @db.UnsignedSmallInt
+  paymentDate          DateTime @map("payment_date") @db.Date
+  paymentDateHijri     String?  @map("payment_date_hijri") @db.VarChar(20)
+  requiredAmountId     Int      @map("required_amount_id") @db.UnsignedSmallInt
+  receivedAmount       Decimal  @default(0.00) @map("received_amount") @db.Decimal(10, 2)
+  isExempt             Boolean  @default(false) @map("is_exempt")
+  exemptionReasonId    Int?     @map("exemption_reason_id") @db.UnsignedSmallInt
+  exemptionAmount      Decimal  @default(0.00) @map("exemption_amount") @db.Decimal(10, 2)
+  exemptionAuthorityId Int?     @map("exemption_authority_id") @db.UnsignedSmallInt
+  recipientEmployeeId  String?  @map("recipient_employee_id") @db.VarChar(191)
+  payerName            String?  @map("payer_name") @db.VarChar(150)
+  receiptNumber        String?  @map("receipt_number") @db.VarChar(50)
+  notes                String?  @db.Text
+  createdAt            DateTime @default(now()) @map("created_at")
+  createdByUserId      String?  @map("created_by_user_id") @db.VarChar(191)
+  invoiceId            BigInt?  @map("invoice_id") @db.UnsignedBigInt
+  journalEntryId       String?  @map("journal_entry_id") @db.VarChar(191)
+
+  enrollment        StudentEnrollment       @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  academicYear      AcademicYear            @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  semester          AcademicTerm            @relation(fields: [semesterId], references: [id], onDelete: Restrict)
+  month             AcademicMonth           @relation(fields: [monthId], references: [id], onDelete: Restrict)
+  week              LookupWeek?             @relation(fields: [weekId], references: [id], onDelete: SetNull)
+  requiredAmount    LookupContributionAmount @relation(fields: [requiredAmountId], references: [id], onDelete: Restrict)
+  exemptionReason   LookupExemptionReason?  @relation(fields: [exemptionReasonId], references: [id], onDelete: SetNull)
+  exemptionAuthority LookupExemptionAuthority? @relation(fields: [exemptionAuthorityId], references: [id], onDelete: SetNull)
+  recipientEmployee Employee?               @relation(fields: [recipientEmployeeId], references: [id], onDelete: SetNull)
+  createdByUser     User?                   @relation("community_contribution_created_by_user", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  invoice           StudentInvoice?          @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  journalEntry      JournalEntry?            @relation("community_contribution_journal_entry", fields: [journalEntryId], references: [id], onDelete: SetNull)
+
+  @@unique([enrollmentId, monthId], map: "uk_contrib_monthly")
+  @@map("community_contributions")
+}
+
+model FinancialViewLog {
+  id           Int      @id @default(autoincrement()) @db.UnsignedInt
+  viewerName   String?  @map("viewer_name") @db.VarChar(100)
+  viewerPhone  String?  @map("viewer_phone") @db.VarChar(20)
+  viewDate     DateTime @map("view_date") @db.Date
+  targetReport String?  @map("target_report") @db.VarChar(100)
+  impression   String?  @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("financial_view_logs")
+}
+
+model AuditTrail {
+  id          BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
+  tableName   String          @map("table_name") @db.VarChar(80)
+  recordId    BigInt          @map("record_id") @db.UnsignedBigInt
+  action      AuditTrailAction
+  fieldName   String?         @map("field_name") @db.VarChar(80)
+  oldValue    String?         @map("old_value") @db.Text
+  newValue    String?         @map("new_value") @db.Text
+  changeSummary String?       @map("change_summary") @db.Text
+  userId      String          @map("user_id") @db.VarChar(191)
+  userIp      String?         @map("user_ip") @db.VarChar(45)
+  userAgent   String?         @map("user_agent") @db.VarChar(255)
+  createdAt   DateTime        @default(now()) @map("created_at")
+
+  user User @relation("audit_trail_user", fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([tableName, recordId], map: "idx_table_record")
+  @@index([userId], map: "idx_user")
+  @@index([action], map: "idx_action")
+  @@index([createdAt], map: "idx_date")
+  @@index([tableName, createdAt], map: "idx_table_date")
+  @@map("audit_trail")
+}
+
+model Budget {
+  id               Int          @id @default(autoincrement()) @db.UnsignedInt
+  nameAr           String       @map("name_ar") @db.VarChar(100)
+  fiscalYearId     Int          @map("fiscal_year_id")
+  branchId         Int?         @map("branch_id")
+  budgetType       BudgetType   @default(ANNUAL) @map("budget_type")
+  startDate        DateTime     @map("start_date") @db.Date
+  endDate          DateTime     @map("end_date") @db.Date
+  totalAmount      Decimal      @default(0.00) @map("total_amount") @db.Decimal(18, 2)
+  status           BudgetStatus @default(DRAFT)
+  approvedByUserId String?      @map("approved_by_user_id") @db.VarChar(191)
+  approvedAt       DateTime?    @map("approved_at")
+  notes            String?      @db.Text
+  createdByUserId  String?      @map("created_by_user_id") @db.VarChar(191)
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime?    @updatedAt @map("updated_at")
+
+  fiscalYear     FiscalYear @relation(fields: [fiscalYearId], references: [id], onDelete: Restrict)
+  branch         Branch?    @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  approvedByUser User?      @relation("budget_approved_by_user", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  createdByUser  User?      @relation("budget_created_by_user", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  lines BudgetLine[]
+
+  @@index([fiscalYearId], map: "idx_fiscal")
+  @@index([status], map: "idx_status")
+  @@map("budgets")
+}
+
+model BudgetLine {
+  id               Int      @id @default(autoincrement()) @db.UnsignedInt
+  budgetId         Int      @map("budget_id") @db.UnsignedInt
+  accountId        Int      @map("account_id")
+  lineDescription  String?  @map("line_description") @db.VarChar(200)
+  budgetedAmount   Decimal  @default(0.00) @map("budgeted_amount") @db.Decimal(18, 2)
+  actualAmount     Decimal  @default(0.00) @map("actual_amount") @db.Decimal(18, 2)
+  variance         Decimal  @map("variance") @db.Decimal(18, 2) @default(dbgenerated("(budgeted_amount - actual_amount)"))
+  variancePercentage Decimal @map("variance_percentage") @db.Decimal(7, 2) @default(dbgenerated("(CASE WHEN budgeted_amount > 0 THEN ROUND(((budgeted_amount - actual_amount) / budgeted_amount) * 100, 2) ELSE 0 END)"))
+  notes            String?  @db.VarChar(255)
+
+  budget  Budget        @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  account ChartOfAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@index([budgetId], map: "idx_budget")
+  @@index([accountId], map: "idx_account")
+  @@map("budget_lines")
+}
+
+model CreditDebitNote {
+  id               BigInt              @id @default(autoincrement()) @db.UnsignedBigInt
+  noteNumber       String              @unique @map("note_number") @db.VarChar(30)
+  noteType         CreditDebitNoteType @map("note_type")
+  originalInvoiceId BigInt             @map("original_invoice_id") @db.UnsignedBigInt
+  enrollmentId     String?             @map("enrollment_id") @db.VarChar(191)
+  amount           Decimal             @db.Decimal(15, 2)
+  vatAmount        Decimal             @default(0.00) @map("vat_amount") @db.Decimal(15, 2)
+  totalAmount      Decimal             @map("total_amount") @db.Decimal(15, 2)
+  reason           CreditDebitNoteReason
+  reasonDetails    String?             @map("reason_details") @db.Text
+  status           CreditDebitNoteStatus @default(DRAFT)
+  appliedAt        DateTime?           @map("applied_at")
+  journalEntryId   String?             @map("journal_entry_id") @db.VarChar(191)
+  createdByUserId  String?             @map("created_by_user_id") @db.VarChar(191)
+  approvedByUserId String?             @map("approved_by_user_id") @db.VarChar(191)
+  approvedAt       DateTime?           @map("approved_at")
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime?           @updatedAt @map("updated_at")
+
+  originalInvoice StudentInvoice  @relation(fields: [originalInvoiceId], references: [id], onDelete: Restrict)
+  enrollment      StudentEnrollment? @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
+  journalEntry    JournalEntry?    @relation("credit_debit_note_journal_entry", fields: [journalEntryId], references: [id], onDelete: SetNull)
+  createdByUser   User?            @relation("credit_debit_note_created_by_user", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  approvedByUser  User?            @relation("credit_debit_note_approved_by_user", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([originalInvoiceId], map: "idx_invoice")
+  @@index([noteType], map: "idx_type")
+  @@index([status], map: "idx_status")
+  @@index([reason], map: "idx_reason")
+  @@map("credit_debit_notes")
+}
+
+model DocumentSequence {
+  id           Int         @id @default(autoincrement()) @db.UnsignedInt
+  documentType DocumentType @map("document_type")
+  prefix       String      @db.VarChar(10)
+  fiscalYearId Int?        @map("fiscal_year_id")
+  branchId     Int?        @map("branch_id")
+  lastNumber   Int         @default(0) @map("last_number") @db.UnsignedInt
+  numberFormat String      @default("{PREFIX}-{YEAR}-{SEQ:5}") @map("number_format") @db.VarChar(50)
+  isActive     Boolean     @default(true) @map("is_active")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime?   @updatedAt @map("updated_at")
+
+  fiscalYear FiscalYear? @relation(fields: [fiscalYearId], references: [id], onDelete: SetNull)
+  branch     Branch?     @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@unique([documentType, fiscalYearId, branchId], map: "uk_seq")
+  @@map("document_sequences")
+}
+
+model RecurringJournalTemplate {
+  id               Int               @id @default(autoincrement()) @db.UnsignedInt
+  templateName     String            @map("template_name") @db.VarChar(100)
+  description      String?           @db.Text
+  frequency        RecurringFrequency @default(MONTHLY)
+  startDate        DateTime          @map("start_date") @db.Date
+  endDate          DateTime?         @map("end_date") @db.Date
+  nextRunDate      DateTime          @map("next_run_date") @db.Date
+  branchId         Int?              @map("branch_id")
+  currencyId       Int?              @map("currency_id")
+  entryDescription String            @map("entry_description") @db.Text
+  referenceType    String?           @map("reference_type") @db.VarChar(30)
+  totalAmount      Decimal           @map("total_amount") @db.Decimal(18, 2)
+  autoPost         Boolean           @default(false) @map("auto_post")
+  isActive         Boolean           @default(true) @map("is_active")
+  lastGeneratedAt  DateTime?         @map("last_generated_at")
+  lastGeneratedJeId String?          @map("last_generated_je_id") @db.VarChar(191)
+  totalGenerated   Int               @default(0) @map("total_generated") @db.UnsignedInt
+  createdByUserId  String            @map("created_by_user_id") @db.VarChar(191)
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime?         @updatedAt @map("updated_at")
+
+  branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  currency     Currency?    @relation(fields: [currencyId], references: [id], onDelete: SetNull)
+  lastGeneratedJournalEntry JournalEntry? @relation("recurring_last_generated_je", fields: [lastGeneratedJeId], references: [id], onDelete: SetNull)
+  createdByUser User        @relation("recurring_template_created_by_user", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  lines RecurringTemplateLine[]
+
+  @@index([nextRunDate], map: "idx_next_run")
+  @@index([isActive], map: "idx_active")
+  @@index([frequency], map: "idx_frequency")
+  @@map("recurring_journal_templates")
+}
+
+model RecurringTemplateLine {
+  id           Int      @id @default(autoincrement()) @db.UnsignedInt
+  templateId   Int      @map("template_id") @db.UnsignedInt
+  lineNumber   Int      @map("line_number") @db.UnsignedSmallInt
+  accountId    Int      @map("account_id")
+  description  String?  @db.VarChar(255)
+  debitAmount  Decimal  @default(0.00) @map("debit_amount") @db.Decimal(18, 2)
+  creditAmount Decimal  @default(0.00) @map("credit_amount") @db.Decimal(18, 2)
+  costCenterId Int?     @map("cost_center_id") @db.UnsignedInt
+
+  template   RecurringJournalTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  account    ChartOfAccount           @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  costCenter CostCenter?              @relation("recurring_template_cost_center", fields: [costCenterId], references: [id], onDelete: SetNull)
+
+  @@unique([templateId, lineNumber], map: "uk_tpl_line")
+  @@map("recurring_template_lines")
+}
+
+model CostCenter {
+  id                Int      @id @default(autoincrement()) @db.UnsignedInt
+  code              String   @unique @db.VarChar(20)
+  nameAr            String   @map("name_ar") @db.VarChar(100)
+  nameEn            String?  @map("name_en") @db.VarChar(100)
+  parentId          Int?     @map("parent_id") @db.UnsignedInt
+  branchId          Int?     @map("branch_id")
+  managerEmployeeId String?  @map("manager_employee_id") @db.VarChar(191)
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  parent   CostCenter? @relation("cost_center_parent", fields: [parentId], references: [id], onDelete: Restrict)
+  children CostCenter[] @relation("cost_center_parent")
+  branch   Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  managerEmployee Employee? @relation(fields: [managerEmployeeId], references: [id], onDelete: SetNull)
+  journalEntryLines      JournalEntryLine[]      @relation("journal_entry_line_cost_center")
+  recurringTemplateLines RecurringTemplateLine[] @relation("recurring_template_cost_center")
+
+  @@index([code], map: "idx_code")
+  @@index([parentId], map: "idx_parent")
+  @@map("cost_centers")
 }

@@ -2,9 +2,15 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { json } from 'express';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { StructuredLogger } from './common/logger/structured-logger.service';
+
+// Ensure BigInt values serialize safely in JSON responses.
+(BigInt.prototype as unknown as { toJSON?: () => string }).toJSON = function () {
+  return this.toString();
+};
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -13,6 +19,14 @@ async function bootstrap() {
 
   const logger = new StructuredLogger();
   app.useLogger(logger);
+
+  app.use(
+    json({
+      verify: (req, _res, buf) => {
+        (req as { rawBody?: Buffer }).rawBody = buf;
+      },
+    }),
+  );
 
   app.useGlobalPipes(
     new ValidationPipe({
