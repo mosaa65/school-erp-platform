@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { StudentEnrollmentPickerSheet } from "@/components/ui/student-enrollment-picker-sheet";
 import {
   Card,
   CardContent,
@@ -28,11 +29,12 @@ import {
 import { useStudentHomeworksQuery } from "@/features/assignments/student-homeworks/hooks/use-student-homeworks-query";
 import { useHomeworkOptionsQuery } from "@/features/assignments/student-homeworks/hooks/use-homework-options-query";
 import { useStudentEnrollmentOptionsQuery } from "@/features/assignments/student-homeworks/hooks/use-student-enrollment-options-query";
-import type { StudentHomeworkListItem, StudentEnrollmentListItem } from "@/lib/api/client";
+import type { StudentHomeworkListItem } from "@/lib/api/client";
 import {
   formatNameCodeLabel,
   formatSectionWithGradeLabel,
 } from "@/lib/option-labels";
+import { toStudentEnrollmentPickerOption } from "@/features/students/lib/student-enrollment-picker";
 
 type StudentHomeworkFormState = {
   homeworkId: string;
@@ -122,39 +124,6 @@ function toFormState(item: StudentHomeworkListItem): StudentHomeworkFormState {
   };
 }
 
-function formatEnrollmentPlacementLabel(
-  item: Pick<StudentEnrollmentListItem, "academicYear" | "gradeLevel" | "section">,
-): string {
-  const academicYearLabel = formatNameCodeLabel(item.academicYear.name, item.academicYear.code);
-
-  if (item.section) {
-    return `${academicYearLabel} / ${formatSectionWithGradeLabel(item.section)}`;
-  }
-
-  const gradeLevelLabel = item.gradeLevel
-    ? formatNameCodeLabel(item.gradeLevel.name, item.gradeLevel.code)
-    : null;
-
-  return gradeLevelLabel
-    ? `${academicYearLabel} / ${gradeLevelLabel} / غير موزع`
-    : `${academicYearLabel} / غير موزع`;
-}
-
-function isHomeworkEnrollmentSelectable(
-  enrollment: StudentEnrollmentListItem,
-  homework: StudentHomeworkListItem["homework"],
-): boolean {
-  if (enrollment.academicYearId !== homework.academicYearId) {
-    return false;
-  }
-
-  if (!enrollment.sectionId) {
-    return false;
-  }
-
-  return enrollment.sectionId === homework.sectionId;
-}
-
 export function StudentHomeworksWorkspace() {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("student-homeworks.create");
@@ -234,7 +203,17 @@ export function StudentHomeworksWorkspace() {
     [formState.homeworkId, homeworksQuery.data],
   );
 
-  const formEnrollmentOptions = React.useMemo(() => enrollmentsQuery.data ?? [], [enrollmentsQuery.data]);
+  const selectedEnrollmentForForm = React.useMemo(
+    () =>
+      (enrollmentsQuery.data ?? []).find((item) => item.id === formState.studentEnrollmentId) ??
+      null,
+    [enrollmentsQuery.data, formState.studentEnrollmentId],
+  );
+  const selectedEnrollmentOptionForForm = React.useMemo(
+    () =>
+      selectedEnrollmentForForm ? toStudentEnrollmentPickerOption(selectedEnrollmentForForm) : null,
+    [selectedEnrollmentForForm],
+  );
 
   const mutationError =
     (createMutation.error as Error | null)?.message ??
@@ -500,30 +479,23 @@ export function StudentHomeworksWorkspace() {
                 ))}
               </select>
 
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <StudentEnrollmentPickerSheet
                 value={formState.studentEnrollmentId}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, studentEnrollmentId: event.target.value }))
+                selectedOption={selectedEnrollmentOptionForForm}
+                onSelect={(option) =>
+                  setFormState((prev) => ({ ...prev, studentEnrollmentId: option?.id ?? "" }))
                 }
-                disabled={!canReadEnrollments}
-              >
-                <option value="">اختر القيد *</option>
-                {formEnrollmentOptions.map((item) => (
-                  <option
-                    key={item.id}
-                    value={item.id}
-                    disabled={
-                      selectedHomeworkForForm
-                        ? !isHomeworkEnrollmentSelectable(item, selectedHomeworkForForm)
-                        : false
-                    }
-                  >
-                    {item.student.fullName} ({item.student.admissionNo ?? "بدون رقم قيد"}) -{" "}
-                    {formatEnrollmentPlacementLabel(item)}
-                  </option>
-                ))}
-              </select>
+                scope="assignments.student-homeworks"
+                variant="form"
+                academicYearId={selectedHomeworkForForm?.academicYearId}
+                sectionId={selectedHomeworkForForm?.sectionId ?? undefined}
+                placeholder="اختر القيد *"
+                title="اختيار قيد الطالب"
+                searchPlaceholder="ابحث باسم الطالب أو رقم القيد"
+                emptySelectionLabel="إلغاء اختيار القيد"
+                allowEmptySelection={false}
+                disabled={!canReadEnrollments || !selectedHomeworkForForm}
+              />
 
               <div className="grid gap-3 md:grid-cols-2">
                 <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">

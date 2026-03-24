@@ -29,6 +29,7 @@ import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Input } from "@/components/ui/input";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
+import { StudentEnrollmentPickerSheet } from "@/components/ui/student-enrollment-picker-sheet";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useAcademicYearOptionsQuery } from "@/features/grade-aggregation/annual-grades/hooks/use-academic-year-options-query";
 import { useSectionOptionsQuery } from "@/features/grade-aggregation/annual-grades/hooks/use-section-options-query";
@@ -48,7 +49,8 @@ import { usePromotionDecisionOptionsQuery } from "@/features/results-decisions/a
 import { translateGradingWorkflowStatus } from "@/lib/i18n/ar";
 import type { AnnualGradeListItem, AnnualResultListItem, GradingWorkflowStatus } from "@/lib/api/client";
 import { formatNameCodeLabel, formatSectionWithGradeLabel } from "@/lib/option-labels";
-import { formatStudentEnrollmentOptionLabel, formatStudentEnrollmentPlacementLabel } from "@/lib/student-enrollment-display";
+import { formatStudentEnrollmentPlacementLabel } from "@/lib/student-enrollment-display";
+import { toStudentEnrollmentPickerOption } from "@/features/students/lib/student-enrollment-picker";
 
 type FormState = {
   academicYearId: string;
@@ -248,6 +250,13 @@ export function AnnualResultsWorkspace() {
     academicYearId: form.academicYearId || undefined,
     sectionId: form.sectionId || undefined,
   });
+  const selectedEnrollmentOption = React.useMemo(() => {
+    const selectedEnrollment = (enrollmentsQuery.data ?? []).find(
+      (item) => item.id === form.studentEnrollmentId,
+    );
+
+    return selectedEnrollment ? toStudentEnrollmentPickerOption(selectedEnrollment) : null;
+  }, [enrollmentsQuery.data, form.studentEnrollmentId]);
 
   const annualResultsQuery = useAnnualResultsQuery({
     page,
@@ -443,19 +452,20 @@ export function AnnualResultsWorkspace() {
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-1 flex-wrap items-center gap-2">
+        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+          <div className="min-w-0">
             <SearchField
-              containerClassName="min-w-[260px] max-w-lg flex-1"
+              containerClassName="min-w-0"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
               placeholder="بحث باسم الطالب..."
             />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center justify-end gap-2">
             <FilterTriggerButton
               count={activeFiltersCount}
               onClick={() => setIsFilterOpen((prev) => !prev)}
+              className="h-11 w-11 justify-center px-0 sm:w-auto sm:px-4 sm:justify-start [&>span:nth-child(2)]:hidden sm:[&>span:nth-child(2)]:inline [&>span:nth-child(3)]:hidden sm:[&>span:nth-child(3)]:inline"
             />
           </div>
         </div>
@@ -694,12 +704,26 @@ export function AnnualResultsWorkspace() {
             </SelectField>
           </div>
           <div className="grid gap-2 md:grid-cols-2">
-            <SelectField value={form.studentEnrollmentId} disabled={editingId !== null} onChange={(event) => setForm((prev) => ({ ...prev, studentEnrollmentId: event.target.value }))}>
-              <option value="">القيد *</option>
-              {(enrollmentsQuery.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>{formatStudentEnrollmentOptionLabel(item)}</option>
-              ))}
-            </SelectField>
+            <StudentEnrollmentPickerSheet
+              value={form.studentEnrollmentId}
+              selectedOption={selectedEnrollmentOption}
+              onSelect={(option) =>
+                setForm((prev) => ({
+                  ...prev,
+                  studentEnrollmentId: option?.id ?? "",
+                }))
+              }
+              scope="results-decisions-annual-results"
+              variant="form"
+              academicYearId={form.academicYearId || undefined}
+              sectionId={form.sectionId || undefined}
+              placeholder="القيد *"
+              title="اختيار قيد الطالب"
+              searchPlaceholder="ابحث باسم الطالب أو رقم القيد"
+              emptySelectionLabel="إلغاء اختيار القيد"
+              allowEmptySelection
+              disabled={editingId !== null}
+            />
             <SelectField value={form.promotionDecisionId} onChange={(event) => setForm((prev) => ({ ...prev, promotionDecisionId: event.target.value }))}>
               <option value="">قرار الترفيع *</option>
               {(decisionsQuery.data ?? []).map((item) => (

@@ -3,12 +3,12 @@
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
-  Filter,
   LoaderCircle,
   Medal,
   PencilLine,
   Plus,
   RefreshCw,
+  SlidersHorizontal,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -435,25 +435,27 @@ export function EmployeePerformanceEvaluationsWorkspace() {
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[260px] max-w-lg">
+        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+          <div className="flex min-w-0 items-center gap-2">
             <SearchField
-              containerClassName="flex-1"
+              containerClassName="min-w-0"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="??? ??????? ?? ???? ???????..."
+              placeholder="ابحث عن الموظف أو السنة الأكاديمية..."
             />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center justify-end">
             <Button
+              type="button"
               variant="outline"
-              className="gap-2"
+              className="h-10 rounded-2xl px-3 sm:px-4"
               onClick={() => setIsFilterOpen((prev) => !prev)}
+              aria-label="فتح الفلاتر"
             >
-              <Filter className="h-4 w-4" />
-              ?????
+              <SlidersHorizontal className="h-4 w-4" />
+              <span className="hidden sm:inline">فلترة</span>
               {activeFiltersCount > 0 ? (
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
+                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground">
                   {activeFiltersCount}
                 </span>
               ) : null}
@@ -464,7 +466,9 @@ export function EmployeePerformanceEvaluationsWorkspace() {
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
-          title="????? ?????????"
+          title="فلترة التقييمات"
+          renderInPortal
+          overlayClassName="z-[70]"
           actionButtons={
             <div className="flex w-full gap-2">
               <Button
@@ -474,10 +478,10 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                 className="flex-1 gap-1.5"
               >
                 <Trash2 className="h-4 w-4" />
-                ???
+                مسح
               </Button>
               <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                ?????
+                تطبيق
               </Button>
             </div>
           }
@@ -489,7 +493,7 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                 setFilterDraft((prev) => ({ ...prev, employee: event.target.value }))
               }
             >
-              <option value="all">?? ????????</option>
+              <option value="all">كل الموظفين</option>
               {(employeesQuery.data ?? []).map((employee) => (
                 <option key={employee.id} value={employee.id}>
                   {employee.jobNumber ?? employee.fullName}
@@ -503,7 +507,7 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                 setFilterDraft((prev) => ({ ...prev, academicYear: event.target.value }))
               }
             >
-              <option value="all">?? ???????</option>
+              <option value="all">كل السنوات</option>
               {(academicYearsQuery.data ?? []).map((year) => (
                 <option key={year.id} value={year.id}>
                   {year.code}
@@ -520,7 +524,7 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                 }))
               }
             >
-              <option value="all">?? ?????????</option>
+              <option value="all">كل التقديرات</option>
               {RATING_OPTIONS.map((rating) => (
                 <option key={rating} value={rating}>
                   {translatePerformanceRatingLevel(rating)}
@@ -534,7 +538,7 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                 setFilterDraft((prev) => ({ ...prev, evaluator: event.target.value }))
               }
             >
-              <option value="all">?? ?????????</option>
+              <option value="all">كل المقيّمين</option>
               {(employeesQuery.data ?? []).map((employee) => (
                 <option key={employee.id} value={employee.id}>
                   {employee.jobNumber ?? employee.fullName}
@@ -551,9 +555,9 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                 }))
               }
             >
-              <option value="all">?? ???????</option>
-              <option value="active">?????? ???</option>
-              <option value="inactive">??? ?????? ???</option>
+              <option value="all">كل الحالات</option>
+              <option value="active">نشط فقط</option>
+              <option value="inactive">غير نشط فقط</option>
             </SelectField>
           </div>
         </FilterDrawer>
@@ -698,31 +702,34 @@ export function EmployeePerformanceEvaluationsWorkspace() {
 
       <Fab
         icon={<Plus className="h-4 w-4" />}
-        label="?????"
-        ariaLabel="????? ????? ????"
+        label="إضافة"
+        ariaLabel="إضافة تقييم أداء"
         onClick={handleStartCreate}
         disabled={!canCreate}
       />
 
       <BottomSheetForm
         open={isFormOpen}
-        title={isEditing ? "????? ????? ????" : "????? ????? ????"}
+        title={isEditing ? "تعديل تقييم أداء" : "إضافة تقييم أداء"}
         onClose={resetForm}
         onSubmit={() => handleSubmitForm()}
         isSubmitting={isFormSubmitting}
-        submitLabel={isEditing ? "??? ?????????" : "????? ?????"}
+        submitLabel={isEditing ? "تحديث التقييم" : "إضافة تقييم"}
         showFooter={false}
+        renderInPortal
+        overlayClassName="z-[70]"
+        panelClassName="md:max-w-[720px]"
       >
         {!canCreate && !isEditing ? (
           <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            ?? ???? ???????? ????????: <code>employee-performance-evaluations.create</code>.
+            لا تملك الصلاحية المطلوبة: <code>employee-performance-evaluations.create</code>.
           </div>
         ) : (
-<form className="space-y-3" onSubmit={handleSubmitForm}>
+          <form className="space-y-3" onSubmit={handleSubmitForm}>
               <p className="text-sm text-muted-foreground">
                 {isEditing
-                  ? "????? ????? ??????."
-                  : "????? ????? ???? ???? ??????."}
+                  ? "عدّل بيانات التقييم الحالية."
+                  : "أدخل بيانات التقييم لإنشاء سجل جديد."}
               </p>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">الموظف *</label>

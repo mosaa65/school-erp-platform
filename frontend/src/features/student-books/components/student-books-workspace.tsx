@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
+import { StudentPickerSheet } from "@/components/ui/student-picker-sheet";
 import {
   Card,
   CardContent,
@@ -33,9 +34,9 @@ import {
   useUpdateStudentBookMutation,
 } from "@/features/student-books/hooks/use-student-books-mutations";
 import { useStudentBooksQuery } from "@/features/student-books/hooks/use-student-books-query";
-import { useStudentOptionsQuery } from "@/features/student-books/hooks/use-student-options-query";
 import { useStudentEnrollmentOptionsQuery } from "@/features/student-books/hooks/use-student-enrollment-options-query";
 import { useSubjectOptionsQuery } from "@/features/student-books/hooks/use-subject-options-query";
+import type { StudentPickerOption } from "@/features/students/lib/student-picker";
 import type {
   StudentBookListItem,
   StudentBookStatus,
@@ -159,6 +160,18 @@ function toFormState(item: StudentBookListItem): StudentBookFormState {
   };
 }
 
+function buildStudentPickerOptionFromBook(item: StudentBookListItem): StudentPickerOption {
+  return {
+    id: item.studentEnrollment.student.id,
+    title: item.studentEnrollment.student.fullName,
+    subtitle: item.studentEnrollment.student.admissionNo
+      ? `رقم الطالب ${item.studentEnrollment.student.admissionNo}`
+      : "بدون رقم طالب",
+    meta: formatEnrollmentPlacementLabel(item.studentEnrollment),
+    groupLabel: "الطالب المحدد",
+  };
+}
+
 export function StudentBooksWorkspace() {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("student-books.create");
@@ -205,6 +218,13 @@ export function StudentBooksWorkspace() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<StudentBookFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [selectedFilterStudentOption, setSelectedFilterStudentOption] =
+    React.useState<StudentPickerOption | null>(null);
+  const [filterDraftStudentOption, setFilterDraftStudentOption] =
+    React.useState<StudentPickerOption | null>(null);
+  const [selectedFormStudent, setSelectedFormStudent] = React.useState<StudentPickerOption | null>(
+    null,
+  );
 
   const studentBooksQuery = useStudentBooksQuery({
     page,
@@ -219,7 +239,6 @@ export function StudentBooksWorkspace() {
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
   });
 
-  const studentsQuery = useStudentOptionsQuery();
   const enrollmentsQuery = useStudentEnrollmentOptionsQuery();
   const subjectsQuery = useSubjectOptionsQuery();
 
@@ -246,6 +265,13 @@ export function StudentBooksWorkspace() {
     isFilterOpen,
     studentFilter,
   ]);
+  const formEnrollmentOptions = React.useMemo(() => {
+    const selectedStudentId = selectedFormStudent?.id;
+
+    return (enrollmentsQuery.data ?? []).filter((item) =>
+      selectedStudentId ? item.student.id === selectedStudentId : true,
+    );
+  }, [enrollmentsQuery.data, selectedFormStudent?.id]);
 
   const mutationError =
     (createMutation.error as Error | null)?.message ??
@@ -263,6 +289,7 @@ export function StudentBooksWorkspace() {
       setEditingStudentBookId(null);
       setFormState(DEFAULT_FORM_STATE);
       setFormError(null);
+      setSelectedFormStudent(null);
       setIsFormOpen(false);
     }
   }, [books, editingStudentBookId, isEditing]);
@@ -286,9 +313,11 @@ export function StudentBooksWorkspace() {
       toIssuedDate: toIssuedDateFilter,
       active: activeFilter,
     });
+    setFilterDraftStudentOption(selectedFilterStudentOption);
   }, [
     activeFilter,
     enrollmentFilter,
+    selectedFilterStudentOption,
     fromIssuedDateFilter,
     isFilterOpen,
     statusFilter,
@@ -301,6 +330,7 @@ export function StudentBooksWorkspace() {
     setEditingStudentBookId(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
+    setSelectedFormStudent(null);
     setIsFormOpen(false);
   };
 
@@ -312,6 +342,7 @@ export function StudentBooksWorkspace() {
     setFormError(null);
     setEditingStudentBookId(null);
     setFormState(DEFAULT_FORM_STATE);
+    setSelectedFormStudent(null);
     setIsFormOpen(true);
   };
 
@@ -418,6 +449,7 @@ export function StudentBooksWorkspace() {
     setFormError(null);
     setEditingStudentBookId(item.id);
     setFormState(toFormState(item));
+    setSelectedFormStudent(buildStudentPickerOptionFromBook(item));
     setIsFormOpen(true);
   };
 
@@ -469,6 +501,8 @@ export function StudentBooksWorkspace() {
     setFromIssuedDateFilter("");
     setToIssuedDateFilter("");
     setActiveFilter("all");
+    setSelectedFilterStudentOption(null);
+    setFilterDraftStudentOption(null);
     setIsFilterOpen(false);
   };
 
@@ -481,6 +515,7 @@ export function StudentBooksWorkspace() {
     setFromIssuedDateFilter(filterDraft.fromIssuedDate);
     setToIssuedDateFilter(filterDraft.toIssuedDate);
     setActiveFilter(filterDraft.active);
+    setSelectedFilterStudentOption(filterDraftStudentOption);
     setIsFilterOpen(false);
   };
 
@@ -511,7 +546,7 @@ export function StudentBooksWorkspace() {
     <>
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[260px] max-w-lg">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
             <SearchField
               containerClassName="flex-1"
               value={searchInput}
@@ -549,25 +584,21 @@ export function StudentBooksWorkspace() {
           }
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
+            <StudentPickerSheet
+              scope="student-books"
+              variant="filter"
               value={filterDraft.student}
-              onChange={(event) => {
-                const value = event.target.value;
+              selectedOption={filterDraftStudentOption}
+              onSelect={(option) => {
                 setFilterDraft((prev) => ({
                   ...prev,
-                  student: value,
-                  enrollment: value === "all" ? prev.enrollment : "all",
+                  student: option?.id ?? "all",
+                  enrollment: option ? "all" : prev.enrollment,
                 }));
+                setFilterDraftStudentOption(option);
               }}
               disabled={!canReadStudents}
-            >
-              <option value="all">كل الطلاب</option>
-              {(studentsQuery.data ?? []).map((student) => (
-                <option key={student.id} value={student.id}>
-                  {student.admissionNo ?? student.fullName}
-                </option>
-              ))}
-            </SelectField>
+            />
 
             <SelectField
               value={filterDraft.enrollment}
@@ -828,27 +859,75 @@ export function StudentBooksWorkspace() {
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
             <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الطالب</label>
+              <StudentPickerSheet
+                scope="student-books"
+                variant="narrow"
+                value={selectedFormStudent?.id ?? ""}
+                selectedOption={selectedFormStudent}
+                onSelect={(option) => {
+                  const nextStudentId = option?.id;
+                  setSelectedFormStudent(option);
+                  setFormState((prev) => ({
+                    ...prev,
+                    studentEnrollmentId:
+                      nextStudentId &&
+                      (enrollmentsQuery.data ?? []).some(
+                        (item) =>
+                          item.id === prev.studentEnrollmentId && item.student.id === nextStudentId,
+                      )
+                        ? prev.studentEnrollmentId
+                        : "",
+                  }));
+                }}
+                disabled={!canReadStudents}
+              />
+            </div>
+
+            <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
                 القيد الطلابي *
               </label>
               <select
                 className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                 value={formState.studentEnrollmentId}
-                onChange={(event) =>
+                onChange={(event) => {
+                  const nextEnrollmentId = event.target.value;
+                  const selectedEnrollment = (enrollmentsQuery.data ?? []).find(
+                    (item) => item.id === nextEnrollmentId,
+                  );
+
                   setFormState((prev) => ({
                     ...prev,
-                    studentEnrollmentId: event.target.value,
-                  }))
-                }
+                    studentEnrollmentId: nextEnrollmentId,
+                  }));
+
+                  if (selectedEnrollment) {
+                    setSelectedFormStudent({
+                      id: selectedEnrollment.student.id,
+                      title: selectedEnrollment.student.fullName,
+                      subtitle: selectedEnrollment.student.admissionNo
+                        ? `رقم الطالب ${selectedEnrollment.student.admissionNo}`
+                        : "بدون رقم طالب",
+                      meta: formatEnrollmentPlacementLabel(selectedEnrollment),
+                      groupLabel: "الطالب المحدد",
+                    });
+                  }
+                }}
                 disabled={!canReadStudentEnrollments}
               >
                 <option value="">اختر القيد</option>
-                {(enrollmentsQuery.data ?? []).map((item) => (
+                {formEnrollmentOptions.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.displayLabel}
                   </option>
                 ))}
               </select>
+              {selectedFormStudent ? (
+                <p className="text-[11px] text-muted-foreground">
+                  تم تقليص القيود بحسب الطالب المحدد.
+                </p>
+              ) : null}
             </div>
 
             <div className="space-y-1.5">

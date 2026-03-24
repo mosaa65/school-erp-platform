@@ -16,6 +16,8 @@ import { Input } from "@/components/ui/input";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
+import { GuardianPickerSheet } from "@/components/ui/guardian-picker-sheet";
+import { StudentPickerSheet } from "@/components/ui/student-picker-sheet";
 import {
   Card,
   CardContent,
@@ -34,8 +36,8 @@ import {
 } from "@/features/student-guardians/hooks/use-student-guardians-mutations";
 import { useRelationshipTypeOptionsQuery } from "@/features/student-guardians/hooks/use-relationship-type-options-query";
 import { useStudentGuardiansQuery } from "@/features/student-guardians/hooks/use-student-guardians-query";
-import { useStudentOptionsQuery } from "@/features/student-guardians/hooks/use-student-options-query";
-import { useGuardianOptionsQuery } from "@/features/student-guardians/hooks/use-guardian-options-query";
+import type { GuardianPickerOption } from "@/features/guardians/lib/guardian-picker";
+import type { StudentPickerOption } from "@/features/students/lib/student-picker";
 import type {
   GuardianRelationship,
   LookupCatalogListItem,
@@ -176,6 +178,45 @@ function renderDateRange(item: StudentGuardianListItem): string {
   return `${start} - ${end}`;
 }
 
+function buildStudentPickerOptionFromRelation(
+  item: StudentGuardianListItem,
+): StudentPickerOption {
+  return {
+    id: item.studentId,
+    title: item.student.fullName,
+    subtitle: item.student.admissionNo
+      ? `رقم الطالب ${item.student.admissionNo}`
+      : "بدون رقم طالب",
+    meta: null,
+    groupLabel: "الطالب المحدد",
+  };
+}
+
+function buildGuardianPickerOptionFromRelation(
+  item: StudentGuardianListItem,
+): GuardianPickerOption {
+  const relationshipLabel =
+    item.relationshipTypeLookup?.nameAr ?? translateGuardianRelationship(item.relationship);
+  const metaParts = [
+    item.guardian.whatsappNumber && item.guardian.whatsappNumber !== item.guardian.phonePrimary
+      ? `واتساب ${item.guardian.whatsappNumber}`
+      : null,
+    `صلة القرابة: ${relationshipLabel}`,
+  ].filter((part): part is string => Boolean(part));
+
+  return {
+    id: item.guardianId,
+    title: item.guardian.fullName,
+    subtitle: item.guardian.phonePrimary
+      ? `الهاتف ${item.guardian.phonePrimary}`
+      : item.guardian.whatsappNumber
+        ? `واتساب ${item.guardian.whatsappNumber}`
+        : "بدون رقم مسجل",
+    meta: metaParts.length > 0 ? metaParts.join(" | ") : null,
+    groupLabel: "ولي الأمر المحدد",
+  };
+}
+
 export function StudentGuardiansWorkspace() {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("student-guardians.create");
@@ -217,6 +258,19 @@ export function StudentGuardiansWorkspace() {
   const [formState, setFormState] = React.useState<RelationFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
+  const [selectedFormStudent, setSelectedFormStudent] = React.useState<StudentPickerOption | null>(
+    null,
+  );
+  const [selectedFormGuardian, setSelectedFormGuardian] =
+    React.useState<GuardianPickerOption | null>(null);
+  const [selectedStudentFilterOption, setSelectedStudentFilterOption] =
+    React.useState<StudentPickerOption | null>(null);
+  const [selectedGuardianFilterOption, setSelectedGuardianFilterOption] =
+    React.useState<GuardianPickerOption | null>(null);
+  const [filterDraftStudentOption, setFilterDraftStudentOption] =
+    React.useState<StudentPickerOption | null>(null);
+  const [filterDraftGuardianOption, setFilterDraftGuardianOption] =
+    React.useState<GuardianPickerOption | null>(null);
 
   const relationsQuery = useStudentGuardiansQuery({
     page,
@@ -230,8 +284,6 @@ export function StudentGuardiansWorkspace() {
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
   });
 
-  const studentsQuery = useStudentOptionsQuery();
-  const guardiansQuery = useGuardianOptionsQuery();
   const relationshipTypeOptionsQuery = useRelationshipTypeOptionsQuery();
 
   const createMutation = useCreateStudentGuardianMutation();
@@ -268,6 +320,8 @@ export function StudentGuardiansWorkspace() {
       setEditingRelationId(null);
       setFormState(DEFAULT_FORM_STATE);
       setFormError(null);
+      setSelectedFormStudent(null);
+      setSelectedFormGuardian(null);
       setIsFormOpen(false);
     }
   }, [editingRelationId, isEditing, relations]);
@@ -289,12 +343,16 @@ export function StudentGuardiansWorkspace() {
       primary: primaryFilter,
       active: activeFilter,
     });
+    setFilterDraftStudentOption(selectedStudentFilterOption);
+    setFilterDraftGuardianOption(selectedGuardianFilterOption);
   }, [
     activeFilter,
     guardianFilter,
     isFilterOpen,
     primaryFilter,
     relationshipTypeFilter,
+    selectedGuardianFilterOption,
+    selectedStudentFilterOption,
     studentFilter,
   ]);
 
@@ -331,6 +389,8 @@ export function StudentGuardiansWorkspace() {
     setEditingRelationId(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
+    setSelectedFormStudent(null);
+    setSelectedFormGuardian(null);
     setIsFormOpen(false);
   };
 
@@ -343,6 +403,8 @@ export function StudentGuardiansWorkspace() {
     setFormError(null);
     setEditingRelationId(null);
     setFormState(DEFAULT_FORM_STATE);
+    setSelectedFormStudent(null);
+    setSelectedFormGuardian(null);
     setIsFormOpen(true);
   };
 
@@ -463,6 +525,8 @@ export function StudentGuardiansWorkspace() {
       }
     }
     setFormState(nextState);
+    setSelectedFormStudent(buildStudentPickerOptionFromRelation(item));
+    setSelectedFormGuardian(buildGuardianPickerOptionFromRelation(item));
     setIsFormOpen(true);
   };
 
@@ -521,6 +585,10 @@ export function StudentGuardiansWorkspace() {
     setRelationshipTypeFilter("all");
     setPrimaryFilter("all");
     setActiveFilter("all");
+    setSelectedStudentFilterOption(null);
+    setSelectedGuardianFilterOption(null);
+    setFilterDraftStudentOption(null);
+    setFilterDraftGuardianOption(null);
     setIsFilterOpen(false);
   };
 
@@ -531,6 +599,8 @@ export function StudentGuardiansWorkspace() {
     setRelationshipTypeFilter(filterDraft.relationshipType);
     setPrimaryFilter(filterDraft.primary);
     setActiveFilter(filterDraft.active);
+    setSelectedStudentFilterOption(filterDraftStudentOption);
+    setSelectedGuardianFilterOption(filterDraftGuardianOption);
     setIsFilterOpen(false);
   };
 
@@ -557,7 +627,7 @@ export function StudentGuardiansWorkspace() {
     <>
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[260px] max-w-lg">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
             <SearchField
               containerClassName="flex-1"
               value={searchInput}
@@ -595,35 +665,29 @@ export function StudentGuardiansWorkspace() {
           }
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
+            <StudentPickerSheet
+              scope="student-guardians"
+              variant="filter"
               value={filterDraft.student}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, student: event.target.value }))
-              }
+              selectedOption={filterDraftStudentOption}
+              onSelect={(option) => {
+                setFilterDraft((prev) => ({ ...prev, student: option?.id ?? "all" }));
+                setFilterDraftStudentOption(option);
+              }}
               disabled={!canReadStudents}
-            >
-              <option value="all">كل الطلاب</option>
-              {(studentsQuery.data ?? []).map((student) => (
-                <option key={student.id} value={student.id}>
-                  {student.admissionNo ?? student.fullName}
-                </option>
-              ))}
-            </SelectField>
+            />
 
-            <SelectField
+            <GuardianPickerSheet
+              scope="student-guardians"
+              variant="filter"
               value={filterDraft.guardian}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, guardian: event.target.value }))
-              }
+              selectedOption={filterDraftGuardianOption}
+              onSelect={(option) => {
+                setFilterDraft((prev) => ({ ...prev, guardian: option?.id ?? "all" }));
+                setFilterDraftGuardianOption(option);
+              }}
               disabled={!canReadGuardians}
-            >
-              <option value="all">كل أولياء الأمور</option>
-              {(guardiansQuery.data ?? []).map((guardian) => (
-                <option key={guardian.id} value={guardian.id}>
-                  {guardian.fullName}
-                </option>
-              ))}
-            </SelectField>
+            />
 
             <SelectField
               value={filterDraft.relationshipType}
@@ -859,40 +923,32 @@ export function StudentGuardiansWorkspace() {
           <form className="space-y-3" onSubmit={handleSubmitForm}>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">الطالب *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <StudentPickerSheet
+                scope="student-guardians"
+                variant="form"
                 value={formState.studentId}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, studentId: event.target.value }))
-                }
+                selectedOption={selectedFormStudent}
+                onSelect={(option) => {
+                  setSelectedFormStudent(option);
+                  setFormState((prev) => ({ ...prev, studentId: option?.id ?? "" }));
+                }}
                 disabled={!canReadStudents}
-              >
-                <option value="">اختر الطالب</option>
-                {(studentsQuery.data ?? []).map((student) => (
-                  <option key={student.id} value={student.id}>
-                    {student.fullName} ({student.admissionNo ?? "غير متوفر"})
-                  </option>
-                ))}
-              </select>
+              />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">ولي الأمر *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <GuardianPickerSheet
+                scope="student-guardians"
+                variant="form"
                 value={formState.guardianId}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, guardianId: event.target.value }))
-                }
+                selectedOption={selectedFormGuardian}
+                onSelect={(option) => {
+                  setSelectedFormGuardian(option);
+                  setFormState((prev) => ({ ...prev, guardianId: option?.id ?? "" }));
+                }}
                 disabled={!canReadGuardians}
-              >
-                <option value="">اختر ولي الأمر</option>
-                {(guardiansQuery.data ?? []).map((guardian) => (
-                  <option key={guardian.id} value={guardian.id}>
-                    {guardian.fullName} ({guardian.phonePrimary ?? "لا يوجد رقم"})
-                  </option>
-                ))}
-              </select>
+              />
             </div>
 
             <div className="space-y-1.5">

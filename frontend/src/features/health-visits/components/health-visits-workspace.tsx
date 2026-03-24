@@ -13,11 +13,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { StudentPickerSheet } from "@/components/ui/student-picker-sheet";
 import { useHealthSummaryQuery } from "@/features/health-visits/hooks/use-health-summary-query";
 import { useHealthVisitsQuery } from "@/features/health-visits/hooks/use-health-visits-query";
 import { useHealthStatusOptionsQuery } from "@/features/students/hooks/use-health-status-options-query";
-import { useStudentsQuery } from "@/features/students/hooks/use-students-query";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
+import type { StudentPickerOption } from "@/features/students/lib/student-picker";
 import { apiClient } from "@/lib/api/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -39,7 +40,6 @@ export function HealthVisitsWorkspace() {
   const summary = summaryQuery.data;
   const visits = visitsQuery.data?.data ?? [];
 
-  const studentsQuery = useStudentsQuery({ limit: 200, isActive: true });
   const healthStatusQuery = useHealthStatusOptionsQuery();
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("health-visits.create");
@@ -54,6 +54,8 @@ export function HealthVisitsWorkspace() {
     followUpNotes: "",
   });
   const [formMessage, setFormMessage] = React.useState<string | null>(null);
+  const [selectedStudentOption, setSelectedStudentOption] =
+    React.useState<StudentPickerOption | null>(null);
 
   const createVisitMutation = useMutation({
     mutationFn: (payload: Parameters<typeof apiClient.createHealthVisit>[0]) =>
@@ -69,6 +71,7 @@ export function HealthVisitsWorkspace() {
         followUpNotes: "",
         visitDate: new Date().toISOString().slice(0, 16),
       }));
+      setSelectedStudentOption(null);
       setFormMessage("تم تسجيل الزيارة بنجاح.");
     },
     onError: () => {
@@ -106,26 +109,16 @@ export function HealthVisitsWorkspace() {
           <div className="grid gap-4 md:grid-cols-4">
             <label className="flex flex-col text-sm font-medium text-muted-foreground">
               الطالب
-              <select
-                className="mt-1 rounded-md border border-input bg-card px-3 py-2 text-sm outline-none"
+              <StudentPickerSheet
+                scope="health-visits"
+                variant="form"
                 value={formState.studentId}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, studentId: event.target.value }))
-                }
-              >
-                <option value="">اختر طالباً</option>
-                {studentsQuery.isLoading ? (
-                  <option disabled>جارٍ التحميل...</option>
-                ) : (
-                  studentsQuery.data?.data
-                    ?.slice(0, 200)
-                    .map((student) => (
-                      <option key={student.id} value={student.id}>
-                        {student.fullName} ({student.admissionNo ?? "—"})
-                      </option>
-                    ))
-                )}
-              </select>
+                selectedOption={selectedStudentOption}
+                onSelect={(option) => {
+                  setSelectedStudentOption(option);
+                  setFormState((prev) => ({ ...prev, studentId: option?.id ?? "" }));
+                }}
+              />
             </label>
             <label className="flex flex-col text-sm font-medium text-muted-foreground">
               الحالة الصحية

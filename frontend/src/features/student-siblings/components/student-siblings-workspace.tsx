@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
+import { StudentPickerSheet } from "@/components/ui/student-picker-sheet";
 import {
   Card,
   CardContent,
@@ -27,13 +28,13 @@ import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
-import { useStudentOptionsQuery } from "@/features/student-books/hooks/use-student-options-query";
 import {
   useCreateStudentSiblingMutation,
   useDeleteStudentSiblingMutation,
   useUpdateStudentSiblingMutation,
 } from "@/features/student-siblings/hooks/use-student-siblings-mutations";
 import { useStudentSiblingsQuery } from "@/features/student-siblings/hooks/use-student-siblings-query";
+import type { StudentPickerOption } from "@/features/students/lib/student-picker";
 import type {
   StudentSiblingListItem,
   StudentSiblingRelationship,
@@ -77,6 +78,25 @@ function toFormState(item: StudentSiblingListItem): StudentSiblingFormState {
   };
 }
 
+function buildStudentPickerOption(
+  student: StudentSiblingListItem["student"],
+  label: string,
+): StudentPickerOption {
+  return {
+    id: student.id,
+    title: student.fullName,
+    subtitle: student.admissionNo ? `رقم الطالب ${student.admissionNo}` : "بدون رقم طالب",
+    meta: null,
+    groupLabel: label,
+  };
+}
+
+function buildSiblingPickerOption(
+  sibling: StudentSiblingListItem["sibling"],
+): StudentPickerOption {
+  return buildStudentPickerOption(sibling, "الأخ/الأخت المحدد");
+}
+
 export function StudentSiblingsWorkspace() {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("student-siblings.create");
@@ -112,6 +132,18 @@ export function StudentSiblingsWorkspace() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<StudentSiblingFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [selectedFormStudent, setSelectedFormStudent] =
+    React.useState<StudentPickerOption | null>(null);
+  const [selectedFormSibling, setSelectedFormSibling] =
+    React.useState<StudentPickerOption | null>(null);
+  const [selectedStudentFilterOption, setSelectedStudentFilterOption] =
+    React.useState<StudentPickerOption | null>(null);
+  const [selectedSiblingFilterOption, setSelectedSiblingFilterOption] =
+    React.useState<StudentPickerOption | null>(null);
+  const [filterDraftStudentOption, setFilterDraftStudentOption] =
+    React.useState<StudentPickerOption | null>(null);
+  const [filterDraftSiblingOption, setFilterDraftSiblingOption] =
+    React.useState<StudentPickerOption | null>(null);
 
   const siblingsQuery = useStudentSiblingsQuery({
     page,
@@ -122,8 +154,6 @@ export function StudentSiblingsWorkspace() {
     relationship: relationshipFilter === "all" ? undefined : relationshipFilter,
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
   });
-
-  const studentsQuery = useStudentOptionsQuery();
 
   const createMutation = useCreateStudentSiblingMutation();
   const updateMutation = useUpdateStudentSiblingMutation();
@@ -149,6 +179,8 @@ export function StudentSiblingsWorkspace() {
       setEditingSiblingId(null);
       setFormState(DEFAULT_FORM_STATE);
       setFormError(null);
+      setSelectedFormStudent(null);
+      setSelectedFormSibling(null);
       setIsFormOpen(false);
     }
   }, [editingSiblingId, isEditing, siblings]);
@@ -169,12 +201,24 @@ export function StudentSiblingsWorkspace() {
       relationship: relationshipFilter,
       active: activeFilter,
     });
-  }, [activeFilter, isFilterOpen, relationshipFilter, siblingFilter, studentFilter]);
+    setFilterDraftStudentOption(selectedStudentFilterOption);
+    setFilterDraftSiblingOption(selectedSiblingFilterOption);
+  }, [
+    activeFilter,
+    isFilterOpen,
+    relationshipFilter,
+    siblingFilter,
+    selectedSiblingFilterOption,
+    selectedStudentFilterOption,
+    studentFilter,
+  ]);
 
   const resetForm = () => {
     setEditingSiblingId(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
+    setSelectedFormStudent(null);
+    setSelectedFormSibling(null);
     setIsFormOpen(false);
   };
 
@@ -186,6 +230,8 @@ export function StudentSiblingsWorkspace() {
     setFormError(null);
     setEditingSiblingId(null);
     setFormState(DEFAULT_FORM_STATE);
+    setSelectedFormStudent(null);
+    setSelectedFormSibling(null);
     setIsFormOpen(true);
   };
 
@@ -265,6 +311,8 @@ export function StudentSiblingsWorkspace() {
     setFormError(null);
     setEditingSiblingId(item.id);
     setFormState(toFormState(item));
+    setSelectedFormStudent(buildStudentPickerOption(item.student, "الطالب المحدد"));
+    setSelectedFormSibling(buildSiblingPickerOption(item.sibling));
     setIsFormOpen(true);
   };
 
@@ -299,6 +347,10 @@ export function StudentSiblingsWorkspace() {
     setSiblingFilter("all");
     setRelationshipFilter("all");
     setActiveFilter("all");
+    setSelectedStudentFilterOption(null);
+    setSelectedSiblingFilterOption(null);
+    setFilterDraftStudentOption(null);
+    setFilterDraftSiblingOption(null);
     setIsFilterOpen(false);
   };
 
@@ -308,6 +360,8 @@ export function StudentSiblingsWorkspace() {
     setSiblingFilter(filterDraft.sibling);
     setRelationshipFilter(filterDraft.relationship);
     setActiveFilter(filterDraft.active);
+    setSelectedStudentFilterOption(filterDraftStudentOption);
+    setSelectedSiblingFilterOption(filterDraftSiblingOption);
     setIsFilterOpen(false);
   };
 
@@ -326,7 +380,7 @@ export function StudentSiblingsWorkspace() {
     <>
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[260px] max-w-lg">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
             <SearchField
               containerClassName="flex-1"
               value={searchInput}
@@ -364,33 +418,29 @@ export function StudentSiblingsWorkspace() {
           }
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
+            <StudentPickerSheet
+              scope="student-siblings"
+              variant="filter"
               value={filterDraft.student}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, student: event.target.value }))
-              }
-            >
-              <option value="all">كل الطلاب</option>
-              {(studentsQuery.data ?? []).map((student) => (
-                <option key={student.id} value={student.id}>
-                  {student.fullName} ({student.admissionNo ?? "بدون رقم"})
-                </option>
-              ))}
-            </SelectField>
+              selectedOption={filterDraftStudentOption}
+              onSelect={(option) => {
+                setFilterDraft((prev) => ({ ...prev, student: option?.id ?? "all" }));
+                setFilterDraftStudentOption(option);
+              }}
+              disabled={!canReadStudents}
+            />
 
-            <SelectField
+            <StudentPickerSheet
+              scope="student-siblings"
+              variant="filter"
               value={filterDraft.sibling}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, sibling: event.target.value }))
-              }
-            >
-              <option value="all">كل الإخوة</option>
-              {(studentsQuery.data ?? []).map((student) => (
-                <option key={student.id} value={student.id}>
-                  {student.fullName} ({student.admissionNo ?? "بدون رقم"})
-                </option>
-              ))}
-            </SelectField>
+              selectedOption={filterDraftSiblingOption}
+              onSelect={(option) => {
+                setFilterDraft((prev) => ({ ...prev, sibling: option?.id ?? "all" }));
+                setFilterDraftSiblingOption(option);
+              }}
+              disabled={!canReadStudents}
+            />
 
             <SelectField
               value={filterDraft.relationship}
@@ -581,42 +631,34 @@ export function StudentSiblingsWorkspace() {
           <form className="space-y-3" onSubmit={handleSubmitForm}>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">الطالب *</label>
-              <select
-                data-testid="student-sibling-form-student"
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <StudentPickerSheet
+              scope="student-siblings"
+              variant="form"
+                triggerTestId="student-sibling-form-student"
                 value={formState.studentId}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, studentId: event.target.value }))
-                }
+                selectedOption={selectedFormStudent}
+                onSelect={(option) => {
+                  setSelectedFormStudent(option);
+                  setFormState((prev) => ({ ...prev, studentId: option?.id ?? "" }));
+                }}
                 disabled={!canReadStudents}
-              >
-                <option value="">اختر الطالب</option>
-                {(studentsQuery.data ?? []).map((student) => (
-                  <option key={student.id} value={student.id}>
-                    {student.fullName} ({student.admissionNo ?? "بدون رقم"})
-                  </option>
-                ))}
-              </select>
+              />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">الأخ/الأخت *</label>
-              <select
-                data-testid="student-sibling-form-sibling"
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <StudentPickerSheet
+              scope="student-siblings"
+              variant="form"
+                triggerTestId="student-sibling-form-sibling"
                 value={formState.siblingId}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, siblingId: event.target.value }))
-                }
+                selectedOption={selectedFormSibling}
+                onSelect={(option) => {
+                  setSelectedFormSibling(option);
+                  setFormState((prev) => ({ ...prev, siblingId: option?.id ?? "" }));
+                }}
                 disabled={!canReadStudents}
-              >
-                <option value="">اختر الأخ/الأخت</option>
-                {(studentsQuery.data ?? []).map((student) => (
-                  <option key={student.id} value={student.id}>
-                    {student.fullName} ({student.admissionNo ?? "بدون رقم"})
-                  </option>
-                ))}
-              </select>
+              />
             </div>
 
             <div className="space-y-1.5">

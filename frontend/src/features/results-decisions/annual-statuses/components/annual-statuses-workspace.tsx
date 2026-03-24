@@ -194,21 +194,21 @@ export function AnnualStatusesWorkspace() {
     const description = form.description.trim();
 
     if (!code || !name) {
-      setFormError("?????? ????????: ????? ??????.");
+      setFormError("الرجاء تعبئة الحقول المطلوبة: الرمز والاسم.");
       return false;
     }
     if (code.length > 40 || !/^[A-Z0-9_]+$/.test(code)) {
       setFormError(
-        "????? ??? ?? ????? ?????? ????? ???????? ????? ????? (_) ???? ???? ???? 40 ?????.",
+        "يجب أن يحتوي الرمز على أحرف كبيرة أو أرقام أو شرطة سفلية (_) فقط، وبحد أقصى 40 حرفًا.",
       );
       return false;
     }
     if (name.length > 120) {
-      setFormError("????? ??? ??? ?????? 120 ?????.");
+      setFormError("يجب ألا يتجاوز الاسم 120 حرفًا.");
       return false;
     }
     if (description.length > 255) {
-      setFormError("????? ??? ??? ?????? 255 ?????.");
+      setFormError("يجب ألا يتجاوز الوصف 255 حرفًا.");
       return false;
     }
 
@@ -233,7 +233,7 @@ export function AnnualStatusesWorkspace() {
 
     if (isEditing && editingId) {
       if (!canUpdate) {
-        setFormError("?? ???? ???????? ????????: annual-statuses.update.");
+        setFormError("لا تملك صلاحية التحديث: annual-statuses.update.");
         return;
       }
 
@@ -252,7 +252,7 @@ export function AnnualStatusesWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("?? ???? ???????? ????????: annual-statuses.create.");
+      setFormError("لا تملك صلاحية الإضافة: annual-statuses.create.");
       return;
     }
 
@@ -292,19 +292,20 @@ export function AnnualStatusesWorkspace() {
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[260px] max-w-lg">
+        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+          <div className="min-w-0">
             <SearchField
-              containerClassName="flex-1"
+              containerClassName="min-w-0"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="???..."
+              placeholder="بحث..."
             />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center justify-end gap-2">
             <FilterTriggerButton
               count={activeFiltersCount}
               onClick={() => setIsFilterOpen((prev) => !prev)}
+              className="h-11 w-11 justify-center px-0 sm:w-auto sm:px-4 sm:justify-start [&>span:nth-child(2)]:hidden sm:[&>span:nth-child(2)]:inline [&>span:nth-child(3)]:hidden sm:[&>span:nth-child(3)]:inline"
             />
           </div>
         </div>
@@ -312,7 +313,7 @@ export function AnnualStatusesWorkspace() {
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
-          title="????? ??????? ???????"
+          title="فلترة حالات النتائج السنوية"
           actionButtons={
             <div className="flex w-full gap-2">
               <Button
@@ -322,10 +323,10 @@ export function AnnualStatusesWorkspace() {
                 className="flex-1 gap-1.5"
               >
                 <Trash2 className="h-4 w-4" />
-                ???
+                مسح
               </Button>
               <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                ?????
+                تطبيق
               </Button>
             </div>
           }
@@ -340,9 +341,9 @@ export function AnnualStatusesWorkspace() {
                 }))
               }
             >
-              <option value="all">????</option>
-              <option value="system">?????</option>
-              <option value="custom">????</option>
+              <option value="all">الكل</option>
+              <option value="system">نظامي</option>
+              <option value="custom">مخصص</option>
             </SelectField>
 
             <SelectField
@@ -354,9 +355,9 @@ export function AnnualStatusesWorkspace() {
                 }))
               }
             >
-              <option value="all">?? ???????</option>
-              <option value="active">???</option>
-              <option value="inactive">??? ???</option>
+              <option value="all">كل الحالات</option>
+              <option value="active">نشط</option>
+              <option value="inactive">غير نشط</option>
             </SelectField>
           </div>
         </FilterDrawer>
@@ -364,27 +365,27 @@ export function AnnualStatusesWorkspace() {
         <Card className="border-border/70 bg-card/80">
           <CardHeader className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>??????? ???????</CardTitle>
-              <Badge variant="secondary">????????: {pagination?.total ?? 0}</Badge>
+              <CardTitle>حالات النتائج السنوية</CardTitle>
+              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
-            <CardDescription>????? ????? ??????/?????? ??????? ??????.</CardDescription>
+            <CardDescription>عرض حالات النتائج السنوية مع التحديث والحذف والتعديل.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {annualStatusesQuery.isPending ? (
               <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                ???? ????? ????????...
+                جارٍ تحميل البيانات...
               </div>
             ) : null}
             {annualStatusesQuery.error ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
                 {annualStatusesQuery.error instanceof Error
                   ? annualStatusesQuery.error.message
-                  : "????? ????? ????????."}
+                  : "تعذّر تحميل البيانات."}
               </div>
             ) : null}
             {!annualStatusesQuery.isPending && records.length === 0 ? (
               <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                ?? ???? ?????.
+                لا توجد بيانات.
               </div>
             ) : null}
 
@@ -400,20 +401,20 @@ export function AnnualStatusesWorkspace() {
                     </p>
                     <p className="text-xs text-muted-foreground">{item.description ?? "-"}</p>
                     <p className="text-xs text-muted-foreground">
-                      ??? ??????? ??????? ????????: {item._count.annualGrades}
+                      عدد الدرجات السنوية المرتبطة: {item._count.annualGrades}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5">
                     {item.isSystem ? (
                       <Badge variant="outline" className="gap-1.5">
                         <ShieldAlert className="h-3.5 w-3.5" />
-                        ?????
+                        نظامي
                       </Badge>
                     ) : (
-                      <Badge variant="secondary">????</Badge>
+                      <Badge variant="secondary">مخصص</Badge>
                     )}
                     <Badge variant={item.isActive ? "default" : "outline"}>
-                      {item.isActive ? "???" : "??? ???"}
+                      {item.isActive ? "نشط" : "غير نشط"}
                     </Badge>
                   </div>
                 </div>
@@ -426,7 +427,7 @@ export function AnnualStatusesWorkspace() {
                     disabled={!canUpdate || item.isSystem || updateMutation.isPending}
                   >
                     <PencilLine className="h-3.5 w-3.5" />
-                    ?????
+                    تعديل
                   </Button>
                   <Button
                     variant="destructive"
@@ -436,7 +437,7 @@ export function AnnualStatusesWorkspace() {
                       if (!canDelete || item.isSystem) {
                         return;
                       }
-                      if (!window.confirm(`????? ??? ?????? ${item.code}?`)) {
+                      if (!window.confirm(`هل تريد حذف الحالة ${item.code}؟`)) {
                         return;
                       }
                       deleteMutation.mutate(item.id);
@@ -444,7 +445,7 @@ export function AnnualStatusesWorkspace() {
                     disabled={!canDelete || item.isSystem || deleteMutation.isPending}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                    ???
+                    حذف
                   </Button>
                 </div>
               </div>
@@ -452,7 +453,7 @@ export function AnnualStatusesWorkspace() {
 
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
               <p className="text-xs text-muted-foreground">
-                ?????? {pagination?.page ?? 1} ?? {pagination?.totalPages ?? 1}
+                الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
               </p>
               <div className="flex items-center gap-2">
                 <Button
@@ -461,7 +462,7 @@ export function AnnualStatusesWorkspace() {
                   onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
                   disabled={!pagination || pagination.page <= 1 || annualStatusesQuery.isFetching}
                 >
-                  ??????
+                السابق
                 </Button>
                 <Button
                   variant="outline"
@@ -477,7 +478,7 @@ export function AnnualStatusesWorkspace() {
                     annualStatusesQuery.isFetching
                   }
                 >
-                  ??????
+                  التالي
                 </Button>
                 <Button
                   variant="ghost"
@@ -489,7 +490,7 @@ export function AnnualStatusesWorkspace() {
                   <RefreshCw
                     className={`h-4 w-4 ${annualStatusesQuery.isFetching ? "animate-spin" : ""}`}
                   />
-                  ?????
+                  تحديث
                 </Button>
               </div>
             </div>
@@ -499,47 +500,47 @@ export function AnnualStatusesWorkspace() {
 
       <Fab
         icon={<Plus className="h-4 w-4" />}
-        label="?????"
-        ariaLabel="????? ???? ?????"
+        label="إضافة"
+        ariaLabel="إضافة حالة نتائج سنوية"
         onClick={handleStartCreate}
         disabled={!canCreate}
       />
 
       <BottomSheetForm
         open={isFormOpen}
-        title={isEditing ? "????? ???? ?????" : "????? ???? ?????"}
+        title={isEditing ? "تعديل حالة نتائج سنوية" : "إضافة حالة نتائج سنوية"}
         onClose={resetForm}
         onSubmit={() => undefined}
         isSubmitting={isSubmitting}
-        submitLabel={isEditing ? "??? ?????????" : "????? ???? ?????"}
+        submitLabel={isEditing ? "حفظ التغييرات" : "إضافة الحالة"}
         showFooter={false}
       >
         {!canCreate && !isEditing ? (
           <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            ?? ???? ???????? ????????: <code>annual-statuses.create</code>.
+            لا تملك صلاحية الإضافة: <code>annual-statuses.create</code>.
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
             <Input
               value={form.code}
               onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
-              placeholder="????? *"
+              placeholder="الرمز *"
               required
             />
             <Input
               value={form.name}
               onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-              placeholder="????? *"
+              placeholder="الاسم *"
               required
             />
             <Input
               value={form.description}
               onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-              placeholder="?????"
+              placeholder="الوصف"
             />
             <div className="grid gap-2 md:grid-cols-2">
               <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>?????</span>
+                <span>نظامي</span>
                 <input
                   type="checkbox"
                   checked={form.isSystem}
@@ -549,7 +550,7 @@ export function AnnualStatusesWorkspace() {
                 />
               </label>
               <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>???</span>
+                <span>نشط</span>
                 <input
                   type="checkbox"
                   checked={form.isActive}
@@ -578,11 +579,11 @@ export function AnnualStatusesWorkspace() {
                 ) : (
                   <Tag className="h-4 w-4" />
                 )}
-                {isEditing ? "??? ?????????" : "????? ???? ?????"}
+                {isEditing ? "حفظ التغييرات" : "إضافة الحالة"}
               </Button>
               {isEditing ? (
                 <Button type="button" variant="outline" onClick={resetForm}>
-                  ?????
+                  إلغاء
                 </Button>
               ) : null}
             </div>

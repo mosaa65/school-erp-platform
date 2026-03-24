@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PhoneContactInput } from "@/components/ui/phone-contact-input";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
@@ -347,7 +348,7 @@ export function SchoolProfilesWorkspace() {
     <>
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[260px] max-w-lg">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
             <SearchField
               containerClassName="flex-1"
               value={searchInput}
@@ -620,12 +621,14 @@ export function SchoolProfilesWorkspace() {
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">الهاتف</label>
-                <Input
+                <PhoneContactInput
                   value={formState.phone}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, phone: event.target.value }))
+                  onValueChange={(value) =>
+                    setFormState((prev) => ({ ...prev, phone: value }))
                   }
                   placeholder="رقم الهاتف"
+                  className="h-10"
+                  buttonTestId="school-profile-phone-contact-picker"
                 />
               </div>
               <div className="space-y-1.5">

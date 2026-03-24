@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
+import { StudentPickerSheet } from "@/components/ui/student-picker-sheet";
 import {
   Card,
   CardContent,
@@ -27,13 +28,13 @@ import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
-import { useStudentOptionsQuery } from "@/features/student-books/hooks/use-student-options-query";
 import {
   useCreateStudentProblemMutation,
   useDeleteStudentProblemMutation,
   useUpdateStudentProblemMutation,
 } from "@/features/student-problems/hooks/use-student-problems-mutations";
 import { useStudentProblemsQuery } from "@/features/student-problems/hooks/use-student-problems-query";
+import type { StudentPickerOption } from "@/features/students/lib/student-picker";
 import type { StudentProblemListItem } from "@/lib/api/client";
 
 type StudentProblemFormState = {
@@ -108,6 +109,20 @@ function toFormState(item: StudentProblemListItem): StudentProblemFormState {
   };
 }
 
+function buildStudentPickerOptionFromProblem(
+  item: StudentProblemListItem,
+): StudentPickerOption {
+  return {
+    id: item.studentId,
+    title: item.student.fullName,
+    subtitle: item.student.admissionNo
+      ? `رقم الطالب ${item.student.admissionNo}`
+      : "بدون رقم طالب",
+    meta: null,
+    groupLabel: "الطالب المحدد",
+  };
+}
+
 export function StudentProblemsWorkspace() {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("student-problems.create");
@@ -146,6 +161,12 @@ export function StudentProblemsWorkspace() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<StudentProblemFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [selectedFormStudent, setSelectedFormStudent] =
+    React.useState<StudentPickerOption | null>(null);
+  const [selectedStudentFilterOption, setSelectedStudentFilterOption] =
+    React.useState<StudentPickerOption | null>(null);
+  const [filterDraftStudentOption, setFilterDraftStudentOption] =
+    React.useState<StudentPickerOption | null>(null);
 
   const problemsQuery = useStudentProblemsQuery({
     page,
@@ -158,8 +179,6 @@ export function StudentProblemsWorkspace() {
     toProblemDate: toDateFilter ? toDateIso(toDateFilter) : undefined,
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
   });
-
-  const studentsQuery = useStudentOptionsQuery();
 
   const createMutation = useCreateStudentProblemMutation();
   const updateMutation = useUpdateStudentProblemMutation();
@@ -185,6 +204,7 @@ export function StudentProblemsWorkspace() {
       setEditingProblemId(null);
       setFormState(DEFAULT_FORM_STATE);
       setFormError(null);
+      setSelectedFormStudent(null);
       setIsFormOpen(false);
     }
   }, [editingProblemId, isEditing, problems]);
@@ -206,12 +226,22 @@ export function StudentProblemsWorkspace() {
       toDate: toDateFilter,
       active: activeFilter,
     });
-  }, [activeFilter, fromDateFilter, isFilterOpen, statusFilter, studentFilter, toDateFilter]);
+    setFilterDraftStudentOption(selectedStudentFilterOption);
+  }, [
+    activeFilter,
+    fromDateFilter,
+    isFilterOpen,
+    selectedStudentFilterOption,
+    statusFilter,
+    studentFilter,
+    toDateFilter,
+  ]);
 
   const resetForm = () => {
     setEditingProblemId(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
+    setSelectedFormStudent(null);
     setIsFormOpen(false);
   };
 
@@ -223,6 +253,7 @@ export function StudentProblemsWorkspace() {
     setFormError(null);
     setEditingProblemId(null);
     setFormState(DEFAULT_FORM_STATE);
+    setSelectedFormStudent(null);
     setIsFormOpen(true);
   };
 
@@ -310,6 +341,7 @@ export function StudentProblemsWorkspace() {
     setFormError(null);
     setEditingProblemId(item.id);
     setFormState(toFormState(item));
+    setSelectedFormStudent(buildStudentPickerOptionFromProblem(item));
     setIsFormOpen(true);
   };
 
@@ -345,6 +377,8 @@ export function StudentProblemsWorkspace() {
     setFromDateFilter("");
     setToDateFilter("");
     setActiveFilter("all");
+    setSelectedStudentFilterOption(null);
+    setFilterDraftStudentOption(null);
     setIsFilterOpen(false);
   };
 
@@ -355,6 +389,7 @@ export function StudentProblemsWorkspace() {
     setFromDateFilter(filterDraft.fromDate);
     setToDateFilter(filterDraft.toDate);
     setActiveFilter(filterDraft.active);
+    setSelectedStudentFilterOption(filterDraftStudentOption);
     setIsFilterOpen(false);
   };
 
@@ -374,7 +409,7 @@ export function StudentProblemsWorkspace() {
     <>
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[260px] max-w-lg">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
             <SearchField
               containerClassName="flex-1"
               value={searchInput}
@@ -412,19 +447,17 @@ export function StudentProblemsWorkspace() {
           }
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
+            <StudentPickerSheet
+              scope="student-problems"
+              variant="filter"
               value={filterDraft.student}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, student: event.target.value }))
-              }
-            >
-              <option value="all">كل الطلاب</option>
-              {(studentsQuery.data ?? []).map((student) => (
-                <option key={student.id} value={student.id}>
-                  {student.fullName} ({student.admissionNo ?? "بدون رقم"})
-                </option>
-              ))}
-            </SelectField>
+              selectedOption={filterDraftStudentOption}
+              onSelect={(option) => {
+                setFilterDraft((prev) => ({ ...prev, student: option?.id ?? "all" }));
+                setFilterDraftStudentOption(option);
+              }}
+              disabled={!canReadStudents}
+            />
 
             <SelectField
               value={filterDraft.status}
@@ -636,22 +669,18 @@ export function StudentProblemsWorkspace() {
           <form className="space-y-3" onSubmit={handleSubmitForm}>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">الطالب *</label>
-              <select
-                data-testid="student-problem-form-student"
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <StudentPickerSheet
+                scope="student-problems"
+                variant="form"
                 value={formState.studentId}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, studentId: event.target.value }))
-                }
+                selectedOption={selectedFormStudent}
+                onSelect={(option) => {
+                  setSelectedFormStudent(option);
+                  setFormState((prev) => ({ ...prev, studentId: option?.id ?? "" }));
+                }}
                 disabled={!canReadStudents}
-              >
-                <option value="">اختر الطالب</option>
-                {(studentsQuery.data ?? []).map((student) => (
-                  <option key={student.id} value={student.id}>
-                    {student.fullName} ({student.admissionNo ?? "بدون رقم"})
-                  </option>
-                ))}
-              </select>
+                triggerTestId="student-problem-form-student"
+              />
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">

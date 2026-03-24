@@ -14,6 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import { Button } from "@/components/ui/button";
+import { StudentEnrollmentPickerSheet } from "@/components/ui/student-enrollment-picker-sheet";
 import {
   Card,
   CardContent,
@@ -35,8 +36,11 @@ import {
 } from "@/features/exams/student-exam-scores/hooks/use-student-exam-scores-mutations";
 import { useExamAssessmentOptionsQuery } from "@/features/exams/student-exam-scores/hooks/use-exam-assessment-options-query";
 import { useExamPeriodOptionsQuery } from "@/features/exams/student-exam-scores/hooks/use-exam-period-options-query";
-import { useStudentEnrollmentOptionsQuery } from "@/features/exams/student-exam-scores/hooks/use-student-enrollment-options-query";
 import { useStudentExamScoresQuery } from "@/features/exams/student-exam-scores/hooks/use-student-exam-scores-query";
+import {
+  toStudentEnrollmentPickerOption,
+  type StudentEnrollmentPickerOption,
+} from "@/features/students/lib/student-enrollment-picker";
 import {
   translateAssessmentType,
   translateExamAbsenceType,
@@ -133,21 +137,6 @@ function formatEnrollmentPlacementLabel(
     : `${academicYearLabel} / غير موزع`;
 }
 
-function isExamEnrollmentSelectable(
-  enrollment: StudentEnrollmentListItem,
-  assessment: StudentExamScoreListItem["examAssessment"],
-): boolean {
-  if (enrollment.academicYearId !== assessment.examPeriod.academicYearId) {
-    return false;
-  }
-
-  if (!enrollment.sectionId) {
-    return false;
-  }
-
-  return enrollment.sectionId === assessment.sectionId;
-}
-
 export function StudentExamScoresWorkspace() {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("student-exam-scores.create");
@@ -177,6 +166,8 @@ export function StudentExamScoresWorkspace() {
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [form, setForm] = React.useState<FormState>(DEFAULT_FORM);
+  const [selectedEnrollmentOption, setSelectedEnrollmentOption] =
+    React.useState<StudentEnrollmentPickerOption | null>(null);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
 
@@ -186,7 +177,6 @@ export function StudentExamScoresWorkspace() {
   const assessmentsForFilterQuery = useExamAssessmentOptionsQuery(
     filterExamPeriodId === "all" ? undefined : filterExamPeriodId,
   );
-  const enrollmentsQuery = useStudentEnrollmentOptionsQuery();
 
   const scoresQuery = useStudentExamScoresQuery({
     page,
@@ -207,7 +197,6 @@ export function StudentExamScoresWorkspace() {
   const selectedAssessment = (assessmentsForFormQuery.data ?? []).find(
     (item) => item.id === form.examAssessmentId,
   );
-  const formEnrollments = React.useMemo(() => enrollmentsQuery.data ?? [], [enrollmentsQuery.data]);
 
   const mutationError =
     (createMutation.error as Error | null)?.message ??
@@ -224,6 +213,7 @@ export function StudentExamScoresWorkspace() {
     if (!stillExists) {
       setEditingId(null);
       setForm(DEFAULT_FORM);
+      setSelectedEnrollmentOption(null);
       setFormError(null);
       setIsFormOpen(false);
     }
@@ -267,6 +257,7 @@ export function StudentExamScoresWorkspace() {
     setActionSuccess(null);
     setEditingId(null);
     setForm(DEFAULT_FORM);
+    setSelectedEnrollmentOption(null);
     setIsFormOpen(true);
   };
 
@@ -279,6 +270,7 @@ export function StudentExamScoresWorkspace() {
     setActionSuccess(null);
     setEditingId(item.id);
     setForm(toFormState(item));
+    setSelectedEnrollmentOption(toStudentEnrollmentPickerOption(item.studentEnrollment));
     setIsFormOpen(true);
   };
 
@@ -297,28 +289,6 @@ export function StudentExamScoresWorkspace() {
     }
     if (selectedAssessment.examPeriod.isLocked) {
       setFormError("فترة الاختبار مقفلة.");
-      return false;
-    }
-
-    const selectedEnrollment = (enrollmentsQuery.data ?? []).find(
-      (item) => item.id === form.studentEnrollmentId,
-    );
-    if (!selectedEnrollment) {
-      setFormError("الرجاء اختيار قيد طالب صحيح.");
-      return false;
-    }
-    if (selectedEnrollment.academicYearId !== selectedAssessment.examPeriod.academicYearId) {
-      setFormError("قيد الطالب لا ينتمي لنفس السنة الدراسية للاختبار.");
-      return false;
-    }
-
-    if (!selectedEnrollment.sectionId) {
-      setFormError("قيد الطالب غير موزع على شعبة بعد، ولا يمكن ربطه بهذا الاختبار.");
-      return false;
-    }
-
-    if (selectedEnrollment.sectionId !== selectedAssessment.sectionId) {
-      setFormError("قيد الطالب لا يطابق شعبة الاختبار.");
       return false;
     }
 
@@ -456,19 +426,20 @@ export function StudentExamScoresWorkspace() {
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[260px] max-w-lg">
+        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+          <div className="min-w-0">
             <SearchField
-              containerClassName="flex-1"
+              containerClassName="min-w-0"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
               placeholder="ابحث..."
             />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center justify-end gap-2">
             <FilterTriggerButton
               count={activeFiltersCount}
               onClick={() => setIsFilterOpen((prev) => !prev)}
+              className="h-11 w-11 justify-center px-0 sm:w-auto sm:px-4 sm:justify-start [&>span:nth-child(2)]:hidden sm:[&>span:nth-child(2)]:inline [&>span:nth-child(3)]:hidden sm:[&>span:nth-child(3)]:inline"
             />
           </div>
         </div>
@@ -718,18 +689,19 @@ export function StudentExamScoresWorkspace() {
         showFooter={false}
       >
         <form className="space-y-3" onSubmit={handleSubmit}>
-          <select
-            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-            value={form.examPeriodId}
-            onChange={(event) =>
-              setForm((prev) => ({
-                ...prev,
-                examPeriodId: event.target.value,
-                examAssessmentId: "",
-                studentEnrollmentId: "",
-              }))
-            }
-          >
+            <select
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              value={form.examPeriodId}
+              onChange={(event) => {
+                setForm((prev) => ({
+                  ...prev,
+                  examPeriodId: event.target.value,
+                  examAssessmentId: "",
+                  studentEnrollmentId: "",
+                }));
+                setSelectedEnrollmentOption(null);
+              }}
+            >
             <option value="">اختر الفترة *</option>
             {(examPeriodsQuery.data ?? []).map((item) => (
               <option key={item.id} value={item.id}>
@@ -738,17 +710,18 @@ export function StudentExamScoresWorkspace() {
             ))}
           </select>
 
-          <select
-            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-            value={form.examAssessmentId}
-            onChange={(event) =>
-              setForm((prev) => ({
-                ...prev,
-                examAssessmentId: event.target.value,
-                studentEnrollmentId: "",
-              }))
-            }
-          >
+            <select
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              value={form.examAssessmentId}
+              onChange={(event) => {
+                setForm((prev) => ({
+                  ...prev,
+                  examAssessmentId: event.target.value,
+                  studentEnrollmentId: "",
+                }));
+                setSelectedEnrollmentOption(null);
+              }}
+            >
             <option value="">اختر التقييم *</option>
             {(assessmentsForFormQuery.data ?? []).map((item) => (
               <option key={item.id} value={item.id}>
@@ -757,29 +730,22 @@ export function StudentExamScoresWorkspace() {
             ))}
           </select>
 
-          <select
-            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+          <StudentEnrollmentPickerSheet
             value={form.studentEnrollmentId}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, studentEnrollmentId: event.target.value }))
-            }
-          >
-            <option value="">اختر الطالب *</option>
-            {formEnrollments.map((item) => (
-              <option
-                key={item.id}
-                value={item.id}
-                disabled={
-                  selectedAssessment
-                    ? !isExamEnrollmentSelectable(item, selectedAssessment)
-                    : false
-                }
-              >
-                {item.student.fullName} ({item.student.admissionNo ?? "بدون رقم طالب"}) -{" "}
-                {formatEnrollmentPlacementLabel(item)}
-              </option>
-            ))}
-          </select>
+            selectedOption={selectedEnrollmentOption}
+            onSelect={(option) => {
+              setSelectedEnrollmentOption(option);
+              setForm((prev) => ({ ...prev, studentEnrollmentId: option?.id ?? "" }));
+            }}
+            scope="exams-student-exam-scores"
+            variant="form"
+            academicYearId={selectedAssessment?.examPeriod.academicYearId}
+            sectionId={selectedAssessment?.sectionId ?? undefined}
+            placeholder="اختر الطالب *"
+            title="اختيار الطالب"
+            searchPlaceholder="ابحث بالاسم أو رقم الطالب"
+            allowEmptySelection={false}
+          />
 
           <div className="grid gap-3 md:grid-cols-2">
             <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">

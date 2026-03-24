@@ -36,10 +36,12 @@ import { useAcademicTermOptionsQuery } from "@/features/grade-aggregation/annual
 import { useSectionOptionsQuery } from "@/features/grade-aggregation/annual-grades/hooks/use-section-options-query";
 import { useStudentEnrollmentOptionsQuery } from "@/features/grade-aggregation/annual-grades/hooks/use-student-enrollment-options-query";
 import { useSubjectOptionsQuery } from "@/features/grade-aggregation/annual-grades/hooks/use-subject-options-query";
+import { StudentEnrollmentPickerSheet } from "@/components/ui/student-enrollment-picker-sheet";
+import { type StudentEnrollmentPickerOption } from "@/features/students/lib/student-enrollment-picker";
 import { translateGradingWorkflowStatus } from "@/lib/i18n/ar";
 import type { AnnualGradeListItem, GradingWorkflowStatus } from "@/lib/api/client";
 import { formatNameCodeLabel, formatSectionWithGradeLabel } from "@/lib/option-labels";
-import { formatStudentEnrollmentOptionLabel, formatStudentEnrollmentPlacementLabel } from "@/lib/student-enrollment-display";
+import { formatStudentEnrollmentPlacementLabel } from "@/lib/student-enrollment-display";
 
 type FormState = {
   academicYearId: string;
@@ -129,6 +131,27 @@ function toFormState(item: AnnualGradeListItem): FormState {
   };
 }
 
+function buildStudentEnrollmentPickerOption(
+  item: AnnualGradeListItem,
+): StudentEnrollmentPickerOption {
+  return {
+    id: item.studentEnrollmentId,
+    studentId: item.studentEnrollment.student.id,
+    title: item.studentEnrollment.student.fullName,
+    subtitle: item.studentEnrollment.student.admissionNo
+      ? `رقم الطالب ${item.studentEnrollment.student.admissionNo}`
+      : "بدون رقم طالب",
+    meta: formatStudentEnrollmentPlacementLabel({
+      academicYear: item.academicYear,
+      gradeLevel: item.studentEnrollment.gradeLevel,
+      section: item.studentEnrollment.section,
+    }),
+    groupLabel: item.studentEnrollment.section
+      ? formatSectionWithGradeLabel(item.studentEnrollment.section)
+      : formatNameCodeLabel(item.academicYear.name, item.academicYear.code),
+  };
+}
+
 export function AnnualGradesWorkspace() {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("annual-grades.create");
@@ -155,6 +178,8 @@ export function AnnualGradesWorkspace() {
   const [form, setForm] = React.useState<FormState>(DEFAULT_FORM);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
+  const [selectedFormEnrollmentOption, setSelectedFormEnrollmentOption] =
+    React.useState<StudentEnrollmentPickerOption | null>(null);
 
   const academicYearsQuery = useAcademicYearOptionsQuery();
   const academicTermsQuery = useAcademicTermOptionsQuery(
@@ -206,6 +231,7 @@ export function AnnualGradesWorkspace() {
     setEditingItem(null);
     setForm(DEFAULT_FORM);
     setFormError(null);
+    setSelectedFormEnrollmentOption(null);
   };
 
   const validateForm = (): boolean => {
@@ -399,15 +425,16 @@ export function AnnualGradesWorkspace() {
                 className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                 value={form.academicYearId}
                 disabled={editingId !== null}
-                onChange={(event) =>
+                onChange={(event) => {
                   setForm((prev) => ({
                     ...prev,
                     academicYearId: event.target.value,
                     studentEnrollmentId: "",
                     termTotals: {},
                     useTermTotals: false,
-                  }))
-                }
+                  }));
+                  setSelectedFormEnrollmentOption(null);
+                }}
               >
                 <option value="">السنة الدراسية *</option>
                 {(academicYearsQuery.data ?? []).map((item) => (
@@ -420,13 +447,14 @@ export function AnnualGradesWorkspace() {
                 className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                 value={form.sectionId}
                 disabled={editingId !== null}
-                onChange={(event) =>
+                onChange={(event) => {
                   setForm((prev) => ({
                     ...prev,
                     sectionId: event.target.value,
                     studentEnrollmentId: "",
-                  }))
-                }
+                  }));
+                  setSelectedFormEnrollmentOption(null);
+                }}
               >
                 <option value="">الشعبة *</option>
                 {(sectionsQuery.data ?? []).map((item) => (
@@ -456,24 +484,22 @@ export function AnnualGradesWorkspace() {
                   </option>
                 ))}
               </select>
-              <select
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              <StudentEnrollmentPickerSheet
+                scope="annual-grades"
+                variant="form"
                 value={form.studentEnrollmentId}
+                selectedOption={selectedFormEnrollmentOption}
+                academicYearId={form.academicYearId || undefined}
+                sectionId={form.sectionId || undefined}
                 disabled={editingId !== null}
-                onChange={(event) =>
+                onSelect={(option) => {
+                  setSelectedFormEnrollmentOption(option);
                   setForm((prev) => ({
                     ...prev,
-                    studentEnrollmentId: event.target.value,
-                  }))
-                }
-              >
-                <option value="">القيد *</option>
-                {(enrollmentsQuery.data ?? []).map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {formatStudentEnrollmentOptionLabel(item)}
-                  </option>
-                ))}
-              </select>
+                    studentEnrollmentId: option?.id ?? "",
+                  }));
+                }}
+              />
             </div>
 
             <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
@@ -867,6 +893,7 @@ export function AnnualGradesWorkspace() {
                     setEditingId(item.id);
                     setEditingItem(item);
                     setForm(toFormState(item));
+                    setSelectedFormEnrollmentOption(buildStudentEnrollmentPickerOption(item));
                     setFormError(null);
                     setActionSuccess(null);
                   }}

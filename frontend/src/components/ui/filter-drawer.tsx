@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +30,8 @@ export type FilterDrawerProps = {
   children: React.ReactNode;
   actionButtons?: React.ReactNode;
   className?: string;
+  overlayClassName?: string;
+  renderInPortal?: boolean;
 };
 
 export function FilterDrawer({
@@ -38,16 +41,26 @@ export function FilterDrawer({
   children,
   actionButtons,
   className,
+  overlayClassName,
+  renderInPortal = false,
 }: FilterDrawerProps) {
   const isDesktop = useMediaQuery(`(min-width: ${DESKTOP_BREAKPOINT}px)`);
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   if (!open) {
     return null;
   }
 
-  return (
+  const drawer = (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-4 backdrop-blur-[2px] md:items-center md:justify-end"
+      className={cn(
+        "fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-0 backdrop-blur-[2px] sm:p-4 md:items-center md:justify-end",
+        overlayClassName,
+      )}
       onClick={onClose}
       role="presentation"
     >
@@ -56,7 +69,7 @@ export function FilterDrawer({
           "relative w-full overflow-hidden border border-[color:var(--app-accent-strong)] bg-background/95 shadow-2xl shadow-black/15 backdrop-blur-xl",
           isDesktop
             ? "h-[min(760px,calc(100vh-2rem))] max-w-[460px] rounded-[28px]"
-            : "max-h-[85vh] max-w-md rounded-[28px]",
+            : "h-[88dvh] max-h-[88dvh] rounded-t-[30px] rounded-b-none",
           className,
         )}
         role="dialog"
@@ -94,8 +107,8 @@ export function FilterDrawer({
         </div>
         <div
           className={cn(
-            "overflow-y-auto px-5 py-4",
-            isDesktop ? "h-[calc(100%-148px)]" : "max-h-[calc(85vh-132px)]",
+            "overflow-y-auto px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]",
+            isDesktop ? "h-[calc(100%-148px)]" : "max-h-[calc(88dvh-132px)]",
           )}
         >
           {children}
@@ -110,4 +123,14 @@ export function FilterDrawer({
       </div>
     </div>
   );
+
+  if (renderInPortal) {
+    if (!isMounted) {
+      return null;
+    }
+
+    return createPortal(drawer, document.body);
+  }
+
+  return drawer;
 }

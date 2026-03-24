@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
+import { StudentPickerSheet } from "@/components/ui/student-picker-sheet";
 import {
   Card,
   CardContent,
@@ -27,7 +28,6 @@ import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
-import { useStudentOptionsQuery } from "@/features/student-books/hooks/use-student-options-query";
 import { useTalentOptionsQuery } from "@/features/employee-talents/hooks/use-talent-options-query";
 import {
   useCreateStudentTalentMutation,
@@ -35,6 +35,7 @@ import {
   useUpdateStudentTalentMutation,
 } from "@/features/student-talents/hooks/use-student-talents-mutations";
 import { useStudentTalentsQuery } from "@/features/student-talents/hooks/use-student-talents-query";
+import type { StudentPickerOption } from "@/features/students/lib/student-picker";
 import type { StudentTalentListItem } from "@/lib/api/client";
 
 type StudentTalentFormState = {
@@ -64,6 +65,20 @@ function toFormState(mapping: StudentTalentListItem): StudentTalentFormState {
     talentId: mapping.talentId,
     notes: mapping.notes ?? "",
     isActive: mapping.isActive,
+  };
+}
+
+function buildStudentPickerOptionFromMapping(
+  mapping: Pick<StudentTalentListItem, "student">,
+): StudentPickerOption {
+  return {
+    id: mapping.student.id,
+    title: mapping.student.fullName,
+    subtitle: mapping.student.admissionNo
+      ? `رقم الطالب ${mapping.student.admissionNo}`
+      : "بدون رقم طالب",
+    meta: null,
+    groupLabel: "الطلاب",
   };
 }
 
@@ -98,6 +113,12 @@ export function StudentTalentsWorkspace() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<StudentTalentFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [selectedFormStudent, setSelectedFormStudent] =
+    React.useState<StudentPickerOption | null>(null);
+  const [selectedStudentFilterOption, setSelectedStudentFilterOption] =
+    React.useState<StudentPickerOption | null>(null);
+  const [filterDraftStudentOption, setFilterDraftStudentOption] =
+    React.useState<StudentPickerOption | null>(null);
 
   const mappingsQuery = useStudentTalentsQuery({
     page,
@@ -108,7 +129,6 @@ export function StudentTalentsWorkspace() {
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
   });
 
-  const studentsQuery = useStudentOptionsQuery();
   const talentsQuery = useTalentOptionsQuery();
 
   const createMutation = useCreateStudentTalentMutation();
@@ -138,6 +158,7 @@ export function StudentTalentsWorkspace() {
       setEditingMappingId(null);
       setFormState(DEFAULT_FORM_STATE);
       setFormError(null);
+      setSelectedFormStudent(null);
       setIsFormOpen(false);
     }
   }, [editingMappingId, isEditing, mappings]);
@@ -157,12 +178,14 @@ export function StudentTalentsWorkspace() {
       talent: talentFilter,
       active: activeFilter,
     });
-  }, [activeFilter, isFilterOpen, studentFilter, talentFilter]);
+    setFilterDraftStudentOption(selectedStudentFilterOption);
+  }, [activeFilter, isFilterOpen, selectedStudentFilterOption, studentFilter, talentFilter]);
 
   const resetForm = () => {
     setEditingMappingId(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
+    setSelectedFormStudent(null);
     setIsFormOpen(false);
   };
 
@@ -174,6 +197,7 @@ export function StudentTalentsWorkspace() {
     setFormError(null);
     setEditingMappingId(null);
     setFormState(DEFAULT_FORM_STATE);
+    setSelectedFormStudent(null);
     setIsFormOpen(true);
   };
 
@@ -252,6 +276,7 @@ export function StudentTalentsWorkspace() {
     setFormError(null);
     setEditingMappingId(mapping.id);
     setFormState(toFormState(mapping));
+    setSelectedFormStudent(buildStudentPickerOptionFromMapping(mapping));
     setIsFormOpen(true);
   };
 
@@ -286,6 +311,8 @@ export function StudentTalentsWorkspace() {
     setStudentFilter("all");
     setTalentFilter("all");
     setActiveFilter("all");
+    setSelectedStudentFilterOption(null);
+    setFilterDraftStudentOption(null);
     setIsFilterOpen(false);
   };
 
@@ -294,6 +321,7 @@ export function StudentTalentsWorkspace() {
     setStudentFilter(filterDraft.student);
     setTalentFilter(filterDraft.talent);
     setActiveFilter(filterDraft.active);
+    setSelectedStudentFilterOption(filterDraftStudentOption);
     setIsFilterOpen(false);
   };
 
@@ -311,7 +339,7 @@ export function StudentTalentsWorkspace() {
     <>
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[260px] max-w-lg">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
             <SearchField
               containerClassName="flex-1"
               value={searchInput}
@@ -349,19 +377,17 @@ export function StudentTalentsWorkspace() {
           }
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
+            <StudentPickerSheet
+              scope="student-talents"
+              variant="filter"
               value={filterDraft.student}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, student: event.target.value }))
-              }
-            >
-              <option value="all">كل الطلاب</option>
-              {(studentsQuery.data ?? []).map((student) => (
-                <option key={student.id} value={student.id}>
-                  {student.fullName} ({student.admissionNo ?? "بدون رقم"})
-                </option>
-              ))}
-            </SelectField>
+              selectedOption={filterDraftStudentOption}
+              onSelect={(option) => {
+                setFilterDraft((prev) => ({ ...prev, student: option?.id ?? "all" }));
+                setFilterDraftStudentOption(option);
+              }}
+              disabled={!canReadStudents}
+            />
 
             <SelectField
               value={filterDraft.talent}
@@ -551,22 +577,18 @@ export function StudentTalentsWorkspace() {
           <form className="space-y-3" onSubmit={handleSubmitForm}>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">الطالب *</label>
-              <select
-                data-testid="student-talent-form-student"
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <StudentPickerSheet
+                triggerTestId="student-talent-form-student"
+                scope="student-talents"
+                variant="form"
                 value={formState.studentId}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, studentId: event.target.value }))
-                }
+                selectedOption={selectedFormStudent}
+                onSelect={(option) => {
+                  setSelectedFormStudent(option);
+                  setFormState((prev) => ({ ...prev, studentId: option?.id ?? "" }));
+                }}
                 disabled={!canReadStudents}
-              >
-                <option value="">اختر الطالب</option>
-                {(studentsQuery.data ?? []).map((student) => (
-                  <option key={student.id} value={student.id}>
-                    {student.fullName} ({student.admissionNo ?? "بدون رقم"})
-                  </option>
-                ))}
-              </select>
+              />
             </div>
 
             <div className="space-y-1.5">

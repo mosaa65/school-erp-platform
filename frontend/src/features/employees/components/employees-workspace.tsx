@@ -14,6 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PhoneContactInput } from "@/components/ui/phone-contact-input";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
@@ -904,18 +905,19 @@ export function EmployeesWorkspace() {
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[260px] max-w-lg">
+        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+          <div className="flex min-w-0 items-center gap-2">
             <SearchField
-              containerClassName="flex-1"
+              containerClassName="min-w-0"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="??? ?????? ?? ????? ???????..."
+              placeholder="ابحث عن موظف أو رقم وظيفي..."
             />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center justify-end">
             <FilterTriggerButton
               count={activeFiltersCount}
+              className="px-3 sm:px-4 [&>span:nth-child(2)]:hidden [&>span:nth-child(3)]:hidden sm:[&>span:nth-child(2)]:inline-flex sm:[&>span:nth-child(3)]:inline-flex"
               onClick={() => setIsFilterOpen((prev) => !prev)}
             />
           </div>
@@ -924,7 +926,9 @@ export function EmployeesWorkspace() {
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
-          title="????? ????????"
+          title="فلترة الموظفين"
+          renderInPortal
+          overlayClassName="z-[70]"
           actionButtons={
             <div className="flex w-full gap-2">
               <Button
@@ -934,10 +938,10 @@ export function EmployeesWorkspace() {
                 className="flex-1 gap-1.5"
               >
                 <Trash2 className="h-4 w-4" />
-                ???
+                مسح
               </Button>
               <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                ?????
+                تطبيق
               </Button>
             </div>
           }
@@ -948,7 +952,7 @@ export function EmployeesWorkspace() {
               onChange={(event) => setFilterDraft((prev) => ({ ...prev, gender: event.target.value }))}
               disabled={!canReadGenders || genderOptionsQuery.isLoading}
             >
-              <option value="all">?? ???????</option>
+              <option value="all">كل الجنسيات</option>
               {genderOptions.map((option) => {
                 const translated =
                   option.code && isEmployeeGenderCode(option.code)
@@ -975,7 +979,7 @@ export function EmployeesWorkspace() {
                 }))
               }
             >
-              <option value="all">?? ???????</option>
+              <option value="all">كل أنواع التوظيف</option>
               <option value="PERMANENT">
                 {translateEmploymentType("PERMANENT")}
               </option>
@@ -992,7 +996,7 @@ export function EmployeesWorkspace() {
               onChange={(event) => setFilterDraft((prev) => ({ ...prev, idType: event.target.value }))}
               disabled={!canReadIdTypes || idTypeOptionsQuery.isLoading}
             >
-              <option value="all">?? ????? ??????</option>
+              <option value="all">كل أنواع الهوية</option>
               {idTypeOptions.map((idType) => (
                 <option key={idType.id} value={idType.id}>
                   {idType.nameAr}
@@ -1005,7 +1009,7 @@ export function EmployeesWorkspace() {
               onChange={(event) => setFilterDraft((prev) => ({ ...prev, locality: event.target.value }))}
               disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
             >
-              <option value="all">?? ???????</option>
+              <option value="all">كل المواقع</option>
               {localityOptions.map((locality) => (
                 <option key={locality.id} value={locality.id}>
                   {formatLocalityHierarchyLabel(locality, geographyMaps)}
@@ -1020,7 +1024,7 @@ export function EmployeesWorkspace() {
               }
               disabled={!canReadQualifications || qualificationOptionsQuery.isLoading}
             >
-              <option value="all">?? ????????</option>
+              <option value="all">كل المؤهلات</option>
               {qualificationOptions.map((option) => (
                 <option key={option.id} value={option.id}>
                   {option.nameAr ?? option.name ?? option.code ?? String(option.id)}
@@ -1033,7 +1037,7 @@ export function EmployeesWorkspace() {
               onChange={(event) => setFilterDraft((prev) => ({ ...prev, jobRole: event.target.value }))}
               disabled={!canReadJobRoles || jobRoleOptionsQuery.isLoading}
             >
-              <option value="all">?? ????????</option>
+              <option value="all">كل المسميات الوظيفية</option>
               {jobRoleOptions.map((option) => (
                 <option key={option.id} value={option.id}>
                   {option.nameAr ?? option.name ?? option.code ?? String(option.id)}
@@ -1050,9 +1054,9 @@ export function EmployeesWorkspace() {
                 }))
               }
             >
-              <option value="all">?? ???????</option>
-              <option value="active">??? ???</option>
-              <option value="inactive">??? ??? ???</option>
+              <option value="all">كل الحالات</option>
+              <option value="active">نشط فقط</option>
+              <option value="inactive">غير نشط فقط</option>
             </SelectField>
 
             <SelectField
@@ -1064,10 +1068,10 @@ export function EmployeesWorkspace() {
                 }))
               }
             >
-              <option value="all">?? ???????? ?????????</option>
-              <option value="READY">???? ????????</option>
-              <option value="PARTIAL">?????? ?????</option>
-              <option value="NOT_READY">??? ????</option>
+              <option value="all">كل حالات الجاهزية التشغيلية</option>
+              <option value="READY">جاهز بالكامل</option>
+              <option value="PARTIAL">جاهز جزئيًا</option>
+              <option value="NOT_READY">غير جاهز</option>
             </SelectField>
           </div>
         </FilterDrawer>
@@ -1314,31 +1318,34 @@ export function EmployeesWorkspace() {
 
       <Fab
         icon={<Plus className="h-4 w-4" />}
-        label="?????"
-        ariaLabel="????? ????"
+        label="إضافة"
+        ariaLabel="إضافة موظف"
         onClick={handleStartCreate}
         disabled={!canCreate}
       />
 
       <BottomSheetForm
         open={isFormOpen}
-        title={isEditing ? "????? ????" : "????? ????"}
+        title={isEditing ? "تعديل موظف" : "إضافة موظف"}
         onClose={resetForm}
         onSubmit={() => handleSubmitForm()}
         isSubmitting={isFormSubmitting}
-        submitLabel={isEditing ? "??? ?????????" : "????? ????"}
+        submitLabel={isEditing ? "تحديث الموظف" : "إضافة موظف"}
         showFooter={false}
+        renderInPortal
+        overlayClassName="z-[70]"
+        panelClassName="md:max-w-[760px]"
       >
         {!canCreate && !isEditing ? (
           <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            ?? ???? ???????? ????????: <code>employees.create</code>.
+            لا تملك الصلاحية المطلوبة: <code>employees.create</code>.
           </div>
         ) : (
-<form className="space-y-3" onSubmit={handleSubmitForm}>
+          <form className="space-y-3" onSubmit={handleSubmitForm}>
               <p className="text-sm text-muted-foreground">
                 {isEditing
-                  ? "????? ???????? ???????? ????????? ??????."
-                  : "????? ??? ???? ???? ??? ???? ??????? ???????."}
+                  ? "عدّل بيانات الموظف الحالية."
+                  : "أدخل بيانات الموظف الأساسية لإنشاء سجل جديد."}
               </p>
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
@@ -1446,30 +1453,36 @@ export function EmployeesWorkspace() {
                   <label className="text-xs font-medium text-muted-foreground">
                     الهاتف الأساسي
                   </label>
-                  <Input
+                  <PhoneContactInput
                     value={formState.phonePrimary}
-                    onChange={(event) =>
+                    onValueChange={(value) =>
                       setFormState((prev) => ({
                         ...prev,
-                        phonePrimary: event.target.value,
+                        phonePrimary: value,
                       }))
                     }
                     placeholder="+967777111222"
+                    autoComplete="tel"
+                    inputMode="tel"
+                    buttonTestId="employee-phone-primary-contact-picker"
                   />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-muted-foreground">
                     الهاتف الاحتياطي
                   </label>
-                  <Input
+                  <PhoneContactInput
                     value={formState.phoneSecondary}
-                    onChange={(event) =>
+                    onValueChange={(value) =>
                       setFormState((prev) => ({
                         ...prev,
-                        phoneSecondary: event.target.value,
+                        phoneSecondary: value,
                       }))
                     }
                     placeholder="+967733444555"
+                    autoComplete="tel"
+                    inputMode="tel"
+                    buttonTestId="employee-phone-secondary-contact-picker"
                   />
                 </div>
               </div>

@@ -2,13 +2,23 @@
 import { AUTH_COOKIE_NAME, AUTH_STORAGE_KEY } from "@/lib/auth/constants";
 
 const DEFAULT_TOKEN_MAX_AGE_SECONDS = 60 * 60 * 24;
+const DEFAULT_EXPIRES_IN = "1d";
 
 function isBrowser(): boolean {
   return typeof window !== "undefined";
 }
 
-function parseExpiresInToSeconds(expiresIn: string): number {
-  const value = expiresIn.trim().toLowerCase();
+function normalizeExpiresIn(expiresIn: unknown): string {
+  if (typeof expiresIn !== "string") {
+    return DEFAULT_EXPIRES_IN;
+  }
+
+  const value = expiresIn.trim();
+  return value.length > 0 ? value : DEFAULT_EXPIRES_IN;
+}
+
+function parseExpiresInToSeconds(expiresIn: string | undefined | null): number {
+  const value = normalizeExpiresIn(expiresIn).toLowerCase();
 
   if (/^\d+$/.test(value)) {
     return Number(value);
@@ -36,7 +46,7 @@ function parseExpiresInToSeconds(expiresIn: string): number {
   }
 }
 
-function setAuthCookie(accessToken: string, expiresIn: string): void {
+function setAuthCookie(accessToken: string, expiresIn?: string | null): void {
   if (!isBrowser()) {
     return;
   }
@@ -98,7 +108,10 @@ export function loadAuthSession(): AuthSession | null {
       return null;
     }
 
-    return parsed;
+    return {
+      ...(parsed as AuthSession),
+      expiresIn: normalizeExpiresIn((parsed as Partial<AuthSession>).expiresIn),
+    };
   } catch {
     clearAuthCookie();
     return null;
@@ -110,8 +123,13 @@ export function saveAuthSession(session: AuthSession): void {
     return;
   }
 
-  window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
-  setAuthCookie(session.accessToken, session.expiresIn);
+  const normalizedSession: AuthSession = {
+    ...session,
+    expiresIn: normalizeExpiresIn(session.expiresIn),
+  };
+
+  window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(normalizedSession));
+  setAuthCookie(normalizedSession.accessToken, normalizedSession.expiresIn);
 }
 
 export function clearAuthSession(): void {

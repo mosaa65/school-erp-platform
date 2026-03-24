@@ -26,6 +26,7 @@ import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useSectionOptionsQuery } from "@/features/grade-aggregation/monthly-grades/hooks/use-section-options-query";
 import { useSubjectOptionsQuery } from "@/features/grade-aggregation/monthly-grades/hooks/use-subject-options-query";
 import { useStudentEnrollmentOptionsQuery } from "@/features/grade-aggregation/monthly-grades/hooks/use-student-enrollment-options-query";
+import { StudentEnrollmentPickerSheet } from "@/components/ui/student-enrollment-picker-sheet";
 import {
   useCalculateSemesterGradesMutation,
   useCreateSemesterGradeMutation,
@@ -40,7 +41,8 @@ import { useSemesterGradesQuery } from "@/features/grade-aggregation/semester-gr
 import type { GradingWorkflowStatus, SemesterGradeListItem } from "@/lib/api/client";
 import { translateGradingWorkflowStatus } from "@/lib/i18n/ar";
 import { formatNameCodeLabel, formatSectionWithGradeLabel } from "@/lib/option-labels";
-import { formatStudentEnrollmentOptionLabel, formatStudentEnrollmentPlacementLabel } from "@/lib/student-enrollment-display";
+import { formatStudentEnrollmentPlacementLabel } from "@/lib/student-enrollment-display";
+import { type StudentEnrollmentPickerOption } from "@/features/students/lib/student-enrollment-picker";
 
 type FormState = {
   academicTermId: string;
@@ -108,6 +110,27 @@ function toFormState(item: SemesterGradeListItem): FormState {
   };
 }
 
+function buildStudentEnrollmentPickerOption(
+  item: SemesterGradeListItem,
+): StudentEnrollmentPickerOption {
+  return {
+    id: item.studentEnrollmentId,
+    studentId: item.studentEnrollment.student.id,
+    title: item.studentEnrollment.student.fullName,
+    subtitle: item.studentEnrollment.student.admissionNo
+      ? `رقم الطالب ${item.studentEnrollment.student.admissionNo}`
+      : "بدون رقم طالب",
+    meta: formatStudentEnrollmentPlacementLabel({
+      academicYear: item.academicYear,
+      gradeLevel: item.studentEnrollment.gradeLevel,
+      section: item.studentEnrollment.section,
+    }),
+    groupLabel: item.studentEnrollment.section
+      ? formatSectionWithGradeLabel(item.studentEnrollment.section)
+      : formatNameCodeLabel(item.academicYear.name, item.academicYear.code),
+  };
+}
+
 export function SemesterGradesWorkspace() {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("semester-grades.create");
@@ -135,6 +158,8 @@ export function SemesterGradesWorkspace() {
   const [calcInfo, setCalcInfo] = React.useState<string | null>(null);
   const [fillInfo, setFillInfo] = React.useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
+  const [selectedFormEnrollmentOption, setSelectedFormEnrollmentOption] =
+    React.useState<StudentEnrollmentPickerOption | null>(null);
 
   const termsQuery = useAcademicTermOptionsQuery();
   const sectionsQuery = useSectionOptionsQuery();
@@ -183,6 +208,7 @@ export function SemesterGradesWorkspace() {
     setEditingItem(null);
     setForm(DEFAULT_FORM);
     setFormError(null);
+    setSelectedFormEnrollmentOption(null);
   };
 
   const validateForm = (): boolean => {
@@ -320,11 +346,11 @@ export function SemesterGradesWorkspace() {
             createMutation.mutate({ academicTermId: form.academicTermId, subjectId: form.subjectId, studentEnrollmentId: form.studentEnrollmentId, semesterWorkTotal, finalExamScore, status: form.status, notes: toOptionalString(form.notes), isActive: form.isActive }, { onSuccess: () => { resetForm(); setActionSuccess("تم إنشاء الدرجة الفصلية بنجاح."); } });
           }}>
             <div className="grid gap-2 md:grid-cols-2">
-              <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.academicTermId} disabled={editingId !== null} onChange={(event) => setForm((prev) => ({ ...prev, academicTermId: event.target.value, studentEnrollmentId: "" }))}>
+              <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.academicTermId} disabled={editingId !== null} onChange={(event) => { setForm((prev) => ({ ...prev, academicTermId: event.target.value, studentEnrollmentId: "" })); setSelectedFormEnrollmentOption(null); }}>
                 <option value="">الفصل *</option>
                 {(termsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
               </select>
-              <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.sectionId} disabled={editingId !== null} onChange={(event) => setForm((prev) => ({ ...prev, sectionId: event.target.value, studentEnrollmentId: "" }))}>
+              <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.sectionId} disabled={editingId !== null} onChange={(event) => { setForm((prev) => ({ ...prev, sectionId: event.target.value, studentEnrollmentId: "" })); setSelectedFormEnrollmentOption(null); }}>
                 <option value="">الشعبة *</option>
                 {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatSectionWithGradeLabel(item)}</option>)}
               </select>
@@ -334,10 +360,19 @@ export function SemesterGradesWorkspace() {
                 <option value="">المادة *</option>
                 {(subjectsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
               </select>
-              <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.studentEnrollmentId} disabled={editingId !== null} onChange={(event) => setForm((prev) => ({ ...prev, studentEnrollmentId: event.target.value }))}>
-                <option value="">القيد *</option>
-                {(enrollmentsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatStudentEnrollmentOptionLabel(item)}</option>)}
-              </select>
+              <StudentEnrollmentPickerSheet
+                scope="semester-grades"
+                variant="form"
+                value={form.studentEnrollmentId}
+                selectedOption={selectedFormEnrollmentOption}
+                academicYearId={selectedTermForForm?.academicYearId}
+                sectionId={form.sectionId || undefined}
+                disabled={editingId !== null}
+                onSelect={(option) => {
+                  setSelectedFormEnrollmentOption(option);
+                  setForm((prev) => ({ ...prev, studentEnrollmentId: option?.id ?? "" }));
+                }}
+              />
             </div>
             <div className="grid gap-2 md:grid-cols-2">
               <Input type="number" min={0} step={0.01} value={form.semesterWorkTotal} onChange={(event) => setForm((prev) => ({ ...prev, semesterWorkTotal: event.target.value }))} placeholder="مجموع أعمال الفصل" />
@@ -423,7 +458,7 @@ export function SemesterGradesWorkspace() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { if (!item.isLocked && canUpdate) { setEditingId(item.id); setEditingItem(item); setForm(toFormState(item)); setFormError(null); setActionSuccess(null); } }} disabled={!canUpdate || item.isLocked || updateMutation.isPending}>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { if (!item.isLocked && canUpdate) { setEditingId(item.id); setEditingItem(item); setForm(toFormState(item)); setSelectedFormEnrollmentOption(buildStudentEnrollmentPickerOption(item)); setFormError(null); setActionSuccess(null); } }} disabled={!canUpdate || item.isLocked || updateMutation.isPending}>
                   <PencilLine className="h-3.5 w-3.5" />تعديل
                 </Button>
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { if (item.isLocked) { if (canUnlock) unlockMutation.mutate(item.id, { onSuccess: () => setActionSuccess("تم إلغاء قفل الدرجة الفصلية بنجاح.") }); } else if (canLock) { lockMutation.mutate(item.id, { onSuccess: () => setActionSuccess("تم قفل الدرجة الفصلية بنجاح.") }); } }} disabled={(item.isLocked && !canUnlock) || (!item.isLocked && !canLock) || lockMutation.isPending || unlockMutation.isPending}>

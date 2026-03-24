@@ -634,7 +634,7 @@ export function SectionClassroomAssignmentsWorkspace({
         ) : null}
 
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex min-w-[240px] max-w-lg flex-1 flex-wrap items-center gap-2">
+          <div className="flex min-w-0 sm:min-w-[240px] max-w-lg flex-1 flex-wrap items-center gap-2">
             <SearchField
               containerClassName="flex-1"
               value={searchInput}

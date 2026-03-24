@@ -7,6 +7,7 @@ import {
   PencilLine,
   Plus,
   RefreshCw,
+  SlidersHorizontal,
   Sparkles,
   Trash2,
 } from "lucide-react";
@@ -24,7 +25,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useEmployeeOptionsQuery } from "@/features/employee-talents/hooks/use-employee-options-query";
@@ -304,20 +304,31 @@ export function EmployeeTalentsWorkspace() {
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[260px] max-w-lg">
+        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+          <div className="flex min-w-0 items-center gap-2">
             <SearchField
-              containerClassName="flex-1"
+              containerClassName="min-w-0"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
               placeholder="بحث بالموظف أو الموهبة..."
             />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterTriggerButton
-              count={activeFiltersCount}
+          <div className="flex items-center justify-end">
+            <Button
+              type="button"
+              variant="outline"
               onClick={() => setIsFilterOpen((prev) => !prev)}
-            />
+              className="h-10 rounded-2xl px-3 sm:px-4"
+              aria-label="فتح الفلاتر"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              <span className="hidden sm:inline">فلترة</span>
+              {activeFiltersCount > 0 ? (
+                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground">
+                  {activeFiltersCount}
+                </span>
+              ) : null}
+            </Button>
           </div>
         </div>
 
@@ -325,6 +336,8 @@ export function EmployeeTalentsWorkspace() {
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
           title="فلاتر المواهب"
+          renderInPortal
+          overlayClassName="z-[70]"
           actionButtons={
             <div className="flex w-full gap-2">
               <Button
@@ -534,6 +547,9 @@ export function EmployeeTalentsWorkspace() {
         isSubmitting={isFormSubmitting}
         submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء ربط"}
         showFooter={false}
+        renderInPortal
+        overlayClassName="z-[70]"
+        panelClassName="md:max-w-[720px]"
       >
         {!canCreate && !isEditing ? (
           <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">

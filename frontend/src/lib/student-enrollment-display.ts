@@ -15,7 +15,7 @@ type SectionLike = {
 type AcademicYearLike = {
   name: string;
   code: string;
-};
+} | null | undefined;
 
 type StudentLike = {
   fullName: string;
@@ -23,7 +23,7 @@ type StudentLike = {
 } | null | undefined;
 
 export type StudentEnrollmentPlacementLike = {
-  academicYear: AcademicYearLike;
+  academicYear?: AcademicYearLike;
   gradeLevel?: GradeLevelLike;
   section?: SectionLike;
   student?: StudentLike;
@@ -32,19 +32,26 @@ export type StudentEnrollmentPlacementLike = {
 export function formatStudentEnrollmentPlacementLabel(
   item: StudentEnrollmentPlacementLike,
 ): string {
-  const academicYearLabel = formatNameCodeLabel(item.academicYear.name, item.academicYear.code);
+  const academicYearLabel = item.academicYear
+    ? formatNameCodeLabel(item.academicYear.name, item.academicYear.code)
+    : null;
 
   if (item.section) {
-    return `${academicYearLabel} / ${formatSectionWithGradeLabel(item.section)}`;
+    const sectionLabel = formatSectionWithGradeLabel(item.section);
+    return academicYearLabel ? `${academicYearLabel} / ${sectionLabel}` : sectionLabel;
   }
 
   const gradeLevelLabel = item.gradeLevel
     ? formatNameCodeLabel(item.gradeLevel.name, item.gradeLevel.code)
     : null;
 
-  return gradeLevelLabel
-    ? `${academicYearLabel} / ${gradeLevelLabel} / بانتظار التوزيع`
-    : `${academicYearLabel} / بانتظار التوزيع`;
+  if (gradeLevelLabel) {
+    return academicYearLabel
+      ? `${academicYearLabel} / ${gradeLevelLabel} / بانتظار التوزيع`
+      : `${gradeLevelLabel} / بانتظار التوزيع`;
+  }
+
+  return academicYearLabel ?? "بانتظار التوزيع";
 }
 
 export function formatStudentEnrollmentOptionLabel(
@@ -60,10 +67,14 @@ export function sortStudentEnrollmentOptions<T extends StudentEnrollmentPlacemen
   items: T[],
 ): T[] {
   return [...items].sort((left, right) => {
-    const academicYearCompare = left.academicYear.code.localeCompare(right.academicYear.code, "ar", {
-      numeric: true,
-      sensitivity: "base",
-    });
+    const academicYearCompare = (left.academicYear?.code ?? "").localeCompare(
+      right.academicYear?.code ?? "",
+      "ar",
+      {
+        numeric: true,
+        sensitivity: "base",
+      },
+    );
     if (academicYearCompare !== 0) {
       return academicYearCompare;
     }

@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
+import { StudentPickerSheet } from "@/components/ui/student-picker-sheet";
 import {
   Card,
   CardContent,
@@ -33,8 +34,8 @@ import {
   useUpdateStudentAttendanceMutation,
 } from "@/features/student-attendance/hooks/use-student-attendance-mutations";
 import { useStudentAttendanceQuery } from "@/features/student-attendance/hooks/use-student-attendance-query";
-import { useStudentOptionsQuery } from "@/features/student-attendance/hooks/use-student-options-query";
 import { useStudentEnrollmentOptionsQuery } from "@/features/student-attendance/hooks/use-student-enrollment-options-query";
+import type { StudentPickerOption } from "@/features/students/lib/student-picker";
 import type {
   StudentAttendanceListItem,
   StudentAttendanceStatus,
@@ -194,6 +195,20 @@ function toFormState(attendance: StudentAttendanceListItem): AttendanceFormState
   };
 }
 
+function buildStudentPickerOptionFromAttendance(
+  attendance: StudentAttendanceListItem,
+): StudentPickerOption {
+  return {
+    id: attendance.studentEnrollment.student.id,
+    title: attendance.studentEnrollment.student.fullName,
+    subtitle: attendance.studentEnrollment.student.admissionNo
+      ? `رقم الطالب ${attendance.studentEnrollment.student.admissionNo}`
+      : "بدون رقم طالب",
+    meta: formatEnrollmentPlacementLabel(attendance.studentEnrollment),
+    groupLabel: "الطالب المحدد",
+  };
+}
+
 export function StudentAttendanceWorkspace() {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("student-attendance.create");
@@ -238,6 +253,13 @@ export function StudentAttendanceWorkspace() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<AttendanceFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [selectedFilterStudentOption, setSelectedFilterStudentOption] =
+    React.useState<StudentPickerOption | null>(null);
+  const [filterDraftStudentOption, setFilterDraftStudentOption] =
+    React.useState<StudentPickerOption | null>(null);
+  const [selectedFormStudent, setSelectedFormStudent] = React.useState<StudentPickerOption | null>(
+    null,
+  );
 
   const attendanceQuery = useStudentAttendanceQuery({
     page,
@@ -251,7 +273,6 @@ export function StudentAttendanceWorkspace() {
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
   });
 
-  const studentsQuery = useStudentOptionsQuery();
   const enrollmentsQuery = useStudentEnrollmentOptionsQuery();
 
   const createMutation = useCreateStudentAttendanceMutation();
@@ -277,6 +298,13 @@ export function StudentAttendanceWorkspace() {
     isFilterOpen,
     studentFilter,
   ]);
+  const formEnrollmentOptions = React.useMemo(() => {
+    const selectedStudentId = selectedFormStudent?.id;
+
+    return (enrollmentsQuery.data ?? []).filter((item) =>
+      selectedStudentId ? item.student.id === selectedStudentId : true,
+    );
+  }, [enrollmentsQuery.data, selectedFormStudent?.id]);
 
   const mutationError =
     (createMutation.error as Error | null)?.message ??
@@ -294,6 +322,7 @@ export function StudentAttendanceWorkspace() {
       setEditingAttendanceId(null);
       setFormState(DEFAULT_FORM_STATE);
       setFormError(null);
+      setSelectedFormStudent(null);
       setIsFormOpen(false);
     }
   }, [records, editingAttendanceId, isEditing]);
@@ -316,11 +345,13 @@ export function StudentAttendanceWorkspace() {
       toDate: toDateFilter,
       active: activeFilter,
     });
+    setFilterDraftStudentOption(selectedFilterStudentOption);
   }, [
     activeFilter,
     enrollmentFilter,
     fromDateFilter,
     isFilterOpen,
+    selectedFilterStudentOption,
     statusFilter,
     studentFilter,
     toDateFilter,
@@ -330,6 +361,7 @@ export function StudentAttendanceWorkspace() {
     setEditingAttendanceId(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
+    setSelectedFormStudent(null);
     setIsFormOpen(false);
   };
 
@@ -341,6 +373,7 @@ export function StudentAttendanceWorkspace() {
     setFormError(null);
     setEditingAttendanceId(null);
     setFormState(DEFAULT_FORM_STATE);
+    setSelectedFormStudent(null);
     setIsFormOpen(true);
   };
 
@@ -431,6 +464,7 @@ export function StudentAttendanceWorkspace() {
     setFormError(null);
     setEditingAttendanceId(attendance.id);
     setFormState(toFormState(attendance));
+    setSelectedFormStudent(buildStudentPickerOptionFromAttendance(attendance));
     setIsFormOpen(true);
   };
 
@@ -483,6 +517,8 @@ export function StudentAttendanceWorkspace() {
     setFromDateFilter("");
     setToDateFilter("");
     setActiveFilter("all");
+    setSelectedFilterStudentOption(null);
+    setFilterDraftStudentOption(null);
     setIsFilterOpen(false);
   };
 
@@ -494,6 +530,7 @@ export function StudentAttendanceWorkspace() {
     setFromDateFilter(filterDraft.fromDate);
     setToDateFilter(filterDraft.toDate);
     setActiveFilter(filterDraft.active);
+    setSelectedFilterStudentOption(filterDraftStudentOption);
     setIsFilterOpen(false);
   };
 
@@ -522,7 +559,7 @@ export function StudentAttendanceWorkspace() {
     <>
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[260px] max-w-lg">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
             <SearchField
               containerClassName="flex-1"
               value={searchInput}
@@ -560,25 +597,21 @@ export function StudentAttendanceWorkspace() {
           }
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
+            <StudentPickerSheet
+              scope="student-attendance"
+              variant="filter"
               value={filterDraft.student}
-              onChange={(event) => {
-                const value = event.target.value;
+              selectedOption={filterDraftStudentOption}
+              onSelect={(option) => {
                 setFilterDraft((prev) => ({
                   ...prev,
-                  student: value,
-                  enrollment: value === "all" ? prev.enrollment : "all",
+                  student: option?.id ?? "all",
+                  enrollment: option ? "all" : prev.enrollment,
                 }));
+                setFilterDraftStudentOption(option);
               }}
               disabled={!canReadStudents}
-            >
-              <option value="all">كل الطلاب</option>
-              {(studentsQuery.data ?? []).map((student) => (
-                <option key={student.id} value={student.id}>
-                  {student.admissionNo ?? student.fullName}
-                </option>
-              ))}
-            </SelectField>
+            />
 
             <SelectField
               value={filterDraft.enrollment}
@@ -822,27 +855,75 @@ export function StudentAttendanceWorkspace() {
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
             <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الطالب</label>
+              <StudentPickerSheet
+                scope="student-attendance"
+                variant="narrow"
+                value={selectedFormStudent?.id ?? ""}
+                selectedOption={selectedFormStudent}
+                onSelect={(option) => {
+                  const nextStudentId = option?.id;
+                  setSelectedFormStudent(option);
+                  setFormState((prev) => ({
+                    ...prev,
+                    studentEnrollmentId:
+                      nextStudentId &&
+                      (enrollmentsQuery.data ?? []).some(
+                        (item) =>
+                          item.id === prev.studentEnrollmentId && item.student.id === nextStudentId,
+                      )
+                        ? prev.studentEnrollmentId
+                        : "",
+                  }));
+                }}
+                disabled={!canReadStudents}
+              />
+            </div>
+
+            <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
                 القيد الطلابي *
               </label>
               <select
                 className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                 value={formState.studentEnrollmentId}
-                onChange={(event) =>
+                onChange={(event) => {
+                  const nextEnrollmentId = event.target.value;
+                  const selectedEnrollment = (enrollmentsQuery.data ?? []).find(
+                    (item) => item.id === nextEnrollmentId,
+                  );
+
                   setFormState((prev) => ({
                     ...prev,
-                    studentEnrollmentId: event.target.value,
-                  }))
-                }
+                    studentEnrollmentId: nextEnrollmentId,
+                  }));
+
+                  if (selectedEnrollment) {
+                    setSelectedFormStudent({
+                      id: selectedEnrollment.student.id,
+                      title: selectedEnrollment.student.fullName,
+                      subtitle: selectedEnrollment.student.admissionNo
+                        ? `رقم الطالب ${selectedEnrollment.student.admissionNo}`
+                        : "بدون رقم طالب",
+                      meta: formatEnrollmentPlacementLabel(selectedEnrollment),
+                      groupLabel: "الطالب المحدد",
+                    });
+                  }
+                }}
                 disabled={!canReadStudentEnrollments}
               >
                 <option value="">اختر القيد</option>
-                {(enrollmentsQuery.data ?? []).map((item) => (
+                {formEnrollmentOptions.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.displayLabel}
                   </option>
                 ))}
               </select>
+              {selectedFormStudent ? (
+                <p className="text-[11px] text-muted-foreground">
+                  تم تقليص القيود بحسب الطالب المحدد.
+                </p>
+              ) : null}
             </div>
 
             <div className="space-y-1.5">

@@ -425,18 +425,19 @@ export function EmployeeViolationsWorkspace() {
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[260px] max-w-lg">
+        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+          <div className="flex min-w-0 items-center gap-2">
             <SearchField
-              containerClassName="flex-1"
+              containerClassName="min-w-0"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="??? ??????? ?? ?? ????????..."
+              placeholder="ابحث عن الموظف أو نوع المخالفة..."
             />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center justify-end">
             <FilterTriggerButton
               count={activeFiltersCount}
+              className="px-3 sm:px-4 [&>span:nth-child(2)]:hidden [&>span:nth-child(3)]:hidden sm:[&>span:nth-child(2)]:inline-flex sm:[&>span:nth-child(3)]:inline-flex"
               onClick={() => setIsFilterOpen((prev) => !prev)}
             />
           </div>
@@ -445,7 +446,9 @@ export function EmployeeViolationsWorkspace() {
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
-          title="????? ?????????"
+          title="فلترة المخالفات"
+          renderInPortal
+          overlayClassName="z-[70]"
           actionButtons={
             <div className="flex w-full gap-2">
               <Button
@@ -455,10 +458,10 @@ export function EmployeeViolationsWorkspace() {
                 className="flex-1 gap-1.5"
               >
                 <Trash2 className="h-4 w-4" />
-                ???
+                مسح
               </Button>
               <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                ?????
+                تطبيق
               </Button>
             </div>
           }
@@ -470,7 +473,7 @@ export function EmployeeViolationsWorkspace() {
                 setFilterDraft((prev) => ({ ...prev, employee: event.target.value }))
               }
             >
-              <option value="all">?? ????????</option>
+              <option value="all">كل الموظفين</option>
               {(employeesQuery.data ?? []).map((employee) => (
                 <option key={employee.id} value={employee.id}>
                   {employee.jobNumber ?? employee.fullName}
@@ -484,7 +487,7 @@ export function EmployeeViolationsWorkspace() {
                 setFilterDraft((prev) => ({ ...prev, reporter: event.target.value }))
               }
             >
-              <option value="all">?? ???????????</option>
+              <option value="all">كل المبلغين</option>
               {(employeesQuery.data ?? []).map((employee) => (
                 <option key={employee.id} value={employee.id}>
                   {employee.jobNumber ?? employee.fullName}
@@ -501,7 +504,7 @@ export function EmployeeViolationsWorkspace() {
                 }))
               }
             >
-              <option value="all">?? ??????? ?????</option>
+              <option value="all">كل درجات المخالفة</option>
               {SEVERITY_OPTIONS.map((severity) => (
                 <option key={severity} value={severity}>
                   {translateViolationSeverity(severity)}
@@ -534,9 +537,9 @@ export function EmployeeViolationsWorkspace() {
                 }))
               }
             >
-              <option value="all">?? ???????</option>
-              <option value="active">?????? ???</option>
-              <option value="inactive">??? ?????? ???</option>
+              <option value="all">كل الحالات</option>
+              <option value="active">نشط فقط</option>
+              <option value="inactive">غير نشط فقط</option>
             </SelectField>
           </div>
           {filtersError ? (
@@ -549,18 +552,18 @@ export function EmployeeViolationsWorkspace() {
         <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
           <CardHeader className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>??????? ????????</CardTitle>
-              <Badge variant="secondary">????????: {pagination?.total ?? 0}</Badge>
+              <CardTitle>سجل المخالفات</CardTitle>
+              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
             <CardDescription>
-              ????? ??????? ???????? ??? ????? ???????? ???????.
+              عرض مخالفات الموظفين مع الفلترة حسب الموظف والمبلّغ ودرجة المخالفة والتاريخ.
             </CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-3">
             {violationsQuery.isPending ? (
               <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                ???? ????? ????????...
+                جارٍ تحميل المخالفات...
               </div>
             ) : null}
 
@@ -568,13 +571,13 @@ export function EmployeeViolationsWorkspace() {
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
                 {violationsQuery.error instanceof Error
                   ? violationsQuery.error.message
-                  : "????? ????? ????????."}
+                  : "تعذّر تحميل المخالفات."}
               </div>
             ) : null}
 
             {!violationsQuery.isPending && violations.length === 0 ? (
               <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                ?? ???? ????? ??????.
+                لا توجد مخالفات مطابقة.
               </div>
             ) : null}
 
@@ -594,16 +597,16 @@ export function EmployeeViolationsWorkspace() {
                   <div className="space-y-1">
                     <p className="font-medium">{violation.employee.fullName}</p>
                     <p className="text-xs text-muted-foreground">
-                      ???????: {formatDate(violation.violationDate)} | ?????:{" "}
+                      التاريخ: {formatDate(violation.violationDate)} | النوع:{" "}
                       {violation.violationAspect}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      ?????????: {violation.reportedBy?.fullName ?? "??? ????"}
+                      المبلّغ: {violation.reportedBy?.fullName ?? "غير محدد"}
                     </p>
                     <p className="text-xs text-muted-foreground">{violation.violationText}</p>
                     {violation.actionTaken ? (
                       <p className="text-xs text-muted-foreground">
-                        ???????: {violation.actionTaken}
+                        الإجراء المتخذ: {violation.actionTaken}
                       </p>
                     ) : null}
                   </div>
@@ -612,10 +615,10 @@ export function EmployeeViolationsWorkspace() {
                     <Badge variant="outline" className={severityBadgeClass(violation.severity)}>
                       {translateViolationSeverity(violation.severity)}
                     </Badge>
-                    {violation.hasWarning ? <Badge variant="secondary">?????</Badge> : null}
-                    {violation.hasMinutes ? <Badge variant="secondary">????</Badge> : null}
+                    {violation.hasWarning ? <Badge variant="secondary">يوجد إنذار</Badge> : null}
+                    {violation.hasMinutes ? <Badge variant="secondary">يوجد محضر</Badge> : null}
                     <Badge variant={violation.isActive ? "default" : "outline"}>
-                      {violation.isActive ? "???" : "??? ???"}
+                      {violation.isActive ? "نشط" : "غير نشط"}
                     </Badge>
                   </div>
                 </div>
@@ -629,7 +632,7 @@ export function EmployeeViolationsWorkspace() {
                     disabled={!canUpdate || updateMutation.isPending}
                   >
                     <PencilLine className="h-3.5 w-3.5" />
-                    ?????
+                    تعديل
                   </Button>
                   <Button
                     variant="destructive"
@@ -639,7 +642,7 @@ export function EmployeeViolationsWorkspace() {
                     disabled={!canDelete || deleteMutation.isPending}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                    ???
+                    حذف
                   </Button>
                 </div>
               </div>
@@ -647,7 +650,7 @@ export function EmployeeViolationsWorkspace() {
 
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
               <p className="text-xs text-muted-foreground">
-                ?????? {pagination?.page ?? 1} ?? {pagination?.totalPages ?? 1}
+                الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
               </p>
               <div className="flex items-center gap-2">
                 <Button
@@ -656,7 +659,7 @@ export function EmployeeViolationsWorkspace() {
                   onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
                   disabled={!pagination || pagination.page <= 1 || violationsQuery.isFetching}
                 >
-                  ??????
+                  السابق
                 </Button>
                 <Button
                   variant="outline"
@@ -672,7 +675,7 @@ export function EmployeeViolationsWorkspace() {
                     violationsQuery.isFetching
                   }
                 >
-                  ??????
+                  التالي
                 </Button>
                 <Button
                   variant="ghost"
@@ -684,7 +687,7 @@ export function EmployeeViolationsWorkspace() {
                   <RefreshCw
                     className={`h-4 w-4 ${violationsQuery.isFetching ? "animate-spin" : ""}`}
                   />
-                  ?????
+                  تحديث
                 </Button>
               </div>
             </div>
@@ -694,32 +697,37 @@ export function EmployeeViolationsWorkspace() {
 
       <Fab
         icon={<Plus className="h-4 w-4" />}
-        label="?????"
-        ariaLabel="????? ?????? ????"
+        label="إضافة"
+        ariaLabel="إضافة مخالفة"
         onClick={handleStartCreate}
         disabled={!canCreate}
       />
 
       <BottomSheetForm
         open={isFormOpen}
-        title={isEditing ? "????? ?????? ????" : "????? ?????? ????"}
+        title={isEditing ? "تعديل مخالفة" : "إضافة مخالفة"}
         onClose={resetForm}
         onSubmit={() => handleSubmitForm()}
         isSubmitting={isFormSubmitting}
-        submitLabel={isEditing ? "??? ?????????" : "????? ??????"}
+        submitLabel={isEditing ? "تحديث المخالفة" : "إضافة مخالفة"}
         showFooter={false}
+        renderInPortal
+        overlayClassName="z-[70]"
+        panelClassName="md:max-w-[720px]"
       >
         {!canCreate && !isEditing ? (
           <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            ?? ???? ???????? ????????: <code>employee-violations.create</code>.
+            لا تملك الصلاحية المطلوبة: <code>employee-violations.create</code>.
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <p className="text-sm text-muted-foreground">
-              {isEditing ? "????? ??? ????????." : "????? ??? ?????? ???? ??? ??????? ???????."}
-            </p>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">?????? *</label>
+              <p className="text-sm text-muted-foreground">
+                {isEditing
+                  ? "عدّل بيانات المخالفة الحالية."
+                  : "أدخل بيانات المخالفة الجديدة لإنشاء سجل جديد."}
+              </p>
+              <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
               <select
                 data-testid="violation-form-employee"
                 className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -729,10 +737,10 @@ export function EmployeeViolationsWorkspace() {
                 }
                 disabled={!canReadEmployees}
               >
-                <option value="">???? ??????</option>
+                <option value="">اختر الموظف</option>
                 {(employeesQuery.data ?? []).map((employee) => (
                   <option key={employee.id} value={employee.id}>
-                    {employee.fullName} ({employee.jobNumber ?? "???? ???"})
+                    {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
                   </option>
                 ))}
               </select>
@@ -740,7 +748,7 @@ export function EmployeeViolationsWorkspace() {
 
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
-                ????? ???????? *
+                تاريخ المخالفة *
               </label>
               <Input
                 data-testid="violation-form-date"
@@ -758,7 +766,7 @@ export function EmployeeViolationsWorkspace() {
 
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
-                ??? ???????? *
+                نوع المخالفة *
               </label>
               <Input
                 data-testid="violation-form-aspect"
@@ -769,14 +777,14 @@ export function EmployeeViolationsWorkspace() {
                     violationAspect: event.target.value,
                   }))
                 }
-                placeholder="???? ?? ??????"
+                placeholder="اكتب نوع المخالفة"
                 required
               />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
-                ??? ???????? *
+                وصف المخالفة *
               </label>
               <Input
                 data-testid="violation-form-text"
@@ -787,25 +795,25 @@ export function EmployeeViolationsWorkspace() {
                     violationText: event.target.value,
                   }))
                 }
-                placeholder="??? ?????? ??????? 20 ????? ??? ?????"
+                placeholder="اكتب تفاصيل المخالفة بحد أدنى 20 حرفًا"
                 required
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">??????? ??????</label>
+              <label className="text-xs font-medium text-muted-foreground">الإجراء المتخذ</label>
               <Input
                 data-testid="violation-form-action-taken"
                 value={formState.actionTaken}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, actionTaken: event.target.value }))
                 }
-                placeholder="?? ????? ????? ???"
+                placeholder="إن وجد اكتب الإجراء المتخذ"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">?????</label>
+              <label className="text-xs font-medium text-muted-foreground">الدرجة</label>
               <select
                 data-testid="violation-form-severity"
                 className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -825,14 +833,14 @@ export function EmployeeViolationsWorkspace() {
               </select>
               {formState.severity === "HIGH" || formState.severity === "CRITICAL" ? (
                 <p className="text-xs text-destructive">
-                  ????????? ??????? ??????? ??? ????? ??????? ??????.
+                  المخالفات الشديدة تتطلب متابعة فورية من الإدارة.
                 </p>
               ) : null}
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
-                ?????? ?????????
+                المبلّغ
               </label>
               <select
                 data-testid="violation-form-reporter"
@@ -846,10 +854,10 @@ export function EmployeeViolationsWorkspace() {
                 }
                 disabled={!canReadEmployees}
               >
-                <option value="">??? ????</option>
+                <option value="">اختر المبلّغ</option>
                 {(employeesQuery.data ?? []).map((employee) => (
                   <option key={employee.id} value={employee.id}>
-                    {employee.fullName} ({employee.jobNumber ?? "???? ???"})
+                    {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
                   </option>
                 ))}
               </select>
@@ -857,7 +865,7 @@ export function EmployeeViolationsWorkspace() {
 
             <div className="grid gap-2 md:grid-cols-3">
               <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>???? ?????</span>
+                <span>يوجد إنذار</span>
                 <input
                   type="checkbox"
                   checked={formState.hasWarning}
@@ -870,7 +878,7 @@ export function EmployeeViolationsWorkspace() {
                 />
               </label>
               <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>???? ????</span>
+                <span>يوجد محضر</span>
                 <input
                   type="checkbox"
                   checked={formState.hasMinutes}
@@ -883,7 +891,7 @@ export function EmployeeViolationsWorkspace() {
                 />
               </label>
               <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>???</span>
+                <span>نشطة</span>
                 <input
                   type="checkbox"
                   checked={formState.isActive}
@@ -908,7 +916,7 @@ export function EmployeeViolationsWorkspace() {
 
             {!canReadEmployees ? (
               <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                ????? ??? ????? ????????: <code>employees.read</code> ??????? ????????.
+                تحتاج صلاحية عرض الموظفين: <code>employees.read</code> لعرض القائمة.
               </div>
             ) : null}
 
@@ -918,17 +926,17 @@ export function EmployeeViolationsWorkspace() {
                 data-testid="violation-form-submit"
                 className="flex-1 gap-2"
                 disabled={isFormSubmitting || (!canCreate && !isEditing) || !canReadEmployees}
-              >
-                {isFormSubmitting ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : (
-                  <AlertTriangle className="h-4 w-4" />
-                )}
-                {isEditing ? "??? ?????????" : "????? ??????"}
+                >
+                  {isFormSubmitting ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <AlertTriangle className="h-4 w-4" />
+                  )}
+                {isEditing ? "تحديث المخالفة" : "إضافة مخالفة"}
               </Button>
               {isEditing ? (
                 <Button type="button" variant="outline" onClick={resetForm}>
-                  ?????
+                  إلغاء
                 </Button>
               ) : null}
             </div>

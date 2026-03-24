@@ -9,21 +9,15 @@ import {
   Plus,
   RefreshCw,
   ShieldAlert,
+  SlidersHorizontal,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Input } from "@/components/ui/input";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
@@ -82,12 +76,8 @@ export function PromotionDecisionsWorkspace() {
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
-  const [systemFilter, setSystemFilter] = React.useState<"all" | "system" | "custom">(
-    "all",
-  );
-  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
-    "all",
-  );
+  const [systemFilter, setSystemFilter] = React.useState<"all" | "system" | "custom">("all");
+  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">("all");
   const [filterDraft, setFilterDraft] = React.useState<{
     system: "all" | "system" | "custom";
     active: "all" | "active" | "inactive";
@@ -115,7 +105,10 @@ export function PromotionDecisionsWorkspace() {
   const updateMutation = useUpdatePromotionDecisionMutation();
   const deleteMutation = useDeletePromotionDecisionMutation();
 
-  const records = React.useMemo(() => promotionDecisionsQuery.data?.data ?? [], [promotionDecisionsQuery.data?.data]);
+  const records = React.useMemo(
+    () => promotionDecisionsQuery.data?.data ?? [],
+    [promotionDecisionsQuery.data?.data],
+  );
   const pagination = promotionDecisionsQuery.data?.pagination;
   const isEditing = editingId !== null;
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
@@ -141,9 +134,9 @@ export function PromotionDecisionsWorkspace() {
   }, [editingId, isEditing, records]);
 
   useDebounceEffect(() => {
-      setPage(1);
-      setSearch(searchInput.trim());
-    }, 400, [searchInput]);
+    setPage(1);
+    setSearch(searchInput.trim());
+  }, 400, [searchInput]);
 
   React.useEffect(() => {
     if (!isFilterOpen) {
@@ -198,21 +191,21 @@ export function PromotionDecisionsWorkspace() {
     const description = form.description.trim();
 
     if (!code || !name) {
-      setFormError("?????? ????????: ????? ??????.");
+      setFormError("الحقول المطلوبة: الكود والاسم.");
       return false;
     }
     if (code.length > 40 || !/^[A-Z0-9_]+$/.test(code)) {
       setFormError(
-        "????? ??? ?? ????? ?????? ????? ???????? ????? ????? (_) ???? ???? ???? 40 ?????.",
+        "يجب أن يكون الكود بالإنجليزية فقط مع الأرقام والشرطة السفلية (_) وبحد أقصى 40 حرفًا.",
       );
       return false;
     }
     if (name.length > 120) {
-      setFormError("????? ??? ??? ?????? 120 ?????.");
+      setFormError("يجب ألا يتجاوز الاسم 120 حرفًا.");
       return false;
     }
     if (description.length > 255) {
-      setFormError("????? ??? ??? ?????? 255 ?????.");
+      setFormError("يجب ألا يتجاوز الوصف 255 حرفًا.");
       return false;
     }
 
@@ -238,7 +231,7 @@ export function PromotionDecisionsWorkspace() {
 
     if (isEditing && editingId) {
       if (!canUpdate) {
-        setFormError("?? ???? ???????? ????????: promotion-decisions.update.");
+        setFormError("لا تملك الصلاحية المطلوبة: promotion-decisions.update.");
         return;
       }
 
@@ -250,7 +243,7 @@ export function PromotionDecisionsWorkspace() {
         {
           onSuccess: () => {
             resetFormState();
-            setActionSuccess("?? ????? ???? ??????? ?????.");
+            setActionSuccess("تم حفظ قرار الترقية بنجاح.");
           },
         },
       );
@@ -258,7 +251,7 @@ export function PromotionDecisionsWorkspace() {
     }
 
     if (!canCreate) {
-      setFormError("?? ???? ???????? ????????: promotion-decisions.create.");
+      setFormError("لا تملك الصلاحية المطلوبة: promotion-decisions.create.");
       return;
     }
 
@@ -266,7 +259,7 @@ export function PromotionDecisionsWorkspace() {
       onSuccess: () => {
         resetFormState();
         setPage(1);
-        setActionSuccess("?? ????? ???? ??????? ?????.");
+        setActionSuccess("تم حفظ قرار الترقية بنجاح.");
       },
     });
   };
@@ -299,27 +292,38 @@ export function PromotionDecisionsWorkspace() {
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[260px] max-w-lg">
+        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+          <div className="min-w-0">
             <SearchField
-              containerClassName="flex-1"
+              containerClassName="min-w-0"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="???..."
+              placeholder="ابحث بالاسم أو الكود..."
             />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterTriggerButton
-              count={activeFiltersCount}
+          <div className="flex items-center gap-2 md:justify-end">
+            <Button
+              type="button"
+              variant="outline"
               onClick={() => setIsFilterOpen((prev) => !prev)}
-            />
+              className="relative h-11 w-11 shrink-0 rounded-full border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] px-0 text-[color:var(--app-accent-color)] shadow-[0_14px_34px_-22px_rgba(15,23,42,0.55)] md:w-auto md:px-4"
+              aria-label="فلترة"
+            >
+              <SlidersHorizontal className="h-4 w-4 md:hidden" />
+              <span className="hidden md:inline">فلترة</span>
+              {activeFiltersCount > 0 ? (
+                <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[color:var(--app-accent-color)] px-1 text-[10px] font-bold text-white shadow-sm">
+                  {activeFiltersCount}
+                </span>
+              ) : null}
+            </Button>
           </div>
         </div>
 
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
-          title="????? ?????? ???????"
+          title="فلترة قرارات الترقية"
           actionButtons={
             <div className="flex w-full gap-2">
               <Button
@@ -329,10 +333,10 @@ export function PromotionDecisionsWorkspace() {
                 className="flex-1 gap-1.5"
               >
                 <Trash2 className="h-4 w-4" />
-                ???
+                مسح
               </Button>
               <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                ?????
+                تطبيق
               </Button>
             </div>
           }
@@ -347,9 +351,9 @@ export function PromotionDecisionsWorkspace() {
                 }))
               }
             >
-              <option value="all">????</option>
-              <option value="system">?????</option>
-              <option value="custom">????</option>
+              <option value="all">الكل</option>
+              <option value="system">نظامي</option>
+              <option value="custom">مخصص</option>
             </SelectField>
 
             <SelectField
@@ -361,9 +365,9 @@ export function PromotionDecisionsWorkspace() {
                 }))
               }
             >
-              <option value="all">?? ???????</option>
-              <option value="active">???</option>
-              <option value="inactive">??? ???</option>
+              <option value="all">كل الحالات</option>
+              <option value="active">نشط</option>
+              <option value="inactive">غير نشط</option>
             </SelectField>
           </div>
         </FilterDrawer>
@@ -371,27 +375,27 @@ export function PromotionDecisionsWorkspace() {
         <Card className="border-border/70 bg-card/80">
           <CardHeader className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>?????? ???????</CardTitle>
-              <Badge variant="secondary">????????: {pagination?.total ?? 0}</Badge>
+              <CardTitle>قرارات الترقية</CardTitle>
+              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
-            <CardDescription>????? ?????? ?????? ??????? ????????.</CardDescription>
+            <CardDescription>استعرض قرارات الترقية وأدِرها من هنا.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {promotionDecisionsQuery.isPending ? (
               <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                ???? ????? ????????...
+                جارٍ تحميل البيانات...
               </div>
             ) : null}
             {promotionDecisionsQuery.error ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
                 {promotionDecisionsQuery.error instanceof Error
                   ? promotionDecisionsQuery.error.message
-                  : "????? ????? ????????."}
+                  : "تعذّر جلب البيانات."}
               </div>
             ) : null}
             {!promotionDecisionsQuery.isPending && records.length === 0 ? (
               <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                ?? ???? ?????.
+                لا توجد نتائج.
               </div>
             ) : null}
 
@@ -407,20 +411,20 @@ export function PromotionDecisionsWorkspace() {
                     </p>
                     <p className="text-xs text-muted-foreground">{item.description ?? "-"}</p>
                     <p className="text-xs text-muted-foreground">
-                      ??? ??????? ??????? ????????: {item._count.annualResults}
+                      عدد النتائج السنوية المرتبطة: {item._count.annualResults}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5">
                     {item.isSystem ? (
                       <Badge variant="outline" className="gap-1.5">
                         <ShieldAlert className="h-3.5 w-3.5" />
-                        ?????
+                        نظامي
                       </Badge>
                     ) : (
-                      <Badge variant="secondary">????</Badge>
+                      <Badge variant="secondary">مخصص</Badge>
                     )}
                     <Badge variant={item.isActive ? "default" : "outline"}>
-                      {item.isActive ? "???" : "??? ???"}
+                      {item.isActive ? "نشط" : "غير نشط"}
                     </Badge>
                   </div>
                 </div>
@@ -433,7 +437,7 @@ export function PromotionDecisionsWorkspace() {
                     disabled={!canUpdate || item.isSystem || updateMutation.isPending}
                   >
                     <PencilLine className="h-3.5 w-3.5" />
-                    ?????
+                    تعديل
                   </Button>
                   <Button
                     variant="destructive"
@@ -443,19 +447,19 @@ export function PromotionDecisionsWorkspace() {
                       if (!canDelete || item.isSystem) {
                         return;
                       }
-                      if (!window.confirm(`????? ??? ?????? ${item.code}?`)) {
+                      if (!window.confirm(`هل تريد حذف قرار الترقية ${item.code}؟`)) {
                         return;
                       }
                       deleteMutation.mutate(item.id, {
                         onSuccess: () => {
-                          setActionSuccess("?? ??? ???? ??????? ?????.");
+                          setActionSuccess("تم حذف قرار الترقية بنجاح.");
                         },
                       });
                     }}
                     disabled={!canDelete || item.isSystem || deleteMutation.isPending}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                    ???
+                    حذف
                   </Button>
                 </div>
               </div>
@@ -463,20 +467,16 @@ export function PromotionDecisionsWorkspace() {
 
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
               <p className="text-xs text-muted-foreground">
-                ?????? {pagination?.page ?? 1} ?? {pagination?.totalPages ?? 1}
+                الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
               </p>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={
-                    !pagination ||
-                    pagination.page <= 1 ||
-                    promotionDecisionsQuery.isFetching
-                  }
+                  disabled={!pagination || pagination.page <= 1 || promotionDecisionsQuery.isFetching}
                 >
-                  ??????
+                  السابق
                 </Button>
                 <Button
                   variant="outline"
@@ -492,7 +492,7 @@ export function PromotionDecisionsWorkspace() {
                     promotionDecisionsQuery.isFetching
                   }
                 >
-                  ??????
+                  التالي
                 </Button>
                 <Button
                   variant="ghost"
@@ -504,7 +504,7 @@ export function PromotionDecisionsWorkspace() {
                   <RefreshCw
                     className={`h-4 w-4 ${promotionDecisionsQuery.isFetching ? "animate-spin" : ""}`}
                   />
-                  ?????
+                  تحديث
                 </Button>
               </div>
             </div>
@@ -514,47 +514,47 @@ export function PromotionDecisionsWorkspace() {
 
       <Fab
         icon={<Plus className="h-4 w-4" />}
-        label="?????"
-        ariaLabel="????? ???? ?????"
+        label="إضافة"
+        ariaLabel="إضافة قرار ترقية"
         onClick={handleStartCreate}
         disabled={!canCreate}
       />
 
       <BottomSheetForm
         open={isFormOpen}
-        title={isEditing ? "????? ???? ?????" : "????? ???? ?????"}
+        title={isEditing ? "تعديل قرار ترقية" : "إضافة قرار ترقية"}
         onClose={resetForm}
         onSubmit={() => undefined}
         isSubmitting={isSubmitting}
-        submitLabel={isEditing ? "??? ?????????" : "????? ???? ?????"}
+        submitLabel={isEditing ? "حفظ التعديلات" : "إضافة القرار"}
         showFooter={false}
       >
         {!canCreate && !isEditing ? (
           <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            ?? ???? ???????? ????????: <code>promotion-decisions.create</code>.
+            لا تملك الصلاحية المطلوبة: <code>promotion-decisions.create</code>.
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
             <Input
               value={form.code}
               onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
-              placeholder="????? *"
+              placeholder="الكود *"
               required
             />
             <Input
               value={form.name}
               onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-              placeholder="????? *"
+              placeholder="الاسم *"
               required
             />
             <Input
               value={form.description}
               onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-              placeholder="?????"
+              placeholder="الوصف"
             />
             <div className="grid gap-2 md:grid-cols-2">
               <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>?????</span>
+                <span>نظامي</span>
                 <input
                   type="checkbox"
                   checked={form.isSystem}
@@ -564,7 +564,7 @@ export function PromotionDecisionsWorkspace() {
                 />
               </label>
               <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>???</span>
+                <span>نشط</span>
                 <input
                   type="checkbox"
                   checked={form.isActive}
@@ -598,11 +598,11 @@ export function PromotionDecisionsWorkspace() {
                 ) : (
                   <MoveUpRight className="h-4 w-4" />
                 )}
-                {isEditing ? "??? ?????????" : "????? ???? ?????"}
+                {isEditing ? "حفظ التعديلات" : "إضافة القرار"}
               </Button>
               {isEditing ? (
                 <Button type="button" variant="outline" onClick={resetForm}>
-                  ?????
+                  إلغاء
                 </Button>
               ) : null}
             </div>

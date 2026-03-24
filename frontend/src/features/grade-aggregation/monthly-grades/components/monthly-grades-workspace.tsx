@@ -29,6 +29,7 @@ import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Input } from "@/components/ui/input";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
+import { StudentEnrollmentPickerSheet } from "@/components/ui/student-enrollment-picker-sheet";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCalculateMonthlyGradesMutation,
@@ -43,9 +44,13 @@ import { useAcademicMonthOptionsQuery } from "@/features/grade-aggregation/month
 import { useSectionOptionsQuery } from "@/features/grade-aggregation/monthly-grades/hooks/use-section-options-query";
 import { useSubjectOptionsQuery } from "@/features/grade-aggregation/monthly-grades/hooks/use-subject-options-query";
 import { useStudentEnrollmentOptionsQuery } from "@/features/grade-aggregation/monthly-grades/hooks/use-student-enrollment-options-query";
+import {
+  toStudentEnrollmentPickerOption,
+  type StudentEnrollmentPickerOption,
+} from "@/features/students/lib/student-enrollment-picker";
 import { translateGradingWorkflowStatus } from "@/lib/i18n/ar";
 import { formatNameCodeLabel, formatSectionWithGradeLabel } from "@/lib/option-labels";
-import { formatStudentEnrollmentOptionLabel, formatStudentEnrollmentPlacementLabel } from "@/lib/student-enrollment-display";
+import { formatStudentEnrollmentPlacementLabel } from "@/lib/student-enrollment-display";
 import type { GradingWorkflowStatus, MonthlyGradeListItem } from "@/lib/api/client";
 
 type FormState = {
@@ -138,6 +143,8 @@ export function MonthlyGradesWorkspace() {
   const [formError, setFormError] = React.useState<string | null>(null);
   const [calcInfo, setCalcInfo] = React.useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
+  const [selectedFormEnrollmentOption, setSelectedFormEnrollmentOption] =
+    React.useState<StudentEnrollmentPickerOption | null>(null);
 
   const monthsQuery = useAcademicMonthOptionsQuery();
   const sectionsQuery = useSectionOptionsQuery();
@@ -207,6 +214,7 @@ export function MonthlyGradesWorkspace() {
       setForm(DEFAULT_FORM);
       setFormError(null);
       setIsFormOpen(false);
+      setSelectedFormEnrollmentOption(null);
     }
   }, [editingId, records]);
 
@@ -214,6 +222,7 @@ export function MonthlyGradesWorkspace() {
     setEditingId(null);
     setForm(DEFAULT_FORM);
     setFormError(null);
+    setSelectedFormEnrollmentOption(null);
   };
 
   const resetForm = () => {
@@ -230,6 +239,7 @@ export function MonthlyGradesWorkspace() {
     setFormError(null);
     setEditingId(null);
     setForm(DEFAULT_FORM);
+    setSelectedFormEnrollmentOption(null);
     setIsFormOpen(true);
   };
 
@@ -242,6 +252,7 @@ export function MonthlyGradesWorkspace() {
     setEditingId(item.id);
     setForm(toFormState(item));
     setFormError(null);
+    setSelectedFormEnrollmentOption(toStudentEnrollmentPickerOption(item.studentEnrollment));
     setIsFormOpen(true);
   };
 
@@ -252,6 +263,20 @@ export function MonthlyGradesWorkspace() {
     }
     if (form.notes.trim().length > 255) {
       setFormError("الملاحظات يجب ألا تتجاوز 255 حرفًا.");
+      return false;
+    }
+    const selectedEnrollment = (enrollmentsQuery.data ?? []).find(
+      (item) => item.id === form.studentEnrollmentId,
+    );
+    if (!selectedEnrollment) {
+      setFormError("قيد الطالب غير صالح.");
+      return false;
+    }
+    if (
+      selectedEnrollment.sectionId !== form.sectionId ||
+      selectedEnrollment.academicYearId !== selectedMonthForForm?.academicYearId
+    ) {
+      setFormError("قيد الطالب لا يطابق الشهر/الشعبة المختارة.");
       return false;
     }
     setFormError(null);
@@ -302,19 +327,20 @@ export function MonthlyGradesWorkspace() {
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-1 flex-wrap items-center gap-2">
+        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+          <div className="min-w-0">
             <SearchField
-              containerClassName="min-w-[260px] max-w-lg flex-1"
+              containerClassName="min-w-0"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
               placeholder="بحث باسم الطالب أو المادة..."
             />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center justify-end gap-2">
             <FilterTriggerButton
               count={activeFiltersCount}
               onClick={() => setIsFilterOpen((prev) => !prev)}
+              className="h-11 w-11 justify-center px-0 sm:w-auto sm:px-4 sm:justify-start [&>span:nth-child(2)]:hidden sm:[&>span:nth-child(2)]:inline [&>span:nth-child(3)]:hidden sm:[&>span:nth-child(3)]:inline"
             />
           </div>
         </div>
@@ -760,13 +786,14 @@ export function MonthlyGradesWorkspace() {
             <SelectField
               value={form.academicMonthId}
               disabled={editingId !== null}
-              onChange={(event) =>
+              onChange={(event) => {
                 setForm((prev) => ({
                   ...prev,
                   academicMonthId: event.target.value,
                   studentEnrollmentId: "",
-                }))
-              }
+                }));
+                setSelectedFormEnrollmentOption(null);
+              }}
             >
               <option value="">الشهر *</option>
               {(monthsQuery.data ?? []).map((item) => (
@@ -778,13 +805,14 @@ export function MonthlyGradesWorkspace() {
             <SelectField
               value={form.sectionId}
               disabled={editingId !== null}
-              onChange={(event) =>
+              onChange={(event) => {
                 setForm((prev) => ({
                   ...prev,
                   sectionId: event.target.value,
                   studentEnrollmentId: "",
-                }))
-              }
+                }));
+                setSelectedFormEnrollmentOption(null);
+              }}
             >
               <option value="">الشعبة *</option>
               {(sectionsQuery.data ?? []).map((item) => (
@@ -809,20 +837,22 @@ export function MonthlyGradesWorkspace() {
                 </option>
               ))}
             </SelectField>
-            <SelectField
+            <StudentEnrollmentPickerSheet
+              scope="monthly-grades"
+              variant="form"
               value={form.studentEnrollmentId}
+              selectedOption={selectedFormEnrollmentOption}
+              academicYearId={selectedMonthForForm?.academicYearId}
+              sectionId={form.sectionId || undefined}
               disabled={editingId !== null}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, studentEnrollmentId: event.target.value }))
-              }
-            >
-              <option value="">القيد *</option>
-              {(enrollmentsQuery.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {formatStudentEnrollmentOptionLabel(item)}
-                </option>
-              ))}
-            </SelectField>
+              onSelect={(option) => {
+                setSelectedFormEnrollmentOption(option);
+                setForm((prev) => ({
+                  ...prev,
+                  studentEnrollmentId: option?.id ?? "",
+                }));
+              }}
+            />
           </div>
           {editingId ? (
             <SelectField

@@ -14,7 +14,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { SelectField } from "@/components/ui/select-field";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { useEmployeeOptionsQuery } from "@/features/hr-reports/hooks/use-employee-options-query";
 import { useHrSummaryReportQuery } from "@/features/hr-reports/hooks/use-hr-summary-report-query";
 import type {
@@ -97,19 +96,30 @@ export function HrReportsWorkspace() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <FilterTriggerButton
-            count={activeFiltersCount}
-            onClick={() => setIsFilterOpen((prev) => !prev)}
-          />
-        </div>
+      <div className="flex items-center justify-start gap-2 rounded-[28px] border border-border/70 bg-card/80 px-4 py-3 shadow-sm backdrop-blur-sm">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setIsFilterOpen((prev) => !prev)}
+          className="h-10 rounded-2xl px-3 sm:px-4"
+          aria-label="فتح فلاتر التقرير"
+        >
+          <BarChart3 className="h-4 w-4" />
+          <span className="hidden sm:inline">فلاتر التقرير</span>
+          {activeFiltersCount > 0 ? (
+            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground">
+              {activeFiltersCount}
+            </span>
+          ) : null}
+        </Button>
       </div>
 
       <FilterDrawer
         open={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
         title="فلاتر التقرير"
+        renderInPortal
+        overlayClassName="z-[70]"
         actionButtons={
           <div className="flex w-full gap-2">
             <Button
