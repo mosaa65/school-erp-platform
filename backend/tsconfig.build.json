@@ -23,6 +23,11 @@
     "src/modules/promotion-decisions/**/*",
     "src/modules/semester-grades/**/*",
     "src/modules/student-exam-scores/**/*",
-    "src/modules/student-homeworks/**/*"
+    "src/modules/student-homeworks/**/*",
+    "src/modules/grade-aggregation/**/*",
+    "src/modules/evaluation-policies/**/*",
+    "src/modules/results-decisions/**/*",
+    "src/modules/grading-notifications/**/*"
   ]
 }
+

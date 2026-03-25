@@ -6,9 +6,6 @@ import { AuthModule } from './auth/auth.module';
 import { AcademicMonthsModule } from './modules/academic-months/academic-months.module';
 import { AssignmentsModule } from './modules/assignments/assignments.module';
 import { ExamsModule } from './modules/exams/exams.module';
-import { EvaluationPoliciesModule } from './modules/evaluation-policies/evaluation-policies.module';
-import { GradeAggregationModule } from './modules/grade-aggregation/grade-aggregation.module';
-import { ResultsDecisionsModule } from './modules/results-decisions/results-decisions.module';
 import { AcademicTermsModule } from './modules/academic-terms/academic-terms.module';
 import { AcademicYearsModule } from './modules/academic-years/academic-years.module';
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
@@ -72,7 +69,6 @@ import { PrismaModule } from './prisma/prisma.module';
     AcademicYearsModule,
     AcademicTermsModule,
     AcademicMonthsModule,
-    ResultsDecisionsModule,
     GradeLevelSubjectsModule,
     GradeLevelsModule,
     ClassroomsModule,
@@ -89,9 +85,7 @@ import { PrismaModule } from './prisma/prisma.module';
     StudentProblemsModule,
     HealthVisitsModule,
     ParentNotificationsModule,
-    EvaluationPoliciesModule,
     ExamsModule,
-    GradeAggregationModule,
     AssignmentsModule,
     HrReportsModule,
     EmployeesModule,
