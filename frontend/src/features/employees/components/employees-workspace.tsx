@@ -13,7 +13,6 @@ import {
   PencilLine,
   Plus,
   RefreshCw,
-  Search,
   Trash2,
   User,
   Users,
@@ -23,7 +22,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PhoneContactInput } from "@/components/ui/phone-contact-input";
-import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
@@ -302,7 +300,7 @@ export function EmployeesWorkspace() {
         ? undefined
         : operationalReadinessFilter,
   });
-  const idTypeOptionsQuery = useIdTypeOptionsQuery();
+  useIdTypeOptionsQuery();
   const genderOptionsQuery = useGenderOptionsQuery();
   const geographyOptionsQuery = useGeographyOptionsQuery("employees");
   const qualificationOptionsQuery = useQualificationOptionsQuery();

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Phone, UserPlus, X } from "lucide-react";
+import { UserPlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";

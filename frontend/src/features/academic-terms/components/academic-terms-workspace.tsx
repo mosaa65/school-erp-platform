@@ -194,7 +194,7 @@ export function AcademicTermsWorkspace() {
 
     const stillExists = terms.some((term) => term.id === editingTermId);
     if (!stillExists) {
-      setEditingYearId(null);
+      setEditingTermId(null);
       setFormState(DEFAULT_FORM_STATE);
       setFormError(null);
     }

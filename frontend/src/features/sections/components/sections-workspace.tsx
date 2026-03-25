@@ -8,14 +8,12 @@ import {
   Building,
   DoorOpen,
   GraduationCap,
-  Hash,
   Layers2,
   LayoutGrid,
   LoaderCircle,
   PencilLine,
   Plus,
   RefreshCw,
-  Search,
   Shuffle,
   Trash2,
   Type,
@@ -25,7 +23,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
