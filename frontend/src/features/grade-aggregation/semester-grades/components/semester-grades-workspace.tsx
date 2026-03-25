@@ -8,12 +8,16 @@ import {
   LockOpen,
   Medal,
   PencilLine,
+  Plus,
   RefreshCw,
-  Search,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import { Button } from "@/components/ui/button";
+import { Fab } from "@/components/ui/fab";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Input } from "@/components/ui/input";
 import {
   Card,
@@ -22,6 +26,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField } from "@/components/ui/select-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useSectionOptionsQuery } from "@/features/grade-aggregation/monthly-grades/hooks/use-section-options-query";
 import { useSubjectOptionsQuery } from "@/features/grade-aggregation/monthly-grades/hooks/use-subject-options-query";
@@ -43,6 +49,7 @@ import { translateGradingWorkflowStatus } from "@/lib/i18n/ar";
 import { formatNameCodeLabel, formatSectionWithGradeLabel } from "@/lib/option-labels";
 import { formatStudentEnrollmentPlacementLabel } from "@/lib/student-enrollment-display";
 import { type StudentEnrollmentPickerOption } from "@/features/students/lib/student-enrollment-picker";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 
 type FormState = {
   academicTermId: string;
@@ -148,6 +155,19 @@ export function SemesterGradesWorkspace() {
   const [sectionFilter, setSectionFilter] = React.useState("all");
   const [subjectFilter, setSubjectFilter] = React.useState("all");
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">("all");
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
+  const [filterDraft, setFilterDraft] = React.useState<{
+    term: string;
+    section: string;
+    subject: string;
+    active: "all" | "active" | "inactive";
+  }>({
+    term: "all",
+    section: "all",
+    subject: "all",
+    active: "all",
+  });
 
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [editingItem, setEditingItem] = React.useState<SemesterGradeListItem | null>(null);
@@ -209,7 +229,80 @@ export function SemesterGradesWorkspace() {
     setForm(DEFAULT_FORM);
     setFormError(null);
     setSelectedFormEnrollmentOption(null);
+    setIsFormOpen(false);
   };
+
+  useDebounceEffect(() => {
+    setPage(1);
+    setSearch(searchInput.trim());
+  }, 400, [searchInput]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setFilterDraft({
+      term: termFilter,
+      section: sectionFilter,
+      subject: subjectFilter,
+      active: activeFilter,
+    });
+  }, [activeFilter, isFilterOpen, sectionFilter, subjectFilter, termFilter]);
+
+  const handleStartCreate = () => {
+    setActionSuccess(null);
+    setFormError(null);
+    setEditingId(null);
+    setEditingItem(null);
+    setForm(DEFAULT_FORM);
+    setSelectedFormEnrollmentOption(null);
+    setIsFormOpen(true);
+  };
+
+  const handleStartEdit = (item: SemesterGradeListItem) => {
+    if (!canUpdate || item.isLocked) {
+      return;
+    }
+
+    setActionSuccess(null);
+    setEditingId(item.id);
+    setEditingItem(item);
+    setForm(toFormState(item));
+    setSelectedFormEnrollmentOption(buildStudentEnrollmentPickerOption(item));
+    setFormError(null);
+    setIsFormOpen(true);
+  };
+
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setTermFilter("all");
+    setSectionFilter("all");
+    setSubjectFilter("all");
+    setActiveFilter("all");
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    setPage(1);
+    setTermFilter(filterDraft.term);
+    setSectionFilter(filterDraft.section);
+    setSubjectFilter(filterDraft.subject);
+    setActiveFilter(filterDraft.active);
+    setIsFilterOpen(false);
+  };
+
+  const activeFiltersCount = React.useMemo(() => {
+    return [
+      searchInput.trim() ? 1 : 0,
+      termFilter !== "all" ? 1 : 0,
+      sectionFilter !== "all" ? 1 : 0,
+      subjectFilter !== "all" ? 1 : 0,
+      activeFilter !== "all" ? 1 : 0,
+    ].reduce((sum, value) => sum + value, 0);
+  }, [activeFilter, searchInput, sectionFilter, subjectFilter, termFilter]);
 
   const validateForm = (): boolean => {
     if (!form.academicTermId || !form.sectionId || !form.subjectId || !form.studentEnrollmentId) {
@@ -253,14 +346,106 @@ export function SemesterGradesWorkspace() {
   };
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[500px_1fr]">
+    <>
+      <div className="space-y-4">
+        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+          <SearchField
+            containerClassName="min-w-0"
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            placeholder="ابحث باسم الطالب أو المادة..."
+          />
+          <div className="flex items-center justify-end gap-2">
+            <FilterTriggerButton
+              count={activeFiltersCount}
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+              className="h-11 w-11 justify-center px-0 sm:w-auto sm:px-4 sm:justify-start [&>span:nth-child(2)]:hidden sm:[&>span:nth-child(2)]:inline [&>span:nth-child(3)]:hidden sm:[&>span:nth-child(3)]:inline"
+            />
+          </div>
+        </div>
+
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="فلترة الدرجات الفصلية"
+          renderInPortal
+          overlayClassName="z-[70]"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button type="button" variant="outline" onClick={clearFilters} className="flex-1 gap-1.5">
+                <Trash2 className="h-4 w-4" />
+                مسح
+              </Button>
+              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
+                تطبيق
+              </Button>
+            </div>
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectField
+              value={filterDraft.term}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, term: event.target.value }))
+              }
+            >
+              <option value="all">كل الفصول</option>
+              {(termsQuery.data ?? []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {formatNameCodeLabel(item.name, item.code)}
+                </option>
+              ))}
+            </SelectField>
+            <SelectField
+              value={filterDraft.section}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, section: event.target.value }))
+              }
+            >
+              <option value="all">كل الشعب</option>
+              {(sectionsQuery.data ?? []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {formatSectionWithGradeLabel(item)}
+                </option>
+              ))}
+            </SelectField>
+            <SelectField
+              value={filterDraft.subject}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, subject: event.target.value }))
+              }
+            >
+              <option value="all">كل المواد</option>
+              {(subjectsQuery.data ?? []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {formatNameCodeLabel(item.name, item.code)}
+                </option>
+              ))}
+            </SelectField>
+            <SelectField
+              value={filterDraft.active}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  active: event.target.value as "all" | "active" | "inactive",
+                }))
+              }
+            >
+              <option value="all">الكل</option>
+              <option value="active">نشط</option>
+              <option value="inactive">غير نشط</option>
+            </SelectField>
+          </div>
+        </FilterDrawer>
+
+        <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)] xl:items-start">
       <Card className="h-fit border-border/70 bg-card/80">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Medal className="h-5 w-5 text-primary" />
-            {editingId ? "تعديل درجة فصلية" : "إنشاء درجة فصلية"}
+            <Calculator className="h-5 w-5 text-primary" />
+            أدوات الدرجات الفصلية
           </CardTitle>
-          <CardDescription>حساب فصلي + سحب درجة النهائي + إدارة السجل.</CardDescription>
+          <CardDescription>احتساب الدرجات، تعبئة النهائي، ثم إدارة السجلات من اللوحة الرئيسية.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-2 rounded-md border p-3">
@@ -330,76 +515,6 @@ export function SemesterGradesWorkspace() {
             </Button>
             {fillInfo ? <div className="rounded-md border border-primary/30 bg-primary/10 p-2 text-xs text-primary">{fillInfo}</div> : null}
           </div>
-
-          <form className="space-y-3" onSubmit={(event) => {
-            event.preventDefault();
-            setActionSuccess(null);
-            if (!validateForm()) return;
-            const semesterWorkTotal = parseOptionalNumber(form.semesterWorkTotal);
-            const finalExamScore = parseOptionalNumber(form.finalExamScore);
-            if (editingId) {
-              if (!canUpdate) { setFormError("لا تملك الصلاحية المطلوبة: semester-grades.update."); return; }
-              updateMutation.mutate({ semesterGradeId: editingId, payload: { semesterWorkTotal, finalExamScore, status: form.status, notes: toOptionalString(form.notes), isActive: form.isActive } }, { onSuccess: () => { resetForm(); setActionSuccess("تم تحديث الدرجة الفصلية بنجاح."); } });
-              return;
-            }
-            if (!canCreate) { setFormError("لا تملك الصلاحية المطلوبة: semester-grades.create."); return; }
-            createMutation.mutate({ academicTermId: form.academicTermId, subjectId: form.subjectId, studentEnrollmentId: form.studentEnrollmentId, semesterWorkTotal, finalExamScore, status: form.status, notes: toOptionalString(form.notes), isActive: form.isActive }, { onSuccess: () => { resetForm(); setActionSuccess("تم إنشاء الدرجة الفصلية بنجاح."); } });
-          }}>
-            <div className="grid gap-2 md:grid-cols-2">
-              <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.academicTermId} disabled={editingId !== null} onChange={(event) => { setForm((prev) => ({ ...prev, academicTermId: event.target.value, studentEnrollmentId: "" })); setSelectedFormEnrollmentOption(null); }}>
-                <option value="">الفصل *</option>
-                {(termsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
-              </select>
-              <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.sectionId} disabled={editingId !== null} onChange={(event) => { setForm((prev) => ({ ...prev, sectionId: event.target.value, studentEnrollmentId: "" })); setSelectedFormEnrollmentOption(null); }}>
-                <option value="">الشعبة *</option>
-                {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatSectionWithGradeLabel(item)}</option>)}
-              </select>
-            </div>
-            <div className="grid gap-2 md:grid-cols-2">
-              <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.subjectId} disabled={editingId !== null} onChange={(event) => setForm((prev) => ({ ...prev, subjectId: event.target.value }))}>
-                <option value="">المادة *</option>
-                {(subjectsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
-              </select>
-              <StudentEnrollmentPickerSheet
-                scope="semester-grades"
-                variant="form"
-                value={form.studentEnrollmentId}
-                selectedOption={selectedFormEnrollmentOption}
-                academicYearId={selectedTermForForm?.academicYearId}
-                sectionId={form.sectionId || undefined}
-                disabled={editingId !== null}
-                onSelect={(option) => {
-                  setSelectedFormEnrollmentOption(option);
-                  setForm((prev) => ({ ...prev, studentEnrollmentId: option?.id ?? "" }));
-                }}
-              />
-            </div>
-            <div className="grid gap-2 md:grid-cols-2">
-              <Input type="number" min={0} step={0.01} value={form.semesterWorkTotal} onChange={(event) => setForm((prev) => ({ ...prev, semesterWorkTotal: event.target.value }))} placeholder="مجموع أعمال الفصل" />
-              <Input type="number" min={0} step={0.01} value={form.finalExamScore} onChange={(event) => setForm((prev) => ({ ...prev, finalExamScore: event.target.value }))} placeholder="درجة الاختبار النهائي" />
-            </div>
-            <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.status} onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value as GradingWorkflowStatus }))}>
-              <option value="DRAFT">مسودة</option>
-              <option value="IN_REVIEW">قيد المراجعة</option>
-              <option value="APPROVED">معتمد</option>
-              <option value="ARCHIVED">مؤرشف</option>
-            </select>
-            <Input value={form.notes} onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))} placeholder="ملاحظات" />
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input type="checkbox" checked={form.isActive} onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))} />
-            </label>
-            {formError ? <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">{formError}</div> : null}
-            {mutationError ? <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">{mutationError}</div> : null}
-            {actionSuccess ? <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">{actionSuccess}</div> : null}
-            <div className="flex gap-2">
-              <Button type="submit" className="flex-1 gap-2" disabled={isSubmitting}>
-                {isSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Medal className="h-4 w-4" />}
-                {editingId ? "حفظ التعديلات" : "إنشاء درجة فصلية"}
-              </Button>
-              {editingId ? <Button type="button" variant="outline" onClick={resetForm}>إلغاء</Button> : null}
-            </div>
-          </form>
         </CardContent>
       </Card>
 
@@ -409,30 +524,7 @@ export function SemesterGradesWorkspace() {
             <CardTitle>الدرجات الفصلية</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
-          <form onSubmit={(event) => { event.preventDefault(); setPage(1); setSearch(searchInput.trim()); }} className="grid gap-2 md:grid-cols-[1fr_160px_140px_140px_110px_auto]">
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="بحث..." className="pr-8" />
-            </div>
-            <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={termFilter} onChange={(event) => { setPage(1); setTermFilter(event.target.value); }}>
-              <option value="all">كل الفصول</option>
-              {(termsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
-            </select>
-            <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={sectionFilter} onChange={(event) => { setPage(1); setSectionFilter(event.target.value); }}>
-              <option value="all">كل الشعب</option>
-              {(sectionsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatSectionWithGradeLabel(item)}</option>)}
-            </select>
-            <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={subjectFilter} onChange={(event) => { setPage(1); setSubjectFilter(event.target.value); }}>
-              <option value="all">كل المواد</option>
-              {(subjectsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
-            </select>
-            <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={activeFilter} onChange={(event) => { setPage(1); setActiveFilter(event.target.value as "all" | "active" | "inactive"); }}>
-              <option value="all">الكل</option>
-              <option value="active">نشط</option>
-              <option value="inactive">غير نشط</option>
-            </select>
-            <Button type="submit" variant="outline" className="gap-2"><Search className="h-4 w-4" />تطبيق</Button>
-          </form>
+          <p className="text-xs text-muted-foreground">البحث والفلترة من الشريط العلوي، ويمكن إضافة أو تعديل السجل من زر الإضافة العائم.</p>
         </CardHeader>
         <CardContent className="space-y-3">
           {semesterGradesQuery.isPending ? <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">جارٍ تحميل البيانات...</div> : null}
@@ -458,7 +550,7 @@ export function SemesterGradesWorkspace() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { if (!item.isLocked && canUpdate) { setEditingId(item.id); setEditingItem(item); setForm(toFormState(item)); setSelectedFormEnrollmentOption(buildStudentEnrollmentPickerOption(item)); setFormError(null); setActionSuccess(null); } }} disabled={!canUpdate || item.isLocked || updateMutation.isPending}>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handleStartEdit(item)} disabled={!canUpdate || item.isLocked || updateMutation.isPending}>
                   <PencilLine className="h-3.5 w-3.5" />تعديل
                 </Button>
                 <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { if (item.isLocked) { if (canUnlock) unlockMutation.mutate(item.id, { onSuccess: () => setActionSuccess("تم إلغاء قفل الدرجة الفصلية بنجاح.") }); } else if (canLock) { lockMutation.mutate(item.id, { onSuccess: () => setActionSuccess("تم قفل الدرجة الفصلية بنجاح.") }); } }} disabled={(item.isLocked && !canUnlock) || (!item.isLocked && !canLock) || lockMutation.isPending || unlockMutation.isPending}>
@@ -488,7 +580,263 @@ export function SemesterGradesWorkspace() {
           </div>
         </CardContent>
       </Card>
-    </div>
+        </div>
+      </div>
+
+      <BottomSheetForm
+        open={isFormOpen}
+        title={editingId ? "تعديل درجة فصلية" : "إنشاء درجة فصلية"}
+        description="إدارة السجل اليدوي لدرجات الطالب الفصلية."
+        eyebrow="درجة فصلية"
+        onClose={resetForm}
+        onSubmit={() => undefined}
+        isSubmitting={isSubmitting}
+        submitLabel={editingId ? "حفظ التعديلات" : "إنشاء درجة فصلية"}
+        showFooter={false}
+        renderInPortal
+        overlayClassName="z-[80]"
+        panelClassName="md:max-w-[760px]"
+        contentClassName="space-y-3"
+      >
+        <form
+          className="space-y-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setActionSuccess(null);
+            if (!validateForm()) {
+              return;
+            }
+
+            const semesterWorkTotal = parseOptionalNumber(form.semesterWorkTotal);
+            const finalExamScore = parseOptionalNumber(form.finalExamScore);
+
+            if (editingId) {
+              if (!canUpdate) {
+                setFormError("لا تملك الصلاحية المطلوبة: semester-grades.update.");
+                return;
+              }
+
+              updateMutation.mutate(
+                {
+                  semesterGradeId: editingId,
+                  payload: {
+                    semesterWorkTotal,
+                    finalExamScore,
+                    status: form.status,
+                    notes: toOptionalString(form.notes),
+                    isActive: form.isActive,
+                  },
+                },
+                {
+                  onSuccess: () => {
+                    resetForm();
+                    setActionSuccess("تم تحديث الدرجة الفصلية بنجاح.");
+                  },
+                },
+              );
+              return;
+            }
+
+            if (!canCreate) {
+              setFormError("لا تملك الصلاحية المطلوبة: semester-grades.create.");
+              return;
+            }
+
+            createMutation.mutate(
+              {
+                academicTermId: form.academicTermId,
+                subjectId: form.subjectId,
+                studentEnrollmentId: form.studentEnrollmentId,
+                semesterWorkTotal,
+                finalExamScore,
+                status: form.status,
+                notes: toOptionalString(form.notes),
+                isActive: form.isActive,
+              },
+              {
+                onSuccess: () => {
+                  resetForm();
+                  setActionSuccess("تم إنشاء الدرجة الفصلية بنجاح.");
+                },
+              },
+            );
+          }}
+        >
+          <div className="grid gap-2 md:grid-cols-2">
+            <select
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              value={form.academicTermId}
+              disabled={editingId !== null}
+              onChange={(event) => {
+                setForm((prev) => ({
+                  ...prev,
+                  academicTermId: event.target.value,
+                  studentEnrollmentId: "",
+                }));
+                setSelectedFormEnrollmentOption(null);
+              }}
+            >
+              <option value="">الفصل *</option>
+              {(termsQuery.data ?? []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {formatNameCodeLabel(item.name, item.code)}
+                </option>
+              ))}
+            </select>
+            <select
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              value={form.sectionId}
+              disabled={editingId !== null}
+              onChange={(event) => {
+                setForm((prev) => ({
+                  ...prev,
+                  sectionId: event.target.value,
+                  studentEnrollmentId: "",
+                }));
+                setSelectedFormEnrollmentOption(null);
+              }}
+            >
+              <option value="">الشعبة *</option>
+              {(sectionsQuery.data ?? []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {formatSectionWithGradeLabel(item)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid gap-2 md:grid-cols-2">
+            <select
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              value={form.subjectId}
+              disabled={editingId !== null}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, subjectId: event.target.value }))
+              }
+            >
+              <option value="">المادة *</option>
+              {(subjectsQuery.data ?? []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {formatNameCodeLabel(item.name, item.code)}
+                </option>
+              ))}
+            </select>
+            <StudentEnrollmentPickerSheet
+              scope="semester-grades"
+              variant="form"
+              value={form.studentEnrollmentId}
+              selectedOption={selectedFormEnrollmentOption}
+              academicYearId={selectedTermForForm?.academicYearId}
+              sectionId={form.sectionId || undefined}
+              disabled={editingId !== null}
+              onSelect={(option) => {
+                setSelectedFormEnrollmentOption(option);
+                setForm((prev) => ({ ...prev, studentEnrollmentId: option?.id ?? "" }));
+              }}
+            />
+          </div>
+
+          <div className="grid gap-2 md:grid-cols-2">
+            <Input
+              type="number"
+              min={0}
+              step={0.01}
+              value={form.semesterWorkTotal}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, semesterWorkTotal: event.target.value }))
+              }
+              placeholder="مجموع أعمال الفصل"
+            />
+            <Input
+              type="number"
+              min={0}
+              step={0.01}
+              value={form.finalExamScore}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, finalExamScore: event.target.value }))
+              }
+              placeholder="درجة الاختبار النهائي"
+            />
+          </div>
+
+          <select
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            value={form.status}
+            onChange={(event) =>
+              setForm((prev) => ({
+                ...prev,
+                status: event.target.value as GradingWorkflowStatus,
+              }))
+            }
+          >
+            <option value="DRAFT">مسودة</option>
+            <option value="IN_REVIEW">قيد المراجعة</option>
+            <option value="APPROVED">معتمد</option>
+            <option value="ARCHIVED">مؤرشف</option>
+          </select>
+
+          <Input
+            value={form.notes}
+            onChange={(event) =>
+              setForm((prev) => ({ ...prev, notes: event.target.value }))
+            }
+            placeholder="ملاحظات"
+          />
+
+          <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+            <span>نشط</span>
+            <input
+              type="checkbox"
+              checked={form.isActive}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, isActive: event.target.checked }))
+              }
+            />
+          </label>
+
+          {formError ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+              {formError}
+            </div>
+          ) : null}
+          {mutationError ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+              {mutationError}
+            </div>
+          ) : null}
+          {actionSuccess ? (
+            <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
+              {actionSuccess}
+            </div>
+          ) : null}
+
+          <div className="flex gap-2">
+            <Button type="submit" className="flex-1 gap-2" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <Medal className="h-4 w-4" />
+              )}
+              {editingId ? "حفظ التعديلات" : "إنشاء درجة فصلية"}
+            </Button>
+            {editingId ? (
+              <Button type="button" variant="outline" onClick={resetForm}>
+                إلغاء
+              </Button>
+            ) : null}
+          </div>
+        </form>
+      </BottomSheetForm>
+
+      {canCreate ? (
+        <Fab
+          onClick={handleStartCreate}
+          label="إضافة درجة فصلية"
+          ariaLabel="إضافة درجة فصلية"
+          icon={<Plus className="h-4 w-4 sm:h-5 sm:w-5" />}
+        />
+      ) : null}
+    </>
   );
 }
 

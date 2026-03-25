@@ -7,7 +7,6 @@ export class AssignRolePermissionsDto {
     description: 'Permission IDs that should remain active on role',
   })
   @IsArray()
-  @ArrayNotEmpty()
   @ArrayUnique()
   @IsString({ each: true })
   permissionIds!: string[];

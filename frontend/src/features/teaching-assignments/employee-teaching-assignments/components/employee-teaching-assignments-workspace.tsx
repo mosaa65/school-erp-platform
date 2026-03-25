@@ -1,18 +1,19 @@
 "use client";
 
 import * as React from "react";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import Link from "next/link";
 import {
   LoaderCircle,
   PencilLine,
   RefreshCw,
-  Search,
   Trash2,
-  UserRoundPlus,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
+import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
 import {
   Card,
   CardContent,
@@ -20,6 +21,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
+import { SelectField } from "@/components/ui/select-field";
+import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateEmployeeTeachingAssignmentMutation,
@@ -91,6 +96,20 @@ export function EmployeeTeachingAssignmentsWorkspace() {
   const [activeFilter, setActiveFilter] = React.useState<
     "all" | "active" | "inactive"
   >("all");
+  const [filterDraft, setFilterDraft] = React.useState<{
+    employee: string;
+    section: string;
+    subject: string;
+    academicYear: string;
+    active: "all" | "active" | "inactive";
+  }>({
+    employee: "all",
+    section: "all",
+    subject: "all",
+    academicYear: "all",
+    active: "all",
+  });
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
 
   const [editingAssignmentId, setEditingAssignmentId] = React.useState<
     string | null
@@ -98,6 +117,7 @@ export function EmployeeTeachingAssignmentsWorkspace() {
   const [formState, setFormState] =
     React.useState<AssignmentFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
 
   const assignmentsQuery = useEmployeeTeachingAssignmentsQuery({
     page,
@@ -155,6 +175,32 @@ export function EmployeeTeachingAssignmentsWorkspace() {
     (deleteMutation.error as Error | null)?.message ??
     null;
 
+  useDebounceEffect(() => {
+    setPage(1);
+    setSearch(searchInput.trim());
+  }, 400, [searchInput]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setFilterDraft({
+      employee: employeeFilter,
+      section: sectionFilter,
+      subject: subjectFilter,
+      academicYear: academicYearFilter,
+      active: activeFilter,
+    });
+  }, [
+    academicYearFilter,
+    activeFilter,
+    employeeFilter,
+    isFilterOpen,
+    sectionFilter,
+    subjectFilter,
+  ]);
+
   React.useEffect(() => {
     if (!isEditing) {
       return;
@@ -174,12 +220,18 @@ export function EmployeeTeachingAssignmentsWorkspace() {
     setEditingAssignmentId(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
+    setIsFormOpen(false);
   };
 
-  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPage(1);
-    setSearch(searchInput.trim());
+  const handleStartCreate = () => {
+    if (!canCreate) {
+      return;
+    }
+
+    setFormError(null);
+    setEditingAssignmentId(null);
+    setFormState(DEFAULT_FORM_STATE);
+    setIsFormOpen(true);
   };
 
   const validateForm = (): boolean => {
@@ -281,6 +333,7 @@ export function EmployeeTeachingAssignmentsWorkspace() {
     setFormError(null);
     setEditingAssignmentId(assignment.id);
     setFormState(toFormState(assignment));
+    setIsFormOpen(true);
   };
 
   const handleDelete = (assignment: EmployeeTeachingAssignmentListItem) => {
@@ -310,235 +363,150 @@ export function EmployeeTeachingAssignmentsWorkspace() {
     canReadSections &&
     canReadSubjects &&
     canReadAcademicYears;
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setEmployeeFilter("all");
+    setSectionFilter("all");
+    setSubjectFilter("all");
+    setAcademicYearFilter("all");
+    setActiveFilter("all");
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    setPage(1);
+    setEmployeeFilter(filterDraft.employee);
+    setSectionFilter(filterDraft.section);
+    setSubjectFilter(filterDraft.subject);
+    setAcademicYearFilter(filterDraft.academicYear);
+    setActiveFilter(filterDraft.active);
+    setIsFilterOpen(false);
+  };
+
+  const activeFiltersCount = React.useMemo(
+    () =>
+      [
+        searchInput.trim() ? 1 : 0,
+        employeeFilter !== "all" ? 1 : 0,
+        sectionFilter !== "all" ? 1 : 0,
+        subjectFilter !== "all" ? 1 : 0,
+        academicYearFilter !== "all" ? 1 : 0,
+        activeFilter !== "all" ? 1 : 0,
+      ].reduce((total, value) => total + value, 0),
+    [
+      academicYearFilter,
+      activeFilter,
+      employeeFilter,
+      searchInput,
+      sectionFilter,
+      subjectFilter,
+    ],
+  );
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[430px_1fr]">
-      <Card className="h-fit border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UserRoundPlus className="h-5 w-5 text-primary" />
-            {isEditing ? "تعديل إسناد تدريس" : "إنشاء إسناد تدريس"}
-          </CardTitle>
-          <CardDescription>
-            {isEditing
-              ? "تحديث ربط المعلم بالشعبة والمادة والسنة الأكاديمية."
-              : "إضافة إسناد تدريس جديد ضمن الموارد البشرية."}{" "}
-            هذا الربط يحدد نطاق العمل الأكاديمي ولا ينشئ حساب مستخدم أو دور
-            تلقائيًا.
-          </CardDescription>
-        </CardHeader>
+    <>
+      <div className="space-y-4">
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="بحث بالمعلم أو الشعبة أو المادة..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+        />
 
-        <CardContent>
-          {!canCreate && !isEditing ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك الصلاحية المطلوبة: <code>employee-teaching-assignments.create</code>.
-            </div>
-          ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm}>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  الموظف *
-                </label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.employeeId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      employeeId: event.target.value,
-                    }))
-                  }
-                  disabled={!canReadEmployees}
-                >
-                  <option value="">اختر الموظف</option>
-                  {(employeesQuery.data ?? []).map((employee) => (
-                    <option key={employee.id} value={employee.id}>
-                      {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
-                    </option>
-                  ))}
-                </select>
-                {selectedEmployee && !selectedEmployee.userAccount ? (
-                  <p className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-300">
-                    الموظف المختار لا يملك حساب مستخدم مرتبط. الإسناد سيُحفظ،
-                    لكن لن يتمكن من الدخول والتنفيذ إلا بعد إنشاء/ربط الحساب من{" "}
-                    <Link
-                      href={`/app/users?q=${encodeURIComponent(selectedEmployee.fullName)}`}
-                      className="underline underline-offset-2"
-                    >
-                      إدارة المستخدمين
-                    </Link>
-                    .
-                  </p>
-                ) : null}
-              </div>
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="فلاتر إسناد التدريس"
+          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectField
+              value={filterDraft.employee}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  employee: event.target.value,
+                }))
+              }
+            >
+              <option value="all">كل الموظفين</option>
+              {(employeesQuery.data ?? []).map((employee) => (
+                <option key={employee.id} value={employee.id}>
+                  {employee.jobNumber ?? employee.fullName}
+                </option>
+              ))}
+            </SelectField>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  الشعبة *
-                </label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.sectionId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      sectionId: event.target.value,
-                    }))
-                  }
-                  disabled={!canReadSections}
-                >
-                  <option value="">اختر الشعبة</option>
-                  {(sectionsQuery.data ?? []).map((section) => (
-                    <option key={section.id} value={section.id}>
-                      {section.name} ({section.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <SelectField
+              value={filterDraft.section}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  section: event.target.value,
+                }))
+              }
+            >
+              <option value="all">كل الشعب</option>
+              {(sectionsQuery.data ?? []).map((section) => (
+                <option key={section.id} value={section.id}>
+                  {section.code}
+                </option>
+              ))}
+            </SelectField>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  المادة *
-                </label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.subjectId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      subjectId: event.target.value,
-                    }))
-                  }
-                  disabled={!canReadSubjects}
-                >
-                  <option value="">اختر المادة</option>
-                  {(subjectsQuery.data ?? []).map((subject) => (
-                    <option key={subject.id} value={subject.id}>
-                      {subject.name} ({subject.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <SelectField
+              value={filterDraft.subject}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  subject: event.target.value,
+                }))
+              }
+            >
+              <option value="all">كل المواد</option>
+              {(subjectsQuery.data ?? []).map((subject) => (
+                <option key={subject.id} value={subject.id}>
+                  {subject.code}
+                </option>
+              ))}
+            </SelectField>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  السنة الأكاديمية *
-                </label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.academicYearId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      academicYearId: event.target.value,
-                    }))
-                  }
-                  disabled={!canReadAcademicYears}
-                >
-                  <option value="">اختر السنة الدراسية</option>
-                  {(academicYearsQuery.data ?? []).map((year) => (
-                    <option key={year.id} value={year.id}>
-                      {year.name} ({year.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <SelectField
+              value={filterDraft.academicYear}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  academicYear: event.target.value,
+                }))
+              }
+            >
+              <option value="all">كل السنوات</option>
+              {(academicYearsQuery.data ?? []).map((year) => (
+                <option key={year.id} value={year.id}>
+                  {year.code}
+                </option>
+              ))}
+            </SelectField>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  الحصص الأسبوعية *
-                </label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={60}
-                  value={formState.weeklyPeriods}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      weeklyPeriods: event.target.value,
-                    }))
-                  }
-                  required
-                />
-              </div>
-
-              <div className="grid gap-2 md:grid-cols-2">
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>مدرس أساسي</span>
-                  <input
-                    type="checkbox"
-                    checked={formState.isPrimary}
-                    onChange={(event) =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        isPrimary: event.target.checked,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>نشط</span>
-                  <input
-                    type="checkbox"
-                    checked={formState.isActive}
-                    onChange={(event) =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        isActive: event.target.checked,
-                      }))
-                    }
-                  />
-                </label>
-              </div>
-
-              {formError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {formError}
-                </div>
-              ) : null}
-
-              {mutationError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {mutationError}
-                </div>
-              ) : null}
-
-              {!hasDependenciesReadPermissions ? (
-                <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يتطلب هذا الجزء صلاحيات القراءة: <code>employees.read</code>,{" "}
-                  <code>sections.read</code>, <code>subjects.read</code>,{" "}
-                  <code>academic-years.read</code>.
-                </div>
-              ) : null}
-
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  className="flex-1 gap-2"
-                  disabled={
-                    isFormSubmitting ||
-                    (!canCreate && !isEditing) ||
-                    !hasDependenciesReadPermissions
-                  }
-                >
-                  {isFormSubmitting ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <UserRoundPlus className="h-4 w-4" />
-                  )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء إسناد تدريس"}
-                </Button>
-                {isEditing ? (
-                  <Button type="button" variant="outline" onClick={resetForm}>
-                    إلغاء
-                  </Button>
-                ) : null}
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
+            <SelectField
+              containerClassName="sm:col-span-2"
+              value={filterDraft.active}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  active: event.target.value as "all" | "active" | "inactive",
+                }))
+              }
+            >
+              <option value="all">كل الحالات</option>
+              <option value="active">النشطة فقط</option>
+              <option value="inactive">غير النشطة فقط</option>
+            </SelectField>
+          </div>
+        </FilterDrawer>
 
       <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
@@ -553,105 +521,6 @@ export function EmployeeTeachingAssignmentsWorkspace() {
             الدخول تبقى عبر المستخدم + الدور، بينما الإسناد يضبط نطاق البيانات
             داخل الصفحات الأكاديمية.
           </CardDescription>
-
-          <form
-            onSubmit={handleSearchSubmit}
-            className="grid gap-2 md:grid-cols-[1fr_180px_170px_170px_170px_130px_auto]"
-          >
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث بالمعلم أو الشعبة أو المادة..."
-                className="pr-8"
-              />
-            </div>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={employeeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setEmployeeFilter(event.target.value);
-              }}
-            >
-              <option value="all">كل الموظفين</option>
-              {(employeesQuery.data ?? []).map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.jobNumber ?? employee.fullName}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={sectionFilter}
-              onChange={(event) => {
-                setPage(1);
-                setSectionFilter(event.target.value);
-              }}
-            >
-              <option value="all">كل الشعب</option>
-              {(sectionsQuery.data ?? []).map((section) => (
-                <option key={section.id} value={section.id}>
-                  {section.code}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={subjectFilter}
-              onChange={(event) => {
-                setPage(1);
-                setSubjectFilter(event.target.value);
-              }}
-            >
-              <option value="all">كل المواد</option>
-              {(subjectsQuery.data ?? []).map((subject) => (
-                <option key={subject.id} value={subject.id}>
-                  {subject.code}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={academicYearFilter}
-              onChange={(event) => {
-                setPage(1);
-                setAcademicYearFilter(event.target.value);
-              }}
-            >
-              <option value="all">كل السنوات</option>
-              {(academicYearsQuery.data ?? []).map((year) => (
-                <option key={year.id} value={year.id}>
-                  {year.code}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={activeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setActiveFilter(
-                  event.target.value as "all" | "active" | "inactive",
-                );
-              }}
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </select>
-
-            <Button type="submit" variant="outline" className="gap-2">
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
-          </form>
         </CardHeader>
 
         <CardContent className="space-y-3">
@@ -785,7 +654,231 @@ export function EmployeeTeachingAssignmentsWorkspace() {
             </div>
           </div>
         </CardContent>
-      </Card>
-    </div>
+        </Card>
+      </div>
+
+      <Fab
+        onClick={handleStartCreate}
+        label="إضافة"
+        ariaLabel="إضافة إسناد تدريس"
+        disabled={!canCreate}
+      />
+
+      <CrudFormSheet
+        open={isFormOpen}
+        title={isEditing ? "تعديل إسناد تدريس" : "إضافة إسناد تدريس"}
+        submitLabel={isEditing ? "حفظ التعديلات" : "حفظ إسناد التدريس"}
+        onClose={resetForm}
+        onSubmit={() => undefined}
+        isSubmitting={isFormSubmitting}
+      >
+        {!canCreate && !isEditing ? (
+          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+            لا تملك الصلاحية المطلوبة: <code>employee-teaching-assignments.create</code>.
+          </div>
+        ) : (
+          <form className="space-y-3" onSubmit={handleSubmitForm}>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                الموظف *
+              </label>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={formState.employeeId}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    employeeId: event.target.value,
+                  }))
+                }
+                disabled={!canReadEmployees}
+              >
+                <option value="">اختر الموظف</option>
+                {(employeesQuery.data ?? []).map((employee) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
+                  </option>
+                ))}
+              </select>
+              {selectedEmployee && !selectedEmployee.userAccount ? (
+                <p className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-300">
+                  الموظف المختار لا يملك حساب مستخدم مرتبط. الإسناد سيُحفظ، لكن
+                  لن يتمكن من الدخول والتنفيذ إلا بعد إنشاء أو ربط الحساب من{" "}
+                  <Link
+                    href={`/app/users?q=${encodeURIComponent(selectedEmployee.fullName)}`}
+                    className="underline underline-offset-2"
+                  >
+                    إدارة المستخدمين
+                  </Link>
+                  .
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                الشعبة *
+              </label>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={formState.sectionId}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    sectionId: event.target.value,
+                  }))
+                }
+                disabled={!canReadSections}
+              >
+                <option value="">اختر الشعبة</option>
+                {(sectionsQuery.data ?? []).map((section) => (
+                  <option key={section.id} value={section.id}>
+                    {section.name} ({section.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                المادة *
+              </label>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={formState.subjectId}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    subjectId: event.target.value,
+                  }))
+                }
+                disabled={!canReadSubjects}
+              >
+                <option value="">اختر المادة</option>
+                {(subjectsQuery.data ?? []).map((subject) => (
+                  <option key={subject.id} value={subject.id}>
+                    {subject.name} ({subject.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                السنة الأكاديمية *
+              </label>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={formState.academicYearId}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    academicYearId: event.target.value,
+                  }))
+                }
+                disabled={!canReadAcademicYears}
+              >
+                <option value="">اختر السنة الدراسية</option>
+                {(academicYearsQuery.data ?? []).map((year) => (
+                  <option key={year.id} value={year.id}>
+                    {year.name} ({year.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                الحصص الأسبوعية *
+              </label>
+              <Input
+                type="number"
+                min={1}
+                max={60}
+                value={formState.weeklyPeriods}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    weeklyPeriods: event.target.value,
+                  }))
+                }
+                required
+              />
+            </div>
+
+            <div className="grid gap-2 md:grid-cols-2">
+              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                <span>مدرس أساسي</span>
+                <input
+                  type="checkbox"
+                  checked={formState.isPrimary}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      isPrimary: event.target.checked,
+                    }))
+                  }
+                />
+              </label>
+              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                <span>نشط</span>
+                <input
+                  type="checkbox"
+                  checked={formState.isActive}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      isActive: event.target.checked,
+                    }))
+                  }
+                />
+              </label>
+            </div>
+
+            {formError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {formError}
+              </div>
+            ) : null}
+
+            {mutationError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {mutationError}
+              </div>
+            ) : null}
+
+            {!hasDependenciesReadPermissions ? (
+              <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+                يتطلب هذا الجزء صلاحيات القراءة: <code>employees.read</code>,{" "}
+                <code>sections.read</code>, <code>subjects.read</code>,{" "}
+                <code>academic-years.read</code>.
+              </div>
+            ) : null}
+
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                className="flex-1 gap-2"
+                disabled={
+                  isFormSubmitting ||
+                  (!canCreate && !isEditing) ||
+                  !hasDependenciesReadPermissions
+                }
+              >
+                {isFormSubmitting ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : null}
+                {isEditing ? "حفظ التعديلات" : "حفظ إسناد التدريس"}
+              </Button>
+              {isEditing ? (
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  إلغاء
+                </Button>
+              ) : null}
+            </div>
+          </form>
+        )}
+      </CrudFormSheet>
+    </>
   );
 }

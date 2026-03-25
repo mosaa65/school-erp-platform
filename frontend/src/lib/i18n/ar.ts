@@ -174,16 +174,21 @@ const ROLE_CODE_LABELS: Record<string, string> = {
   super_admin: "مدير النظام",
 };
 
-const PERMISSION_RESOURCE_LABELS: Record<string, string> = {
+export const PERMISSION_RESOURCE_LABELS: Record<string, string> = {
   users: "المستخدمون",
   roles: "الأدوار",
   permissions: "الصلاحيات",
   "audit-logs": "سجل التدقيق",
+  sessions: "الجلسات النشطة",
+  "file-attachments": "المرفقات",
   "global-settings": "الإعدادات العامة",
   "system-settings": "إعدادات النظام",
   "reminders-ticker": "شريط التنبيهات",
   "user-permissions": "الصلاحيات المباشرة",
   "school-profiles": "ملف المدرسة",
+  "calendar-master": "التقويم الرئيسي",
+  "calendar-settings": "إعدادات التقويم",
+  "calendar-adjustments-log": "سجل تعديلات التقويم",
   "lookup-blood-types": "فصائل الدم",
   "lookup-id-types": "أنواع الهوية",
   "lookup-enrollment-statuses": "حالات القيد",
@@ -193,11 +198,31 @@ const PERMISSION_RESOURCE_LABELS: Record<string, string> = {
   "lookup-ownership-types": "أنواع الملكية",
   "lookup-periods": "فترات الدوام",
   "lookup-catalog": "قاموس المرجعيات",
+  "lookup-grade-descriptions": "أوصاف التقديرات",
+  "lookup-school-types": "أنواع المدارس",
+  "lookup-genders": "تصنيفات الجنس",
+  "lookup-qualifications": "المؤهلات",
+  "lookup-job-roles": "المسميات الوظيفية",
+  "lookup-days": "أيام الأسبوع",
+  "lookup-attendance-statuses": "حالات الحضور",
+  "lookup-marital-statuses": "الحالات الاجتماعية",
+  "lookup-health-statuses": "الحالات الصحية",
+  "lookup-relationship-types": "أنواع القرابة",
+  "lookup-talents": "أنواع المواهب",
+  "lookup-hijri-months": "الأشهر الهجرية",
+  "lookup-weeks": "الأسابيع",
+  "lookup-buildings": "المباني والمنشآت",
+  governorates: "المحافظات",
+  directorates: "المديريات",
+  "sub-districts": "العزل",
+  villages: "القرى",
+  localities: "المحلات",
   "academic-years": "السنوات الأكاديمية",
   "academic-terms": "الفصول الأكاديمية",
   "academic-months": "الأشهر الأكاديمية",
   "grade-levels": "المراحل/الصفوف",
   sections: "الشعب",
+  classrooms: "القاعات الدراسية",
   subjects: "المواد",
   "grade-level-subjects": "ربط الصفوف بالمواد",
   "term-subject-offerings": "خطة المواد للفصل",
@@ -211,6 +236,7 @@ const PERMISSION_RESOURCE_LABELS: Record<string, string> = {
   "student-talents": "مواهب الطلاب",
   "student-siblings": "الإخوة في المدرسة",
   "student-problems": "مشكلات الطلاب",
+  "health-visits": "الزيارات الصحية",
   "parent-notifications": "إشعارات أولياء الأمور",
   employees: "الموظفون",
   talents: "قاموس المواهب",
@@ -224,6 +250,7 @@ const PERMISSION_RESOURCE_LABELS: Record<string, string> = {
   "employee-performance-evaluations": "تقييمات الأداء",
   "hr-reports": "تقارير الموارد البشرية",
   "grading-policies": "سياسات الدرجات",
+  "grading-policy-components": "مكونات سياسات الدرجات",
   "exam-periods": "الفترات الاختبارية",
   "exam-assessments": "الاختبارات",
   "student-exam-scores": "درجات الاختبارات",
@@ -241,7 +268,7 @@ const PERMISSION_RESOURCE_LABELS: Record<string, string> = {
   "grading-reports": "تقارير الدرجات",
 };
 
-const PERMISSION_ACTION_LABELS: Record<string, string> = {
+export const PERMISSION_ACTION_LABELS: Record<string, string> = {
   create: "إضافة",
   read: "عرض",
   update: "تعديل",
@@ -252,6 +279,7 @@ const PERMISSION_ACTION_LABELS: Record<string, string> = {
   calculate: "احتساب",
   "fill-final-exam": "تعبئة الاختبار النهائي",
   "assign-permissions": "تعيين الصلاحيات",
+  manage: "إدارة كاملة",
 };
 
 export function translateStudentGender(value: StudentGender): string {

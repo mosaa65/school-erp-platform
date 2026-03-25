@@ -9,13 +9,20 @@ import {
   Plus,
   RefreshCw,
   Trash2,
+  CalendarDays,
+  Hash,
+  Type,
+  LayoutGrid,
+  Activity,
+  Calendar,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
-import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
+import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
 import {
   Card,
   CardContent,
@@ -187,16 +194,16 @@ export function AcademicTermsWorkspace() {
 
     const stillExists = terms.some((term) => term.id === editingTermId);
     if (!stillExists) {
-      setEditingTermId(null);
+      setEditingYearId(null);
       setFormState(DEFAULT_FORM_STATE);
       setFormError(null);
     }
   }, [editingTermId, isEditing, terms]);
 
   useDebounceEffect(() => {
-      setPage(1);
-      setSearch(searchInput.trim());
-    }, 400, [searchInput]);
+    setPage(1);
+    setSearch(searchInput.trim());
+  }, 400, [searchInput]);
 
   React.useEffect(() => {
     if (!isFilterOpen) {
@@ -423,51 +430,63 @@ export function AcademicTermsWorkspace() {
             </div>
           }
         >
-          <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.year}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, year: event.target.value }))
-              }
-              disabled={!canReadAcademicYears || academicYearOptionsQuery.isLoading}
-            >
-              <option value="all">كل السنوات</option>
-              {yearOptions.map((year) => (
-                <option key={year.id} value={year.id}>
-                  {year.code}
-                </option>
-              ))}
-            </SelectField>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>السنة الأكاديمية</Label>
+              <SelectField
+                value={filterDraft.year}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, year: event.target.value }))
+                }
+                disabled={!canReadAcademicYears || academicYearOptionsQuery.isLoading}
+                icon={<Calendar className="h-4 w-4" />}
+              >
+                <option value="all">كل السنوات</option>
+                {yearOptions.map((year) => (
+                  <option key={year.id} value={year.id}>
+                    {year.code}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
 
-            <SelectField
-              value={filterDraft.type}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  type: event.target.value as AcademicTermType | "all",
-                }))
-              }
-            >
-              <option value="all">كل الأنواع</option>
-              <option value="SEMESTER">فصلي</option>
-              <option value="TRIMESTER">ثلاثي</option>
-              <option value="QUARTER">ربعي</option>
-              <option value="CUSTOM">مخصص</option>
-            </SelectField>
+            <div className="space-y-1">
+              <Label>نوع الفصل</Label>
+              <SelectField
+                value={filterDraft.type}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    type: event.target.value as AcademicTermType | "all",
+                  }))
+                }
+                icon={<LayoutGrid className="h-4 w-4" />}
+              >
+                <option value="all">كل الأنواع</option>
+                <option value="SEMESTER">فصلي</option>
+                <option value="TRIMESTER">ثلاثي</option>
+                <option value="QUARTER">ربعي</option>
+                <option value="CUSTOM">مخصص</option>
+              </SelectField>
+            </div>
 
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </SelectField>
+            <div className="space-y-1">
+              <Label>الحالة</Label>
+              <SelectField
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+                icon={<Activity className="h-4 w-4" />}
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">النشطة فقط</option>
+                <option value="inactive">غير النشطة فقط</option>
+              </SelectField>
+            </div>
           </div>
         </FilterDrawer>
 
@@ -612,14 +631,13 @@ export function AcademicTermsWorkspace() {
         disabled={!canCreate}
       />
 
-      <BottomSheetForm
+      <CrudFormSheet
         open={isFormOpen}
         title={isEditing ? "تعديل فصل أكاديمي" : "إنشاء فصل أكاديمي"}
         onClose={resetForm}
         onSubmit={() => handleSubmitForm()}
         isSubmitting={isFormSubmitting}
         submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء فصل أكاديمي"}
-        showFooter={false}
       >
         {!canCreate && !isEditing ? (
           <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
@@ -627,10 +645,9 @@ export function AcademicTermsWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">السنة الأكاديمية *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <div className="space-y-1">
+              <Label required>السنة الأكاديمية</Label>
+              <SelectField
                 value={formState.academicYearId}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -639,6 +656,8 @@ export function AcademicTermsWorkspace() {
                   }))
                 }
                 disabled={!canReadAcademicYears}
+                icon={<Calendar className="h-4 w-4" />}
+                required
               >
                 <option value="">اختر السنة الدراسية</option>
                 {yearOptions.map((year) => (
@@ -646,23 +665,24 @@ export function AcademicTermsWorkspace() {
                     {year.name} ({year.code})
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الكود *</label>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <Label required>الكود</Label>
                 <Input
                   value={formState.code}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, code: event.target.value }))
                   }
                   placeholder="term-1"
+                  icon={<Type className="h-4 w-4" />}
                   required
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الترتيب *</label>
+              <div className="space-y-1">
+                <Label required>الترتيب</Label>
                 <Input
                   type="number"
                   min={1}
@@ -671,27 +691,28 @@ export function AcademicTermsWorkspace() {
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, sequence: event.target.value }))
                   }
+                  icon={<Hash className="h-4 w-4" />}
                   required
                 />
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
+            <div className="space-y-1">
+              <Label required>الاسم</Label>
               <Input
                 value={formState.name}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, name: event.target.value }))
                 }
                 placeholder="الفصل الأول"
+                icon={<Type className="h-4 w-4" />}
                 required
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">نوع الفصل *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <div className="space-y-1">
+              <Label required>نوع الفصل</Label>
+              <SelectField
                 value={formState.termType}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -699,49 +720,59 @@ export function AcademicTermsWorkspace() {
                     termType: event.target.value as AcademicTermType,
                   }))
                 }
+                icon={<LayoutGrid className="h-4 w-4" />}
+                required
               >
                 <option value="SEMESTER">فصلي</option>
                 <option value="TRIMESTER">ثلاثي</option>
                 <option value="QUARTER">ربعي</option>
                 <option value="CUSTOM">مخصص</option>
-              </select>
+              </SelectField>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">تاريخ البداية *</label>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <Label required>تاريخ البداية</Label>
                 <Input
                   type="date"
                   value={formState.startDate}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, startDate: event.target.value }))
                   }
+                  icon={<CalendarDays className="h-4 w-4" />}
                   required
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">تاريخ النهاية *</label>
+              <div className="space-y-1">
+                <Label required>تاريخ النهاية</Label>
                 <Input
                   type="date"
                   value={formState.endDate}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, endDate: event.target.value }))
                   }
+                  icon={<CalendarDays className="h-4 w-4" />}
                   required
                 />
               </div>
             </div>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
+            <div className="space-y-1">
+              <Label>الحالة</Label>
+              <SelectField
+                value={formState.isActive ? "active" : "inactive"}
                 onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                  setFormState((prev) => ({
+                    ...prev,
+                    isActive: event.target.value === "active",
+                  }))
                 }
-              />
-            </label>
+                icon={<Activity className="h-4 w-4" />}
+              >
+                <option value="active">نشط</option>
+                <option value="inactive">غير نشط</option>
+              </SelectField>
+            </div>
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
@@ -776,12 +807,7 @@ export function AcademicTermsWorkspace() {
             </div>
           </form>
         )}
-      </BottomSheetForm>
+      </CrudFormSheet>
     </>
   );
 }
-
-
-
-
-

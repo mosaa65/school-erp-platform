@@ -1,4 +1,4 @@
-﻿﻿import { appConfig } from "@/lib/env";
+﻿import { appConfig } from "@/lib/env";
 import type { AuthSession } from "@/features/auth/types/auth-session";
 import { getAccessTokenFromStorage } from "@/lib/auth/session";
 
@@ -4517,12 +4517,21 @@ function buildQueryString(
 }
 
 function resolveErrorMessage(body: unknown, status: number): string {
-  if (typeof body === "object" && body !== null && "message" in body) {
-    const message = body.message;
-    if (Array.isArray(message)) {
-      return message.join(", ");
+  // Case 1: Support nested error structure from HttpExceptionFilter { success: false, error: { message: ... } }
+  if (typeof body === "object" && body !== null) {
+    const b = body as any;
+    
+    // Check for nested error object (Common in our HttpExceptionFilter)
+    if (b.error && typeof b.error === "object" && "message" in b.error) {
+      const msg = b.error.message;
+      return Array.isArray(msg) ? msg.join(", ") : String(msg);
     }
-    return String(message);
+
+    // Check for direct message (Standard NestJS)
+    if ("message" in b) {
+      const msg = b.message;
+      return Array.isArray(msg) ? msg.join(", ") : String(msg);
+    }
   }
 
   if (typeof body === "string" && body.trim()) {

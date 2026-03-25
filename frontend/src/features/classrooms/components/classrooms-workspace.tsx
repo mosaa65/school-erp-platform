@@ -3,10 +3,19 @@
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import { useRouter } from "next/navigation";
-import { Building, LoaderCircle, PencilLine, Plus, RefreshCw, Trash2 } from "lucide-react";
+import {
+  Building,
+  ChevronDown,
+  LoaderCircle,
+  PencilLine,
+  Plus,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
@@ -400,41 +409,53 @@ export function ClassroomsWorkspace() {
           }
         >
           {canReadBuildings ? (
-            <SelectField
-              value={filterDraft.buildingLookupId}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  buildingLookupId: event.target.value,
-                }))
-              }
-            >
-              <option value="all">كل المباني</option>
-              {buildings.map((building) => (
-                <option key={building.id} value={String(building.id)}>
-                  {building.nameAr ?? building.name ?? building.code ?? `مبنى ${building.id}`}
-                </option>
-              ))}
-            </SelectField>
+            <div className="space-y-1">
+              <Label>المبنى</Label>
+              <SelectField
+                value={filterDraft.buildingLookupId}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    buildingLookupId: event.target.value,
+                  }))
+                }
+                icon={<Building className="h-4 w-4" />}
+              >
+                <option value="all">كل المباني</option>
+                {buildings.map((building) => (
+                  <option key={building.id} value={String(building.id)}>
+                    {building.nameAr ??
+                      building.name ??
+                      building.code ??
+                      `مبنى ${building.id}`}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
           ) : (
             <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
-              فلتر المبنى متاح فقط عند وجود صلاحية <code>lookup-buildings.read</code>.
+              فلتر المبنى متاح فقط عند وجود صلاحية{" "}
+              <code>lookup-buildings.read</code>.
             </div>
           )}
 
-          <SelectField
-            value={filterDraft.active}
-            onChange={(event) =>
-              setFilterDraft((prev) => ({
-                ...prev,
-                active: event.target.value as "all" | "active" | "inactive",
-              }))
-            }
-          >
-            <option value="all">كل الحالات</option>
-            <option value="active">النشطة فقط</option>
-            <option value="inactive">غير النشطة فقط</option>
-          </SelectField>
+          <div className="space-y-1">
+            <Label>الحالة</Label>
+            <SelectField
+              value={filterDraft.active}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  active: event.target.value as "all" | "active" | "inactive",
+                }))
+              }
+              icon={<LoaderCircle className="h-4 w-4" />}
+            >
+              <option value="all">كل الحالات</option>
+              <option value="active">النشطة فقط</option>
+              <option value="inactive">غير النشطة فقط</option>
+            </SelectField>
+          </div>
         </FilterDrawer>
 
         <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
@@ -631,19 +652,26 @@ export function ClassroomsWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">المبنى</label>
+            <div className="space-y-1">
+              <Label>المبنى</Label>
               <SelectField
                 value={formState.buildingLookupId}
                 onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, buildingLookupId: event.target.value }))
+                  setFormState((prev) => ({
+                    ...prev,
+                    buildingLookupId: event.target.value,
+                  }))
                 }
                 disabled={!canReadBuildings}
+                icon={<Building className="h-4 w-4" />}
               >
                 <option value="">بدون مبنى</option>
                 {buildings.map((building) => (
                   <option key={building.id} value={String(building.id)}>
-                    {building.nameAr ?? building.name ?? building.code ?? `مبنى ${building.id}`}
+                    {building.nameAr ??
+                      building.name ??
+                      building.code ??
+                      `مبنى ${building.id}`}
                   </option>
                 ))}
               </SelectField>
@@ -654,73 +682,95 @@ export function ClassroomsWorkspace() {
               ) : null}
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الكود *</label>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <Label required>الكود</Label>
                 <Input
                   value={formState.code}
                   onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, code: event.target.value }))
+                    setFormState((prev) => ({
+                      ...prev,
+                      code: event.target.value,
+                    }))
                   }
                   placeholder="مثال: room-a1"
+                  icon={<Plus className="h-4 w-4" />}
                   required
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
+              <div className="space-y-1">
+                <Label required>الاسم</Label>
                 <Input
                   value={formState.name}
                   onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, name: event.target.value }))
+                    setFormState((prev) => ({
+                      ...prev,
+                      name: event.target.value,
+                    }))
                   }
                   placeholder="الفصل A1"
+                  icon={<Building className="h-4 w-4" />}
                   required
                 />
               </div>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">السعة</label>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <Label>السعة</Label>
                 <Input
                   type="number"
                   min={1}
                   max={1000}
                   value={formState.capacity}
                   onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, capacity: event.target.value }))
+                    setFormState((prev) => ({
+                      ...prev,
+                      capacity: event.target.value,
+                    }))
                   }
                   placeholder="30"
+                  icon={<Plus className="h-4 w-4" />}
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الملاحظات</label>
+              <div className="space-y-1">
+                <Label>الملاحظات</Label>
                 <Input
                   value={formState.notes}
                   onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, notes: event.target.value }))
+                    setFormState((prev) => ({
+                      ...prev,
+                      notes: event.target.value,
+                    }))
                   }
                   placeholder="قريب من المختبر"
+                  icon={<PencilLine className="h-4 w-4" />}
                 />
               </div>
             </div>
 
             {formState.buildingLookupId ? (
               <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
-                تم ربط الفصل بمبنى محدد، وهذا سيساعد شاشة توزيع الشعب والاقتراحات الذكية.
+                تم ربط الفصل بمبنى محدد، وهذا سيساعد شاشة توزيع الشعب والاقتراحات
+                الذكية.
               </div>
             ) : null}
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
+            <div className="space-y-1">
+              <Label>الحالة</Label>
+              <SelectField
+                value={formState.isActive ? "active" : "inactive"}
                 onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                  setFormState((prev) => ({
+                    ...prev,
+                    isActive: event.target.value === "active",
+                  }))
                 }
-              />
-            </label>
+              >
+                <option value="active">نشط</option>
+                <option value="inactive">غير نشط</option>
+              </SelectField>
+            </div>
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

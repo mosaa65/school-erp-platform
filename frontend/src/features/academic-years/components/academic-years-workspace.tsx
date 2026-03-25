@@ -14,9 +14,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SearchField } from "@/components/ui/search-field";
+import { Label } from "@/components/ui/label";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
-import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
+import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
 import {
   Card,
   CardContent,
@@ -24,8 +25,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
@@ -178,9 +179,9 @@ export function AcademicYearsWorkspace() {
   }, [editingYearId, isEditing, years]);
 
   useDebounceEffect(() => {
-      setPage(1);
-      setSearch(searchInput.trim());
-    }, 400, [searchInput]);
+    setPage(1);
+    setSearch(searchInput.trim());
+  }, 400, [searchInput]);
 
   React.useEffect(() => {
     if (!isFilterOpen) {
@@ -349,74 +350,58 @@ export function AcademicYearsWorkspace() {
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-1 flex-wrap items-center gap-2 min-w-0 sm:min-w-[240px] max-w-lg">
-            <SearchField
-              containerClassName="flex-1"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="بحث بالاسم أو الكود..."
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterTriggerButton
-              count={activeFiltersCount}
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-            />
-          </div>
-        </div>
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="بحث بالاسم أو الكود..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+        />
 
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
           title="فلاتر السنوات الأكاديمية"
-          actionButtons={
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
-            </div>
-          }
+          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
-          <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.status}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  status: event.target.value as AcademicYearStatus | "all",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="PLANNED">مخططة</option>
-              <option value="ACTIVE">نشطة</option>
-              <option value="CLOSED">مغلقة</option>
-              <option value="ARCHIVED">مؤرشفة</option>
-            </SelectField>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>الحالة</Label>
+              <SelectField
+                value={filterDraft.status}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    status: event.target.value as AcademicYearStatus | "all",
+                  }))
+                }
+                icon={<LoaderCircle className="h-4 w-4" />}
+              >
+                <option value="all">كل الحالات</option>
+                <option value="PLANNED">مخططة</option>
+                <option value="ACTIVE">نشطة</option>
+                <option value="CLOSED">مغلقة</option>
+                <option value="ARCHIVED">مؤرشفة</option>
+              </SelectField>
+            </div>
 
-            <SelectField
-              value={filterDraft.current}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  current: event.target.value as "all" | "current" | "not-current",
-                }))
-              }
-            >
-              <option value="all">كل حالات الحالية</option>
-              <option value="current">الحالية فقط</option>
-              <option value="not-current">غير الحالية فقط</option>
-            </SelectField>
+            <div className="space-y-1">
+              <Label>هل السنة الحالية؟</Label>
+              <SelectField
+                value={filterDraft.current}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    current: event.target.value as "all" | "current" | "not-current",
+                  }))
+                }
+                icon={<Star className="h-4 w-4" />}
+              >
+                <option value="all">كل الحالات</option>
+                <option value="current">الحالية فقط</option>
+                <option value="not-current">غير الحالية فقط</option>
+              </SelectField>
+            </div>
           </div>
         </FilterDrawer>
 
@@ -562,14 +547,13 @@ export function AcademicYearsWorkspace() {
         disabled={!canCreate}
       />
 
-      <BottomSheetForm
+      <CrudFormSheet
         open={isFormOpen}
         title={isEditing ? "تعديل سنة أكاديمية" : "إنشاء سنة أكاديمية"}
         onClose={resetForm}
         onSubmit={() => handleSubmitForm()}
         isSubmitting={isFormSubmitting}
         submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء سنة أكاديمية"}
-        showFooter={false}
       >
         {!canCreate && !isEditing ? (
           <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
@@ -577,61 +561,68 @@ export function AcademicYearsWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الكود *</label>
+            <div className="space-y-1">
+              <Label required>الكود</Label>
               <Input
                 value={formState.code}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, code: event.target.value }))
                 }
                 placeholder="ay-2026-2027"
+                icon={<Plus className="h-4 w-4" />}
                 required
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
+            <div className="space-y-1">
+              <Label required>الاسم</Label>
               <Input
                 value={formState.name}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, name: event.target.value }))
                 }
                 placeholder="العام الأكاديمي 2026/2027"
+                icon={<CalendarDays className="h-4 w-4" />}
                 required
               />
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  تاريخ البداية *
-                </label>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <Label required>تاريخ البداية</Label>
                 <Input
                   type="date"
                   value={formState.startDate}
                   onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, startDate: event.target.value }))
+                    setFormState((prev) => ({
+                      ...prev,
+                      startDate: event.target.value,
+                    }))
                   }
+                  icon={<CalendarDays className="h-4 w-4" />}
                   required
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">تاريخ النهاية *</label>
+              <div className="space-y-1">
+                <Label required>تاريخ النهاية</Label>
                 <Input
                   type="date"
                   value={formState.endDate}
                   onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, endDate: event.target.value }))
+                    setFormState((prev) => ({
+                      ...prev,
+                      endDate: event.target.value,
+                    }))
                   }
+                  icon={<CalendarDays className="h-4 w-4" />}
                   required
                 />
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الحالة *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <div className="space-y-1">
+              <Label required>الحالة</Label>
+              <SelectField
                 value={formState.status}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -639,24 +630,31 @@ export function AcademicYearsWorkspace() {
                     status: event.target.value as AcademicYearStatus,
                   }))
                 }
+                icon={<LoaderCircle className="h-4 w-4" />}
               >
                 <option value="PLANNED">مخططة</option>
                 <option value="ACTIVE">نشطة</option>
                 <option value="CLOSED">مغلقة</option>
                 <option value="ARCHIVED">مؤرشفة</option>
-              </select>
+              </SelectField>
             </div>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>السنة الأكاديمية الحالية</span>
-              <input
-                type="checkbox"
-                checked={formState.isCurrent}
+            <div className="space-y-1">
+              <Label>هل السنة الحالية؟</Label>
+              <SelectField
+                value={formState.isCurrent ? "yes" : "no"}
                 onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isCurrent: event.target.checked }))
+                  setFormState((prev) => ({
+                    ...prev,
+                    isCurrent: event.target.value === "yes",
+                  }))
                 }
-              />
-            </label>
+                icon={<Star className="h-4 w-4" />}
+              >
+                <option value="yes">نعم، هي السنة الحالية</option>
+                <option value="no">لا</option>
+              </SelectField>
+            </div>
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
@@ -691,12 +689,7 @@ export function AcademicYearsWorkspace() {
             </div>
           </form>
         )}
-      </BottomSheetForm>
+      </CrudFormSheet>
     </>
   );
 }
-
-
-
-
-

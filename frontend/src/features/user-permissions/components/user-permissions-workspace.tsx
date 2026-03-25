@@ -36,6 +36,7 @@ import {
 import { useUserPermissionsQuery } from "@/features/user-permissions/hooks/use-user-permissions-query";
 import { usePermissionsOptionsQuery } from "@/features/permissions/hooks/use-permissions-options-query";
 import { useUsersOptionsQuery } from "@/features/users/hooks/use-users-options-query";
+import { PermissionsSelector } from "@/components/ui/permissions-selector";
 import type { UserPermissionListItem } from "@/lib/api/client";
 import { translatePermissionCode } from "@/lib/i18n/ar";
 
@@ -152,7 +153,6 @@ export function UserPermissionsWorkspace() {
   >("all");
   const [userFilterDraft, setUserFilterDraft] = React.useState<string>("all");
   const [permissionFilterDraft, setPermissionFilterDraft] = React.useState<string>("all");
-  const [permissionSearch, setPermissionSearch] = React.useState("");
   const [isBulkSubmitting, setIsBulkSubmitting] = React.useState(false);
 
   const [editingItemId, setEditingItemId] = React.useState<number | null>(null);
@@ -181,18 +181,6 @@ export function UserPermissionsWorkspace() {
 
   const users = React.useMemo(() => usersOptionsQuery.data ?? [], [usersOptionsQuery.data]);
   const permissions = React.useMemo(() => permissionsOptionsQuery.data ?? [], [permissionsOptionsQuery.data]);
-  const filteredPermissions = React.useMemo(() => {
-    const keyword = permissionSearch.trim().toLowerCase();
-    if (!keyword) {
-      return permissions;
-    }
-
-    return permissions.filter((permission) =>
-      `${permission.code} ${permission.resource} ${permission.action} ${permission.description ?? ""}`
-        .toLowerCase()
-        .includes(keyword),
-    );
-  }, [permissionSearch, permissions]);
   const items = React.useMemo(() => userPermissionsQuery.data?.data ?? [], [userPermissionsQuery.data?.data]);
   const pagination = userPermissionsQuery.data?.pagination;
   const isEditing = editingItemId !== null;
@@ -237,7 +225,6 @@ export function UserPermissionsWorkspace() {
     setEditingItemId(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
-    setPermissionSearch("");
     setIsFormOpen(false);
   };
 
@@ -249,7 +236,6 @@ export function UserPermissionsWorkspace() {
     setFormError(null);
     setEditingItemId(null);
     setFormState(DEFAULT_FORM_STATE);
-    setPermissionSearch("");
     setIsFormOpen(true);
   };
 
@@ -717,44 +703,11 @@ export function UserPermissionsWorkspace() {
                     : "لم يتم اختيار صلاحية"}
                 </div>
               ) : (
-                <>
-                  <SearchField
-                    value={permissionSearch}
-                    onChange={(event) => setPermissionSearch(event.target.value)}
-                    placeholder="ابحث عن صلاحية..."
-                    data-testid="user-permission-form-permission-search"
-                  />
-                  <div className="max-h-48 space-y-1 overflow-y-auto rounded-md border p-2">
-                    {filteredPermissions.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">لا توجد صلاحيات مطابقة.</p>
-                    ) : (
-                      filteredPermissions.map((permission) => (
-                        <label
-                          key={permission.id}
-                          className="flex cursor-pointer items-center justify-between gap-2 rounded-md border border-transparent px-2 py-1 text-xs hover:border-border"
-                        >
-                          <span className="truncate">
-                            {getPermissionOptionLabel(permission.code)}
-                          </span>
-                          <input
-                            type="checkbox"
-                            checked={formState.selectedPermissionIds.includes(permission.id)}
-                            onChange={(event) =>
-                              setFormState((prev) => ({
-                                ...prev,
-                                selectedPermissionIds: event.target.checked
-                                  ? [...prev.selectedPermissionIds, permission.id]
-                                  : prev.selectedPermissionIds.filter(
-                                      (existingId) => existingId !== permission.id,
-                                    ),
-                              }))
-                            }
-                          />
-                        </label>
-                      ))
-                    )}
-                  </div>
-                </>
+                <PermissionsSelector
+                  permissions={permissions}
+                  selectedIds={formState.selectedPermissionIds}
+                  onChange={(ids) => setFormState(prev => ({ ...prev, selectedPermissionIds: ids }))}
+                />
               )}
             </div>
 

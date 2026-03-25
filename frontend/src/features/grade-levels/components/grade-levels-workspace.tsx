@@ -9,10 +9,15 @@ import {
   Plus,
   RefreshCw,
   Trash2,
+  Hash,
+  BookOpen,
+  Activity,
+  ListOrdered,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
@@ -369,37 +374,45 @@ export function GradeLevelsWorkspace() {
             </div>
           }
         >
-          <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.stage}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  stage: event.target.value as GradeStage | "all",
-                }))
-              }
-            >
-              <option value="all">كل المراحل</option>
-              {STAGE_OPTIONS.map((stage) => (
-                <option key={stage} value={stage}>
-                  {STAGE_LABELS[stage]}
-                </option>
-              ))}
-            </SelectField>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>المرحلة التدريسية</Label>
+              <SelectField
+                value={filterDraft.stage}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    stage: event.target.value as GradeStage | "all",
+                  }))
+                }
+                icon={<Layers3 className="h-4 w-4" />}
+              >
+                <option value="all">كل المراحل</option>
+                {STAGE_OPTIONS.map((stage) => (
+                  <option key={stage} value={stage}>
+                    {STAGE_LABELS[stage]}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
 
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </SelectField>
+            <div className="space-y-1">
+              <Label>الحالة</Label>
+              <SelectField
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+                icon={<Activity className="h-4 w-4" />}
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">النشطة فقط</option>
+                <option value="inactive">غير النشطة فقط</option>
+              </SelectField>
+            </div>
           </div>
         </FilterDrawer>
 
@@ -443,10 +456,18 @@ export function GradeLevelsWorkspace() {
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="space-y-1">
                     <p className="font-medium">{gradeLevel.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      <code>{gradeLevel.code}</code> - الترتيب: {gradeLevel.sequence}
+                    <p className="text-xs text-muted-foreground flex items-center gap-3">
+                      <span className="flex items-center gap-1">
+                        <Hash className="h-3 w-3" />
+                        <code>{gradeLevel.code}</code>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <ListOrdered className="h-3 w-3" />
+                        الترتيب: {gradeLevel.sequence}
+                      </span>
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <BookOpen className="h-3 w-3" />
                       الشعب: {gradeLevel.sections.length}
                     </p>
                   </div>
@@ -464,12 +485,12 @@ export function GradeLevelsWorkspace() {
                 {gradeLevel.sections.length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
                     {gradeLevel.sections.slice(0, 4).map((section) => (
-                      <Badge key={section.id} variant="outline">
+                      <Badge key={section.id} variant="outline" className="text-[10px] h-5">
                         {section.code}
                       </Badge>
                     ))}
                     {gradeLevel.sections.length > 4 ? (
-                      <Badge variant="outline">+{gradeLevel.sections.length - 4}</Badge>
+                      <Badge variant="outline" className="text-[10px] h-5">+{gradeLevel.sections.length - 4}</Badge>
                     ) : null}
                   </div>
                 ) : null}
@@ -571,36 +592,37 @@ export function GradeLevelsWorkspace() {
             لا تملك الصلاحية المطلوبة: <code>grade-levels.create</code>.
           </div>
         ) : (
-          <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الكود *</label>
+          <form className="space-y-4" onSubmit={handleSubmitForm}>
+            <div className="space-y-1">
+              <Label required>الكود</Label>
               <Input
                 value={formState.code}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, code: event.target.value }))
                 }
                 placeholder="grade-01"
+                icon={<Hash className="h-4 w-4" />}
                 required
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
+            <div className="space-y-1">
+              <Label required>الاسم</Label>
               <Input
                 value={formState.name}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, name: event.target.value }))
                 }
                 placeholder="الصف الأول"
+                icon={<BookOpen className="h-4 w-4" />}
                 required
               />
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">المرحلة *</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <Label required>المرحلة</Label>
+                <SelectField
                   value={formState.stage}
                   onChange={(event) =>
                     setFormState((prev) => ({
@@ -608,17 +630,18 @@ export function GradeLevelsWorkspace() {
                       stage: event.target.value as GradeStage,
                     }))
                   }
+                  icon={<Layers3 className="h-4 w-4" />}
                 >
                   {STAGE_OPTIONS.map((stage) => (
                     <option key={stage} value={stage}>
                       {STAGE_LABELS[stage]}
                     </option>
                   ))}
-                </select>
+                </SelectField>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الترتيب *</label>
+              <div className="space-y-1">
+                <Label required>الترتيب</Label>
                 <Input
                   type="number"
                   min={1}
@@ -627,21 +650,28 @@ export function GradeLevelsWorkspace() {
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, sequence: event.target.value }))
                   }
+                  icon={<ListOrdered className="h-4 w-4" />}
                   required
                 />
               </div>
             </div>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
+            <div className="space-y-1">
+              <Label>الحالة</Label>
+              <SelectField
+                value={formState.isActive ? "active" : "inactive"}
                 onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                  setFormState((prev) => ({
+                    ...prev,
+                    isActive: event.target.value === "active",
+                  }))
                 }
-              />
-            </label>
+                icon={<Activity className="h-4 w-4" />}
+              >
+                <option value="active">نشط</option>
+                <option value="inactive">غير نشط</option>
+              </SelectField>
+            </div>
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
@@ -655,10 +685,10 @@ export function GradeLevelsWorkspace() {
               </div>
             ) : null}
 
-            <div className="flex gap-2">
-              <Button
+            <div className="flex gap-2 pt-2">
+              <button
                 type="submit"
-                className="flex-1 gap-2"
+                className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/30 active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
                 disabled={isFormSubmitting || (!canCreate && !isEditing)}
               >
                 {isFormSubmitting ? (
@@ -667,9 +697,9 @@ export function GradeLevelsWorkspace() {
                   <Layers3 className="h-4 w-4" />
                 )}
                 {isEditing ? "حفظ التعديلات" : "إنشاء مرحلة/صف"}
-              </Button>
+              </button>
               {isEditing ? (
-                <Button type="button" variant="outline" onClick={resetForm}>
+                <Button type="button" variant="outline" onClick={resetForm} className="rounded-2xl">
                   إلغاء
                 </Button>
               ) : null}

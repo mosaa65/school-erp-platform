@@ -42,14 +42,15 @@ export function PhoneContactInput({
     setIsSupported(supportsContactPicker());
   }, []);
 
-  const resolvedHelpText = helpText
-    ? helpText
-    : isSupported
-      ? "يمكنك إدخال الرقم يدويًا أو استخدام اختيار من النظام."
-      : "هذا المتصفح لا يدعم جلب جهات الاتصال مباشرة، لذا يبقى الإدخال اليدوي هو المتاح هنا.";
+  const resolvedHelpText = helpText ?? "يمكنك إدخال الرقم يدويًا أو اختيار جهة اتصال من جهازك (إن كان مدعوماً).";
 
   const handleChooseContact = async () => {
-    if (!isSupported || disabled || isPicking) {
+    if (!isSupported) {
+      alert("عذراً، متصفحك أو جهازك لا يدعم ميزة استيراد جهات الاتصال بشكل مباشر. يرجى إدخال الرقم يدوياً.");
+      return;
+    }
+    
+    if (disabled || isPicking) {
       return;
     }
 
@@ -86,26 +87,25 @@ export function PhoneContactInput({
         <Input
           {...inputProps}
           type="tel"
+          autoComplete="tel"
           value={value}
+          onChange={(e) => onValueChange(e.target.value)}
           disabled={disabled}
           className={cn("flex-1", className)}
         />
 
-        {isSupported ? (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => void handleChooseContact()}
-            disabled={disabled || isPicking}
-            data-testid={buttonTestId}
-            className="h-10 shrink-0 rounded-md px-3"
-          >
-            <Phone className="h-4 w-4" />
-            <span className="hidden sm:inline">
-              {isPicking ? "جارٍ الفتح..." : actionLabel}
-            </span>
-          </Button>
-        ) : null}
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={() => void handleChooseContact()}
+          disabled={disabled || isPicking}
+          data-testid={buttonTestId}
+          title={actionLabel}
+          className="h-10 w-10 shrink-0 rounded-full bg-primary/5 text-primary hover:bg-primary/15 transition-colors border-primary/20 shadow-sm"
+        >
+          <Phone className={cn("h-4 w-4", isPicking && "animate-pulse opacity-50")} />
+        </Button>
       </div>
 
       <p className="text-[11px] leading-5 text-muted-foreground">{resolvedHelpText}</p>

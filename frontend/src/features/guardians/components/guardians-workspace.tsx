@@ -1,10 +1,26 @@
 "use client";
 
 import * as React from "react";
-import { LoaderCircle, PencilLine, RefreshCw, Search, Trash2, Users } from "lucide-react";
+import {
+  LoaderCircle,
+  PencilLine,
+  RefreshCw,
+  Search,
+  Trash2,
+  Users,
+  User,
+  IdCard,
+  Phone,
+  MessageSquare,
+  MapPin,
+  Activity,
+  UserCheck,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { SelectField } from "@/components/ui/select-field";
 import { PhoneContactInput } from "@/components/ui/phone-contact-input";
 import {
   Card,
@@ -586,7 +602,7 @@ export function GuardiansWorkspace() {
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[390px_1fr]">
+    <div className="grid gap-4 xl:grid-cols-[420px_1fr]">
       <Card className="h-fit border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -606,79 +622,86 @@ export function GuardiansWorkspace() {
               لا تملك الصلاحية المطلوبة: <code>guardians.create</code>.
             </div>
           ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm}>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الاسم الكامل *</label>
+            <form className="space-y-4" onSubmit={handleSubmitForm}>
+              <div className="space-y-1">
+                <Label required>الاسم الكامل</Label>
                 <Input
                   value={formState.fullName}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, fullName: event.target.value }))
                   }
                   placeholder="أحمد محمد صالح"
+                  icon={<User className="h-4 w-4" />}
                   required
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الجنس *</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.genderId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      genderId: event.target.value,
-                    }))
-                  }
-                  disabled={!canReadGenders || genderOptionsQuery.isLoading}
-                >
-                  <option value="">اختر الجنس</option>
-                  {genderOptions.map((option) => {
-                    const translated =
-                      option.code && isStudentGenderCode(option.code)
-                        ? translateStudentGender(option.code)
-                        : option.nameAr ?? option.name ?? option.code ?? String(option.id);
-
-                    return (
-                      <option key={option.id} value={option.id}>
-                        {option.nameAr ?? translated}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">رقم الهوية</label>
-                  <Input
-                    value={formState.idNumber}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-1">
+                  <Label required>الجنس</Label>
+                  <SelectField
+                    value={formState.genderId}
                     onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, idNumber: event.target.value }))
+                      setFormState((prev) => ({
+                        ...prev,
+                        genderId: event.target.value,
+                      }))
                     }
-                    placeholder="مثال: 90909012"
-                  />
+                    disabled={!canReadGenders || genderOptionsQuery.isLoading}
+                    icon={<User className="h-4 w-4" />}
+                    required
+                  >
+                    <option value="">اختر الجنس</option>
+                    {genderOptions.map((option) => {
+                      const translated =
+                        option.code && isStudentGenderCode(option.code)
+                          ? translateStudentGender(option.code)
+                          : option.nameAr ?? option.name ?? option.code ?? String(option.id);
+
+                      return (
+                        <option key={option.id} value={option.id}>
+                          {option.nameAr ?? translated}
+                        </option>
+                      );
+                    })}
+                  </SelectField>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">نوع الهوية</label>
-                  <select
-                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+
+                <div className="space-y-1">
+                  <Label>نوع الهوية</Label>
+                  <SelectField
                     value={formState.idTypeId}
                     onChange={(event) =>
                       setFormState((prev) => ({ ...prev, idTypeId: event.target.value }))
                     }
                     disabled={!canReadIdTypes || idTypeOptionsQuery.isLoading}
+                    icon={<IdCard className="h-4 w-4" />}
                   >
                     <option value="">غير محدد</option>
                     {idTypeOptions.map((idType) => (
                       <option key={idType.id} value={idType.id}>
-                        {idType.nameAr} ({idType.code})
+                        {idType.nameAr}
                       </option>
                     ))}
-                  </select>
+                  </SelectField>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">الهاتف الأساسي</label>
+              </div>
+
+              <div className="space-y-1">
+                <Label>رقم الهوية</Label>
+                <Input
+                  value={formState.idNumber}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, idNumber: event.target.value }))
+                  }
+                  placeholder="مثال: 90909012"
+                  icon={<IdCard className="h-4 w-4" />}
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-1">
+                  <Label>الهاتف الأساسي</Label>
                   <PhoneContactInput
                     value={formState.phonePrimary}
                     onValueChange={(value) =>
@@ -690,133 +713,8 @@ export function GuardiansWorkspace() {
                     buttonTestId="guardian-phone-primary-contact-picker"
                   />
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground">
-                  الموقع الجغرافي (هرمي)
-                </label>
-                {hasGeographyHierarchy ? (
-                  <div className="grid gap-2 md:grid-cols-2">
-                    <select
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                      value={formGovernorateId}
-                      onChange={(event) => handleGovernorateChange(event.target.value)}
-                      disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
-                    >
-                      <option value="">اختر المحافظة</option>
-                      {governorateOptions.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.nameAr ?? item.name ?? `محافظة #${item.id}`}
-                        </option>
-                      ))}
-                    </select>
-
-                    <select
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                      value={formDirectorateId}
-                      onChange={(event) => handleDirectorateChange(event.target.value)}
-                      disabled={
-                        !canReadLocalities ||
-                        geographyOptionsQuery.isLoading ||
-                        !formGovernorateId
-                      }
-                    >
-                      <option value="">اختر المديرية</option>
-                      {filteredDirectorates.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.nameAr ?? item.name ?? `مديرية #${item.id}`}
-                        </option>
-                      ))}
-                    </select>
-
-                    <select
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                      value={formSubDistrictId}
-                      onChange={(event) => handleSubDistrictChange(event.target.value)}
-                      disabled={
-                        !canReadLocalities ||
-                        geographyOptionsQuery.isLoading ||
-                        !formDirectorateId
-                      }
-                    >
-                      <option value="">اختر العزلة</option>
-                      {filteredSubDistricts.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.nameAr ?? item.name ?? `عزلة #${item.id}`}
-                        </option>
-                      ))}
-                    </select>
-
-                    <select
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                      value={formVillageId}
-                      onChange={(event) => handleVillageChange(event.target.value)}
-                      disabled={
-                        !canReadLocalities ||
-                        geographyOptionsQuery.isLoading ||
-                        !formSubDistrictId
-                      }
-                    >
-                      <option value="">اختر القرية (اختياري للحضر)</option>
-                      {filteredVillages.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.nameAr ?? item.name ?? `قرية #${item.id}`}
-                        </option>
-                      ))}
-                    </select>
-
-                    <div className="md:col-span-2">
-                      <select
-                        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                        value={formState.localityId}
-                        onChange={(event) => handleLocalityChange(event.target.value)}
-                        disabled={
-                          !canReadLocalities ||
-                          geographyOptionsQuery.isLoading ||
-                          !formDirectorateId
-                        }
-                      >
-                        <option value="">اختر المحلة</option>
-                        {filteredLocalities.map((locality) => (
-                          <option key={locality.id} value={locality.id}>
-                            {formatLocalityHierarchyLabel(locality, geographyMaps)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <p className="text-xs text-muted-foreground md:col-span-2">
-                      {formSelectedLocality
-                        ? `المحدد: ${formatLocalityHierarchyLabel(
-                            formSelectedLocality,
-                            geographyMaps,
-                          )}`
-                        : "يمكن اختيار محلة حضرية بعد تحديد المديرية، أو محلة ريفية بعد اختيار العزلة والقرية."}
-                    </p>
-                  </div>
-                ) : (
-                  <select
-                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    value={formState.localityId}
-                    onChange={(event) => handleLocalityChange(event.target.value)}
-                    disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
-                  >
-                    <option value="">غير محدد</option>
-                    {localityOptions.map((locality) => (
-                      <option key={locality.id} value={locality.id}>
-                        {formatLocalityHierarchyLabel(locality, geographyMaps)}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    الهاتف الاحتياطي
-                  </label>
+                <div className="space-y-1">
+                  <Label>الهاتف الاحتياطي</Label>
                   <PhoneContactInput
                     value={formState.phoneSecondary}
                     onValueChange={(value) =>
@@ -828,28 +726,145 @@ export function GuardiansWorkspace() {
                     buttonTestId="guardian-phone-secondary-contact-picker"
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    رقم واتساب
-                  </label>
-                  <PhoneContactInput
-                    value={formState.whatsappNumber}
-                    onValueChange={(value) =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        whatsappNumber: value,
-                      }))
-                    }
-                    placeholder="+967777111222"
-                    autoComplete="tel"
-                    inputMode="tel"
-                    buttonTestId="guardian-whatsapp-contact-picker"
-                  />
-                </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">العنوان</label>
+              <div className="space-y-1">
+                <Label>رقم واتساب</Label>
+                <PhoneContactInput
+                  value={formState.whatsappNumber}
+                  onValueChange={(value) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      whatsappNumber: value,
+                    }))
+                  }
+                  placeholder="+967777111222"
+                  autoComplete="tel"
+                  inputMode="tel"
+                  buttonTestId="guardian-whatsapp-contact-picker"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>الموقع الجغرافي (هرمي)</Label>
+                {hasGeographyHierarchy ? (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <SelectField
+                      value={formGovernorateId}
+                      onChange={(event) => handleGovernorateChange(event.target.value)}
+                      disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
+                      icon={<MapPin className="h-4 w-4" />}
+                    >
+                      <option value="">اختر المحافظة</option>
+                      {governorateOptions.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.nameAr ?? item.name ?? `محافظة #${item.id}`}
+                        </option>
+                      ))}
+                    </SelectField>
+
+                    <SelectField
+                      value={formDirectorateId}
+                      onChange={(event) => handleDirectorateChange(event.target.value)}
+                      disabled={
+                        !canReadLocalities ||
+                        geographyOptionsQuery.isLoading ||
+                        !formGovernorateId
+                      }
+                      icon={<MapPin className="h-4 w-4" />}
+                    >
+                      <option value="">اختر المديرية</option>
+                      {filteredDirectorates.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.nameAr ?? item.name ?? `مديرية #${item.id}`}
+                        </option>
+                      ))}
+                    </SelectField>
+
+                    <SelectField
+                      value={formSubDistrictId}
+                      onChange={(event) => handleSubDistrictChange(event.target.value)}
+                      disabled={
+                        !canReadLocalities ||
+                        geographyOptionsQuery.isLoading ||
+                        !formDirectorateId
+                      }
+                      icon={<MapPin className="h-4 w-4" />}
+                    >
+                      <option value="">اختر العزلة</option>
+                      {filteredSubDistricts.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.nameAr ?? item.name ?? `عزلة #${item.id}`}
+                        </option>
+                      ))}
+                    </SelectField>
+
+                    <SelectField
+                      value={formVillageId}
+                      onChange={(event) => handleVillageChange(event.target.value)}
+                      disabled={
+                        !canReadLocalities ||
+                        geographyOptionsQuery.isLoading ||
+                        !formSubDistrictId
+                      }
+                      icon={<MapPin className="h-4 w-4" />}
+                    >
+                      <option value="">اختر القرية (اختياري للحضر)</option>
+                      {filteredVillages.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.nameAr ?? item.name ?? `قرية #${item.id}`}
+                        </option>
+                      ))}
+                    </SelectField>
+
+                    <div className="md:col-span-2">
+                      <SelectField
+                        value={formState.localityId}
+                        onChange={(event) => handleLocalityChange(event.target.value)}
+                        disabled={
+                          !canReadLocalities ||
+                          geographyOptionsQuery.isLoading ||
+                          !formDirectorateId
+                        }
+                        icon={<MapPin className="h-4 w-4" />}
+                      >
+                        <option value="">اختر المحلة</option>
+                        {filteredLocalities.map((locality) => (
+                          <option key={locality.id} value={locality.id}>
+                            {formatLocalityHierarchyLabel(locality, geographyMaps)}
+                          </option>
+                        ))}
+                      </SelectField>
+                    </div>
+
+                    <p className="text-[10px] text-muted-foreground md:col-span-2 px-1">
+                      {formSelectedLocality
+                        ? `المحدد: ${formatLocalityHierarchyLabel(
+                            formSelectedLocality,
+                            geographyMaps,
+                          )}`
+                        : "يمكن اختيار محلة حضرية بعد تحديد المديرية، أو محلة ريفية بعد اختيار العزلة والقرية."}
+                    </p>
+                  </div>
+                ) : (
+                  <SelectField
+                    value={formState.localityId}
+                    onChange={(event) => handleLocalityChange(event.target.value)}
+                    disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
+                    icon={<MapPin className="h-4 w-4" />}
+                  >
+                    <option value="">غير محدد</option>
+                    {localityOptions.map((locality) => (
+                      <option key={locality.id} value={locality.id}>
+                        {formatLocalityHierarchyLabel(locality, geographyMaps)}
+                      </option>
+                    ))}
+                  </SelectField>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <Label>العنوان</Label>
                 <Input
                   value={formState.residenceText}
                   onChange={(event) =>
@@ -859,19 +874,26 @@ export function GuardiansWorkspace() {
                     }))
                   }
                   placeholder="صنعاء - حي الصافية"
+                  icon={<MapPin className="h-4 w-4" />}
                 />
               </div>
 
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشط</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isActive}
+              <div className="space-y-1">
+                <Label>الحالة</Label>
+                <SelectField
+                  value={formState.isActive ? "active" : "inactive"}
                   onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                    setFormState((prev) => ({
+                      ...prev,
+                      isActive: event.target.value === "active",
+                    }))
                   }
-                />
-              </label>
+                  icon={<Activity className="h-4 w-4" />}
+                >
+                  <option value="active">نشط</option>
+                  <option value="inactive">غير نشط</option>
+                </SelectField>
+              </div>
 
               {formError ? (
                 <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
@@ -890,10 +912,10 @@ export function GuardiansWorkspace() {
                 </div>
               ) : null}
 
-              <div className="flex gap-2">
-                <Button
+              <div className="flex gap-2 pt-2">
+                <button
                   type="submit"
-                  className="flex-1 gap-2"
+                  className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/30 active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
                   disabled={isFormSubmitting || (!canCreate && !isEditing)}
                 >
                   {isFormSubmitting ? (
@@ -902,9 +924,9 @@ export function GuardiansWorkspace() {
                     <Users className="h-4 w-4" />
                   )}
                   {isEditing ? "حفظ التعديلات" : "إنشاء ولي أمر"}
-                </Button>
+                </button>
                 {isEditing ? (
-                  <Button type="button" variant="outline" onClick={resetForm}>
+                  <Button type="button" variant="outline" onClick={resetForm} className="rounded-2xl">
                     إلغاء
                   </Button>
                 ) : null}
@@ -924,26 +946,27 @@ export function GuardiansWorkspace() {
 
           <form
             onSubmit={handleSearchSubmit}
-            className="grid gap-2 md:grid-cols-[1fr_150px_170px_220px_130px_auto]"
+            className="grid gap-2 md:grid-cols-[1fr_auto_auto_auto_auto_auto]"
           >
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <div className="relative flex-1">
               <Input
                 value={searchInput}
                 onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث بالاسم/الهاتف/الهوية..."
-                className="pr-8"
+                placeholder="بحث..."
+                className="pr-10"
+                icon={<Search className="h-4 w-4" />}
               />
             </div>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            <SelectField
+              className="w-full md:w-[140px]"
               value={genderFilter}
               onChange={(event) => {
                 setPage(1);
                 setGenderFilter(event.target.value);
               }}
               disabled={!canReadGenders || genderOptionsQuery.isLoading}
+              icon={<User className="h-3.5 w-3.5" />}
             >
               <option value="all">كل الأجناس</option>
               {genderOptions.map((option) => {
@@ -958,33 +981,35 @@ export function GuardiansWorkspace() {
                   </option>
                 );
               })}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            <SelectField
+              className="w-full md:w-[160px]"
               value={idTypeFilter}
               onChange={(event) => {
                 setPage(1);
                 setIdTypeFilter(event.target.value);
               }}
               disabled={!canReadIdTypes || idTypeOptionsQuery.isLoading}
+              icon={<IdCard className="h-3.5 w-3.5" />}
             >
-              <option value="all">كل أنواع الهوية</option>
+              <option value="all">كل الهويات</option>
               {idTypeOptions.map((idType) => (
                 <option key={idType.id} value={idType.id}>
                   {idType.nameAr}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            <SelectField
+              className="w-full md:w-[160px]"
               value={localityFilter}
               onChange={(event) => {
                 setPage(1);
                 setLocalityFilter(event.target.value);
               }}
               disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
+              icon={<MapPin className="h-3.5 w-3.5" />}
             >
               <option value="all">كل المحلات</option>
               {localityOptions.map((locality) => (
@@ -992,20 +1017,21 @@ export function GuardiansWorkspace() {
                   {formatLocalityHierarchyLabel(locality, geographyMaps)}
                 </option>
               ))}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            <SelectField
+              className="w-full md:w-[140px]"
               value={activeFilter}
               onChange={(event) => {
                 setPage(1);
                 setActiveFilter(event.target.value as "all" | "active" | "inactive");
               }}
+              icon={<Activity className="h-3.5 w-3.5" />}
             >
               <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </select>
+              <option value="active">النشطة</option>
+              <option value="inactive">غير النشطة</option>
+            </SelectField>
 
             <Button type="submit" variant="outline" className="gap-2">
               <Search className="h-4 w-4" />
@@ -1042,17 +1068,31 @@ export function GuardiansWorkspace() {
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="space-y-1">
-                  <p className="font-medium">{guardian.fullName}</p>
-                  <p className="text-xs text-muted-foreground">
-                    الهوية: {guardian.idNumber ?? "-"} ({guardian.idType?.nameAr ?? "غير محدد"}) | الهاتف:{" "}
-                    {guardian.phonePrimary ?? "-"} | واتساب:{" "}
-                    {guardian.whatsappNumber ?? "-"}
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium">{guardian.fullName}</p>
+                    <Badge variant="outline" className="text-[10px] h-4 px-1">
+                      {guardian.genderLookup?.nameAr ?? translateStudentGender(guardian.gender)}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span className="flex items-center gap-1">
+                      <IdCard className="h-3 w-3" />
+                      {guardian.idNumber ?? "-"} ({guardian.idType?.nameAr ?? "بدون"})
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Phone className="h-3 w-3" />
+                      {guardian.phonePrimary ?? "-"}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <MessageSquare className="h-3 w-3" />
+                      {guardian.whatsappNumber ?? "-"}
+                    </span>
                   </p>
                   <p className="text-xs text-muted-foreground">
                     الطلاب: {guardian.students.length} ({toRelationshipPreview(guardian)})
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    الموقع:{" "}
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
                     {guardian.locality
                       ? formatLocalityHierarchyLabel(
                           (geographyMaps.localityById.get(guardian.locality.id) ??
@@ -1064,9 +1104,6 @@ export function GuardiansWorkspace() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant="outline">
-                    {guardian.genderLookup?.nameAr ?? translateStudentGender(guardian.gender)}
-                  </Badge>
                   <Badge variant={guardian.isActive ? "default" : "outline"}>
                     {guardian.isActive ? "نشط" : "غير نشط"}
                   </Badge>
@@ -1077,7 +1114,7 @@ export function GuardiansWorkspace() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-1.5"
+                  className="gap-1.5 transition-all duration-300 hover:bg-primary/5"
                   onClick={() => handleStartEdit(guardian)}
                   disabled={!canUpdate || updateMutation.isPending}
                 >
@@ -1087,6 +1124,7 @@ export function GuardiansWorkspace() {
                 <Button
                   variant="outline"
                   size="sm"
+                  className="transition-all duration-300"
                   onClick={() => handleToggleActive(guardian)}
                   disabled={!canUpdate || updateMutation.isPending}
                 >
@@ -1095,7 +1133,7 @@ export function GuardiansWorkspace() {
                 <Button
                   variant="destructive"
                   size="sm"
-                  className="gap-1.5"
+                  className="gap-1.5 transition-all duration-300"
                   onClick={() => handleDelete(guardian)}
                   disabled={!canDelete || deleteMutation.isPending}
                 >
@@ -1155,8 +1193,3 @@ export function GuardiansWorkspace() {
     </div>
   );
 }
-
-
-
-
-

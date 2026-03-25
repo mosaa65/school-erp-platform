@@ -2,17 +2,20 @@
 
 import * as React from "react";
 import {
-  CalendarClock,
-  LoaderCircle,
+  Plus,
   Lock,
   LockOpen,
   PencilLine,
   RefreshCw,
-  Search,
   Trash2,
 } from "lucide-react";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Fab } from "@/components/ui/fab";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { Input } from "@/components/ui/input";
 import {
   Card,
@@ -21,6 +24,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { SelectField } from "@/components/ui/select-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateExamPeriodMutation,
@@ -53,6 +57,15 @@ type ExamPeriodFormState = {
   isActive: boolean;
 };
 
+type ExamPeriodFiltersState = {
+  academicYearId: string;
+  academicTermId: string;
+  assessmentType: AssessmentType | "all";
+  status: GradingWorkflowStatus | "all";
+  locked: "all" | "locked" | "unlocked";
+  active: "all" | "active" | "inactive";
+};
+
 const PAGE_SIZE = 12;
 
 const ASSESSMENT_TYPE_OPTIONS: AssessmentType[] = [
@@ -82,6 +95,15 @@ const DEFAULT_FORM_STATE: ExamPeriodFormState = {
   status: "DRAFT",
   isLocked: false,
   isActive: true,
+};
+
+const DEFAULT_FILTERS: ExamPeriodFiltersState = {
+  academicYearId: "all",
+  academicTermId: "all",
+  assessmentType: "all",
+  status: "all",
+  locked: "all",
+  active: "all",
 };
 
 function toDateTimeLocalInput(isoDateTime: string | null): string {
@@ -161,6 +183,9 @@ export function ExamPeriodsWorkspace() {
   const [statusFilter, setStatusFilter] = React.useState<GradingWorkflowStatus | "all">("all");
   const [lockedFilter, setLockedFilter] = React.useState<"all" | "locked" | "unlocked">("all");
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">("all");
+  const [filterDraft, setFilterDraft] = React.useState<ExamPeriodFiltersState>(DEFAULT_FILTERS);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
 
   const [editingExamPeriodId, setEditingExamPeriodId] = React.useState<string | null>(null);
   const [formState, setFormState] = React.useState<ExamPeriodFormState>(DEFAULT_FORM_STATE);
@@ -168,7 +193,11 @@ export function ExamPeriodsWorkspace() {
   const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
 
   const selectedYearForTerms =
-    formState.academicYearId || (academicYearFilter === "all" ? undefined : academicYearFilter);
+    (isFilterOpen && filterDraft.academicYearId !== "all"
+      ? filterDraft.academicYearId
+      : undefined) ||
+    formState.academicYearId ||
+    (academicYearFilter === "all" ? undefined : academicYearFilter);
 
   const yearsQuery = useAcademicYearOptionsQuery();
   const termsQuery = useAcademicTermOptionsQuery(selectedYearForTerms);
@@ -206,12 +235,19 @@ export function ExamPeriodsWorkspace() {
 
   const termsForFilter = React.useMemo(() => {
     const all = termsQuery.data ?? [];
-    if (academicYearFilter === "all") {
+    const selectedFilterYear =
+      filterDraft.academicYearId !== "all"
+        ? filterDraft.academicYearId
+        : academicYearFilter === "all"
+          ? undefined
+          : academicYearFilter;
+
+    if (!selectedFilterYear) {
       return all;
     }
 
-    return all.filter((term) => term.academicYearId === academicYearFilter);
-  }, [academicYearFilter, termsQuery.data]);
+    return all.filter((term) => term.academicYearId === selectedFilterYear);
+  }, [academicYearFilter, filterDraft.academicYearId, termsQuery.data]);
 
   const mutationError =
     (createMutation.error as Error | null)?.message ??
@@ -229,6 +265,7 @@ export function ExamPeriodsWorkspace() {
       setEditingExamPeriodId(null);
       setFormState(DEFAULT_FORM_STATE);
       setFormError(null);
+      setIsFormOpen(false);
     }
   }, [editingExamPeriodId, examPeriods, isEditing]);
 
@@ -249,10 +286,62 @@ export function ExamPeriodsWorkspace() {
     setFormError(null);
   };
 
-  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const closeFormSheet = () => {
+    setIsFormOpen(false);
+    resetForm();
+  };
+
+  const openCreateSheet = () => {
+    if (!canCreate) {
+      return;
+    }
+
+    setActionSuccess(null);
+    setIsFilterOpen(false);
+    resetForm();
+    setIsFormOpen(true);
+  };
+
+  const openFilterDrawer = () => {
+    setIsFormOpen(false);
+    setFilterDraft({
+      academicYearId: academicYearFilter,
+      academicTermId: academicTermFilter,
+      assessmentType: assessmentTypeFilter,
+      status: statusFilter,
+      locked: lockedFilter,
+      active: activeFilter,
+    });
+    setIsFilterOpen(true);
+  };
+
+  const handleStartCreate = () => {
+    openCreateSheet();
+  };
+
+  const applyFilters = () => {
     setPage(1);
-    setSearch(searchInput.trim());
+    setAcademicYearFilter(filterDraft.academicYearId);
+    setAcademicTermFilter(filterDraft.academicTermId);
+    setAssessmentTypeFilter(filterDraft.assessmentType);
+    setStatusFilter(filterDraft.status);
+    setLockedFilter(filterDraft.locked);
+    setActiveFilter(filterDraft.active);
+    setIsFilterOpen(false);
+  };
+
+  const clearFilters = () => {
+    setSearchInput("");
+    setSearch("");
+    setAcademicYearFilter("all");
+    setAcademicTermFilter("all");
+    setAssessmentTypeFilter("all");
+    setStatusFilter("all");
+    setLockedFilter("all");
+    setActiveFilter("all");
+    setFilterDraft(DEFAULT_FILTERS);
+    setPage(1);
+    setIsFilterOpen(false);
   };
 
   const validateForm = (): boolean => {
@@ -285,8 +374,8 @@ export function ExamPeriodsWorkspace() {
     return true;
   };
 
-  const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
     setActionSuccess(null);
 
     if (!validateForm()) {
@@ -318,7 +407,7 @@ export function ExamPeriodsWorkspace() {
         },
         {
           onSuccess: () => {
-            resetForm();
+            closeFormSheet();
             setActionSuccess("تم تحديث الفترة الاختبارية بنجاح.");
           },
         },
@@ -333,7 +422,7 @@ export function ExamPeriodsWorkspace() {
 
     createMutation.mutate(payload, {
       onSuccess: () => {
-        resetForm();
+        closeFormSheet();
         setPage(1);
         setActionSuccess("تم إنشاء الفترة الاختبارية بنجاح.");
       },
@@ -347,8 +436,10 @@ export function ExamPeriodsWorkspace() {
 
     setFormError(null);
     setActionSuccess(null);
+    setIsFilterOpen(false);
     setEditingExamPeriodId(item.id);
     setFormState(toFormState(item));
+    setIsFormOpen(true);
   };
 
   const handleToggleLock = (item: ExamPeriodListItem) => {
@@ -415,308 +506,328 @@ export function ExamPeriodsWorkspace() {
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
   const hasDependenciesReadPermissions = canReadAcademicYears && canReadAcademicTerms;
+  const activeFiltersCount = [
+    search ? 1 : 0,
+    academicYearFilter !== "all" ? 1 : 0,
+    academicTermFilter !== "all" ? 1 : 0,
+    assessmentTypeFilter !== "all" ? 1 : 0,
+    statusFilter !== "all" ? 1 : 0,
+    lockedFilter !== "all" ? 1 : 0,
+    activeFilter !== "all" ? 1 : 0,
+  ].reduce((total, count) => total + count, 0);
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[460px_1fr]">
-      <Card className="h-fit border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CalendarClock className="h-5 w-5 text-primary" />
-            {isEditing ? "تعديل فترة اختبارية" : "إنشاء فترة اختبارية"}
-          </CardTitle>
-          <CardDescription>إدارة الفترات الاختبارية وربطها بالسنة/الفصل.</CardDescription>
-        </CardHeader>
+    <div className="space-y-4">
+      <ManagementToolbar
+        searchValue={searchInput}
+        onSearchChange={(event) => setSearchInput(event.target.value)}
+        searchPlaceholder="ابحث في الفترات الاختبارية..."
+        filterCount={activeFiltersCount}
+        onFilterClick={openFilterDrawer}
+      />
 
-        <CardContent>
-          {!canCreate && !isEditing ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك الصلاحية المطلوبة: <code>exam-periods.create</code>.
-            </div>
-          ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm}>
-              <div className="grid gap-3 md:grid-cols-2">
-                <select
-                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.academicYearId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      academicYearId: event.target.value,
-                      academicTermId: "",
-                    }))
-                  }
-                  disabled={!canReadAcademicYears}
-                >
-                  <option value="">اختر السنة *</option>
-                  {(yearsQuery.data ?? []).map((year) => (
-                    <option key={year.id} value={year.id}>
-                      {formatNameCodeLabel(year.name, year.code)}
-                    </option>
-                  ))}
-                </select>
+      {actionSuccess || mutationError ? (
+        <div
+          className={`rounded-2xl border px-4 py-3 text-sm shadow-sm ${
+            actionSuccess
+              ? "border-emerald-300/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+              : "border-destructive/30 bg-destructive/10 text-destructive"
+          }`}
+        >
+          {actionSuccess ?? mutationError}
+        </div>
+      ) : null}
 
-                <select
-                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.academicTermId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, academicTermId: event.target.value }))
-                  }
-                  disabled={!canReadAcademicTerms || !formState.academicYearId}
-                >
-                  <option value="">اختر الفصل *</option>
-                  {termsForForm.map((term) => (
-                    <option key={term.id} value={term.id}>
-                      {formatNameCodeLabel(term.name, term.code)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <Input
-                value={formState.name}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, name: event.target.value }))
-                }
-                placeholder="اختبار شهري - محرم"
-                required
-              />
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <select
-                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.assessmentType}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      assessmentType: event.target.value as AssessmentType,
-                    }))
-                  }
-                >
-                  {ASSESSMENT_TYPE_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {translateAssessmentType(option)}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                  value={formState.status}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      status: event.target.value as GradingWorkflowStatus,
-                    }))
-                  }
-                >
-                  {WORKFLOW_STATUS_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {translateGradingWorkflowStatus(option)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <Input
-                  type="datetime-local"
-                  value={formState.startDate}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, startDate: event.target.value }))
-                  }
-                />
-                <Input
-                  type="datetime-local"
-                  value={formState.endDate}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, endDate: event.target.value }))
-                  }
-                />
-              </div>
-
-              <div className="grid gap-2 md:grid-cols-2">
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>مقفل</span>
-                  <input
-                    type="checkbox"
-                    checked={formState.isLocked}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, isLocked: event.target.checked }))
-                    }
-                  />
-                </label>
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>نشط</span>
-                  <input
-                    type="checkbox"
-                    checked={formState.isActive}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                    }
-                  />
-                </label>
-              </div>
-
-              {formError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {formError}
-                </div>
-              ) : null}
-              {mutationError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {mutationError}
-                </div>
-              ) : null}
-              {actionSuccess ? (
-                <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
-                  {actionSuccess}
-                </div>
-              ) : null}
-              {!hasDependenciesReadPermissions ? (
-                <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يتطلب هذا الجزء صلاحيات القراءة: <code>academic-years.read</code> و <code>academic-terms.read</code>.
-                </div>
-              ) : null}
-
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  className="flex-1 gap-2"
-                  disabled={
-                    isFormSubmitting ||
-                    (!canCreate && !isEditing) ||
-                    !hasDependenciesReadPermissions
-                  }
-                >
-                  {isFormSubmitting ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <CalendarClock className="h-4 w-4" />
-                  )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء فترة اختبارية"}
-                </Button>
-                {isEditing ? (
-                  <Button type="button" variant="outline" onClick={resetForm}>
-                    إلغاء
-                  </Button>
-                ) : null}
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>الفترات الاختبارية</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
-          </div>
-          <CardDescription>فلترة الفترات الاختبارية حسب النوع والحالة والقفل.</CardDescription>
-
-          <form
-            onSubmit={handleSearchSubmit}
-            className="grid gap-2 md:grid-cols-[1fr_130px_130px_120px_130px_120px_110px_auto]"
+      <FilterDrawer
+        open={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        title="فلترة الفترات الاختبارية"
+        actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
+      >
+        <div className="space-y-4">
+          <SelectField
+            value={filterDraft.academicYearId}
+            onChange={(event) =>
+              setFilterDraft((prev) => ({
+                ...prev,
+                academicYearId: event.target.value,
+                academicTermId: "all",
+              }))
+            }
           >
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث..."
-                className="pr-8"
-              />
-            </div>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={academicYearFilter}
-              onChange={(event) => {
-                setPage(1);
-                setAcademicYearFilter(event.target.value);
-                setAcademicTermFilter("all");
-              }}
-            >
-              <option value="all">كل السنوات</option>
-              {(yearsQuery.data ?? []).map((year) => (
-                <option key={year.id} value={year.id}>
-                  {formatNameCodeLabel(year.name, year.code)}
-                </option>
-              ))}
-            </select>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={academicTermFilter}
-              onChange={(event) => {
-                setPage(1);
-                setAcademicTermFilter(event.target.value);
-              }}
-            >
-              <option value="all">كل الفصول</option>
-              {termsForFilter.map((term) => (
-                <option key={term.id} value={term.id}>
-                  {formatNameCodeLabel(term.name, term.code)}
-                </option>
-              ))}
-            </select>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={assessmentTypeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setAssessmentTypeFilter(event.target.value as AssessmentType | "all");
-              }}
-            >
-              <option value="all">كل الأنواع</option>
-              {ASSESSMENT_TYPE_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {translateAssessmentType(option)}
-                </option>
-              ))}
-            </select>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={statusFilter}
-              onChange={(event) => {
-                setPage(1);
-                setStatusFilter(event.target.value as GradingWorkflowStatus | "all");
-              }}
-            >
-              <option value="all">كل الحالات</option>
-              {WORKFLOW_STATUS_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {translateGradingWorkflowStatus(option)}
-                </option>
-              ))}
-            </select>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={lockedFilter}
-              onChange={(event) => {
-                setPage(1);
-                setLockedFilter(event.target.value as "all" | "locked" | "unlocked");
-              }}
+            <option value="all">كل السنوات</option>
+            {(yearsQuery.data ?? []).map((year) => (
+              <option key={year.id} value={year.id}>
+                {formatNameCodeLabel(year.name, year.code)}
+              </option>
+            ))}
+          </SelectField>
+
+          <SelectField
+            value={filterDraft.academicTermId}
+            onChange={(event) =>
+              setFilterDraft((prev) => ({ ...prev, academicTermId: event.target.value }))
+            }
+            disabled={!filterDraft.academicYearId || filterDraft.academicYearId === "all"}
+          >
+            <option value="all">كل الفصول</option>
+            {termsForFilter.map((term) => (
+              <option key={term.id} value={term.id}>
+                {formatNameCodeLabel(term.name, term.code)}
+              </option>
+            ))}
+          </SelectField>
+
+          <SelectField
+            value={filterDraft.assessmentType}
+            onChange={(event) =>
+              setFilterDraft((prev) => ({
+                ...prev,
+                assessmentType: event.target.value as AssessmentType | "all",
+              }))
+            }
+          >
+            <option value="all">كل الأنواع</option>
+            {ASSESSMENT_TYPE_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {translateAssessmentType(option)}
+              </option>
+            ))}
+          </SelectField>
+
+          <SelectField
+            value={filterDraft.status}
+            onChange={(event) =>
+              setFilterDraft((prev) => ({
+                ...prev,
+                status: event.target.value as GradingWorkflowStatus | "all",
+              }))
+            }
+          >
+            <option value="all">كل الحالات</option>
+            {WORKFLOW_STATUS_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {translateGradingWorkflowStatus(option)}
+              </option>
+            ))}
+          </SelectField>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectField
+              value={filterDraft.locked}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  locked: event.target.value as "all" | "locked" | "unlocked",
+                }))
+              }
             >
               <option value="all">القفل: الكل</option>
               <option value="locked">مقفل</option>
               <option value="unlocked">غير مقفل</option>
-            </select>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={activeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setActiveFilter(event.target.value as "all" | "active" | "inactive");
-              }}
+            </SelectField>
+
+            <SelectField
+              value={filterDraft.active}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  active: event.target.value as "all" | "active" | "inactive",
+                }))
+              }
             >
-              <option value="all">الكل</option>
+              <option value="all">الحالة: الكل</option>
               <option value="active">نشط</option>
               <option value="inactive">غير نشط</option>
-            </select>
-            <Button type="submit" variant="outline" className="gap-2">
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
-          </form>
+            </SelectField>
+          </div>
+        </div>
+      </FilterDrawer>
+
+      <BottomSheetForm
+        open={isFormOpen}
+        title={isEditing ? "تعديل فترة اختبارية" : "إنشاء فترة اختبارية"}
+        onClose={closeFormSheet}
+        onSubmit={handleSubmitForm}
+        submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء فترة اختبارية"}
+        isSubmitting={isFormSubmitting}
+        showFooter={false}
+      >
+        <div className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">السنة *</label>
+              <SelectField
+                value={formState.academicYearId}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    academicYearId: event.target.value,
+                    academicTermId: "",
+                  }))
+                }
+                disabled={!canReadAcademicYears}
+              >
+                <option value="">اختر السنة *</option>
+                {(yearsQuery.data ?? []).map((year) => (
+                  <option key={year.id} value={year.id}>
+                    {formatNameCodeLabel(year.name, year.code)}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الفصل *</label>
+              <SelectField
+                value={formState.academicTermId}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, academicTermId: event.target.value }))
+                }
+                disabled={!canReadAcademicTerms || !formState.academicYearId}
+              >
+                <option value="">اختر الفصل *</option>
+                {termsForForm.map((term) => (
+                  <option key={term.id} value={term.id}>
+                    {formatNameCodeLabel(term.name, term.code)}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">اسم الفترة *</label>
+            <Input
+              value={formState.name}
+              onChange={(event) =>
+                setFormState((prev) => ({ ...prev, name: event.target.value }))
+              }
+              placeholder="اختبار شهري - محرم"
+              required
+            />
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">نوع التقييم *</label>
+              <SelectField
+                value={formState.assessmentType}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    assessmentType: event.target.value as AssessmentType,
+                  }))
+                }
+              >
+                {ASSESSMENT_TYPE_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {translateAssessmentType(option)}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الحالة *</label>
+              <SelectField
+                value={formState.status}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    status: event.target.value as GradingWorkflowStatus,
+                  }))
+                }
+              >
+                {WORKFLOW_STATUS_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {translateGradingWorkflowStatus(option)}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">بداية الفترة *</label>
+              <Input
+                type="datetime-local"
+                value={formState.startDate}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, startDate: event.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">نهاية الفترة *</label>
+              <Input
+                type="datetime-local"
+                value={formState.endDate}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, endDate: event.target.value }))
+                }
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-2 md:grid-cols-2">
+            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+              <span>مقفل</span>
+              <input
+                type="checkbox"
+                checked={formState.isLocked}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, isLocked: event.target.checked }))
+                }
+              />
+            </label>
+            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+              <span>نشط</span>
+              <input
+                type="checkbox"
+                checked={formState.isActive}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                }
+              />
+            </label>
+          </div>
+
+          {formError ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+              {formError}
+            </div>
+          ) : null}
+          {mutationError ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+              {mutationError}
+            </div>
+          ) : null}
+          {!hasDependenciesReadPermissions ? (
+            <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+              يتطلب هذا الجزء صلاحيات القراءة: <code>academic-years.read</code> و{" "}
+              <code>academic-terms.read</code>.
+            </div>
+          ) : null}
+        </div>
+      </BottomSheetForm>
+
+      <Fab
+        icon={<Plus className="h-4 w-4" />}
+        label="إضافة فترة"
+        ariaLabel="إضافة فترة اختبارية"
+        onClick={handleStartCreate}
+        disabled={!canCreate}
+      />
+
+      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+        <CardHeader className="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle>الفترات الاختبارية</CardTitle>
+            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+          </div>
+          <CardDescription>النتائج معروضة هنا، بينما الفلترة التفصيلية في لوحة جانبية مستقلة.</CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-3">
