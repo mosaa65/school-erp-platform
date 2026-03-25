@@ -7,16 +7,15 @@ import {
 import {
   AssessmentType,
   AuditStatus,
-  GradingComponentCalculationMode,
   GradingWorkflowStatus,
   MonthlyGrade,
   Prisma,
   StudentAttendanceStatus,
 } from '@prisma/client';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { AuditLogsService } from '../../audit-logs/audit-logs.service';
-import { PolicyResolverService } from '../../evaluation-policies/grading-policies/policy-resolver.service';
-import { DataScopeService } from '../../teaching-assignments/data-scope/data-scope.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { DataScopeService } from '../data-scope/data-scope.service';
+import { PolicyResolverService } from '../evaluation-policies/grading-policies/policy-resolver.service';
 import { CalculateMonthlyGradesDto } from './dto/calculate-monthly-grades.dto';
 import { CreateMonthlyGradeDto } from './dto/create-monthly-grade.dto';
 import { ListMonthlyGradesDto } from './dto/list-monthly-grades.dto';
@@ -24,20 +23,13 @@ import { UpdateMonthlyGradeDto } from './dto/update-monthly-grade.dto';
 
 type PrismaDb = PrismaService | Prisma.TransactionClient;
 
-type PolicyComponentContext = {
-  id: string;
-  code: string;
-  maxScore: number;
-  calculationMode: GradingComponentCalculationMode;
-  includeInMonthly: boolean;
-  includeInSemester: boolean;
-  isActive: boolean;
-};
-
 type GradingPolicyContext = {
   id: string;
-  totalMaxScore: number;
-  components: PolicyComponentContext[];
+  maxAttendanceScore: number;
+  maxHomeworkScore: number;
+  maxExamScore: number;
+  maxActivityScore: number;
+  maxContributionScore: number;
 };
 
 type EnrollmentMonthlyContext = {
@@ -60,7 +52,6 @@ const monthlyGradeInclude: Prisma.MonthlyGradeInclude = {
     select: {
       id: true,
       sectionId: true,
-      gradeLevelId: true,
       academicYearId: true,
       status: true,
       isActive: true,
@@ -86,14 +77,6 @@ const monthlyGradeInclude: Prisma.MonthlyGradeInclude = {
               sequence: true,
             },
           },
-        },
-      },
-      gradeLevel: {
-        select: {
-          id: true,
-          code: true,
-          name: true,
-          sequence: true,
         },
       },
       academicYear: {
@@ -151,25 +134,11 @@ const monthlyGradeInclude: Prisma.MonthlyGradeInclude = {
       id: true,
       assessmentType: true,
       status: true,
-      totalMaxScore: true,
-      passingScore: true,
-      components: {
-        where: {
-          deletedAt: null,
-          isActive: true,
-          includeInMonthly: true,
-        },
-        select: {
-          id: true,
-          code: true,
-          maxScore: true,
-          calculationMode: true,
-          includeInMonthly: true,
-          includeInSemester: true,
-          isActive: true,
-        },
-        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
-      },
+      maxExamScore: true,
+      maxHomeworkScore: true,
+      maxAttendanceScore: true,
+      maxActivityScore: true,
+      maxContributionScore: true,
       isActive: true,
     },
   },
@@ -220,24 +189,6 @@ const monthlyGradeInclude: Prisma.MonthlyGradeInclude = {
       },
     ],
   },
-  periodGradeComponents: {
-    where: {
-      deletedAt: null,
-    },
-    include: {
-      gradingPolicyComponent: {
-        select: {
-          id: true,
-          code: true,
-          name: true,
-          maxScore: true,
-          includeInMonthly: true,
-          calculationMode: true,
-          isActive: true,
-        },
-      },
-    },
-  },
 };
 
 @Injectable()
@@ -245,8 +196,8 @@ export class MonthlyGradesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLogsService: AuditLogsService,
-    private readonly policyResolver: PolicyResolverService,
     private readonly dataScopeService: DataScopeService,
+    private readonly policyResolverService: PolicyResolverService,
   ) {}
 
   async create(payload: CreateMonthlyGradeDto, actorUserId: string) {
@@ -280,7 +231,7 @@ export class MonthlyGradesService {
       );
     }
 
-    const autoScores = await this.computeComponentScores(
+    const autoScores = await this.computeAutoScores(
       this.prisma,
       payload.studentEnrollmentId,
       payload.subjectId,
@@ -292,18 +243,18 @@ export class MonthlyGradesService {
       context.policy,
     );
 
-    const monthlyTotal = this.computeMonthlyTotal(
-      autoScores.computedComponents,
-      0,
-    );
+    const activityScore = payload.activityScore ?? 0;
+    const contributionScore = payload.contributionScore ?? 0;
+    this.validateManualScores(context.policy, activityScore, contributionScore);
 
-    const legacyScores = {
-      attendanceScore: autoScores.attendanceScore,
-      homeworkScore: autoScores.homeworkScore,
-      activityScore: autoScores.activityScore,
-      contributionScore: autoScores.contributionScore,
-      examScore: autoScores.examScore,
-    };
+    const monthlyTotal = this.computeMonthlyTotal(
+      autoScores.attendanceScore,
+      autoScores.homeworkScore,
+      activityScore,
+      contributionScore,
+      0,
+      autoScores.examScore,
+    );
 
     try {
       const monthlyGrade = await this.prisma.monthlyGrade.create({
@@ -314,12 +265,12 @@ export class MonthlyGradesService {
           academicTermId: context.academicTermId,
           academicYearId: context.academicYearId,
           gradingPolicyId: context.policy.id,
-          attendanceScore: legacyScores.attendanceScore,
-          homeworkScore: legacyScores.homeworkScore,
-          activityScore: legacyScores.activityScore,
-          contributionScore: legacyScores.contributionScore,
+          attendanceScore: autoScores.attendanceScore,
+          homeworkScore: autoScores.homeworkScore,
+          activityScore,
+          contributionScore,
           customComponentsScore: 0,
-          examScore: legacyScores.examScore,
+          examScore: autoScores.examScore,
           monthlyTotal,
           status: GradingWorkflowStatus.DRAFT,
           isLocked: false,
@@ -328,15 +279,6 @@ export class MonthlyGradesService {
           isActive: payload.isActive ?? true,
           createdById: actorUserId,
           updatedById: actorUserId,
-          periodGradeComponents: {
-            create: autoScores.computedComponents.map((c) => ({
-              gradingPolicyComponentId: c.gradingPolicyComponentId,
-              score: c.score,
-              isAutoCalculated: c.isAutoCalculated,
-              createdById: actorUserId,
-              updatedById: actorUserId,
-            })),
-          },
         },
         include: monthlyGradeInclude,
       });
@@ -418,8 +360,7 @@ export class MonthlyGradesService {
 
     if (enrollments.length === 0) {
       return {
-        message:
-          'لا توجد قيود طلاب نشطة للشعبة والشهر المحددين',
+        message: 'لا توجد قيود طلاب نشطة للشعبة والشهر المحددين',
         summary: {
           totalEnrollments: 0,
           created: 0,
@@ -442,6 +383,8 @@ export class MonthlyGradesService {
       select: {
         id: true,
         studentEnrollmentId: true,
+        activityScore: true,
+        contributionScore: true,
         isLocked: true,
       },
     });
@@ -450,6 +393,7 @@ export class MonthlyGradesService {
       existingRows.map((row) => [row.studentEnrollmentId, row] as const),
     );
 
+    const overwriteManual = payload.overwriteManual ?? false;
     const now = new Date();
     const summary = {
       totalEnrollments: enrollmentIds.length,
@@ -459,6 +403,18 @@ export class MonthlyGradesService {
     };
 
     await this.prisma.$transaction(async (tx) => {
+      const autoScoresMap = await this.computeBatchAutoScores(
+        tx,
+        enrollmentIds,
+        payload.subjectId,
+        payload.sectionId,
+        month.startDate,
+        month.endDate,
+        month.academicYearId,
+        month.academicTermId,
+        policy,
+      );
+
       for (const enrollmentId of enrollmentIds) {
         const existing = existingByEnrollmentId.get(enrollmentId);
 
@@ -467,33 +423,29 @@ export class MonthlyGradesService {
           continue;
         }
 
-        const autoScores = await this.computeComponentScores(
-          tx,
-          enrollmentId,
-          payload.subjectId,
-          payload.sectionId,
-          month.startDate,
-          month.endDate,
-          month.academicYearId,
-          month.academicTermId,
-          policy,
-        );
-
-        const legacyScores = {
-          attendanceScore: autoScores.attendanceScore,
-          homeworkScore: autoScores.homeworkScore,
-          activityScore: autoScores.activityScore,
-          contributionScore: autoScores.contributionScore,
-          examScore: autoScores.examScore,
-        };
+        const autoScores =
+          autoScoresMap.get(enrollmentId) ??
+          ({ attendanceScore: 0, homeworkScore: 0, examScore: 0 } as const);
 
         const customComponentsScore = existing
           ? await this.sumCustomComponentScores(tx, existing.id, policy.id)
           : 0;
+        const activityScore = overwriteManual
+          ? 0
+          : (this.decimalToNumber(existing?.activityScore) ?? 0);
+        const contributionScore = overwriteManual
+          ? 0
+          : (this.decimalToNumber(existing?.contributionScore) ?? 0);
+
+        this.validateManualScores(policy, activityScore, contributionScore);
 
         const monthlyTotal = this.computeMonthlyTotal(
-          autoScores.computedComponents,
+          autoScores.attendanceScore,
+          autoScores.homeworkScore,
+          activityScore,
+          contributionScore,
           customComponentsScore,
+          autoScores.examScore,
         );
 
         if (existing) {
@@ -502,25 +454,15 @@ export class MonthlyGradesService {
               id: existing.id,
             },
             data: {
-              attendanceScore: legacyScores.attendanceScore,
-              homeworkScore: legacyScores.homeworkScore,
-              activityScore: legacyScores.activityScore,
-              contributionScore: legacyScores.contributionScore,
+              attendanceScore: autoScores.attendanceScore,
+              homeworkScore: autoScores.homeworkScore,
+              activityScore,
+              contributionScore,
               customComponentsScore,
-              examScore: legacyScores.examScore,
+              examScore: autoScores.examScore,
               monthlyTotal,
               calculatedAt: now,
               updatedById: actorUserId,
-              periodGradeComponents: {
-                deleteMany: {},
-                create: autoScores.computedComponents.map((c) => ({
-                  gradingPolicyComponentId: c.gradingPolicyComponentId,
-                  score: c.score,
-                  isAutoCalculated: c.isAutoCalculated,
-                  createdById: actorUserId,
-                  updatedById: actorUserId,
-                })),
-              },
             },
           });
           summary.updated += 1;
@@ -533,15 +475,19 @@ export class MonthlyGradesService {
               academicTermId: month.academicTermId,
               academicYearId: month.academicYearId,
               gradingPolicyId: policy.id,
-              attendanceScore: legacyScores.attendanceScore,
-              homeworkScore: legacyScores.homeworkScore,
-              activityScore: legacyScores.activityScore,
-              contributionScore: legacyScores.contributionScore,
+              attendanceScore: autoScores.attendanceScore,
+              homeworkScore: autoScores.homeworkScore,
+              activityScore: 0,
+              contributionScore: 0,
               customComponentsScore: 0,
-              examScore: legacyScores.examScore,
+              examScore: autoScores.examScore,
               monthlyTotal: this.computeMonthlyTotal(
-                autoScores.computedComponents,
+                autoScores.attendanceScore,
+                autoScores.homeworkScore,
                 0,
+                0,
+                0,
+                autoScores.examScore,
               ),
               status: GradingWorkflowStatus.DRAFT,
               isLocked: false,
@@ -549,15 +495,6 @@ export class MonthlyGradesService {
               isActive: true,
               createdById: actorUserId,
               updatedById: actorUserId,
-              periodGradeComponents: {
-                create: autoScores.computedComponents.map((c) => ({
-                  gradingPolicyComponentId: c.gradingPolicyComponentId,
-                  score: c.score,
-                  isAutoCalculated: c.isAutoCalculated,
-                  createdById: actorUserId,
-                  updatedById: actorUserId,
-                })),
-              },
             },
           });
           summary.created += 1;
@@ -573,6 +510,7 @@ export class MonthlyGradesService {
         academicMonthId: payload.academicMonthId,
         sectionId: payload.sectionId,
         subjectId: payload.subjectId,
+        overwriteManual,
         summary,
       },
     });
@@ -745,14 +683,9 @@ export class MonthlyGradesService {
       throw new NotFoundException('الدرجة الشهرية غير موجودة');
     }
 
-    const sectionId = this.requireAssignedSectionId(
-      monthlyGrade.studentEnrollment.sectionId,
-      'لا يمكن عرض الدرجة الشهرية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
-    );
-
     await this.ensureActorAuthorized(
       actorUserId,
-      sectionId,
+      monthlyGrade.studentEnrollment.sectionId,
       monthlyGrade.subject.id,
       monthlyGrade.academicYear.id,
     );
@@ -780,25 +713,24 @@ export class MonthlyGradesService {
       existing.academicYearId,
     );
 
-    const autoScores = await this.computeComponentScores(
-      this.prisma,
-      existing.studentEnrollmentId,
-      existing.subjectId,
-      context.sectionId,
-      context.monthStartDate,
-      context.monthEndDate,
-      existing.academicYearId,
-      existing.academicTermId,
-      context.policy,
-    );
-    const customComponentsScore = await this.sumCustomComponentScores(
-      this.prisma,
-      existing.id,
-      context.policy.id,
-    );
+    const activityScore =
+      payload.activityScore ??
+      this.decimalToNumber(existing.activityScore) ??
+      0;
+    const contributionScore =
+      payload.contributionScore ??
+      this.decimalToNumber(existing.contributionScore) ??
+      0;
+
+    this.validateManualScores(context.policy, activityScore, contributionScore);
+
     const monthlyTotal = this.computeMonthlyTotal(
-      autoScores.computedComponents,
-      customComponentsScore,
+      this.decimalToNumber(existing.attendanceScore) ?? 0,
+      this.decimalToNumber(existing.homeworkScore) ?? 0,
+      activityScore,
+      contributionScore,
+      this.decimalToNumber(existing.customComponentsScore) ?? 0,
+      this.decimalToNumber(existing.examScore) ?? 0,
     );
 
     const monthlyGrade = await this.prisma.monthlyGrade.update({
@@ -806,27 +738,13 @@ export class MonthlyGradesService {
         id,
       },
       data: {
-        attendanceScore: autoScores.attendanceScore,
-        homeworkScore: autoScores.homeworkScore,
-        activityScore: 0,
-        contributionScore: 0,
-        customComponentsScore,
-        examScore: autoScores.examScore,
+        activityScore: payload.activityScore,
+        contributionScore: payload.contributionScore,
         status: payload.status,
         notes: payload.notes?.trim(),
         isActive: payload.isActive,
         monthlyTotal,
         updatedById: actorUserId,
-        periodGradeComponents: {
-          deleteMany: {},
-          create: autoScores.computedComponents.map((c) => ({
-            gradingPolicyComponentId: c.gradingPolicyComponentId,
-            score: c.score,
-            isAutoCalculated: c.isAutoCalculated,
-            createdById: actorUserId,
-            updatedById: actorUserId,
-          })),
-        },
       },
       include: monthlyGradeInclude,
     });
@@ -986,7 +904,6 @@ export class MonthlyGradesService {
         select: {
           id: true,
           academicYearId: true,
-          gradeLevelId: true,
           sectionId: true,
           isActive: true,
           section: {
@@ -1022,23 +939,7 @@ export class MonthlyGradesService {
       throw new BadRequestException('قيد الطالب غير نشط');
     }
 
-    const section = enrollment.section;
-    const gradeLevelId = this.resolveEnrollmentGradeLevelId(
-      enrollment.gradeLevelId,
-      section?.gradeLevelId,
-    );
-
-    if (!gradeLevelId) {
-      throw new BadRequestException('تعذر تحديد الصف المرتبط بالقيد');
-    }
-
-    if (!section) {
-      throw new BadRequestException(
-        'لا يمكن احتساب درجة شهرية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
-      );
-    }
-
-    if (!section.isActive) {
+    if (!enrollment.section.isActive) {
       throw new BadRequestException('شعبة القيد غير نشطة');
     }
 
@@ -1060,20 +961,20 @@ export class MonthlyGradesService {
     await this.ensureSubjectOfferedInTerm(
       month.academicYearId,
       month.academicTermId,
-      gradeLevelId,
+      enrollment.section.gradeLevelId,
       subjectId,
     );
 
     const policy = await this.findMonthlyPolicy(
       month.academicYearId,
-      gradeLevelId,
+      enrollment.section.gradeLevelId,
       subjectId,
       month.academicTermId,
     );
 
     return {
-      sectionId: section.id,
-      gradeLevelId,
+      sectionId: enrollment.sectionId,
+      gradeLevelId: enrollment.section.gradeLevelId,
       academicYearId: month.academicYearId,
       academicTermId: month.academicTermId,
       monthStartDate: month.startDate,
@@ -1092,17 +993,9 @@ export class MonthlyGradesService {
         id: true,
         subjectId: true,
         academicYearId: true,
-        academicMonthId: true,
         academicTermId: true,
-        academicMonth: {
-          select: {
-            startDate: true,
-            endDate: true,
-          },
-        },
         studentEnrollment: {
           select: {
-            gradeLevelId: true,
             sectionId: true,
             section: {
               select: {
@@ -1118,30 +1011,15 @@ export class MonthlyGradesService {
       throw new NotFoundException('الدرجة الشهرية غير موجودة');
     }
 
-    const sectionId = this.requireAssignedSectionId(
-      monthlyGrade.studentEnrollment.sectionId,
-      'لا يمكن استخدام درجة شهرية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
-    );
-    const gradeLevelId = this.resolveEnrollmentGradeLevelId(
-      monthlyGrade.studentEnrollment.gradeLevelId,
-      monthlyGrade.studentEnrollment.section?.gradeLevelId,
-    );
-
-    if (!gradeLevelId) {
-      throw new BadRequestException('تعذر تحديد الصف المرتبط بالقيد');
-    }
-
     const policy = await this.findMonthlyPolicy(
       monthlyGrade.academicYearId,
-      gradeLevelId,
+      monthlyGrade.studentEnrollment.section.gradeLevelId,
       monthlyGrade.subjectId,
       monthlyGrade.academicTermId,
     );
 
     return {
-      sectionId,
-      monthStartDate: monthlyGrade.academicMonth.startDate,
-      monthEndDate: monthlyGrade.academicMonth.endDate,
+      sectionId: monthlyGrade.studentEnrollment.sectionId,
       policy,
     };
   }
@@ -1159,21 +1037,6 @@ export class MonthlyGradesService {
     }
 
     return monthlyGrade;
-  }
-
-  private requireAssignedSectionId(sectionId: string | null, message: string) {
-    if (!sectionId) {
-      throw new BadRequestException(message);
-    }
-
-    return sectionId;
-  }
-
-  private resolveEnrollmentGradeLevelId(
-    enrollmentGradeLevelId: string | null | undefined,
-    sectionGradeLevelId: string | null | undefined,
-  ) {
-    return enrollmentGradeLevelId ?? sectionGradeLevelId ?? null;
   }
 
   private async ensureAcademicMonthExistsAndActive(academicMonthId: string) {
@@ -1282,43 +1145,37 @@ export class MonthlyGradesService {
     academicYearId: string,
     gradeLevelId: string,
     subjectId: string,
-    academicTermId?: string | null,
+    academicTermId?: string,
   ): Promise<GradingPolicyContext> {
-    const policy = await this.policyResolver.resolvePolicy({
-      academicYearId,
-      gradeLevelId,
-      subjectId,
-      assessmentType: AssessmentType.MONTHLY,
-      academicTermId,
-    });
+    try {
+      const policy = await this.policyResolverService.resolvePolicy({
+        academicYearId,
+        gradeLevelId,
+        subjectId,
+        assessmentType: AssessmentType.MONTHLY,
+        academicTermId,
+      });
 
-    const components: PolicyComponentContext[] = policy.components
-      .filter((component) => component.includeInMonthly)
-      .map((component) => ({
-        id: component.id,
-        code: component.code,
-        maxScore: this.decimalToNumber(component.maxScore) ?? 0,
-        calculationMode: component.calculationMode,
-        includeInMonthly: component.includeInMonthly,
-        includeInSemester: component.includeInSemester,
-        isActive: component.isActive,
-      }));
-
-    if (components.length === 0) {
-      throw new BadRequestException(
-        'سياسة الدرجات المختارة لا تحتوي على مكونات شهرية نشطة',
-      );
+      return {
+        id: policy.id,
+        maxAttendanceScore: this.decimalToNumber(policy.maxAttendanceScore) ?? 0,
+        maxHomeworkScore: this.decimalToNumber(policy.maxHomeworkScore) ?? 0,
+        maxExamScore: this.decimalToNumber(policy.maxExamScore) ?? 0,
+        maxActivityScore: this.decimalToNumber(policy.maxActivityScore) ?? 0,
+        maxContributionScore:
+          this.decimalToNumber(policy.maxContributionScore) ?? 0,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw new BadRequestException(
+          'لا توجد سياسة درجات شهرية للسنة والمرحلة والمادة المحددة',
+        );
+      }
+      throw error;
     }
-
-    return {
-      id: policy.id,
-      totalMaxScore: this.decimalToNumber(policy.totalMaxScore) ?? 100,
-      components,
-    };
   }
 
-
-  private async computeComponentScores(
+  private async computeAutoScores(
     db: PrismaDb,
     studentEnrollmentId: string,
     subjectId: string,
@@ -1415,103 +1272,269 @@ export class MonthlyGradesService {
         }),
       ]);
 
-    const computedComponents: {
-      gradingPolicyComponentId: string;
-      gradingPolicyComponentCode?: string;
-      score: number;
-      isAutoCalculated: boolean;
-    }[] = [];
+    const attendanceScore =
+      totalAttendanceDays === 0
+        ? 0
+        : this.round2(
+            (presentAttendanceDays / totalAttendanceDays) *
+              policy.maxAttendanceScore,
+          );
 
-    const legacyScores = {
-      attendanceScore: 0,
-      homeworkScore: 0,
-      examScore: 0,
-      activityScore: 0,
-      contributionScore: 0,
-    };
+    let totalHomeworkScore = 0;
+    let totalHomeworkMaxScore = 0;
 
-    for (const comp of policy.components) {
-      let score = 0;
-      let isAutoCalculated = false;
+    for (const row of homeworkRows) {
+      const rowMaxScore = this.decimalToNumber(row.homework.maxScore) ?? 0;
+      const manualScore = this.decimalToNumber(row.manualScore);
+      const effectiveScore = manualScore ?? (row.isCompleted ? rowMaxScore : 0);
 
-      if (
-        comp.calculationMode === GradingComponentCalculationMode.AUTO_ATTENDANCE
-      ) {
-        score =
-          totalAttendanceDays === 0
-            ? 0
-            : this.round2(
-                (presentAttendanceDays / totalAttendanceDays) * comp.maxScore,
-              );
-        isAutoCalculated = true;
-      } else if (
-        comp.calculationMode === GradingComponentCalculationMode.AUTO_HOMEWORK
-      ) {
-        let tHwScore = 0;
-        let tHwMaxScore = 0;
-        for (const row of homeworkRows) {
-          const rowMaxScore = this.decimalToNumber(row.homework.maxScore) ?? 0;
-          const manScore = this.decimalToNumber(row.manualScore);
-          tHwScore += manScore ?? (row.isCompleted ? rowMaxScore : 0);
-          tHwMaxScore += rowMaxScore;
-        }
-        score =
-          tHwMaxScore > 0
-            ? this.round2((tHwScore / tHwMaxScore) * comp.maxScore)
-            : 0;
-        isAutoCalculated = true;
-      } else if (
-        comp.calculationMode === GradingComponentCalculationMode.AUTO_EXAM
-      ) {
-        let tExScore = 0;
-        let tExMaxScore = 0;
-        for (const row of examRows) {
-          tExScore += this.decimalToNumber(row.score) ?? 0;
-          tExMaxScore += this.decimalToNumber(row.examAssessment.maxScore) ?? 0;
-        }
-        score =
-          tExMaxScore > 0
-            ? this.round2((tExScore / tExMaxScore) * comp.maxScore)
-            : 0;
-        isAutoCalculated = true;
-      } else {
-        // Manual or custom calculation: we don't auto-calculate a score here.
-        score = 0;
-      }
-
-      const code = comp.code?.toUpperCase?.() ?? '';
-      const componentEntry = {
-        gradingPolicyComponentId: comp.id,
-        gradingPolicyComponentCode: code,
-        score,
-        isAutoCalculated,
-      };
-
-      switch (code) {
-        case 'ATTENDANCE':
-          legacyScores.attendanceScore += score;
-          break;
-        case 'HOMEWORK':
-          legacyScores.homeworkScore += score;
-          break;
-        case 'EXAM':
-          legacyScores.examScore += score;
-          break;
-        case 'ACTIVITY':
-          legacyScores.activityScore += score;
-          break;
-        case 'CONTRIBUTION':
-          legacyScores.contributionScore += score;
-          break;
-      }
-
-      computedComponents.push(componentEntry);
+      totalHomeworkScore += effectiveScore;
+      totalHomeworkMaxScore += rowMaxScore;
     }
 
+    const homeworkScore =
+      totalHomeworkMaxScore > 0
+        ? this.round2(
+            (totalHomeworkScore / totalHomeworkMaxScore) *
+              policy.maxHomeworkScore,
+          )
+        : 0;
+
+    let totalExamScore = 0;
+    let totalExamMaxScore = 0;
+
+    for (const row of examRows) {
+      totalExamScore += this.decimalToNumber(row.score) ?? 0;
+      totalExamMaxScore +=
+        this.decimalToNumber(row.examAssessment.maxScore) ?? 0;
+    }
+
+    const examScore =
+      totalExamMaxScore > 0
+        ? this.round2(
+            (totalExamScore / totalExamMaxScore) * policy.maxExamScore,
+          )
+        : 0;
+
     return {
-      ...legacyScores,
-      computedComponents,
+      attendanceScore,
+      homeworkScore,
+      examScore,
     };
+  }
+
+  private async computeBatchAutoScores(
+    db: PrismaDb,
+    enrollmentIds: string[],
+    subjectId: string,
+    sectionId: string,
+    monthStartDate: Date,
+    monthEndDate: Date,
+    academicYearId: string,
+    academicTermId: string,
+    policy: GradingPolicyContext,
+  ) {
+    const [attendanceTotals, presentTotals, homeworkRows, examRows] =
+      await Promise.all([
+        db.studentAttendance.groupBy({
+          by: ['studentEnrollmentId'],
+          where: {
+            studentEnrollmentId: {
+              in: enrollmentIds,
+            },
+            attendanceDate: {
+              gte: monthStartDate,
+              lte: monthEndDate,
+            },
+            deletedAt: null,
+            isActive: true,
+          },
+          _count: {
+            _all: true,
+          },
+        }),
+        db.studentAttendance.groupBy({
+          by: ['studentEnrollmentId'],
+          where: {
+            studentEnrollmentId: {
+              in: enrollmentIds,
+            },
+            status: StudentAttendanceStatus.PRESENT,
+            attendanceDate: {
+              gte: monthStartDate,
+              lte: monthEndDate,
+            },
+            deletedAt: null,
+            isActive: true,
+          },
+          _count: {
+            _all: true,
+          },
+        }),
+        db.studentHomework.findMany({
+          where: {
+            studentEnrollmentId: {
+              in: enrollmentIds,
+            },
+            deletedAt: null,
+            isActive: true,
+            homework: {
+              subjectId,
+              sectionId,
+              homeworkDate: {
+                gte: monthStartDate,
+                lte: monthEndDate,
+              },
+              deletedAt: null,
+              isActive: true,
+            },
+          },
+          select: {
+            studentEnrollmentId: true,
+            isCompleted: true,
+            manualScore: true,
+            homework: {
+              select: {
+                maxScore: true,
+              },
+            },
+          },
+        }),
+        db.studentExamScore.findMany({
+          where: {
+            studentEnrollmentId: {
+              in: enrollmentIds,
+            },
+            isPresent: true,
+            deletedAt: null,
+            isActive: true,
+            examAssessment: {
+              sectionId,
+              subjectId,
+              examDate: {
+                gte: monthStartDate,
+                lte: monthEndDate,
+              },
+              deletedAt: null,
+              isActive: true,
+              examPeriod: {
+                assessmentType: AssessmentType.MONTHLY,
+                academicYearId,
+                academicTermId,
+                deletedAt: null,
+                isActive: true,
+              },
+            },
+          },
+          select: {
+            studentEnrollmentId: true,
+            score: true,
+            examAssessment: {
+              select: {
+                maxScore: true,
+              },
+            },
+          },
+        }),
+      ]);
+
+    const attendanceMap = new Map<string, {total: number; present: number}>();
+    attendanceTotals.forEach((row) => {
+      attendanceMap.set(row.studentEnrollmentId, {
+        total: row._count._all,
+        present: 0,
+      });
+    });
+    presentTotals.forEach((row) => {
+      const existing = attendanceMap.get(row.studentEnrollmentId);
+      if (existing) {
+        existing.present = row._count._all;
+      } else {
+        attendanceMap.set(row.studentEnrollmentId, {
+          total: 0,
+          present: row._count._all,
+        });
+      }
+    });
+
+    const homeworkMap = new Map<
+      string,
+      { totalHomeworkScore: number; totalHomeworkMaxScore: number }
+    >();
+    enrollmentIds.forEach((id) => {
+      homeworkMap.set(id, { totalHomeworkScore: 0, totalHomeworkMaxScore: 0 });
+    });
+    for (const row of homeworkRows) {
+      const enrollmentId = row.studentEnrollmentId;
+      const metrics = homeworkMap.get(enrollmentId);
+      if (!metrics) continue;
+      const rowMaxScore = this.decimalToNumber(row.homework.maxScore) ?? 0;
+      const manualScore = this.decimalToNumber(row.manualScore);
+      const effectiveScore = manualScore ?? (row.isCompleted ? rowMaxScore : 0);
+      metrics.totalHomeworkScore += effectiveScore;
+      metrics.totalHomeworkMaxScore += rowMaxScore;
+    }
+
+    const examMap = new Map<
+      string,
+      { totalExamScore: number; totalExamMaxScore: number }
+    >();
+    enrollmentIds.forEach((id) => {
+      examMap.set(id, { totalExamScore: 0, totalExamMaxScore: 0 });
+    });
+    for (const row of examRows) {
+      const enrollmentId = row.studentEnrollmentId;
+      const metrics = examMap.get(enrollmentId);
+      if (!metrics) continue;
+      metrics.totalExamScore += this.decimalToNumber(row.score) ?? 0;
+      metrics.totalExamMaxScore += this.decimalToNumber(
+        row.examAssessment.maxScore,
+      ) ?? 0;
+    }
+
+    const result = new Map<string, {
+      attendanceScore: number;
+      homeworkScore: number;
+      examScore: number;
+    }>();
+
+    enrollmentIds.forEach((id) => {
+      const attendance = attendanceMap.get(id);
+      const homework = homeworkMap.get(id);
+      const exam = examMap.get(id);
+
+      const attendanceScore =
+        attendance && attendance.total > 0
+          ? this.round2(
+              (attendance.present / attendance.total) * policy.maxAttendanceScore,
+            )
+          : 0;
+
+      const homeworkScore =
+        homework && homework.totalHomeworkMaxScore > 0
+          ? this.round2(
+              (homework.totalHomeworkScore /
+                homework.totalHomeworkMaxScore) *
+                policy.maxHomeworkScore,
+            )
+          : 0;
+
+      const examScore =
+        exam && exam.totalExamMaxScore > 0
+          ? this.round2(
+              (exam.totalExamScore / exam.totalExamMaxScore) *
+                policy.maxExamScore,
+            )
+          : 0;
+
+      result.set(id, {
+        attendanceScore,
+        homeworkScore,
+        examScore,
+      });
+    });
+
+    return result;
   }
 
   private async sumCustomComponentScores(
@@ -1539,16 +1562,43 @@ export class MonthlyGradesService {
     return this.decimalToNumber(aggregate._sum.score) ?? 0;
   }
 
-  private computeMonthlyTotal(
-    components: Array<{ score: number }>,
-    customComponentsScore: number,
-  ): number {
-    const baseTotal = components.reduce((sum, component) => {
-      const score = Number.isFinite(component.score) ? component.score : 0;
-      return sum + score;
-    }, 0);
+  private validateManualScores(
+    policy: GradingPolicyContext,
+    activityScore: number,
+    contributionScore: number,
+  ) {
+    if (activityScore < 0 || activityScore > policy.maxActivityScore) {
+      throw new BadRequestException(
+        `يجب أن تكون activityScore بين 0 و${policy.maxActivityScore}`,
+      );
+    }
 
-    return this.round2(baseTotal + customComponentsScore);
+    if (
+      contributionScore < 0 ||
+      contributionScore > policy.maxContributionScore
+    ) {
+      throw new BadRequestException(
+        `يجب أن تكون contributionScore بين 0 و${policy.maxContributionScore}`,
+      );
+    }
+  }
+
+  private computeMonthlyTotal(
+    attendanceScore: number,
+    homeworkScore: number,
+    activityScore: number,
+    contributionScore: number,
+    customComponentsScore: number,
+    examScore: number,
+  ): number {
+    return this.round2(
+      attendanceScore +
+        homeworkScore +
+        activityScore +
+        contributionScore +
+        customComponentsScore +
+        examScore,
+    );
   }
 
   private decimalToNumber(

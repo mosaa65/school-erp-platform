@@ -8,10 +8,12 @@ import {
   Briefcase,
   Calendar,
   GraduationCap,
+  Hash,
   LoaderCircle,
   PencilLine,
   Plus,
   RefreshCw,
+  Search,
   Trash2,
   User,
   Users,
@@ -32,13 +34,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useGeographyOptionsQuery } from "@/features/lookup-catalog/hooks/use-geography-options-query";
 import {
   buildGeographyMaps,
-  formatLocalityHierarchyLabel,
   resolveSelectionFromLocality,
 } from "@/features/lookup-catalog/lib/geography";
 import {
@@ -53,16 +55,13 @@ import { useEmployeesQuery } from "@/features/employees/hooks/use-employees-quer
 import { useQualificationOptionsQuery } from "@/features/employees/hooks/use-qualification-options-query";
 import {
   translateEmployeeGender,
-  translateEmployeeSystemAccessStatus,
   translateEmploymentType,
-  translateRoleCode,
 } from "@/lib/i18n/ar";
 import type {
   EmployeeGender,
   EmployeeListItem,
   EmployeeSystemAccessStatus,
   EmploymentType,
-  LookupCatalogListItem,
   OperationalReadinessFilter,
 } from "@/lib/api/client";
 
@@ -208,14 +207,7 @@ function resolveOperationalReadiness(employee: EmployeeListItem): {
   };
 }
 
-type LocalityLabelInput = {
-  id: number;
-  nameAr?: string;
-  name?: string;
-  localityType?: "RURAL" | "URBAN";
-  directorateId?: number | null;
-  villageId?: number | null;
-};
+
 
 function toFormState(employee: EmployeeListItem): EmployeeFormState {
   return {
@@ -252,11 +244,9 @@ export function EmployeesWorkspace() {
   const canCreate = hasPermission("employees.create");
   const canUpdate = hasPermission("employees.update");
   const canDelete = hasPermission("employees.delete");
-  const canReadIdTypes = hasPermission("lookup-id-types.read");
   const canReadGenders = hasPermission("lookup-genders.read");
   const canReadQualifications = hasPermission("lookup-qualifications.read");
   const canReadJobRoles = hasPermission("lookup-job-roles.read");
-  const canReadLocalities = hasPermission("localities.read");
 
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
@@ -285,12 +275,14 @@ export function EmployeesWorkspace() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] =
     React.useState<EmployeeFormState>(DEFAULT_FORM_STATE);
-  const [formError, setFormError] = React.useState<string | null>(null);
-  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
   const [formGovernorateId, setFormGovernorateId] = React.useState<string>("");
   const [formDirectorateId, setFormDirectorateId] = React.useState<string>("");
   const [formSubDistrictId, setFormSubDistrictId] = React.useState<string>("");
   const [formVillageId, setFormVillageId] = React.useState<string>("");
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [formError, setFormError] = React.useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
 
   const employeesQuery = useEmployeesQuery({
     page,
@@ -324,10 +316,7 @@ export function EmployeesWorkspace() {
     () => employeesQuery.data?.data ?? [],
     [employeesQuery.data?.data],
   );
-  const idTypeOptions = React.useMemo(
-    () => idTypeOptionsQuery.data ?? [],
-    [idTypeOptionsQuery.data],
-  );
+
   const genderOptions = React.useMemo(
     () => genderOptionsQuery.data ?? [],
     [genderOptionsQuery.data],
@@ -369,67 +358,8 @@ export function EmployeesWorkspace() {
       villageOptions,
     ],
   );
-  const hasGeographyHierarchy = React.useMemo(
-    () => governorateOptions.length > 0 && directorateOptions.length > 0,
-    [directorateOptions.length, governorateOptions.length],
-  );
-  const filteredDirectorates = React.useMemo(() => {
-    if (!formGovernorateId) {
-      return [];
-    }
 
-    const governorateId = Number(formGovernorateId);
-    return directorateOptions.filter(
-      (item) => item.governorateId === governorateId,
-    );
-  }, [directorateOptions, formGovernorateId]);
-  const filteredSubDistricts = React.useMemo(() => {
-    if (!formDirectorateId) {
-      return [];
-    }
 
-    const directorateId = Number(formDirectorateId);
-    return subDistrictOptions.filter(
-      (item) => item.directorateId === directorateId,
-    );
-  }, [formDirectorateId, subDistrictOptions]);
-  const filteredVillages = React.useMemo(() => {
-    if (!formSubDistrictId) {
-      return [];
-    }
-
-    const subDistrictId = Number(formSubDistrictId);
-    return villageOptions.filter(
-      (item) => item.subDistrictId === subDistrictId,
-    );
-  }, [formSubDistrictId, villageOptions]);
-  const filteredLocalities = React.useMemo(() => {
-    if (!formDirectorateId) {
-      return [];
-    }
-
-    const directorateId = Number(formDirectorateId);
-    const selectedVillageId = formVillageId ? Number(formVillageId) : null;
-
-    return localityOptions.filter((item) => {
-      if (item.localityType === "URBAN") {
-        return item.directorateId === directorateId;
-      }
-
-      if (!selectedVillageId) {
-        return false;
-      }
-
-      return item.villageId === selectedVillageId;
-    });
-  }, [formDirectorateId, formVillageId, localityOptions]);
-  const formSelectedLocality = React.useMemo(
-    () =>
-      formState.localityId
-        ? geographyMaps.localityById.get(Number(formState.localityId))
-        : undefined,
-    [formState.localityId, geographyMaps],
-  );
   const qualificationOptions = React.useMemo(
     () => qualificationOptionsQuery.data ?? [],
     [qualificationOptionsQuery.data],
@@ -441,11 +371,7 @@ export function EmployeesWorkspace() {
   const pagination = employeesQuery.data?.pagination;
   const isEditing = editingEmployeeId !== null;
 
-  const mutationError =
-    (createMutation.error as Error | null)?.message ??
-    (updateMutation.error as Error | null)?.message ??
-    (deleteMutation.error as Error | null)?.message ??
-    null;
+
 
   useDebounceEffect(() => {
       setPage(1);
@@ -608,35 +534,7 @@ export function EmployeesWorkspace() {
     setIsFilterOpen(false);
   };
 
-  const handleGovernorateChange = (value: string) => {
-    setFormGovernorateId(value);
-    setFormDirectorateId("");
-    setFormSubDistrictId("");
-    setFormVillageId("");
-    setFormState((prev) => ({ ...prev, localityId: "" }));
-  };
 
-  const handleDirectorateChange = (value: string) => {
-    setFormDirectorateId(value);
-    setFormSubDistrictId("");
-    setFormVillageId("");
-    setFormState((prev) => ({ ...prev, localityId: "" }));
-  };
-
-  const handleSubDistrictChange = (value: string) => {
-    setFormSubDistrictId(value);
-    setFormVillageId("");
-    setFormState((prev) => ({ ...prev, localityId: "" }));
-  };
-
-  const handleVillageChange = (value: string) => {
-    setFormVillageId(value);
-    setFormState((prev) => ({ ...prev, localityId: "" }));
-  };
-
-  const handleLocalityChange = (value: string) => {
-    setFormState((prev) => ({ ...prev, localityId: value }));
-  };
 
   const validateForm = (): boolean => {
     if (!formState.fullName.trim()) {
@@ -798,29 +696,7 @@ export function EmployeesWorkspace() {
     setIsFormOpen(true);
   };
 
-  const handleToggleActive = (employee: EmployeeListItem) => {
-    if (!canUpdate) {
-      return;
-    }
 
-    updateMutation.mutate(
-      {
-        employeeId: employee.id,
-        payload: {
-          isActive: !employee.isActive,
-        },
-      },
-      {
-        onSuccess: () => {
-          setActionSuccess(
-            employee.isActive
-              ? "تم تعطيل الموظف بنجاح."
-              : "تم تفعيل الموظف بنجاح.",
-          );
-        },
-      },
-    );
-  };
 
   const handleDelete = (employee: EmployeeListItem) => {
     if (!canDelete) {
@@ -869,46 +745,13 @@ export function EmployeesWorkspace() {
   return (
     <>
       <div className="space-y-4">
-        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
-          <div className="flex min-w-0 items-center gap-2">
-            <SearchField
-              containerClassName="min-w-0"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="ابحث عن موظف أو رقم وظيفي..."
-            />
-          </div>
-          <div className="flex items-center justify-end">
-            <FilterTriggerButton
-              count={activeFiltersCount}
-              className="px-3 sm:px-4"
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-            />
-          </div>
-        </div>
-
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
           title="فلترة الموظفين"
           renderInPortal
           overlayClassName="z-[70]"
-          actionButtons={
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
-            </div>
-          }
+          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1">
@@ -1009,16 +852,23 @@ export function EmployeesWorkspace() {
           </div>
         </FilterDrawer>
 
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="ابحث بالاسم، الرقم، الهاتف..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+        />
+
         <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-          <CardHeader className="space-y-3">
+          <CardHeader className="space-y-3 pb-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <CardTitle>قائمة الموظفين</CardTitle>
-              <Badge variant="secondary">
-                الإجمالي: {pagination?.total ?? 0}
-              </Badge>
+              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
             <CardDescription>إدارة بيانات الموظفين وصلاحيات الوصول للنظام.</CardDescription>
           </CardHeader>
+
 
           <CardContent className="space-y-3">
             {employeesQuery.isPending ? (
@@ -1161,9 +1011,6 @@ export function EmployeesWorkspace() {
         isSubmitting={isFormSubmitting}
         submitLabel={isEditing ? "تحديث الموظف" : "إضافة موظف"}
         showFooter={false}
-        renderInPortal
-        overlayClassName="z-[70]"
-        panelClassName="md:max-w-[760px]"
       >
         {!canCreate && !isEditing ? (
           <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground text-center">
@@ -1238,6 +1085,7 @@ export function EmployeesWorkspace() {
                   value={formState.phonePrimary}
                   onValueChange={(value) => setFormState((prev) => ({ ...prev, phonePrimary: value }))}
                   placeholder="+967777111222"
+                  helpText=""
                 />
               </div>
               <div className="space-y-1">
@@ -1246,6 +1094,7 @@ export function EmployeesWorkspace() {
                   value={formState.phoneSecondary}
                   onValueChange={(value) => setFormState((prev) => ({ ...prev, phoneSecondary: value }))}
                   placeholder="+967733444555"
+                  helpText=""
                 />
               </div>
             </div>
@@ -1302,27 +1151,5 @@ export function EmployeesWorkspace() {
         )}
       </BottomSheetForm>
     </>
-  );
-}
-
-function Hash({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <line x1="4" y1="9" x2="20" y2="9" />
-      <line x1="4" y1="15" x2="20" y2="15" />
-      <line x1="10" y1="3" x2="8" y2="21" />
-      <line x1="16" y1="3" x2="14" y2="21" />
-    </svg>
   );
 }

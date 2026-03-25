@@ -4,9 +4,15 @@ import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   LoaderCircle,
+  Mail,
+  Lock,
   PencilLine,
+  Plus,
   RefreshCw,
+  Search,
   Trash2,
+  User,
+  UserPlus,
   UserRoundPlus,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +29,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
@@ -40,6 +47,7 @@ import {
 } from "@/features/users/hooks/use-user-form-options-query";
 import type { UserListItem } from "@/lib/api/client";
 import { translateRoleCode } from "@/lib/i18n/ar";
+import { Label } from "@/components/ui/label";
 
 type UserFormState = {
   email: string;
@@ -453,63 +461,45 @@ export function UsersManagementWorkspace({
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
-            <SearchField
-              containerClassName="flex-1"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="ابحث بالاسم، البريد، اسم المستخدم..."
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterTriggerButton
-              count={activeFiltersCount}
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-            />
-          </div>
-        </div>
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="ابحث بالاسم، البريد، اسم المستخدم..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+        />
 
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
           title="خيارات الفلترة"
           actionButtons={
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
-            </div>
+            <FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />
           }
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft}
-              onChange={(event) =>
-                setFilterDraft(
-                  event.target.value as "all" | "active" | "inactive" | "deleted",
-                )
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">نشط فقط</option>
-              <option value="inactive">غير نشط فقط</option>
-              <option value="deleted">محذوف فقط</option>
-            </SelectField>
+            <div className="space-y-1">
+              <Label>حالة المستخدم</Label>
+              <SelectField
+                value={filterDraft}
+                onChange={(event) =>
+                  setFilterDraft(
+                    event.target.value as "all" | "active" | "inactive" | "deleted",
+                  )
+                }
+                icon={<User className="h-4 w-4" />}
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">نشط فقط</option>
+                <option value="inactive">غير نشط فقط</option>
+                <option value="deleted">محذوف فقط</option>
+              </SelectField>
+            </div>
           </div>
         </FilterDrawer>
 
         <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-          <CardHeader className="space-y-3">
+          <CardHeader className="space-y-3 pb-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <CardTitle>قائمة المستخدمين</CardTitle>
               <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
@@ -749,15 +739,9 @@ export function UsersManagementWorkspace({
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label
-                htmlFor="user-email"
-                className="text-xs font-medium text-muted-foreground"
-              >
-                البريد الإلكتروني *
-              </label>
+            <div className="space-y-1">
+              <Label required>البريد الإلكتروني</Label>
               <Input
-                id="user-email"
                 value={formState.email}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -766,19 +750,14 @@ export function UsersManagementWorkspace({
                   }))
                 }
                 placeholder="user@school.local"
+                icon={<Mail className="h-4 w-4" />}
                 required
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label
-                htmlFor="user-username"
-                className="text-xs font-medium text-muted-foreground"
-              >
-                اسم المستخدم
-              </label>
+            <div className="space-y-1">
+              <Label>اسم المستخدم</Label>
               <Input
-                id="user-username"
                 value={formState.username}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -787,48 +766,47 @@ export function UsersManagementWorkspace({
                   }))
                 }
                 placeholder="ahmad_teacher"
+                icon={<User className="h-4 w-4" />}
               />
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  الاسم الأول *
-                </label>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <Label required>الاسم الأول</Label>
                 <Input
                   value={formState.firstName}
                   onChange={(event) =>
                     setFormState((prev) => ({
                       ...prev,
                       firstName: event.target.value,
-                  }))
-                }
+                    }))
+                  }
                   placeholder="أحمد"
+                  icon={<User className="h-4 w-4" />}
                   required
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  الاسم الأخير *
-                </label>
+              <div className="space-y-1">
+                <Label required>الاسم الأخير</Label>
                 <Input
                   value={formState.lastName}
                   onChange={(event) =>
                     setFormState((prev) => ({
                       ...prev,
                       lastName: event.target.value,
-                  }))
-                }
+                    }))
+                  }
                   placeholder="القحطاني"
+                  icon={<User className="h-4 w-4" />}
                   required
                 />
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                {isEditing ? "تغيير كلمة المرور (اختياري)" : "كلمة المرور *"}
-              </label>
+            <div className="space-y-1">
+              <Label required={!isEditing}>
+                {isEditing ? "تغيير كلمة المرور (اختياري)" : "كلمة المرور"}
+              </Label>
               <Input
                 type="password"
                 value={formState.password}
@@ -839,17 +817,15 @@ export function UsersManagementWorkspace({
                   }))
                 }
                 placeholder="StrongPassword123!"
+                icon={<Lock className="h-4 w-4" />}
                 required={!isEditing}
                 minLength={isEditing ? undefined : 8}
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                ربط موظف (اختياري)
-              </label>
-              <select
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            <div className="space-y-1">
+              <Label>ربط موظف (اختياري)</Label>
+              <SelectField
                 value={formState.employeeId}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -858,6 +834,7 @@ export function UsersManagementWorkspace({
                   }))
                 }
                 disabled={!canReadEmployees || employeesQuery.isLoading}
+                icon={<UserPlus className="h-4 w-4" />}
               >
                 <option value="">اختر موظفًا</option>
                 {(employeesQuery.data ?? []).map((employee) => (
@@ -865,9 +842,9 @@ export function UsersManagementWorkspace({
                     {employee.fullName} ({employee.jobNumber})
                   </option>
                 ))}
-              </select>
+              </SelectField>
               {!canReadEmployees ? (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[10px] text-muted-foreground px-1">
                   ليس لديك الصلاحية المطلوبة: <code>employees.read</code> لعرض الموظفين.
                 </p>
               ) : null}

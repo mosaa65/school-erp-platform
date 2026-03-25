@@ -10,7 +10,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="group relative w-full">
         {icon && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-primary/70 transition-colors group-focus-within:text-primary pointer-events-none">
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-primary transition-colors group-focus-within:text-primary pointer-events-none">
             {icon}
           </div>
         )}

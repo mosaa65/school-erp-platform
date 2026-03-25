@@ -4,13 +4,23 @@ import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import { useRouter } from "next/navigation";
 import {
+  Activity,
   Building,
-  ChevronDown,
+  Calendar,
+  DoorOpen,
+  GraduationCap,
+  Hash,
+  Layers2,
+  LayoutGrid,
   LoaderCircle,
   PencilLine,
   Plus,
   RefreshCw,
+  Search,
+  Shuffle,
   Trash2,
+  Type,
+  Users,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,7 +37,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useBuildingOptionsQuery } from "@/features/sections/hooks/use-building-options-query";
@@ -370,43 +381,11 @@ export function ClassroomsWorkspace() {
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
-            <SearchField
-              containerClassName="flex-1"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="بحث بالكود أو الاسم أو المبنى..."
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterTriggerButton
-              count={activeFiltersCount}
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-            />
-          </div>
-        </div>
-
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
-          title="فلاتر الفصول"
-          actionButtons={
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
-            </div>
-          }
+          title="خيارات الفلترة"
+          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           {canReadBuildings ? (
             <div className="space-y-1">
@@ -458,8 +437,16 @@ export function ClassroomsWorkspace() {
           </div>
         </FilterDrawer>
 
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="ابحث بالاسم، الكود، أو المبنى..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+        />
+
         <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-          <CardHeader className="space-y-3">
+          <CardHeader className="space-y-3 pb-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <CardTitle>الفصول / الغرف</CardTitle>
               <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>

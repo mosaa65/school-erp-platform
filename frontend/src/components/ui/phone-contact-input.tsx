@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Phone, X } from "lucide-react";
+import { Phone, UserPlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -96,15 +96,15 @@ export function PhoneContactInput({
 
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           size="icon"
           onClick={() => void handleChooseContact()}
           disabled={disabled || isPicking}
           data-testid={buttonTestId}
           title={actionLabel}
-          className="h-10 w-10 shrink-0 rounded-full bg-primary/5 text-primary hover:bg-primary/15 transition-colors border-primary/20 shadow-sm"
+          className="h-10 w-10 shrink-0 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-all active:scale-95 border border-primary/20 shadow-sm"
         >
-          <Phone className={cn("h-4 w-4", isPicking && "animate-pulse opacity-50")} />
+          <UserPlus className={cn("h-4 w-4", isPicking && "animate-pulse")} />
         </Button>
       </div>
 

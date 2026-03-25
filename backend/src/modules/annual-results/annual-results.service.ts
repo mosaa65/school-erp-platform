@@ -15,6 +15,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { GradingNotificationsService } from '../grading-notifications/grading-notifications.service';
 import { CalculateAnnualResultsDto } from './dto/calculate-annual-results.dto';
 import { CreateAnnualResultDto } from './dto/create-annual-result.dto';
 import { ListAnnualResultsDto } from './dto/list-annual-results.dto';
@@ -126,6 +127,7 @@ export class AnnualResultsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLogsService: AuditLogsService,
+    private readonly gradingNotificationsService: GradingNotificationsService,
   ) {}
 
   async create(payload: CreateAnnualResultDto, actorUserId: string) {
@@ -597,6 +599,15 @@ export class AnnualResultsService {
     }
 
     const enrollmentIds = enrollments.map((enrollment) => enrollment.id);
+
+    // Check if all semester grades are complete for the year
+    await this.ensureSemesterGradesComplete(
+      enrollmentIds,
+      payload.academicYearId,
+      context,
+      actorUserId,
+    );
+
     const [passStatus, failStatus] = await this.prisma.$transaction([
       this.prisma.annualStatusLookup.findFirst({
         where: {
@@ -1490,6 +1501,84 @@ export class AnnualResultsService {
     if (!Number.isInteger(value) || value < 0) {
       throw new BadRequestException(
         `يجب أن تكون قيمة ${fieldName} عددًا صحيحًا غير سالب`,
+      );
+    }
+  }
+
+  private async ensureSemesterGradesComplete(
+    enrollmentIds: string[],
+    academicYearId: string,
+    context: SectionContext,
+    actorUserId: string,
+  ) {
+    // Get all terms in the year
+    const yearTerms = await this.prisma.academicTerm.findMany({
+      where: {
+        academicYearId,
+        deletedAt: null,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        sequence: true,
+      },
+    });
+
+    if (yearTerms.length === 0) {
+      throw new BadRequestException(
+        'لا توجد فصول أكاديمية نشطة في السنة المحددة',
+      );
+    }
+
+    const termIds = yearTerms.map((term) => term.id);
+
+    // Check if all students have semester grades for all terms in the year
+    const existingSemesterGrades = await this.prisma.semesterGrade.findMany({
+      where: {
+        studentEnrollmentId: {
+          in: enrollmentIds,
+        },
+        academicTermId: {
+          in: termIds,
+        },
+        deletedAt: null,
+        isActive: true,
+      },
+      select: {
+        studentEnrollmentId: true,
+        academicTermId: true,
+      },
+    });
+
+    // Group by enrollment to check completeness
+    const gradesByEnrollment = new Map<string, Set<string>>();
+    for (const grade of existingSemesterGrades) {
+      if (!gradesByEnrollment.has(grade.studentEnrollmentId)) {
+        gradesByEnrollment.set(grade.studentEnrollmentId, new Set());
+      }
+      gradesByEnrollment.get(grade.studentEnrollmentId)!.add(grade.academicTermId);
+    }
+
+    // Check each enrollment has all terms
+    const missingGrades: string[] = [];
+    for (const enrollmentId of enrollmentIds) {
+      const studentTerms = gradesByEnrollment.get(enrollmentId);
+      if (!studentTerms || studentTerms.size !== termIds.length) {
+        missingGrades.push(enrollmentId);
+      }
+    }
+
+    if (missingGrades.length > 0) {
+      await this.gradingNotificationsService.notifySemesterGradesIncomplete(
+        context.sectionId,
+        academicYearId,
+        context.gradeLevelId,
+        missingGrades.length,
+        actorUserId,
+      );
+
+      throw new BadRequestException(
+        `لا يمكن حساب النتيجة السنوية: ${missingGrades.length} طالب لم يكملوا الدرجات الفصلية لجميع فصول السنة. يرجى حساب الدرجات الفصلية أولاً.`,
       );
     }
   }

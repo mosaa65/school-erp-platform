@@ -4,10 +4,8 @@ import * as React from "react";
 import { SearchField } from "@/components/ui/search-field";
 import {
   ShieldCheck,
-  ShieldAlert,
   ChevronDown,
   CheckCircle2,
-  Circle,
   Filter,
   SlidersHorizontal,
   Settings2,

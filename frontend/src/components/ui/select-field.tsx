@@ -25,11 +25,11 @@ export function SelectField({
   return (
     <div className={cn("group/select relative", containerClassName)}>
       {hasIcon ? (
-        <span className="pointer-events-none absolute right-3 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl border border-primary/20 bg-primary/5 text-primary/70 shadow-sm transition-colors group-focus-within/select:border-primary/40 group-focus-within/select:bg-primary/10 group-focus-within/select:text-primary">
+        <span className="pointer-events-none absolute right-3 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 text-primary shadow-sm transition-colors group-focus-within/select:border-primary/50 group-focus-within/select:bg-primary/15 group-focus-within/select:text-primary">
           {renderedIcon}
         </span>
       ) : null}
-      <span className="pointer-events-none absolute left-3 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl border border-primary/10 bg-primary/5 text-primary/40 shadow-sm transition-colors group-focus-within/select:border-primary/30 group-focus-within/select:bg-primary/10 group-focus-within/select:text-primary">
+      <span className="pointer-events-none absolute left-3 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl border border-primary/20 bg-primary/5 text-primary/60 shadow-sm transition-colors group-focus-within/select:border-primary/40 group-focus-within/select:bg-primary/10 group-focus-within/select:text-primary">
         <ChevronDown className="h-4 w-4" />
       </span>
       <select

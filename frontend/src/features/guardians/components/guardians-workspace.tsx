@@ -14,7 +14,6 @@ import {
   MessageSquare,
   MapPin,
   Activity,
-  UserCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -809,33 +808,30 @@ export function GuardiansWorkspace() {
                       }
                       icon={<MapPin className="h-4 w-4" />}
                     >
-                      <option value="">اختر القرية (اختياري للحضر)</option>
+                      <option value="">اختر القرية</option>
                       {filteredVillages.map((item) => (
                         <option key={item.id} value={item.id}>
                           {item.nameAr ?? item.name ?? `قرية #${item.id}`}
                         </option>
                       ))}
                     </SelectField>
-
-                    <div className="md:col-span-2">
-                      <SelectField
-                        value={formState.localityId}
-                        onChange={(event) => handleLocalityChange(event.target.value)}
-                        disabled={
-                          !canReadLocalities ||
-                          geographyOptionsQuery.isLoading ||
-                          !formDirectorateId
-                        }
-                        icon={<MapPin className="h-4 w-4" />}
-                      >
-                        <option value="">اختر المحلة</option>
-                        {filteredLocalities.map((locality) => (
-                          <option key={locality.id} value={locality.id}>
-                            {formatLocalityHierarchyLabel(locality, geographyMaps)}
-                          </option>
-                        ))}
-                      </SelectField>
-                    </div>
+                    <SelectField
+                      value={formState.localityId}
+                      onChange={(event) => handleLocalityChange(event.target.value)}
+                      disabled={
+                        !canReadLocalities ||
+                        geographyOptionsQuery.isLoading ||
+                        !formDirectorateId
+                      }
+                      icon={<MapPin className="h-4 w-4" />}
+                    >
+                      <option value="">اختر المحلة</option>
+                      {filteredLocalities.map((locality) => (
+                        <option key={locality.id} value={locality.id}>
+                          {formatLocalityHierarchyLabel(locality, geographyMaps)}
+                        </option>
+                      ))}
+                    </SelectField>
 
                     <p className="text-[10px] text-muted-foreground md:col-span-2 px-1">
                       {formSelectedLocality

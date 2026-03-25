@@ -16,11 +16,11 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { GradingWorkflowStatus } from '@prisma/client';
-import { CurrentUser } from '../../../common/decorators/current-user.decorator';
-import { RequirePermissions } from '../../../common/decorators/permissions.decorator';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../../../common/guards/permissions.guard';
-import type { AuthUser } from '../../../common/interfaces/auth-user.interface';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import type { AuthUser } from '../../common/interfaces/auth-user.interface';
 import { CreateAnnualGradeDto } from './dto/create-annual-grade.dto';
 import { ListAnnualGradesDto } from './dto/list-annual-grades.dto';
 import { UpdateAnnualGradeDto } from './dto/update-annual-grade.dto';

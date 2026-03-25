@@ -15,6 +15,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { DataScopeService } from '../data-scope/data-scope.service';
+import { PolicyResolverService } from '../evaluation-policies/grading-policies/policy-resolver.service';
 import { CalculateMonthlyGradesDto } from './dto/calculate-monthly-grades.dto';
 import { CreateMonthlyGradeDto } from './dto/create-monthly-grade.dto';
 import { ListMonthlyGradesDto } from './dto/list-monthly-grades.dto';
@@ -196,6 +197,7 @@ export class MonthlyGradesService {
     private readonly prisma: PrismaService,
     private readonly auditLogsService: AuditLogsService,
     private readonly dataScopeService: DataScopeService,
+    private readonly policyResolverService: PolicyResolverService,
   ) {}
 
   async create(payload: CreateMonthlyGradeDto, actorUserId: string) {
@@ -331,6 +333,7 @@ export class MonthlyGradesService {
       month.academicYearId,
       section.gradeLevelId,
       payload.subjectId,
+      month.academicTermId,
     );
 
     await this.ensureActorAuthorized(
@@ -400,6 +403,18 @@ export class MonthlyGradesService {
     };
 
     await this.prisma.$transaction(async (tx) => {
+      const autoScoresMap = await this.computeBatchAutoScores(
+        tx,
+        enrollmentIds,
+        payload.subjectId,
+        payload.sectionId,
+        month.startDate,
+        month.endDate,
+        month.academicYearId,
+        month.academicTermId,
+        policy,
+      );
+
       for (const enrollmentId of enrollmentIds) {
         const existing = existingByEnrollmentId.get(enrollmentId);
 
@@ -408,17 +423,9 @@ export class MonthlyGradesService {
           continue;
         }
 
-        const autoScores = await this.computeAutoScores(
-          tx,
-          enrollmentId,
-          payload.subjectId,
-          payload.sectionId,
-          month.startDate,
-          month.endDate,
-          month.academicYearId,
-          month.academicTermId,
-          policy,
-        );
+        const autoScores =
+          autoScoresMap.get(enrollmentId) ??
+          ({ attendanceScore: 0, homeworkScore: 0, examScore: 0 } as const);
 
         const customComponentsScore = existing
           ? await this.sumCustomComponentScores(tx, existing.id, policy.id)
@@ -962,6 +969,7 @@ export class MonthlyGradesService {
       month.academicYearId,
       enrollment.section.gradeLevelId,
       subjectId,
+      month.academicTermId,
     );
 
     return {
@@ -985,6 +993,7 @@ export class MonthlyGradesService {
         id: true,
         subjectId: true,
         academicYearId: true,
+        academicTermId: true,
         studentEnrollment: {
           select: {
             sectionId: true,
@@ -1006,6 +1015,7 @@ export class MonthlyGradesService {
       monthlyGrade.academicYearId,
       monthlyGrade.studentEnrollment.section.gradeLevelId,
       monthlyGrade.subjectId,
+      monthlyGrade.academicTermId,
     );
 
     return {
@@ -1135,79 +1145,34 @@ export class MonthlyGradesService {
     academicYearId: string,
     gradeLevelId: string,
     subjectId: string,
+    academicTermId?: string,
   ): Promise<GradingPolicyContext> {
-    const approvedPolicy = await this.prisma.gradingPolicy.findFirst({
-      where: {
+    try {
+      const policy = await this.policyResolverService.resolvePolicy({
         academicYearId,
         gradeLevelId,
         subjectId,
         assessmentType: AssessmentType.MONTHLY,
-        status: GradingWorkflowStatus.APPROVED,
-        isActive: true,
-        deletedAt: null,
-      },
-      orderBy: [
-        {
-          isDefault: 'desc',
-        },
-        {
-          updatedAt: 'desc',
-        },
-      ],
-      select: {
-        id: true,
-        maxAttendanceScore: true,
-        maxHomeworkScore: true,
-        maxExamScore: true,
-        maxActivityScore: true,
-        maxContributionScore: true,
-      },
-    });
+        academicTermId,
+      });
 
-    const policy =
-      approvedPolicy ??
-      (await this.prisma.gradingPolicy.findFirst({
-        where: {
-          academicYearId,
-          gradeLevelId,
-          subjectId,
-          assessmentType: AssessmentType.MONTHLY,
-          isActive: true,
-          deletedAt: null,
-        },
-        orderBy: [
-          {
-            isDefault: 'desc',
-          },
-          {
-            updatedAt: 'desc',
-          },
-        ],
-        select: {
-          id: true,
-          maxAttendanceScore: true,
-          maxHomeworkScore: true,
-          maxExamScore: true,
-          maxActivityScore: true,
-          maxContributionScore: true,
-        },
-      }));
-
-    if (!policy) {
-      throw new BadRequestException(
-        'لا توجد سياسة درجات شهرية للسنة والمرحلة والمادة المحددة',
-      );
+      return {
+        id: policy.id,
+        maxAttendanceScore: this.decimalToNumber(policy.maxAttendanceScore) ?? 0,
+        maxHomeworkScore: this.decimalToNumber(policy.maxHomeworkScore) ?? 0,
+        maxExamScore: this.decimalToNumber(policy.maxExamScore) ?? 0,
+        maxActivityScore: this.decimalToNumber(policy.maxActivityScore) ?? 0,
+        maxContributionScore:
+          this.decimalToNumber(policy.maxContributionScore) ?? 0,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw new BadRequestException(
+          'لا توجد سياسة درجات شهرية للسنة والمرحلة والمادة المحددة',
+        );
+      }
+      throw error;
     }
-
-    return {
-      id: policy.id,
-      maxAttendanceScore: this.decimalToNumber(policy.maxAttendanceScore) ?? 0,
-      maxHomeworkScore: this.decimalToNumber(policy.maxHomeworkScore) ?? 0,
-      maxExamScore: this.decimalToNumber(policy.maxExamScore) ?? 0,
-      maxActivityScore: this.decimalToNumber(policy.maxActivityScore) ?? 0,
-      maxContributionScore:
-        this.decimalToNumber(policy.maxContributionScore) ?? 0,
-    };
   }
 
   private async computeAutoScores(
@@ -1356,6 +1321,220 @@ export class MonthlyGradesService {
       homeworkScore,
       examScore,
     };
+  }
+
+  private async computeBatchAutoScores(
+    db: PrismaDb,
+    enrollmentIds: string[],
+    subjectId: string,
+    sectionId: string,
+    monthStartDate: Date,
+    monthEndDate: Date,
+    academicYearId: string,
+    academicTermId: string,
+    policy: GradingPolicyContext,
+  ) {
+    const [attendanceTotals, presentTotals, homeworkRows, examRows] =
+      await Promise.all([
+        db.studentAttendance.groupBy({
+          by: ['studentEnrollmentId'],
+          where: {
+            studentEnrollmentId: {
+              in: enrollmentIds,
+            },
+            attendanceDate: {
+              gte: monthStartDate,
+              lte: monthEndDate,
+            },
+            deletedAt: null,
+            isActive: true,
+          },
+          _count: {
+            _all: true,
+          },
+        }),
+        db.studentAttendance.groupBy({
+          by: ['studentEnrollmentId'],
+          where: {
+            studentEnrollmentId: {
+              in: enrollmentIds,
+            },
+            status: StudentAttendanceStatus.PRESENT,
+            attendanceDate: {
+              gte: monthStartDate,
+              lte: monthEndDate,
+            },
+            deletedAt: null,
+            isActive: true,
+          },
+          _count: {
+            _all: true,
+          },
+        }),
+        db.studentHomework.findMany({
+          where: {
+            studentEnrollmentId: {
+              in: enrollmentIds,
+            },
+            deletedAt: null,
+            isActive: true,
+            homework: {
+              subjectId,
+              sectionId,
+              homeworkDate: {
+                gte: monthStartDate,
+                lte: monthEndDate,
+              },
+              deletedAt: null,
+              isActive: true,
+            },
+          },
+          select: {
+            studentEnrollmentId: true,
+            isCompleted: true,
+            manualScore: true,
+            homework: {
+              select: {
+                maxScore: true,
+              },
+            },
+          },
+        }),
+        db.studentExamScore.findMany({
+          where: {
+            studentEnrollmentId: {
+              in: enrollmentIds,
+            },
+            isPresent: true,
+            deletedAt: null,
+            isActive: true,
+            examAssessment: {
+              sectionId,
+              subjectId,
+              examDate: {
+                gte: monthStartDate,
+                lte: monthEndDate,
+              },
+              deletedAt: null,
+              isActive: true,
+              examPeriod: {
+                assessmentType: AssessmentType.MONTHLY,
+                academicYearId,
+                academicTermId,
+                deletedAt: null,
+                isActive: true,
+              },
+            },
+          },
+          select: {
+            studentEnrollmentId: true,
+            score: true,
+            examAssessment: {
+              select: {
+                maxScore: true,
+              },
+            },
+          },
+        }),
+      ]);
+
+    const attendanceMap = new Map<string, {total: number; present: number}>();
+    attendanceTotals.forEach((row) => {
+      attendanceMap.set(row.studentEnrollmentId, {
+        total: row._count._all,
+        present: 0,
+      });
+    });
+    presentTotals.forEach((row) => {
+      const existing = attendanceMap.get(row.studentEnrollmentId);
+      if (existing) {
+        existing.present = row._count._all;
+      } else {
+        attendanceMap.set(row.studentEnrollmentId, {
+          total: 0,
+          present: row._count._all,
+        });
+      }
+    });
+
+    const homeworkMap = new Map<
+      string,
+      { totalHomeworkScore: number; totalHomeworkMaxScore: number }
+    >();
+    enrollmentIds.forEach((id) => {
+      homeworkMap.set(id, { totalHomeworkScore: 0, totalHomeworkMaxScore: 0 });
+    });
+    for (const row of homeworkRows) {
+      const enrollmentId = row.studentEnrollmentId;
+      const metrics = homeworkMap.get(enrollmentId);
+      if (!metrics) continue;
+      const rowMaxScore = this.decimalToNumber(row.homework.maxScore) ?? 0;
+      const manualScore = this.decimalToNumber(row.manualScore);
+      const effectiveScore = manualScore ?? (row.isCompleted ? rowMaxScore : 0);
+      metrics.totalHomeworkScore += effectiveScore;
+      metrics.totalHomeworkMaxScore += rowMaxScore;
+    }
+
+    const examMap = new Map<
+      string,
+      { totalExamScore: number; totalExamMaxScore: number }
+    >();
+    enrollmentIds.forEach((id) => {
+      examMap.set(id, { totalExamScore: 0, totalExamMaxScore: 0 });
+    });
+    for (const row of examRows) {
+      const enrollmentId = row.studentEnrollmentId;
+      const metrics = examMap.get(enrollmentId);
+      if (!metrics) continue;
+      metrics.totalExamScore += this.decimalToNumber(row.score) ?? 0;
+      metrics.totalExamMaxScore += this.decimalToNumber(
+        row.examAssessment.maxScore,
+      ) ?? 0;
+    }
+
+    const result = new Map<string, {
+      attendanceScore: number;
+      homeworkScore: number;
+      examScore: number;
+    }>();
+
+    enrollmentIds.forEach((id) => {
+      const attendance = attendanceMap.get(id);
+      const homework = homeworkMap.get(id);
+      const exam = examMap.get(id);
+
+      const attendanceScore =
+        attendance && attendance.total > 0
+          ? this.round2(
+              (attendance.present / attendance.total) * policy.maxAttendanceScore,
+            )
+          : 0;
+
+      const homeworkScore =
+        homework && homework.totalHomeworkMaxScore > 0
+          ? this.round2(
+              (homework.totalHomeworkScore /
+                homework.totalHomeworkMaxScore) *
+                policy.maxHomeworkScore,
+            )
+          : 0;
+
+      const examScore =
+        exam && exam.totalExamMaxScore > 0
+          ? this.round2(
+              (exam.totalExamScore / exam.totalExamMaxScore) *
+                policy.maxExamScore,
+            )
+          : 0;
+
+      result.set(id, {
+        attendanceScore,
+        homeworkScore,
+        examScore,
+      });
+    });
+
+    return result;
   }
 
   private async sumCustomComponentScores(

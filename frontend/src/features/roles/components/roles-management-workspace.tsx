@@ -39,7 +39,7 @@ import { usePermissionsOptionsQuery } from "@/features/roles/hooks/use-permissio
 import { PermissionsSelector } from "@/components/ui/permissions-selector";
 import { ApiError, type RoleListItem } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
-import { translatePermissionCode } from "@/lib/i18n/ar";
+
 
 type RoleFormState = {
   code: string;

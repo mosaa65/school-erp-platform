@@ -17,7 +17,6 @@ import {
   Heart,
   Activity,
   UserCheck,
-  LayoutGrid,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -102,11 +101,11 @@ const ORPHAN_STATUS_FALLBACK_OPTIONS: Array<{
   code: StudentOrphanStatus;
   nameAr: string;
 }> = [
-  { id: -1, code: "NONE", nameAr: "غير يتيم" },
-  { id: -2, code: "FATHER_DECEASED", nameAr: "يتيم الأب" },
-  { id: -3, code: "MOTHER_DECEASED", nameAr: "يتيم الأم" },
-  { id: -4, code: "BOTH_DECEASED", nameAr: "يتيم الأبوين" },
-];
+    { id: -1, code: "NONE", nameAr: "غير يتيم" },
+    { id: -2, code: "FATHER_DECEASED", nameAr: "يتيم الأب" },
+    { id: -3, code: "MOTHER_DECEASED", nameAr: "يتيم الأم" },
+    { id: -4, code: "BOTH_DECEASED", nameAr: "يتيم الأبوين" },
+  ];
 
 function isStudentOrphanStatus(value: string): value is StudentOrphanStatus {
   return ORPHAN_OPTIONS.includes(value as StudentOrphanStatus);
@@ -195,9 +194,9 @@ function formatStudentEnrollmentPlacementLabel(
     ? formatNameCodeLabel(enrollment.gradeLevel.name, enrollment.gradeLevel.code)
     : enrollment.section?.gradeLevel
       ? formatNameCodeLabel(
-          enrollment.section.gradeLevel.name,
-          enrollment.section.gradeLevel.code,
-        )
+        enrollment.section.gradeLevel.name,
+        enrollment.section.gradeLevel.code,
+      )
       : "";
 
   if (enrollment.section) {
@@ -506,9 +505,9 @@ export function StudentsWorkspace() {
       prev.genderId
         ? prev
         : {
-            ...prev,
-            genderId: String(defaultGender.id),
-          },
+          ...prev,
+          genderId: String(defaultGender.id),
+        },
     );
   }, [canReadGenders, formState.genderId, genderOptions, isEditing]);
 
@@ -527,9 +526,9 @@ export function StudentsWorkspace() {
       prev.orphanStatusId
         ? prev
         : {
-            ...prev,
-            orphanStatusId: String(defaultOrphan.id),
-          },
+          ...prev,
+          orphanStatusId: String(defaultOrphan.id),
+        },
     );
   }, [formState.orphanStatusId, isEditing, orphanStatusOptions]);
 
@@ -680,7 +679,7 @@ export function StudentsWorkspace() {
         : undefined;
     const mappedHealthStatus =
       selectedHealthStatus?.code &&
-      isStudentHealthStatusCode(selectedHealthStatus.code)
+        isStudentHealthStatusCode(selectedHealthStatus.code)
         ? selectedHealthStatus.code
         : undefined;
 
@@ -1097,10 +1096,10 @@ export function StudentsWorkspace() {
                         الموقع:{" "}
                         {student.locality
                           ? formatLocalityHierarchyLabel(
-                              (geographyMaps.localityById.get(student.locality.id) ??
-                                student.locality) as LocalityLabelInput,
-                              geographyMaps,
-                            )
+                            (geographyMaps.localityById.get(student.locality.id) ??
+                              student.locality) as LocalityLabelInput,
+                            geographyMaps,
+                          )
                           : "غير محدد"}
                       </p>
                     </div>
@@ -1440,7 +1439,7 @@ export function StudentsWorkspace() {
                     }
                     icon={<MapPin className="h-4 w-4" />}
                   >
-                    <option value="">اختر القرية (اختياري للحضر)</option>
+                    <option value="">اختر القرية</option>
                     {filteredVillages.map((item) => (
                       <option key={item.id} value={item.id}>
                         {item.nameAr ?? item.name ?? `قرية #${item.id}`}
@@ -1471,9 +1470,9 @@ export function StudentsWorkspace() {
                   <p className="text-xs text-muted-foreground md:col-span-2 px-1">
                     {formSelectedLocality
                       ? `المحدد: ${formatLocalityHierarchyLabel(
-                          formSelectedLocality,
-                          geographyMaps,
-                        )}`
+                        formSelectedLocality,
+                        geographyMaps,
+                      )}`
                       : "يمكن اختيار محلة حضرية بعد تحديد المديرية، أو محلة ريفية بعد اختيار العزلة والقرية."}
                   </p>
                 </div>
