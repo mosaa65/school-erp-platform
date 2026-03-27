@@ -56,6 +56,7 @@ import { UsersModule } from './modules/users/users.module';
 import { GuardiansModule } from './modules/guardians/guardians.module';
 import { ParentNotificationsModule } from './modules/parent-notifications/parent-notifications.module';
 import { SchoolProfilesModule } from './modules/school-profiles/school-profiles.module';
+import { SeedModule } from './modules/seed/seed.module';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
@@ -119,6 +120,7 @@ import { PrismaModule } from './prisma/prisma.module';
     RemindersTickerModule,
     UserPermissionsModule,
     SchoolProfilesModule,
+    SeedModule,
   ],
   controllers: [AppController],
   providers: [AppService],
