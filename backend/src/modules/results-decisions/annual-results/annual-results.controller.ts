@@ -16,11 +16,11 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { GradingWorkflowStatus } from '@prisma/client';
-import { CurrentUser } from '../../../common/decorators/current-user.decorator';
-import { RequirePermissions } from '../../../common/decorators/permissions.decorator';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../../../common/guards/permissions.guard';
-import type { AuthUser } from '../../../common/interfaces/auth-user.interface';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import type { AuthUser } from '../../common/interfaces/auth-user.interface';
 import { AnnualResultsService } from './annual-results.service';
 import { CalculateAnnualResultsDto } from './dto/calculate-annual-results.dto';
 import { CreateAnnualResultDto } from './dto/create-annual-result.dto';
@@ -72,15 +72,15 @@ export class AnnualResultsController {
   @ApiQuery({ name: 'status', required: false, enum: GradingWorkflowStatus })
   @ApiQuery({ name: 'isLocked', required: false, type: Boolean })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
-  findAll(@Query() query: ListAnnualResultsDto, @CurrentUser() user: AuthUser) {
-    return this.annualResultsService.findAll(query, user.userId);
+  findAll(@Query() query: ListAnnualResultsDto) {
+    return this.annualResultsService.findAll(query);
   }
 
   @Get(':id')
   @RequirePermissions('annual-results.read')
   @ApiOperation({ summary: 'Get annual result by ID' })
-  findOne(@Param('id') id: string, @CurrentUser() user: AuthUser) {
-    return this.annualResultsService.findOne(id, user.userId);
+  findOne(@Param('id') id: string) {
+    return this.annualResultsService.findOne(id);
   }
 
   @Patch(':id')

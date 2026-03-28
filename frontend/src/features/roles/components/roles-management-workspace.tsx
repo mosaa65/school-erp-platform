@@ -3,15 +3,20 @@
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
+  AlignLeft,
+  Fingerprint,
   LoaderCircle,
   PencilLine,
   RefreshCw,
   ShieldPlus,
   Trash2,
+  Type,
+  ToggleLeft,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { SearchField } from "@/components/ui/search-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
@@ -31,8 +36,10 @@ import {
 } from "@/features/roles/hooks/use-roles-mutations";
 import { useRolesQuery } from "@/features/roles/hooks/use-roles-query";
 import { usePermissionsOptionsQuery } from "@/features/roles/hooks/use-permissions-options-query";
-import type { RoleListItem } from "@/lib/api/client";
-import { translatePermissionCode } from "@/lib/i18n/ar";
+import { PermissionsSelector } from "@/components/ui/permissions-selector";
+import { ApiError, type RoleListItem } from "@/lib/api/client";
+import { cn } from "@/lib/utils";
+
 
 type RoleFormState = {
   code: string;
@@ -88,6 +95,10 @@ function areIdSetsEqual(left: string[], right: string[]): boolean {
 }
 
 function readErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    return error.message;
+  }
+  
   if (error instanceof Error) {
     return error.message;
   }
@@ -114,7 +125,6 @@ export function RolesManagementWorkspace() {
   const [formState, setFormState] = React.useState<RoleFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
-  const [permissionSearch, setPermissionSearch] = React.useState("");
 
   const rolesQuery = useRolesQuery({
     page,
@@ -139,21 +149,6 @@ export function RolesManagementWorkspace() {
     (deleteRoleMutation.error as Error | null)?.message ??
     null;
 
-  const filteredPermissions = React.useMemo(() => {
-    const keyword = permissionSearch.trim().toLowerCase();
-    const allPermissions = permissionsQuery.data ?? [];
-
-    if (!keyword) {
-      return allPermissions;
-    }
-
-    return allPermissions.filter((permission) =>
-      `${permission.code} ${permission.resource} ${permission.action} ${permission.description ?? ""}`
-        .toLowerCase()
-        .includes(keyword),
-    );
-  }, [permissionSearch, permissionsQuery.data]);
-
   React.useEffect(() => {
     if (!isEditing) {
       return;
@@ -174,21 +169,11 @@ export function RolesManagementWorkspace() {
       setSearch(searchInput.trim());
     }, 400, [searchInput]);
 
-  const togglePermission = (permissionId: string, checked: boolean) => {
-    setFormState((prev) => ({
-      ...prev,
-      permissionIds: checked
-        ? [...prev.permissionIds, permissionId]
-        : prev.permissionIds.filter((existingId) => existingId !== permissionId),
-    }));
-  };
-
   const resetForm = () => {
     setEditingRoleId(null);
     setOriginalRoleFormState(null);
     setFormState(DEFAULT_FORM_STATE);
     setFormError(null);
-    setPermissionSearch("");
     setIsFormOpen(false);
   };
 
@@ -202,7 +187,6 @@ export function RolesManagementWorkspace() {
     setEditingRoleId(null);
     setOriginalRoleFormState(null);
     setFormState(DEFAULT_FORM_STATE);
-    setPermissionSearch("");
     setIsFormOpen(true);
   };
 
@@ -567,94 +551,91 @@ export function RolesManagementWorkspace() {
             ليس لديك الصلاحية المطلوبة: <code>roles.create</code>.
           </div>
         ) : (
-          <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الكود *</label>
-              <Input
-                value={formState.code}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, code: event.target.value }))
-                }
-                placeholder="school_admin"
-                required
-              />
-            </div>
+          <form className="space-y-6 pt-2" onSubmit={handleSubmitForm}>
+            <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500">
+              <div className="space-y-1">
+                <Label htmlFor="role-code" required>الكود</Label>
+                <Input
+                  id="role-code"
+                  icon={<Fingerprint className="h-4 w-4" />}
+                  placeholder="أدخل كود الدور (مثلاً: admin, moderator)"
+                  value={formState.code}
+                  onChange={(e) => setFormState({ ...formState, code: e.target.value })}
+                  disabled={isFormSubmitting}
+                  className="font-medium"
+                />
+              </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
-              <Input
-                value={formState.name}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, name: event.target.value }))
-                }
-                placeholder="اسم الدور"
-                required
-              />
-            </div>
+              <div className="space-y-1">
+                <Label htmlFor="role-name" required>الاسم بالعربي</Label>
+                <Input
+                  id="role-name"
+                  icon={<Type className="h-4 w-4" />}
+                  placeholder="أدخل اسم الدور المعروض"
+                  value={formState.name}
+                  onChange={(e) => setFormState({ ...formState, name: e.target.value })}
+                  disabled={isFormSubmitting}
+                  className="font-medium"
+                />
+              </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الوصف</label>
-              <Input
-                value={formState.description}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, description: event.target.value }))
-                }
-                placeholder="وصف مختصر للصلاحيات المتاحة"
-              />
-            </div>
+              <div className="space-y-1">
+                <Label htmlFor="role-description">الوصف</Label>
+                <Input
+                  id="role-description"
+                  icon={<AlignLeft className="h-4 w-4" />}
+                  placeholder="وصف مختصر لمهام هذا الدور"
+                  value={formState.description}
+                  onChange={(e) => setFormState({ ...formState, description: e.target.value })}
+                  disabled={isFormSubmitting}
+                />
+              </div>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-              />
-            </label>
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-900/5 dark:bg-white/5 border border-border/20 backdrop-blur-sm group transition-all hover:bg-slate-900/10 dark:hover:bg-white/10">
+                <div className="flex items-center gap-3">
+                  <div className={cn(
+                    "flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-500 shadow-sm",
+                    formState.isActive ? "bg-emerald-500/20 text-emerald-500 border-emerald-500/20" : "bg-slate-500/20 text-slate-500 border-slate-500/20"
+                  )}>
+                    <ToggleLeft className={cn("h-5 w-5 transition-transform duration-500", formState.isActive && "rotate-180")} />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold">حالة الدور</span>
+                    <span className="text-[10px] text-muted-foreground">تفعيل أو تعطيل هذا الدور في النظام</span>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  className="h-5 w-5 rounded-lg border-primary/20 bg-background/50 text-primary focus:ring-primary/20 accent-primary cursor-pointer transition-all hover:scale-110"
+                  checked={formState.isActive}
+                  onChange={(e) => setFormState({ ...formState, isActive: e.target.checked })}
+                  disabled={isFormSubmitting}
+                />
+              </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-medium text-muted-foreground">الصلاحيات</p>
+              <div className="space-y-4 pt-2">
+                <div className="flex items-center justify-between gap-2 px-1">
+                  <Label className="mb-0">الصلاحيات المتاحة</Label>
+                  {!canAssignPermissions ? (
+                    <Badge variant="outline" className="text-[10px] py-0">صلاحية مفقودة</Badge>
+                  ) : null}
+                </div>
                 {!canAssignPermissions ? (
                   <Badge variant="outline">صلاحية مفقودة roles.assign-permissions</Badge>
                 ) : null}
               </div>
-              <SearchField
-                value={permissionSearch}
-                onChange={(event) => setPermissionSearch(event.target.value)}
-                placeholder="ابحث عن صلاحية..."
-                disabled={!canReadPermissions || !canAssignPermissions}
-              />
-              <div className="max-h-52 space-y-1 overflow-y-auto rounded-md border p-2">
-                {(filteredPermissions ?? []).length === 0 ? (
-                  <p className="text-xs text-muted-foreground">
-                    {canReadPermissions
-                      ? "لا توجد صلاحيات مطابقة."
-                      : "ليس لديك الصلاحية المطلوبة: permissions.read لعرض الصلاحيات."}
-                  </p>
-                ) : (
-                  filteredPermissions.map((permission) => (
-                    <label
-                      key={permission.id}
-                      className="flex cursor-pointer items-center justify-between gap-2 rounded-md border border-transparent px-2 py-1 text-xs hover:border-border"
-                    >
-                      <span className="truncate">
-                        {translatePermissionCode(permission.code)} ({permission.code})
-                      </span>
-                      <input
-                        type="checkbox"
-                        checked={formState.permissionIds.includes(permission.id)}
-                        onChange={(event) =>
-                          togglePermission(permission.id, event.target.checked)
-                        }
-                        disabled={!canAssignPermissions}
-                      />
-                    </label>
-                  ))
-                )}
-              </div>
+              {!canReadPermissions ? (
+                <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+                  ليس لديك الصلاحية المطلوبة: <code>permissions.read</code> لعرض الصلاحيات.
+                </div>
+              ) : (
+                <PermissionsSelector
+                  permissions={permissionsQuery.data ?? []}
+                  selectedIds={formState.permissionIds}
+                  onChange={(ids) => setFormState((prev) => ({ ...prev, permissionIds: ids }))}
+                  disabled={!canAssignPermissions}
+                />
+              )}
             </div>
 
             {formError ? (

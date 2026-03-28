@@ -9,10 +9,19 @@ import {
   RefreshCw,
   Trash2,
   Users,
+  User,
+  CalendarDays,
+  MapPin,
+  Droplets,
+  HeartPulse,
+  Heart,
+  Activity,
+  UserCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
@@ -92,11 +101,11 @@ const ORPHAN_STATUS_FALLBACK_OPTIONS: Array<{
   code: StudentOrphanStatus;
   nameAr: string;
 }> = [
-  { id: -1, code: "NONE", nameAr: "غير يتيم" },
-  { id: -2, code: "FATHER_DECEASED", nameAr: "يتيم الأب" },
-  { id: -3, code: "MOTHER_DECEASED", nameAr: "يتيم الأم" },
-  { id: -4, code: "BOTH_DECEASED", nameAr: "يتيم الأبوين" },
-];
+    { id: -1, code: "NONE", nameAr: "غير يتيم" },
+    { id: -2, code: "FATHER_DECEASED", nameAr: "يتيم الأب" },
+    { id: -3, code: "MOTHER_DECEASED", nameAr: "يتيم الأم" },
+    { id: -4, code: "BOTH_DECEASED", nameAr: "يتيم الأبوين" },
+  ];
 
 function isStudentOrphanStatus(value: string): value is StudentOrphanStatus {
   return ORPHAN_OPTIONS.includes(value as StudentOrphanStatus);
@@ -185,9 +194,9 @@ function formatStudentEnrollmentPlacementLabel(
     ? formatNameCodeLabel(enrollment.gradeLevel.name, enrollment.gradeLevel.code)
     : enrollment.section?.gradeLevel
       ? formatNameCodeLabel(
-          enrollment.section.gradeLevel.name,
-          enrollment.section.gradeLevel.code,
-        )
+        enrollment.section.gradeLevel.name,
+        enrollment.section.gradeLevel.code,
+      )
       : "";
 
   if (enrollment.section) {
@@ -463,9 +472,9 @@ export function StudentsWorkspace() {
   }, [editingStudentId, isEditing, students]);
 
   useDebounceEffect(() => {
-      setPage(1);
-      setSearch(searchInput.trim());
-    }, 400, [searchInput]);
+    setPage(1);
+    setSearch(searchInput.trim());
+  }, 400, [searchInput]);
 
   React.useEffect(() => {
     if (!isFilterOpen) {
@@ -496,9 +505,9 @@ export function StudentsWorkspace() {
       prev.genderId
         ? prev
         : {
-            ...prev,
-            genderId: String(defaultGender.id),
-          },
+          ...prev,
+          genderId: String(defaultGender.id),
+        },
     );
   }, [canReadGenders, formState.genderId, genderOptions, isEditing]);
 
@@ -517,9 +526,9 @@ export function StudentsWorkspace() {
       prev.orphanStatusId
         ? prev
         : {
-            ...prev,
-            orphanStatusId: String(defaultOrphan.id),
-          },
+          ...prev,
+          orphanStatusId: String(defaultOrphan.id),
+        },
     );
   }, [formState.orphanStatusId, isEditing, orphanStatusOptions]);
 
@@ -670,7 +679,7 @@ export function StudentsWorkspace() {
         : undefined;
     const mappedHealthStatus =
       selectedHealthStatus?.code &&
-      isStudentHealthStatusCode(selectedHealthStatus.code)
+        isStudentHealthStatusCode(selectedHealthStatus.code)
         ? selectedHealthStatus.code
         : undefined;
 
@@ -868,7 +877,7 @@ export function StudentsWorkspace() {
   };
 
   const activeFiltersCount = React.useMemo(() => {
-    const count = [
+    return [
       searchInput.trim() ? 1 : 0,
       genderFilter !== "all" ? 1 : 0,
       bloodTypeFilter !== "all" ? 1 : 0,
@@ -876,7 +885,6 @@ export function StudentsWorkspace() {
       orphanFilter !== "all" ? 1 : 0,
       activeFilter !== "all" ? 1 : 0,
     ].reduce((acc, value) => acc + value, 0);
-    return count;
   }, [
     activeFilter,
     bloodTypeFilter,
@@ -885,7 +893,6 @@ export function StudentsWorkspace() {
     orphanFilter,
     searchInput,
   ]);
-
 
   return (
     <>
@@ -928,256 +935,276 @@ export function StudentsWorkspace() {
             </div>
           }
         >
-          <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.gender}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, gender: event.target.value }))
-              }
-              disabled={!canReadGenders || genderOptionsQuery.isLoading}
-            >
-              <option value="all">كل الأجناس</option>
-              {genderOptions.map((option) => {
-                const translated =
-                  option.code && isStudentGenderCode(option.code)
-                    ? translateStudentGender(option.code)
-                    : option.nameAr ?? option.name ?? option.code ?? String(option.id);
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>النوع الاجتماعي</Label>
+              <SelectField
+                value={filterDraft.gender}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, gender: event.target.value }))
+                }
+                disabled={!canReadGenders || genderOptionsQuery.isLoading}
+                icon={<User className="h-4 w-4" />}
+              >
+                <option value="all">كل الأجناس</option>
+                {genderOptions.map((option) => {
+                  const translated =
+                    option.code && isStudentGenderCode(option.code)
+                      ? translateStudentGender(option.code)
+                      : option.nameAr ?? option.name ?? option.code ?? String(option.id);
 
-                return (
-                  <option key={option.id} value={option.id}>
-                    {option.nameAr ?? translated}
+                  return (
+                    <option key={option.id} value={option.id}>
+                      {option.nameAr ?? translated}
+                    </option>
+                  );
+                })}
+              </SelectField>
+            </div>
+
+            <div className="space-y-1">
+              <Label>فصيلة الدم</Label>
+              <SelectField
+                value={filterDraft.bloodType}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, bloodType: event.target.value }))
+                }
+                disabled={!canReadBloodTypes || bloodTypeOptionsQuery.isLoading}
+                icon={<Droplets className="h-4 w-4" />}
+              >
+                <option value="all">كل الفصائل</option>
+                {bloodTypeOptions.map((bloodType) => (
+                  <option key={bloodType.id} value={bloodType.id}>
+                    {bloodType.name}
                   </option>
-                );
-              })}
-            </SelectField>
+                ))}
+              </SelectField>
+            </div>
 
-            <SelectField
-              value={filterDraft.bloodType}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, bloodType: event.target.value }))
-              }
-              disabled={!canReadBloodTypes || bloodTypeOptionsQuery.isLoading}
-            >
-              <option value="all">كل الفصائل</option>
-              {bloodTypeOptions.map((bloodType) => (
-                <option key={bloodType.id} value={bloodType.id}>
-                  {bloodType.name}
-                </option>
-              ))}
-            </SelectField>
+            <div className="space-y-1">
+              <Label>المحلّة</Label>
+              <SelectField
+                value={filterDraft.locality}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, locality: event.target.value }))
+                }
+                disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
+                icon={<MapPin className="h-4 w-4" />}
+              >
+                <option value="all">كل المحلات</option>
+                {localityOptions.map((locality) => (
+                  <option key={locality.id} value={locality.id}>
+                    {formatLocalityHierarchyLabel(locality, geographyMaps)}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
 
-            <SelectField
-              value={filterDraft.locality}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, locality: event.target.value }))
-              }
-              disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
-            >
-              <option value="all">كل المحلات</option>
-              {localityOptions.map((locality) => (
-                <option key={locality.id} value={locality.id}>
-                  {formatLocalityHierarchyLabel(locality, geographyMaps)}
-                </option>
-              ))}
-            </SelectField>
+            <div className="space-y-1">
+              <Label>حالة اليتم</Label>
+              <SelectField
+                value={filterDraft.orphan}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, orphan: event.target.value }))
+                }
+                disabled={!canReadOrphanStatuses || orphanStatusesQuery.isLoading}
+                icon={<Heart className="h-4 w-4" />}
+              >
+                <option value="all">كل حالات اليتم</option>
+                {orphanStatusOptions.map((orphanStatus) => (
+                  <option key={orphanStatus.id} value={orphanStatus.id}>
+                    {orphanStatus.nameAr}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
 
-            <SelectField
-              value={filterDraft.orphan}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, orphan: event.target.value }))
-              }
-              disabled={!canReadOrphanStatuses || orphanStatusesQuery.isLoading}
-            >
-              <option value="all">كل حالات اليتم</option>
-              {orphanStatusOptions.map((orphanStatus) => (
-                <option key={orphanStatus.id} value={orphanStatus.id}>
-                  {orphanStatus.nameAr}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">نشط فقط</option>
-              <option value="inactive">غير نشط فقط</option>
-            </SelectField>
+            <div className="space-y-1">
+              <Label>الحالة</Label>
+              <SelectField
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+                icon={<Activity className="h-4 w-4" />}
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">نشط فقط</option>
+                <option value="inactive">غير نشط فقط</option>
+              </SelectField>
+            </div>
           </div>
         </FilterDrawer>
 
         <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-                <CardHeader className="space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <CardTitle>قائمة الطلاب</CardTitle>
-                    <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
-                  </div>
-                  <CardDescription>إدارة الطلاب مع الفلترة حسب النوع الاجتماعي وحالة اليتم.</CardDescription>
-        </CardHeader>
+          <CardHeader className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>قائمة الطلاب</CardTitle>
+              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+            </div>
+            <CardDescription>إدارة الطلاب مع الفلترة حسب النوع الاجتماعي وحالة اليتم.</CardDescription>
+          </CardHeader>
 
-                <CardContent className="space-y-3">
-                  {studentsQuery.isPending ? (
-                    <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                      جارٍ تحميل قائمة الطلاب...
-                    </div>
-                  ) : null}
+          <CardContent className="space-y-3">
+            {studentsQuery.isPending ? (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                جارٍ تحميل قائمة الطلاب...
+              </div>
+            ) : null}
 
-                  {studentsQuery.error ? (
-                    <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                      {studentsQuery.error instanceof Error
-                        ? studentsQuery.error.message
-                        : "فشل تحميل قائمة الطلاب"}
-                    </div>
-                  ) : null}
+            {studentsQuery.error ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                {studentsQuery.error instanceof Error
+                  ? studentsQuery.error.message
+                  : "فشل تحميل قائمة الطلاب"}
+              </div>
+            ) : null}
 
-                  {!studentsQuery.isPending && students.length === 0 ? (
-                    <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                      لا توجد سجلات مطابقة.
-                    </div>
-                  ) : null}
+            {!studentsQuery.isPending && students.length === 0 ? (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                لا توجد سجلات مطابقة.
+              </div>
+            ) : null}
 
-                  {students.map((student) => {
-                    const latestEnrollment = student.enrollments[0];
+            {students.map((student) => {
+              const latestEnrollment = student.enrollments[0];
 
-                    return (
-                      <div
-                        key={student.id}
-                        className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-                      >
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <div className="space-y-1">
-                            <p className="font-medium">{student.fullName}</p>
-                            <p className="text-xs text-muted-foreground">
-                              رقم الطالب: {student.admissionNo ?? "-"} | الميلاد: {formatDate(student.birthDate)}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              أولياء الأمور: {student.guardians.length} | القيود: {student.enrollments.length}
-                            </p>
-                            {latestEnrollment ? (
-                              <p className="text-xs text-muted-foreground">
-                                آخر قيد: {formatStudentEnrollmentPlacementLabel(latestEnrollment)} (
-                                {translateStudentEnrollmentStatus(latestEnrollment.status)})
-                              </p>
-                            ) : null}
-                            <p className="text-xs text-muted-foreground">
-                              الموقع:{" "}
-                              {student.locality
-                                ? formatLocalityHierarchyLabel(
-                                    (geographyMaps.localityById.get(student.locality.id) ??
-                                      student.locality) as LocalityLabelInput,
-                                    geographyMaps,
-                                  )
-                                : "غير محدد"}
-                            </p>
-                          </div>
-
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <Badge variant="outline">
-                              {student.genderLookup?.nameAr ?? translateStudentGender(student.gender)}
-                            </Badge>
-                            <Badge variant="outline">
-                              {student.bloodType ? student.bloodType.name : "بدون فصيلة"}
-                            </Badge>
-                            <Badge variant={orphanBadgeVariant(student.orphanStatus)}>
-                              {student.orphanStatusLookup?.nameAr ?? getOrphanStatusLabel(student.orphanStatus)}
-                            </Badge>
-                            <Badge variant={healthBadgeVariant(student.healthStatus)}>
-                              {student.healthStatusLookup?.nameAr ??
-                                (student.healthStatus
-                                  ? translateStudentHealthStatus(student.healthStatus)
-                                  : "غير محدد")}
-                            </Badge>
-                            <Badge variant={student.isActive ? "default" : "outline"}>
-                              {student.isActive ? "نشط" : "غير نشط"}
-                            </Badge>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-1.5"
-                            onClick={() => handleStartEdit(student)}
-                            disabled={!canUpdate || updateMutation.isPending}
-                          >
-                            <PencilLine className="h-3.5 w-3.5" />
-                            تعديل
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleToggleActive(student)}
-                            disabled={!canUpdate || updateMutation.isPending}
-                          >
-                            {student.isActive ? "تعطيل" : "تفعيل"}
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            className="gap-1.5"
-                            onClick={() => handleDelete(student)}
-                            disabled={!canDelete || deleteMutation.isPending}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            حذف
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-                    <p className="text-xs text-muted-foreground">
-                      صفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                        disabled={!pagination || pagination.page <= 1 || studentsQuery.isFetching}
-                      >
-                        السابق
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setPage((prev) =>
-                            pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
+              return (
+                <div
+                  key={student.id}
+                  className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="space-y-1">
+                      <p className="font-medium">{student.fullName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        رقم الطالب: {student.admissionNo ?? "-"} | الميلاد: {formatDate(student.birthDate)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        أولياء الأمور: {student.guardians.length} | القيود: {student.enrollments.length}
+                      </p>
+                      {latestEnrollment ? (
+                        <p className="text-xs text-muted-foreground">
+                          آخر قيد: {formatStudentEnrollmentPlacementLabel(latestEnrollment)} (
+                          {translateStudentEnrollmentStatus(latestEnrollment.status)})
+                        </p>
+                      ) : null}
+                      <p className="text-xs text-muted-foreground">
+                        الموقع:{" "}
+                        {student.locality
+                          ? formatLocalityHierarchyLabel(
+                            (geographyMaps.localityById.get(student.locality.id) ??
+                              student.locality) as LocalityLabelInput,
+                            geographyMaps,
                           )
-                        }
-                        disabled={
-                          !pagination ||
-                          pagination.page >= pagination.totalPages ||
-                          studentsQuery.isFetching
-                        }
-                      >
-                        التالي
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="gap-1.5"
-                        onClick={() => void studentsQuery.refetch()}
-                        disabled={studentsQuery.isFetching}
-                      >
-                        <RefreshCw
-                          className={`h-4 w-4 ${studentsQuery.isFetching ? "animate-spin" : ""}`}
-                        />
-                        تحديث
-                      </Button>
+                          : "غير محدد"}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge variant="outline">
+                        {student.genderLookup?.nameAr ?? translateStudentGender(student.gender)}
+                      </Badge>
+                      <Badge variant="outline">
+                        {student.bloodType ? student.bloodType.name : "بدون فصيلة"}
+                      </Badge>
+                      <Badge variant={orphanBadgeVariant(student.orphanStatus)}>
+                        {student.orphanStatusLookup?.nameAr ?? getOrphanStatusLabel(student.orphanStatus)}
+                      </Badge>
+                      <Badge variant={healthBadgeVariant(student.healthStatus)}>
+                        {student.healthStatusLookup?.nameAr ??
+                          (student.healthStatus
+                            ? translateStudentHealthStatus(student.healthStatus)
+                            : "غير محدد")}
+                      </Badge>
+                      <Badge variant={student.isActive ? "default" : "outline"}>
+                        {student.isActive ? "نشط" : "غير نشط"}
+                      </Badge>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() => handleStartEdit(student)}
+                      disabled={!canUpdate || updateMutation.isPending}
+                    >
+                      <PencilLine className="h-3.5 w-3.5" />
+                      تعديل
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleToggleActive(student)}
+                      disabled={!canUpdate || updateMutation.isPending}
+                    >
+                      {student.isActive ? "تعطيل" : "تفعيل"}
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() => handleDelete(student)}
+                      disabled={!canDelete || deleteMutation.isPending}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      حذف
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
+              <p className="text-xs text-muted-foreground">
+                صفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={!pagination || pagination.page <= 1 || studentsQuery.isFetching}
+                >
+                  السابق
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setPage((prev) =>
+                      pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
+                    )
+                  }
+                  disabled={
+                    !pagination ||
+                    pagination.page >= pagination.totalPages ||
+                    studentsQuery.isFetching
+                  }
+                >
+                  التالي
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => void studentsQuery.refetch()}
+                  disabled={studentsQuery.isFetching}
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${studentsQuery.isFetching ? "animate-spin" : ""}`}
+                  />
+                  تحديث
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Fab
@@ -1203,14 +1230,14 @@ export function StudentsWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">رقم الطالب</label>
+            <div className="space-y-1">
+              <Label>رقم الطالب</Label>
               {isEditing ? (
                 <Input
                   value={formState.admissionNo}
                   readOnly
                   placeholder="سيتم توليده تلقائيًا"
-                  className="bg-muted/40"
+                  icon={<UserCheck className="h-4 w-4" />}
                 />
               ) : (
                 <div className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
@@ -1219,23 +1246,23 @@ export function StudentsWorkspace() {
               )}
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الاسم الكامل *</label>
+            <div className="space-y-1">
+              <Label required>الاسم الكامل</Label>
               <Input
                 value={formState.fullName}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, fullName: event.target.value }))
                 }
                 placeholder="محمد أحمد علي"
+                icon={<User className="h-4 w-4" />}
                 required
               />
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الجنس *</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <Label required>الجنس</Label>
+                <SelectField
                   value={formState.genderId}
                   onChange={(event) =>
                     setFormState((prev) => ({
@@ -1244,6 +1271,8 @@ export function StudentsWorkspace() {
                     }))
                   }
                   disabled={!canReadGenders || genderOptionsQuery.isLoading}
+                  icon={<User className="h-4 w-4" />}
+                  required
                 >
                   <option value="">اختر الجنس</option>
                   {genderOptions.map((option) => {
@@ -1258,26 +1287,26 @@ export function StudentsWorkspace() {
                       </option>
                     );
                   })}
-                </select>
+                </SelectField>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">تاريخ الميلاد</label>
+              <div className="space-y-1">
+                <Label>تاريخ الميلاد</Label>
                 <Input
                   type="date"
                   value={formState.birthDate}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, birthDate: event.target.value }))
                   }
+                  icon={<CalendarDays className="h-4 w-4" />}
                 />
               </div>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">فصيلة الدم</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-1">
+                <Label>فصيلة الدم</Label>
+                <SelectField
                   value={formState.bloodTypeId}
                   onChange={(event) =>
                     setFormState((prev) => ({
@@ -1286,6 +1315,7 @@ export function StudentsWorkspace() {
                     }))
                   }
                   disabled={!canReadBloodTypes || bloodTypeOptionsQuery.isLoading}
+                  icon={<Droplets className="h-4 w-4" />}
                 >
                   <option value="">غير محدد</option>
                   {bloodTypeOptions.map((bloodType) => (
@@ -1293,13 +1323,12 @@ export function StudentsWorkspace() {
                       {bloodType.name}
                     </option>
                   ))}
-                </select>
+                </SelectField>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الحالة الصحية</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <div className="space-y-1">
+                <Label>الحالة الصحية</Label>
+                <SelectField
                   value={formState.healthStatusId}
                   onChange={(event) =>
                     setFormState((prev) => ({
@@ -1308,6 +1337,7 @@ export function StudentsWorkspace() {
                     }))
                   }
                   disabled={!canReadHealthStatuses || healthStatusOptionsQuery.isLoading}
+                  icon={<HeartPulse className="h-4 w-4" />}
                 >
                   <option value="">غير محدد</option>
                   {healthStatusOptions.map((status) => (
@@ -1318,13 +1348,12 @@ export function StudentsWorkspace() {
                           : status.code ?? String(status.id))}
                     </option>
                   ))}
-                </select>
+                </SelectField>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">حالة اليتم *</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <div className="space-y-1">
+                <Label required>حالة اليتم</Label>
+                <SelectField
                   value={formState.orphanStatusId}
                   onChange={(event) =>
                     setFormState((prev) => ({
@@ -1333,6 +1362,8 @@ export function StudentsWorkspace() {
                     }))
                   }
                   disabled={!canReadOrphanStatuses || orphanStatusesQuery.isLoading}
+                  icon={<Heart className="h-4 w-4" />}
+                  required
                 >
                   <option value="">اختر حالة اليتم</option>
                   {orphanStatusOptions.map((orphanStatus) => (
@@ -1340,21 +1371,19 @@ export function StudentsWorkspace() {
                       {orphanStatus.nameAr}
                     </option>
                   ))}
-                </select>
+                </SelectField>
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">
-                الموقع الجغرافي (هرمي)
-              </label>
+              <Label>الموقع الجغرافي (هرمي)</Label>
               {hasGeographyHierarchy ? (
-                <div className="grid gap-2 md:grid-cols-2">
-                  <select
-                    className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                <div className="grid gap-3 md:grid-cols-2">
+                  <SelectField
                     value={formGovernorateId}
                     onChange={(event) => handleGovernorateChange(event.target.value)}
                     disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
+                    icon={<MapPin className="h-4 w-4" />}
                   >
                     <option value="">اختر المحافظة</option>
                     {governorateOptions.map((item) => (
@@ -1362,10 +1391,9 @@ export function StudentsWorkspace() {
                         {item.nameAr ?? item.name ?? `محافظة #${item.id}`}
                       </option>
                     ))}
-                  </select>
+                  </SelectField>
 
-                  <select
-                    className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  <SelectField
                     value={formDirectorateId}
                     onChange={(event) => handleDirectorateChange(event.target.value)}
                     disabled={
@@ -1373,6 +1401,7 @@ export function StudentsWorkspace() {
                       geographyOptionsQuery.isLoading ||
                       !formGovernorateId
                     }
+                    icon={<MapPin className="h-4 w-4" />}
                   >
                     <option value="">اختر المديرية</option>
                     {filteredDirectorates.map((item) => (
@@ -1380,10 +1409,9 @@ export function StudentsWorkspace() {
                         {item.nameAr ?? item.name ?? `مديرية #${item.id}`}
                       </option>
                     ))}
-                  </select>
+                  </SelectField>
 
-                  <select
-                    className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  <SelectField
                     value={formSubDistrictId}
                     onChange={(event) => handleSubDistrictChange(event.target.value)}
                     disabled={
@@ -1391,6 +1419,7 @@ export function StudentsWorkspace() {
                       geographyOptionsQuery.isLoading ||
                       !formDirectorateId
                     }
+                    icon={<MapPin className="h-4 w-4" />}
                   >
                     <option value="">اختر العزلة</option>
                     {filteredSubDistricts.map((item) => (
@@ -1398,10 +1427,9 @@ export function StudentsWorkspace() {
                         {item.nameAr ?? item.name ?? `عزلة #${item.id}`}
                       </option>
                     ))}
-                  </select>
+                  </SelectField>
 
-                  <select
-                    className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  <SelectField
                     value={formVillageId}
                     onChange={(event) => handleVillageChange(event.target.value)}
                     disabled={
@@ -1409,18 +1437,18 @@ export function StudentsWorkspace() {
                       geographyOptionsQuery.isLoading ||
                       !formSubDistrictId
                     }
+                    icon={<MapPin className="h-4 w-4" />}
                   >
-                    <option value="">اختر القرية (اختياري للحضر)</option>
+                    <option value="">اختر القرية</option>
                     {filteredVillages.map((item) => (
                       <option key={item.id} value={item.id}>
                         {item.nameAr ?? item.name ?? `قرية #${item.id}`}
                       </option>
                     ))}
-                  </select>
+                  </SelectField>
 
                   <div className="md:col-span-2">
-                    <select
-                      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    <SelectField
                       value={formState.localityId}
                       onChange={(event) => handleLocalityChange(event.target.value)}
                       disabled={
@@ -1428,6 +1456,7 @@ export function StudentsWorkspace() {
                         geographyOptionsQuery.isLoading ||
                         !formDirectorateId
                       }
+                      icon={<MapPin className="h-4 w-4" />}
                     >
                       <option value="">اختر المحلة</option>
                       {filteredLocalities.map((locality) => (
@@ -1435,24 +1464,24 @@ export function StudentsWorkspace() {
                           {formatLocalityHierarchyLabel(locality, geographyMaps)}
                         </option>
                       ))}
-                    </select>
+                    </SelectField>
                   </div>
 
-                  <p className="text-xs text-muted-foreground md:col-span-2">
+                  <p className="text-xs text-muted-foreground md:col-span-2 px-1">
                     {formSelectedLocality
                       ? `المحدد: ${formatLocalityHierarchyLabel(
-                          formSelectedLocality,
-                          geographyMaps,
-                        )}`
+                        formSelectedLocality,
+                        geographyMaps,
+                      )}`
                       : "يمكن اختيار محلة حضرية بعد تحديد المديرية، أو محلة ريفية بعد اختيار العزلة والقرية."}
                   </p>
                 </div>
               ) : (
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                <SelectField
                   value={formState.localityId}
                   onChange={(event) => handleLocalityChange(event.target.value)}
                   disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
+                  icon={<MapPin className="h-4 w-4" />}
                 >
                   <option value="">غير محدد</option>
                   {localityOptions.map((locality) => (
@@ -1460,14 +1489,14 @@ export function StudentsWorkspace() {
                       {formatLocalityHierarchyLabel(locality, geographyMaps)}
                     </option>
                   ))}
-                </select>
+                </SelectField>
               )}
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات صحية</label>
+            <div className="space-y-1">
+              <Label>ملاحظات صحية</Label>
               <textarea
-                className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className="min-h-20 w-full rounded-2xl border border-input bg-background/50 px-3 py-2 text-sm backdrop-blur-sm transition-all duration-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
                 value={formState.healthNotes}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, healthNotes: event.target.value }))
@@ -1476,16 +1505,22 @@ export function StudentsWorkspace() {
               />
             </div>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
+            <div className="space-y-1">
+              <Label>الحالة</Label>
+              <SelectField
+                value={formState.isActive ? "active" : "inactive"}
                 onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                  setFormState((prev) => ({
+                    ...prev,
+                    isActive: event.target.value === "active",
+                  }))
                 }
-              />
-            </label>
+                icon={<Activity className="h-4 w-4" />}
+              >
+                <option value="active">نشط</option>
+                <option value="inactive">غير نشط</option>
+              </SelectField>
+            </div>
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
@@ -1504,10 +1539,10 @@ export function StudentsWorkspace() {
               </div>
             ) : null}
 
-            <div className="flex gap-2">
-              <Button
+            <div className="flex gap-2 pt-2">
+              <button
                 type="submit"
-                className="flex-1 gap-2"
+                className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/30 active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
                 disabled={isFormSubmitting || (!canCreate && !isEditing)}
               >
                 {isFormSubmitting ? (
@@ -1516,9 +1551,9 @@ export function StudentsWorkspace() {
                   <Users className="h-4 w-4" />
                 )}
                 {isEditing ? "حفظ التعديلات" : "إنشاء طالب"}
-              </Button>
+              </button>
               {isEditing ? (
-                <Button type="button" variant="outline" onClick={resetForm}>
+                <Button type="button" variant="outline" onClick={resetForm} className="rounded-2xl">
                   إلغاء
                 </Button>
               ) : null}
@@ -1528,5 +1563,4 @@ export function StudentsWorkspace() {
       </BottomSheetForm>
     </>
   );
-
 }

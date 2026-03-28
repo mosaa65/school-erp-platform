@@ -7,20 +7,26 @@ import {
   LockOpen,
   Medal,
   PencilLine,
+  Plus,
   RefreshCw,
-  Search,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import { Button } from "@/components/ui/button";
+import { Fab } from "@/components/ui/fab";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectField } from "@/components/ui/select-field";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useAnnualStatusOptionsQuery } from "@/features/grade-aggregation/annual-grades/hooks/use-annual-status-options-query";
 import {
@@ -172,6 +178,25 @@ export function AnnualGradesWorkspace() {
   >("all");
   const [lockFilter, setLockFilter] = React.useState<"all" | "locked" | "unlocked">("all");
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">("all");
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
+  const [filterDraft, setFilterDraft] = React.useState<{
+    year: string;
+    section: string;
+    subject: string;
+    finalStatus: string;
+    status: "all" | "DRAFT" | "IN_REVIEW" | "APPROVED" | "ARCHIVED";
+    lock: "all" | "locked" | "unlocked";
+    active: "all" | "active" | "inactive";
+  }>({
+    year: "all",
+    section: "all",
+    subject: "all",
+    finalStatus: "all",
+    status: "all",
+    lock: "all",
+    active: "all",
+  });
 
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [editingItem, setEditingItem] = React.useState<AnnualGradeListItem | null>(null);
@@ -226,12 +251,67 @@ export function AnnualGradesWorkspace() {
 
   const academicTermOptions = academicTermsQuery.data ?? [];
 
+  useDebounceEffect(() => {
+    setPage(1);
+    setSearch(searchInput.trim());
+  }, 400, [searchInput]);
+
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setFilterDraft({
+      year: yearFilter,
+      section: sectionFilter,
+      subject: subjectFilter,
+      finalStatus: finalStatusFilter,
+      status: statusFilter,
+      lock: lockFilter,
+      active: activeFilter,
+    });
+  }, [
+    activeFilter,
+    finalStatusFilter,
+    isFilterOpen,
+    lockFilter,
+    sectionFilter,
+    statusFilter,
+    subjectFilter,
+    yearFilter,
+  ]);
+
   const resetForm = () => {
     setEditingId(null);
     setEditingItem(null);
     setForm(DEFAULT_FORM);
     setFormError(null);
     setSelectedFormEnrollmentOption(null);
+    setIsFormOpen(false);
+  };
+
+  const handleStartCreate = () => {
+    setActionSuccess(null);
+    setFormError(null);
+    setEditingId(null);
+    setEditingItem(null);
+    setForm(DEFAULT_FORM);
+    setSelectedFormEnrollmentOption(null);
+    setIsFormOpen(true);
+  };
+
+  const handleStartEdit = (item: AnnualGradeListItem) => {
+    if (!canUpdate || item.isLocked) {
+      return;
+    }
+
+    setActionSuccess(null);
+    setEditingId(item.id);
+    setEditingItem(item);
+    setForm(toFormState(item));
+    setSelectedFormEnrollmentOption(buildStudentEnrollmentPickerOption(item));
+    setFormError(null);
+    setIsFormOpen(true);
   };
 
   const validateForm = (): boolean => {
@@ -340,18 +420,209 @@ export function AnnualGradesWorkspace() {
       );
   };
 
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setYearFilter("all");
+    setSectionFilter("all");
+    setSubjectFilter("all");
+    setFinalStatusFilter("all");
+    setStatusFilter("all");
+    setLockFilter("all");
+    setActiveFilter("all");
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    setPage(1);
+    setYearFilter(filterDraft.year);
+    setSectionFilter(filterDraft.section);
+    setSubjectFilter(filterDraft.subject);
+    setFinalStatusFilter(filterDraft.finalStatus);
+    setStatusFilter(filterDraft.status);
+    setLockFilter(filterDraft.lock);
+    setActiveFilter(filterDraft.active);
+    setIsFilterOpen(false);
+  };
+
+  const activeFiltersCount = React.useMemo(() => {
+    return [
+      searchInput.trim() ? 1 : 0,
+      yearFilter !== "all" ? 1 : 0,
+      sectionFilter !== "all" ? 1 : 0,
+      subjectFilter !== "all" ? 1 : 0,
+      finalStatusFilter !== "all" ? 1 : 0,
+      statusFilter !== "all" ? 1 : 0,
+      lockFilter !== "all" ? 1 : 0,
+      activeFilter !== "all" ? 1 : 0,
+    ].reduce((sum, value) => sum + value, 0);
+  }, [
+    activeFilter,
+    finalStatusFilter,
+    lockFilter,
+    searchInput,
+    sectionFilter,
+    statusFilter,
+    subjectFilter,
+    yearFilter,
+  ]);
+
   return (
-    <div className="grid gap-4 xl:grid-cols-[520px_1fr]">
-      <Card className="h-fit border-border/70 bg-card/80">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Medal className="h-5 w-5 text-primary" />
-            {editingId ? "تعديل درجة سنوية" : "إنشاء درجة سنوية"}
-          </CardTitle>
-          <CardDescription>إدارة الدرجات السنوية لكل مادة لكل طالب.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form
+    <>
+      <div className="space-y-4">
+        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+          <SearchField
+            containerClassName="min-w-0"
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            placeholder="ابحث باسم الطالب أو المادة..."
+          />
+          <div className="flex items-center justify-end gap-2">
+            <FilterTriggerButton
+              count={activeFiltersCount}
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+              className="h-11 w-11 justify-center px-0 sm:w-auto sm:px-4 sm:justify-start [&>span:nth-child(2)]:hidden sm:[&>span:nth-child(2)]:inline [&>span:nth-child(3)]:hidden sm:[&>span:nth-child(3)]:inline"
+            />
+          </div>
+        </div>
+
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="فلترة الدرجات السنوية"
+          renderInPortal
+          overlayClassName="z-[70]"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button type="button" variant="outline" onClick={clearFilters} className="flex-1 gap-1.5">
+                <Trash2 className="h-4 w-4" />
+                مسح
+              </Button>
+              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
+                تطبيق
+              </Button>
+            </div>
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectField
+              value={filterDraft.year}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, year: event.target.value }))
+              }
+            >
+              <option value="all">كل السنوات</option>
+              {(academicYearsQuery.data ?? []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {formatNameCodeLabel(item.name, item.code)}
+                </option>
+              ))}
+            </SelectField>
+            <SelectField
+              value={filterDraft.section}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, section: event.target.value }))
+              }
+            >
+              <option value="all">كل الشعب</option>
+              {(sectionsQuery.data ?? []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {formatSectionWithGradeLabel(item)}
+                </option>
+              ))}
+            </SelectField>
+            <SelectField
+              value={filterDraft.subject}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, subject: event.target.value }))
+              }
+            >
+              <option value="all">كل المواد</option>
+              {(subjectsQuery.data ?? []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {formatNameCodeLabel(item.name, item.code)}
+                </option>
+              ))}
+            </SelectField>
+            <SelectField
+              value={filterDraft.finalStatus}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, finalStatus: event.target.value }))
+              }
+            >
+              <option value="all">كل حالات النتيجة</option>
+              {(annualStatusesQuery.data ?? []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {formatNameCodeLabel(item.name, item.code)}
+                </option>
+              ))}
+            </SelectField>
+            <SelectField
+              value={filterDraft.status}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  status: event.target.value as
+                    | "all"
+                    | "DRAFT"
+                    | "IN_REVIEW"
+                    | "APPROVED"
+                    | "ARCHIVED",
+                }))
+              }
+            >
+              <option value="all">الحالة: الكل</option>
+              <option value="DRAFT">مسودة</option>
+              <option value="IN_REVIEW">قيد المراجعة</option>
+              <option value="APPROVED">معتمد</option>
+              <option value="ARCHIVED">مؤرشف</option>
+            </SelectField>
+            <SelectField
+              value={filterDraft.lock}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  lock: event.target.value as "all" | "locked" | "unlocked",
+                }))
+              }
+            >
+              <option value="all">القفل: الكل</option>
+              <option value="locked">مقفل</option>
+              <option value="unlocked">غير مقفل</option>
+            </SelectField>
+            <SelectField
+              value={filterDraft.active}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  active: event.target.value as "all" | "active" | "inactive",
+                }))
+              }
+            >
+              <option value="all">الكل</option>
+              <option value="active">نشط</option>
+              <option value="inactive">غير نشط</option>
+            </SelectField>
+          </div>
+        </FilterDrawer>
+
+      <BottomSheetForm
+        open={isFormOpen}
+        title={editingId ? "تعديل درجة سنوية" : "إنشاء درجة سنوية"}
+        description="إدارة الدرجات السنوية لكل مادة لكل طالب."
+        eyebrow="درجة سنوية"
+        onClose={resetForm}
+        onSubmit={() => undefined}
+        isSubmitting={isSubmitting}
+        submitLabel={editingId ? "حفظ التعديلات" : "إنشاء درجة سنوية"}
+        showFooter={false}
+        renderInPortal
+        overlayClassName="z-[80]"
+        panelClassName="md:max-w-[760px]"
+        contentClassName="space-y-3"
+      >
+        <form
             className="space-y-3"
             onSubmit={(event) => {
               event.preventDefault();
@@ -674,24 +945,23 @@ export function AnnualGradesWorkspace() {
               </div>
             ) : null}
 
-            <div className="flex gap-2">
-              <Button type="submit" className="flex-1 gap-2" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Medal className="h-4 w-4" />
-                )}
-                {editingId ? "حفظ التعديلات" : "إنشاء درجة سنوية"}
+          <div className="flex gap-2">
+            <Button type="submit" className="flex-1 gap-2" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <Medal className="h-4 w-4" />
+              )}
+              {editingId ? "حفظ التعديلات" : "إنشاء درجة سنوية"}
+            </Button>
+            {editingId ? (
+              <Button type="button" variant="outline" onClick={resetForm}>
+                إلغاء
               </Button>
-              {editingId ? (
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  إلغاء
-                </Button>
-              ) : null}
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+            ) : null}
+          </div>
+        </form>
+      </BottomSheetForm>
 
       <Card className="border-border/70 bg-card/80">
         <CardHeader className="space-y-3">
@@ -699,133 +969,7 @@ export function AnnualGradesWorkspace() {
             <CardTitle>الدرجات السنوية</CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              setPage(1);
-              setSearch(searchInput.trim());
-            }}
-            className="grid gap-2 md:grid-cols-[1fr_150px_130px_130px_140px_130px_110px_110px_auto]"
-          >
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث..."
-                className="pr-8"
-              />
-            </div>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={yearFilter}
-              onChange={(event) => {
-                setPage(1);
-                setYearFilter(event.target.value);
-              }}
-            >
-              <option value="all">كل السنوات</option>
-              {(academicYearsQuery.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {formatNameCodeLabel(item.name, item.code)}
-                </option>
-              ))}
-            </select>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={sectionFilter}
-              onChange={(event) => {
-                setPage(1);
-                setSectionFilter(event.target.value);
-              }}
-            >
-              <option value="all">كل الشعب</option>
-              {(sectionsQuery.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {formatSectionWithGradeLabel(item)}
-                </option>
-              ))}
-            </select>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={subjectFilter}
-              onChange={(event) => {
-                setPage(1);
-                setSubjectFilter(event.target.value);
-              }}
-            >
-              <option value="all">كل المواد</option>
-              {(subjectsQuery.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {formatNameCodeLabel(item.name, item.code)}
-                </option>
-              ))}
-            </select>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={finalStatusFilter}
-              onChange={(event) => {
-                setPage(1);
-                setFinalStatusFilter(event.target.value);
-              }}
-            >
-              <option value="all">كل حالات النتيجة</option>
-              {(annualStatusesQuery.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {formatNameCodeLabel(item.name, item.code)}
-                </option>
-              ))}
-            </select>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={statusFilter}
-              onChange={(event) => {
-                setPage(1);
-                setStatusFilter(
-                  event.target.value as
-                    | "all"
-                    | "DRAFT"
-                    | "IN_REVIEW"
-                    | "APPROVED"
-                    | "ARCHIVED",
-                );
-              }}
-            >
-              <option value="all">الحالة: الكل</option>
-              <option value="DRAFT">مسودة</option>
-              <option value="IN_REVIEW">قيد المراجعة</option>
-              <option value="APPROVED">معتمد</option>
-              <option value="ARCHIVED">مؤرشف</option>
-            </select>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={lockFilter}
-              onChange={(event) => {
-                setPage(1);
-                setLockFilter(event.target.value as "all" | "locked" | "unlocked");
-              }}
-            >
-              <option value="all">القفل: الكل</option>
-              <option value="locked">مقفل</option>
-              <option value="unlocked">غير مقفل</option>
-            </select>
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={activeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setActiveFilter(event.target.value as "all" | "active" | "inactive");
-              }}
-            >
-              <option value="all">الكل</option>
-              <option value="active">نشط</option>
-              <option value="inactive">غير نشط</option>
-            </select>
-            <Button type="submit" variant="outline" className="gap-2">
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
-          </form>
+          <p className="text-xs text-muted-foreground">النتائج تظهر هنا، والبحث والفلترة من الشريط العلوي.</p>
         </CardHeader>
         <CardContent className="space-y-3">
           {annualGradesQuery.isPending ? (
@@ -886,17 +1030,7 @@ export function AnnualGradesWorkspace() {
                   variant="outline"
                   size="sm"
                   className="gap-1.5"
-                  onClick={() => {
-                    if (item.isLocked || !canUpdate) {
-                      return;
-                    }
-                    setEditingId(item.id);
-                    setEditingItem(item);
-                    setForm(toFormState(item));
-                    setSelectedFormEnrollmentOption(buildStudentEnrollmentPickerOption(item));
-                    setFormError(null);
-                    setActionSuccess(null);
-                  }}
+                  onClick={() => handleStartEdit(item)}
                   disabled={!canUpdate || item.isLocked || updateMutation.isPending}
                 >
                   <PencilLine className="h-3.5 w-3.5" />
@@ -1021,7 +1155,17 @@ export function AnnualGradesWorkspace() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+
+      {canCreate ? (
+        <Fab
+          onClick={handleStartCreate}
+          label="إضافة درجة سنوية"
+          ariaLabel="إضافة درجة سنوية"
+          icon={<Plus className="h-4 w-4 sm:h-5 sm:w-5" />}
+        />
+      ) : null}
+    </>
   );
 }
 

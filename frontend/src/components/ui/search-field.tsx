@@ -1,28 +1,32 @@
 import * as React from "react";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
 
 type SearchFieldProps = React.ComponentProps<"input"> & {
   containerClassName?: string;
 };
 
 export function SearchField({
-  containerClassName,
   className,
+  containerClassName,
   ...props
 }: SearchFieldProps) {
   return (
-    <div className={cn("group/search relative", containerClassName)}>
-      <span className="pointer-events-none absolute right-3 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl border border-border/60 bg-background/80 text-muted-foreground shadow-sm transition-colors group-focus-within/search:border-primary/20 group-focus-within/search:bg-primary/5 group-focus-within/search:text-primary">
-        <Search className="h-4 w-4" />
-      </span>
-      <Input
-        {...props}
+    <div className={cn("group relative w-full", containerClassName)}>
+      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 transition-colors group-focus-within:text-primary pointer-events-none">
+        <Search className="h-4.5 w-4.5" />
+      </div>
+      <input
+        type="text"
         className={cn(
-          "h-11 rounded-2xl border-border/70 bg-background/85 pr-14 shadow-sm transition-[border-color,box-shadow,background-color] placeholder:text-muted-foreground/80 hover:border-border focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0",
+          "flex h-11 w-full rounded-2xl border border-border/40 bg-background/50 pr-10 pl-4 py-2 text-sm shadow-sm backdrop-blur-md transition-all duration-300 ring-offset-background",
+          "placeholder:text-muted-foreground/40",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary/50",
+          "hover:border-border/80 hover:bg-background/80",
+          "disabled:cursor-not-allowed disabled:opacity-50",
           className,
         )}
+        {...props}
       />
     </div>
   );

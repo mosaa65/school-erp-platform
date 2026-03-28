@@ -29,6 +29,10 @@ export class PermissionsGuard implements CanActivate {
       throw new UnauthorizedException('Authentication is required');
     }
 
+    if (request.user.roleCodes?.includes('super_admin')) {
+      return true;
+    }
+
     const grantedPermissions = new Set(request.user.permissionCodes);
     const missingPermissions = requiredPermissions.filter(
       (permission) => !grantedPermissions.has(permission),

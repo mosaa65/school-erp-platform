@@ -5,8 +5,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AuditStatus, GradingPolicy, Prisma } from '@prisma/client';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { AuditLogsService } from '../../audit-logs/audit-logs.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { CreateGradingPolicyDto } from './dto/create-grading-policy.dto';
 import { ListGradingPoliciesDto } from './dto/list-grading-policies.dto';
 import { UpdateGradingPolicyDto } from './dto/update-grading-policy.dto';
@@ -83,9 +83,8 @@ export class GradingPoliciesService {
           gradeLevelId: payload.gradeLevelId,
           subjectId: payload.subjectId,
           assessmentType: payload.assessmentType,
-          assessmentTypeLookupId: payload.assessmentTypeLookupId,
-          totalMaxScore: payload.totalMaxScore ?? 100,
-          passingScore: payload.passingScore ?? 50,
+          totalMaxScore: payload.totalMaxScore,
+          passingScore: payload.passingScore,
           isDefault: payload.isDefault ?? false,
           status: payload.status,
           notes: payload.notes,
@@ -138,8 +137,6 @@ export class GradingPoliciesService {
       academicYearId: query.academicYearId,
       gradeLevelId: query.gradeLevelId,
       subjectId: query.subjectId,
-      academicTermId: query.academicTermId,
-      assessmentTypeLookupId: query.assessmentTypeLookupId,
       assessmentType: query.assessmentType,
       status: query.status,
       isDefault: query.isDefault,
@@ -243,7 +240,6 @@ export class GradingPoliciesService {
     actorUserId: string,
   ) {
     const existing = await this.ensureGradingPolicyExists(id);
-    this.validateScoreRules(payload);
 
     const resolvedAcademicYearId =
       payload.academicYearId ?? existing.academicYearId;
@@ -255,6 +251,13 @@ export class GradingPoliciesService {
       resolvedGradeLevelId,
       resolvedSubjectId,
     );
+
+    const mergedPayloadForValidation = {
+      totalMaxScore: payload.totalMaxScore ?? existing.totalMaxScore,
+      passingScore: payload.passingScore ?? existing.passingScore,
+    };
+
+    this.validateScoreRules(mergedPayloadForValidation as any);
 
     try {
       const gradingPolicy = await this.prisma.gradingPolicy.update({
@@ -382,23 +385,24 @@ export class GradingPoliciesService {
   private validateScoreRules(
     payload: Pick<CreateGradingPolicyDto, 'totalMaxScore' | 'passingScore'>,
   ) {
-    const scorePairs = [['totalMaxScore', payload.totalMaxScore]] as const;
-
-    for (const [fieldName, value] of scorePairs) {
-      if (value !== undefined && value < 0) {
-        throw new BadRequestException(`لا يمكن أن تكون قيمة ${fieldName} سالبة`);
+    if (payload.totalMaxScore !== undefined) {
+      if (payload.totalMaxScore <= 0 || payload.totalMaxScore > 100) {
+        throw new BadRequestException(
+          'إجمالي الدرجات يجب أن يكون أكبر من 0 ولا يتجاوز 100',
+        );
       }
     }
 
     if (payload.passingScore !== undefined) {
-      if (payload.passingScore < 0) {
-        throw new BadRequestException('لا يمكن أن تكون درجة النجاح سالبة');
+      if (payload.passingScore < 0 || payload.passingScore > 100) {
+        throw new BadRequestException('يجب أن تكون درجة النجاح بين 0 و100');
       }
-
-      const maxAllowed = payload.totalMaxScore ?? 100;
-      if (payload.passingScore > maxAllowed) {
+      if (
+        payload.totalMaxScore !== undefined &&
+        payload.passingScore > payload.totalMaxScore
+      ) {
         throw new BadRequestException(
-          `يجب ألا تتجاوز درجة النجاح ${maxAllowed}`,
+          'درجة النجاح لا يمكن أن تتجاوز إجمالي الدرجات',
         );
       }
     }
@@ -425,4 +429,3 @@ export class GradingPoliciesService {
     return 'خطأ غير معروف';
   }
 }
-

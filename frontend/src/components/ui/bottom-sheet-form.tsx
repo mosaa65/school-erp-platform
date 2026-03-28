@@ -54,7 +54,7 @@ export function BottomSheetForm({
   const sheet = (
     <div
       className={cn(
-        "fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-0 backdrop-blur-[2px] sm:p-4 md:items-center md:justify-end",
+        "fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-0 backdrop-blur-[2px] sm:p-4 md:items-center md:justify-center",
         overlayClassName,
       )}
       onClick={onClose}
@@ -67,11 +67,11 @@ export function BottomSheetForm({
         )}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="px-4 pt-3 md:hidden">
-          <div className="mx-auto h-1.5 w-14 rounded-full bg-[color:var(--app-accent-strong)]" />
-        </div>
-        <div className="relative border-b border-[color:var(--app-accent-strong)] bg-gradient-to-b from-[color:var(--app-accent-soft)] via-background/96 to-background/84 px-5 py-4 backdrop-blur-sm">
+        <div className="relative border-b border-[color:var(--app-accent-strong)] bg-gradient-to-b from-[color:var(--app-accent-soft)] via-background/96 to-background/84 px-5 pb-4 pt-3 backdrop-blur-sm md:py-4">
           <div className="pointer-events-none absolute inset-x-5 top-0 h-px bg-[color:var(--app-accent-strong)]/70" />
+          <div className="mb-2 flex justify-center md:hidden">
+            <div className="h-1.5 w-14 rounded-full bg-[color:var(--app-accent-strong)]" />
+          </div>
           <div className="flex items-center justify-between gap-3">
             <div className="space-y-1">
               <p className="text-xs font-medium uppercase tracking-[0.2em] text-[color:var(--app-accent-color)]">

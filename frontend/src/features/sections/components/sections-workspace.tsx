@@ -4,18 +4,25 @@ import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import { useRouter } from "next/navigation";
 import {
+  Activity,
+  Building,
+  DoorOpen,
+  GraduationCap,
   Layers2,
+  LayoutGrid,
   LoaderCircle,
   PencilLine,
   Plus,
   RefreshCw,
   Shuffle,
   Trash2,
+  Type,
+  Users,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SearchField } from "@/components/ui/search-field";
+import { Label } from "@/components/ui/label";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
@@ -26,7 +33,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
@@ -167,9 +175,9 @@ export function SectionsWorkspace() {
   }, [editingSectionId, isEditing, sections]);
 
   useDebounceEffect(() => {
-      setPage(1);
-      setSearch(searchInput.trim());
-    }, 400, [searchInput]);
+    setPage(1);
+    setSearch(searchInput.trim());
+  }, 400, [searchInput]);
 
   React.useEffect(() => {
     if (!isFilterOpen) {
@@ -350,88 +358,71 @@ export function SectionsWorkspace() {
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-1 flex-wrap items-center gap-2 min-w-0 sm:min-w-[240px] max-w-lg">
-            <SearchField
-              containerClassName="flex-1"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="بحث بالاسم أو الكود أو الصف..."
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterTriggerButton
-              count={activeFiltersCount}
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-            />
-          </div>
-        </div>
-
         {actionSuccess ? (
           <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">
             {actionSuccess}
           </div>
         ) : null}
 
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="ابحث باسم الشعبة أو الصف..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+        />
+
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
-          title="فلاتر الشعب"
-          actionButtons={
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
-            </div>
-          }
+          title="خيارات الفلترة"
+          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
-          <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.gradeLevel}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  gradeLevel: event.target.value,
-                }))
-              }
-              disabled={!canReadGradeLevels}
-            >
-              <option value="all">كل الصفوف</option>
-              {gradeLevelOptions.map((gradeLevel) => (
-                <option key={gradeLevel.id} value={gradeLevel.id}>
-                  {gradeLevel.code}
-                </option>
-              ))}
-            </SelectField>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>الصف الدراسي</Label>
+              <SelectField
+                value={filterDraft.gradeLevel}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    gradeLevel: event.target.value,
+                  }))
+                }
+                disabled={!canReadGradeLevels}
+                icon={<GraduationCap className="h-4 w-4" />}
+              >
+                <option value="all">كل الصفوف</option>
+                {gradeLevelOptions.map((gradeLevel) => (
+                  <option key={gradeLevel.id} value={gradeLevel.id}>
+                    {gradeLevel.code}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
 
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </SelectField>
+            <div className="space-y-1">
+              <Label>الحالة</Label>
+              <SelectField
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+                icon={<Activity className="h-4 w-4" />}
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">النشطة فقط</option>
+                <option value="inactive">غير النشطة فقط</option>
+              </SelectField>
+            </div>
           </div>
         </FilterDrawer>
 
         <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-          <CardHeader className="space-y-3">
+          <CardHeader className="space-y-3 pb-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <CardTitle>قائمة الشعب</CardTitle>
               <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
@@ -603,8 +594,8 @@ export function SectionsWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الصف/المرحلة *</label>
+            <div className="space-y-1">
+              <Label required>الصف/المرحلة</Label>
               <SelectField
                 value={formState.gradeLevelId}
                 onChange={(event) =>
@@ -614,6 +605,8 @@ export function SectionsWorkspace() {
                   }))
                 }
                 disabled={!canReadGradeLevels}
+                icon={<GraduationCap className="h-4 w-4" />}
+                required
               >
                 <option value="">اختر المستوى الدراسي</option>
                 {gradeLevelOptions.map((gradeLevel) => (
@@ -624,20 +617,21 @@ export function SectionsWorkspace() {
               </SelectField>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الكود *</label>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <Label required>الكود</Label>
                 <Input
                   value={formState.code}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, code: event.target.value }))
                   }
                   placeholder="مثال: g1-a"
+                  icon={<LayoutGrid className="h-4 w-4" />}
                   required
                 />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">السعة</label>
+              <div className="space-y-1">
+                <Label>السعة</Label>
                 <Input
                   type="number"
                   min={1}
@@ -647,13 +641,14 @@ export function SectionsWorkspace() {
                     setFormState((prev) => ({ ...prev, capacity: event.target.value }))
                   }
                   placeholder="30"
+                  icon={<Users className="h-4 w-4" />}
                 />
               </div>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">المبنى</label>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <Label>المبنى</Label>
                 <SelectField
                   value={formState.buildingLookupId}
                   onChange={(event) =>
@@ -663,6 +658,7 @@ export function SectionsWorkspace() {
                     }))
                   }
                   disabled={!canReadBuildings}
+                  icon={<Building className="h-4 w-4" />}
                 >
                   <option value="">بدون ربط بمبنى الآن</option>
                   {buildingOptions.map((building) => (
@@ -672,40 +668,48 @@ export function SectionsWorkspace() {
                   ))}
                 </SelectField>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الغرفة/الفصل</label>
+              <div className="space-y-1">
+                <Label>الغرفة/الفصل</Label>
                 <Input
                   value={formState.roomLabel}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, roomLabel: event.target.value }))
                   }
                   placeholder="مثال: A-101"
+                  icon={<DoorOpen className="h-4 w-4" />}
                 />
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
+            <div className="space-y-1">
+              <Label required>الاسم</Label>
               <Input
                 value={formState.name}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, name: event.target.value }))
                 }
                 placeholder="الشعبة أ"
+                icon={<Type className="h-4 w-4" />}
                 required
               />
             </div>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
+            <div className="space-y-1">
+              <Label>الحالة</Label>
+              <SelectField
+                value={formState.isActive ? "active" : "inactive"}
                 onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                  setFormState((prev) => ({
+                    ...prev,
+                    isActive: event.target.value === "active",
+                  }))
                 }
-              />
-            </label>
+                icon={<Activity className="h-4 w-4" />}
+              >
+                <option value="active">نشط</option>
+                <option value="inactive">غير نشط</option>
+              </SelectField>
+            </div>
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
@@ -733,7 +737,7 @@ export function SectionsWorkspace() {
               </div>
             ) : null}
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 pt-2">
               <Button
                 type="submit"
                 className="flex-1 gap-2"

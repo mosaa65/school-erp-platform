@@ -11,10 +11,11 @@ import {
   Prisma,
   SemesterGrade,
 } from '@prisma/client';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { AuditLogsService } from '../../audit-logs/audit-logs.service';
-import { PolicyResolverService } from '../../evaluation-policies/grading-policies/policy-resolver.service';
-import { DataScopeService } from '../../teaching-assignments/data-scope/data-scope.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { DataScopeService } from '../data-scope/data-scope.service';
+import { GradingNotificationsService } from '../grading-notifications/grading-notifications.service';
+import { PolicyResolverService } from '../evaluation-policies/grading-policies/policy-resolver.service';
 import { CalculateSemesterGradesDto } from './dto/calculate-semester-grades.dto';
 import { CreateSemesterGradeDto } from './dto/create-semester-grade.dto';
 import { FillFinalExamScoresDto } from './dto/fill-final-exam-scores.dto';
@@ -35,7 +36,6 @@ const semesterGradeInclude: Prisma.SemesterGradeInclude = {
       id: true,
       studentId: true,
       sectionId: true,
-      gradeLevelId: true,
       academicYearId: true,
       status: true,
       isActive: true,
@@ -61,14 +61,6 @@ const semesterGradeInclude: Prisma.SemesterGradeInclude = {
               sequence: true,
             },
           },
-        },
-      },
-      gradeLevel: {
-        select: {
-          id: true,
-          code: true,
-          name: true,
-          sequence: true,
         },
       },
     },
@@ -130,8 +122,9 @@ export class SemesterGradesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLogsService: AuditLogsService,
-    private readonly policyResolver: PolicyResolverService,
     private readonly dataScopeService: DataScopeService,
+    private readonly policyResolverService: PolicyResolverService,
+    private readonly gradingNotificationsService: GradingNotificationsService,
   ) {}
 
   async create(payload: CreateSemesterGradeDto, actorUserId: string) {
@@ -240,6 +233,14 @@ export class SemesterGradesService {
       payload.sectionId,
       payload.subjectId,
     );
+
+    await this.findSemesterPolicy(
+      context.academicYearId,
+      context.gradeLevelId,
+      payload.subjectId,
+      payload.academicTermId,
+    );
+
     await this.ensureActorAuthorized(
       actorUserId,
       payload.sectionId,
@@ -275,6 +276,25 @@ export class SemesterGradesService {
     }
 
     const enrollmentIds = enrollments.map((enrollment) => enrollment.id);
+
+    // Check if all monthly grades are complete for the term
+    await this.ensureMonthlyGradesComplete(
+      enrollmentIds,
+      payload.subjectId,
+      payload.academicTermId,
+      context,
+      actorUserId,
+    );
+
+    // Check if final exam scores are filled for existing semester grades
+    await this.ensureFinalExamScoresComplete(
+      enrollmentIds,
+      payload.subjectId,
+      payload.academicTermId,
+      context,
+      actorUserId,
+    );
+
     const existingRows = await this.prisma.semesterGrade.findMany({
       where: {
         academicTermId: payload.academicTermId,
@@ -511,7 +531,6 @@ export class SemesterGradesService {
       context.academicYearId,
       context.gradeLevelId,
       payload.subjectId,
-      payload.academicTermId,
     );
 
     const summary = {
@@ -772,14 +791,9 @@ export class SemesterGradesService {
       throw new NotFoundException('الدرجة الفصلية غير موجودة');
     }
 
-    const sectionId = this.requireAssignedSectionId(
-      semesterGrade.studentEnrollment.sectionId,
-      'لا يمكن عرض الدرجة الفصلية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
-    );
-
     await this.ensureActorAuthorized(
       actorUserId,
-      sectionId,
+      semesterGrade.studentEnrollment.sectionId,
       semesterGrade.subject.id,
       semesterGrade.academicYear.id,
     );
@@ -1009,7 +1023,6 @@ export class SemesterGradesService {
         select: {
           id: true,
           academicYearId: true,
-          gradeLevelId: true,
           sectionId: true,
           isActive: true,
           section: {
@@ -1040,22 +1053,7 @@ export class SemesterGradesService {
     if (!enrollment.isActive) {
       throw new BadRequestException('قيد الطالب غير نشط');
     }
-    const section = enrollment.section;
-    const gradeLevelId = this.resolveEnrollmentGradeLevelId(
-      enrollment.gradeLevelId,
-      section?.gradeLevelId,
-    );
-
-    if (!gradeLevelId) {
-      throw new BadRequestException('تعذر تحديد الصف المرتبط بالقيد');
-    }
-
-    if (!section) {
-      throw new BadRequestException(
-        'لا يمكن احتساب درجة فصلية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
-      );
-    }
-    if (!section.isActive) {
+    if (!enrollment.section.isActive) {
       throw new BadRequestException('شعبة القيد غير نشطة');
     }
     if (!term) {
@@ -1074,13 +1072,13 @@ export class SemesterGradesService {
     await this.ensureSubjectOfferedInTerm(
       term.academicYearId,
       academicTermId,
-      gradeLevelId,
+      enrollment.section.gradeLevelId,
       subjectId,
     );
 
     return {
-      sectionId: section.id,
-      gradeLevelId,
+      sectionId: enrollment.sectionId,
+      gradeLevelId: enrollment.section.gradeLevelId,
       academicYearId: term.academicYearId,
     };
   }
@@ -1143,6 +1141,32 @@ export class SemesterGradesService {
     };
   }
 
+  private async findSemesterPolicy(
+    academicYearId: string,
+    gradeLevelId: string,
+    subjectId: string,
+    academicTermId: string,
+  ) {
+    try {
+      const policy = await this.policyResolverService.resolvePolicy({
+        academicYearId,
+        gradeLevelId,
+        subjectId,
+        assessmentType: AssessmentType.FINAL,
+        academicTermId,
+      });
+
+      return policy;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw new BadRequestException(
+          'لا توجد سياسة تقييم نهائي للفصل/المرحلة/المادة المحددة',
+        );
+      }
+      throw error;
+    }
+  }
+
   private async ensureSemesterGradeContext(
     id: string,
   ): Promise<SemesterContext> {
@@ -1155,7 +1179,6 @@ export class SemesterGradesService {
         academicYearId: true,
         studentEnrollment: {
           select: {
-            gradeLevelId: true,
             sectionId: true,
             section: {
               select: {
@@ -1171,22 +1194,9 @@ export class SemesterGradesService {
       throw new NotFoundException('الدرجة الفصلية غير موجودة');
     }
 
-    const sectionId = this.requireAssignedSectionId(
-      semesterGrade.studentEnrollment.sectionId,
-      'لا يمكن استخدام درجة فصلية لقيد غير موزع على شعبة بعد. وزّع الطالب على شعبة أولًا ثم أعد المحاولة.',
-    );
-    const gradeLevelId = this.resolveEnrollmentGradeLevelId(
-      semesterGrade.studentEnrollment.gradeLevelId,
-      semesterGrade.studentEnrollment.section?.gradeLevelId,
-    );
-
-    if (!gradeLevelId) {
-      throw new BadRequestException('تعذر تحديد الصف المرتبط بالقيد');
-    }
-
     return {
-      sectionId,
-      gradeLevelId,
+      sectionId: semesterGrade.studentEnrollment.sectionId,
+      gradeLevelId: semesterGrade.studentEnrollment.section.gradeLevelId,
       academicYearId: semesterGrade.academicYearId,
     };
   }
@@ -1224,21 +1234,6 @@ export class SemesterGradesService {
     if (!subject.isActive) {
       throw new BadRequestException('المادة غير نشطة');
     }
-  }
-
-  private requireAssignedSectionId(sectionId: string | null, message: string) {
-    if (!sectionId) {
-      throw new BadRequestException(message);
-    }
-
-    return sectionId;
-  }
-
-  private resolveEnrollmentGradeLevelId(
-    enrollmentGradeLevelId: string | null | undefined,
-    sectionGradeLevelId: string | null | undefined,
-  ) {
-    return enrollmentGradeLevelId ?? sectionGradeLevelId ?? null;
   }
 
   private async ensureSubjectOfferedInTerm(
@@ -1295,35 +1290,56 @@ export class SemesterGradesService {
     academicYearId: string,
     gradeLevelId: string,
     subjectId: string,
-    academicTermId?: string | null,
   ): Promise<number | undefined> {
-    try {
-      const policy = await this.policyResolver.resolvePolicy({
+    const approvedPolicy = await this.prisma.gradingPolicy.findFirst({
+      where: {
         academicYearId,
         gradeLevelId,
         subjectId,
         assessmentType: AssessmentType.FINAL,
-        academicTermId,
-      });
+        status: GradingWorkflowStatus.APPROVED,
+        isActive: true,
+        deletedAt: null,
+      },
+      orderBy: [
+        {
+          isDefault: 'desc',
+        },
+        {
+          updatedAt: 'desc',
+        },
+      ],
+      select: {
+        maxExamScore: true,
+      },
+    });
 
-      const componentTotal = policy.components.reduce((sum, component) => {
-        return sum + (this.decimalToNumber(component.maxScore) ?? 0);
-      }, 0);
+    const policy =
+      approvedPolicy ??
+      (await this.prisma.gradingPolicy.findFirst({
+        where: {
+          academicYearId,
+          gradeLevelId,
+          subjectId,
+          assessmentType: AssessmentType.FINAL,
+          isActive: true,
+          deletedAt: null,
+        },
+        orderBy: [
+          {
+            isDefault: 'desc',
+          },
+          {
+            updatedAt: 'desc',
+          },
+        ],
+        select: {
+          maxExamScore: true,
+        },
+      }));
 
-      if (componentTotal > 0) {
-        return componentTotal;
-      }
-
-      return this.decimalToNumber(policy.totalMaxScore) ?? 100;
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        return undefined;
-      }
-
-      throw error;
-    }
+    return this.decimalToNumber(policy?.maxExamScore);
   }
-
 
   private computeSemesterTotal(
     semesterWorkTotal: number,
@@ -1340,11 +1356,137 @@ export class SemesterGradesService {
     }
   }
 
+  private async ensureMonthlyGradesComplete(
+    enrollmentIds: string[],
+    subjectId: string,
+    academicTermId: string,
+    context: SemesterContext,
+    actorUserId: string,
+  ) {
+    // Get all months in the term
+    const termMonths = await this.prisma.academicMonth.findMany({
+      where: {
+        academicTermId,
+        deletedAt: null,
+        isActive: true,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (termMonths.length === 0) {
+      throw new BadRequestException(
+        'لا توجد أشهر أكاديمية نشطة في الفصل المحدد',
+      );
+    }
+
+    const monthIds = termMonths.map((month) => month.id);
+
+    // Check if all students have monthly grades for all months in the term
+    const existingMonthlyGrades = await this.prisma.monthlyGrade.findMany({
+      where: {
+        studentEnrollmentId: {
+          in: enrollmentIds,
+        },
+        subjectId,
+        academicMonthId: {
+          in: monthIds,
+        },
+        deletedAt: null,
+        isActive: true,
+      },
+      select: {
+        studentEnrollmentId: true,
+        academicMonthId: true,
+      },
+    });
+
+    // Group by enrollment to check completeness
+    const gradesByEnrollment = new Map<string, Set<string>>();
+    for (const grade of existingMonthlyGrades) {
+      if (!gradesByEnrollment.has(grade.studentEnrollmentId)) {
+        gradesByEnrollment.set(grade.studentEnrollmentId, new Set());
+      }
+      gradesByEnrollment.get(grade.studentEnrollmentId)!.add(grade.academicMonthId);
+    }
+
+    // Check each enrollment has all months
+    const missingGrades: string[] = [];
+    for (const enrollmentId of enrollmentIds) {
+      const studentMonths = gradesByEnrollment.get(enrollmentId);
+      if (!studentMonths || studentMonths.size !== monthIds.length) {
+        missingGrades.push(enrollmentId);
+      }
+    }
+
+    if (missingGrades.length > 0) {
+      await this.gradingNotificationsService.notifyMonthlyGradesIncomplete(
+        context.sectionId,
+        subjectId,
+        academicTermId,
+        context.academicYearId,
+        context.gradeLevelId,
+        missingGrades.length,
+        actorUserId,
+      );
+
+      throw new BadRequestException(
+        `لا يمكن حساب الدرجة الفصلية: ${missingGrades.length} طالب لم يكملوا المحصلات الشهرية لجميع أشهر الفصل. يرجى حساب المحصلات الشهرية أولاً.`,
+      );
+    }
+  }
+
+  private async ensureFinalExamScoresComplete(
+    enrollmentIds: string[],
+    subjectId: string,
+    academicTermId: string,
+    context: SemesterContext,
+    actorUserId: string,
+  ) {
+    // Check if all existing semester grades have final exam scores filled
+    const semesterGradesWithoutFinal = await this.prisma.semesterGrade.findMany({
+      where: {
+        studentEnrollmentId: {
+          in: enrollmentIds,
+        },
+        subjectId,
+        academicTermId,
+        finalExamScore: null,
+        deletedAt: null,
+        isActive: true,
+      },
+      select: {
+        studentEnrollmentId: true,
+      },
+    });
+
+    if (semesterGradesWithoutFinal.length > 0) {
+      await this.gradingNotificationsService.notifyFinalExamScoresMissing(
+        context.sectionId,
+        subjectId,
+        academicTermId,
+        context.academicYearId,
+        context.gradeLevelId,
+        semesterGradesWithoutFinal.length,
+        actorUserId,
+      );
+
+      throw new BadRequestException(
+        `لا يمكن حساب الدرجة الفصلية: ${semesterGradesWithoutFinal.length} طالب لم يتم تعبئة درجة الاختبار النهائي لهم. يرجى تعبئة درجات الاختبار النهائي أولاً.`,
+      );
+    }
+  }
+
   private decimalToNumber(
     value: Prisma.Decimal | number | null | undefined,
-  ): number | undefined {
-    if (value === null || value === undefined) {
+  ): number | null | undefined {
+    if (value === undefined) {
       return undefined;
+    }
+
+    if (value === null) {
+      return null;
     }
 
     return Number(value);
@@ -1390,4 +1532,3 @@ export class SemesterGradesService {
     return 'خطأ غير معروف';
   }
 }
-

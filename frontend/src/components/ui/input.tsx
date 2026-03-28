@@ -1,21 +1,34 @@
-﻿import * as React from "react";
+import * as React from "react";
 import { cn } from "@/lib/utils";
 
-const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  ({ className, type, ...props }, ref) => {
+export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  icon?: React.ReactNode;
+}
+
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, type, icon, ...props }, ref) => {
     return (
-      <input
-        type={type}
-        className={cn(
-          "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background",
-          "file:border-0 file:bg-transparent file:text-sm file:font-medium",
-          "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-          "disabled:cursor-not-allowed disabled:opacity-50",
-          className,
+      <div className="group relative w-full">
+        {icon && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-primary transition-colors group-focus-within:text-primary pointer-events-none">
+            {icon}
+          </div>
         )}
-        ref={ref}
-        {...props}
-      />
+        <input
+          type={type}
+          className={cn(
+            "flex h-11 w-full rounded-2xl border border-border/40 bg-background/50 px-4 py-2 text-sm shadow-sm backdrop-blur-md transition-all duration-300 ring-offset-background",
+            "placeholder:text-muted-foreground/40",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary/50",
+            "hover:border-border/80 hover:bg-background/80",
+            "disabled:cursor-not-allowed disabled:opacity-50",
+            icon ? "pr-10" : "pr-4",
+            className,
+          )}
+          ref={ref}
+          {...props}
+        />
+      </div>
     );
   },
 );
