@@ -7,9 +7,13 @@ import {
 import { AuditStatus, Prisma, type SystemSetting } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { BranchModeService } from '../../common/branch-mode/branch-mode.service';
 import { CreateSystemSettingDto } from './dto/create-system-setting.dto';
 import { ListSystemSettingsDto } from './dto/list-system-settings.dto';
 import { UpdateSystemSettingDto } from './dto/update-system-setting.dto';
+
+/** مفاتيح إعدادات الفروع التي تستدعي مسح الـ Cache عند تعديلها */
+const BRANCH_SETTING_KEYS = ['multi_branch_mode', 'default_branch_id'] as const;
 
 const systemSettingInclude: Prisma.SystemSettingInclude = {
   createdBy: {
@@ -31,6 +35,7 @@ export class SystemSettingsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLogsService: AuditLogsService,
+    private readonly branchModeService: BranchModeService,
   ) {}
 
   async create(payload: CreateSystemSettingDto, actorUserId: string) {
@@ -77,6 +82,26 @@ export class SystemSettingsService {
 
       this.throwKnownDatabaseErrors(error);
     }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Branch Feature Flag API
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * يُعيد حالة ميزة الفروع المتعددة للفرونت أند.
+   * لا يتطلب صلاحية خاصة — أي مستخدم مسجَّل يمكنه قراءتها.
+   */
+  async getBranchConfig(): Promise<{
+    isMultiBranchEnabled: boolean;
+    defaultBranchId: number | null;
+  }> {
+    const [isMultiBranchEnabled, defaultBranchId] = await Promise.all([
+      this.branchModeService.isMultiBranchEnabled(),
+      this.branchModeService.getDefaultBranchId(),
+    ]);
+
+    return { isMultiBranchEnabled, defaultBranchId };
   }
 
   async findAll(query: ListSystemSettingsDto) {
@@ -171,6 +196,11 @@ export class SystemSettingsService {
         resourceId: String(id),
         details: payload as Prisma.InputJsonValue,
       });
+
+      // مسح الـ Cache إذا كان الإعداد المُعدَّل يخص الفروع
+      if ((BRANCH_SETTING_KEYS as readonly string[]).includes(item.settingKey)) {
+        this.branchModeService.invalidateCache();
+      }
 
       return item;
     } catch (error) {

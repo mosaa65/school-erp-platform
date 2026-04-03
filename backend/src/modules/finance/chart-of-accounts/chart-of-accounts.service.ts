@@ -7,6 +7,10 @@ import {
 import { AccountType, AuditStatus, NormalBalance, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogsService } from '../../audit-logs/audit-logs.service';
+import {
+  buildHybridBranchClause,
+  combineWhereClauses,
+} from '../utils/hybrid-branch-scope';
 import { CreateChartOfAccountDto } from './dto/create-chart-of-account.dto';
 import { ListChartOfAccountsDto } from './dto/list-chart-of-accounts.dto';
 import { UpdateChartOfAccountDto } from './dto/update-chart-of-account.dto';
@@ -125,15 +129,19 @@ export class ChartOfAccountsService {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
 
-    const where: Prisma.ChartOfAccountWhereInput = {
+    const baseWhere: Prisma.ChartOfAccountWhereInput = {
       deletedAt: null,
       isActive: query.isActive,
       accountType: query.accountType,
       parentId: query.parentId,
-      branchId: query.branchId,
       isHeader: query.isHeader,
-      OR: query.search
-        ? [
+    };
+    const branchWhere = buildHybridBranchClause(query.branchId) as
+      | Prisma.ChartOfAccountWhereInput
+      | undefined;
+    const searchWhere: Prisma.ChartOfAccountWhereInput | undefined = query.search
+      ? {
+          OR: [
             {
               accountCode: {
                 contains: query.search,
@@ -149,9 +157,14 @@ export class ChartOfAccountsService {
                 contains: query.search,
               },
             },
-          ]
-        : undefined,
-    };
+          ],
+        }
+      : undefined;
+    const where = combineWhereClauses<Prisma.ChartOfAccountWhereInput>(
+      baseWhere,
+      branchWhere,
+      searchWhere,
+    );
 
     const [total, items] = await this.prisma.$transaction([
       this.prisma.chartOfAccount.count({ where }),

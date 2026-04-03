@@ -56,6 +56,22 @@ export class BankReconciliationsController {
     return this.bankReconciliationsService.addItem(id, payload, user.userId);
   }
 
+  @Post(':id/auto-match-transactions')
+  @RequirePermissions('bank-reconciliations.update')
+  @ApiOperation({
+    summary:
+      'Auto-match eligible completed payment transactions for this bank reconciliation',
+  })
+  autoMatchTransactions(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.bankReconciliationsService.autoMatchTransactions(
+      id,
+      user.userId,
+    );
+  }
+
   @Get()
   @RequirePermissions('bank-reconciliations.read')
   @ApiOperation({ summary: 'Get paginated bank reconciliations' })

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { mockListWithPost } from "./helpers/api-mocks";
+import { mockCrudList, mockListWithPost } from "./helpers/api-mocks";
 import { injectAuthSession } from "./helpers/auth-session";
 import { e2ePermissionSets } from "./helpers/permissions";
 import { expectCardsCount, openModulePage } from "./helpers/ui-assertions";
@@ -17,6 +17,268 @@ function buildListResponse(data: unknown[]) {
 }
 
 test.describe("Employee Section Supervisions", () => {
+  test("allows update access without create or delete actions", async ({ page }) => {
+    await injectAuthSession(page, e2ePermissionSets.employeeSectionSupervisionsUpdateOnly);
+
+    const employees = [
+      {
+        id: "emp-1",
+        fullName: "أحمد علي",
+        jobNumber: "EMP-0001",
+        jobTitle: "مشرف",
+        isActive: true,
+      },
+    ];
+
+    const sections = [
+      {
+        id: "sec-1",
+        code: "A-1",
+        name: "الشعبة أ",
+        isActive: true,
+      },
+    ];
+
+    const academicYears = [
+      {
+        id: "year-1",
+        code: "2026-2027",
+        name: "العام 2026-2027",
+        status: "ACTIVE",
+        isCurrent: true,
+      },
+    ];
+
+    await page.route("**/backend/employees**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(buildListResponse(employees)),
+      });
+    });
+    await page.route("**/backend/sections**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(buildListResponse(sections)),
+      });
+    });
+    await page.route("**/backend/academic-years**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(buildListResponse(academicYears)),
+      });
+    });
+
+    const supervisionApi = await mockCrudList({
+      page,
+      urlPattern: "**/backend/employee-section-supervisions**",
+      initialItems: [
+        {
+          id: "sup-1",
+          employeeId: "emp-1",
+          sectionId: "sec-1",
+          academicYearId: "year-1",
+          canViewStudents: true,
+          canManageHomeworks: true,
+          canManageGrades: false,
+          isActive: true,
+          createdAt: "2026-03-01T00:00:00.000Z",
+          updatedAt: "2026-03-01T00:00:00.000Z",
+          employee: {
+            id: "emp-1",
+            fullName: "أحمد علي",
+            jobNumber: "EMP-0001",
+            jobTitle: "مشرف",
+          },
+          section: {
+            id: "sec-1",
+            code: "A-1",
+            name: "الشعبة أ",
+            gradeLevel: {
+              id: "grade-1",
+              code: "G1",
+              name: "الصف الأول",
+            },
+          },
+          academicYear: {
+            id: "year-1",
+            code: "2026-2027",
+            name: "العام 2026-2027",
+            status: "ACTIVE",
+          },
+        },
+      ],
+      onUpdate: (payload, context) => ({
+        ...context.item,
+        canManageGrades:
+          typeof payload.canManageGrades === "boolean"
+            ? payload.canManageGrades
+            : context.item.canManageGrades,
+        updatedAt: "2026-03-03T00:00:00.000Z",
+      }),
+    });
+
+    await openModulePage({
+      page,
+      path: "/app/employee-section-supervisions",
+      heading: "نطاقات إشراف الموظفين",
+    });
+
+    await expectCardsCount(page, "employee-section-supervision-card", 1);
+    await expect(page.getByRole("button", { name: "إضافة إشراف شعبة" })).toBeDisabled();
+    await expect(
+      page
+        .getByTestId("employee-section-supervision-card")
+        .first()
+        .getByRole("button", { name: "تعديل" }),
+    ).toBeEnabled();
+    await expect(
+      page
+        .getByTestId("employee-section-supervision-card")
+        .first()
+        .getByRole("button", { name: "حذف" }),
+    ).toBeDisabled();
+
+    await page
+      .getByTestId("employee-section-supervision-card")
+      .first()
+      .getByRole("button", { name: "تعديل" })
+      .click();
+    await page
+      .locator("label")
+      .filter({ hasText: "إدارة الدرجات" })
+      .locator('input[type="checkbox"]')
+      .check();
+    await page.getByTestId("employee-section-supervision-form-submit").click();
+
+    await expect(
+      page.getByTestId("employee-section-supervision-card").first(),
+    ).toContainText("إدارة الدرجات: نعم");
+    expect(supervisionApi.getLastUpdatePayload()?.["canManageGrades"]).toBe(true);
+    expect(supervisionApi.getDeleteCount()).toBe(0);
+  });
+
+  test("allows read-only access without create, update, or delete actions", async ({
+    page,
+  }) => {
+    await injectAuthSession(page, e2ePermissionSets.employeeSectionSupervisionsReadOnly);
+
+    const employees = [
+      {
+        id: "emp-1",
+        fullName: "أحمد علي",
+        jobNumber: "EMP-0001",
+        jobTitle: "مشرف",
+        isActive: true,
+      },
+    ];
+
+    const sections = [
+      {
+        id: "sec-1",
+        code: "A-1",
+        name: "الشعبة أ",
+        isActive: true,
+      },
+    ];
+
+    const academicYears = [
+      {
+        id: "year-1",
+        code: "2026-2027",
+        name: "العام 2026-2027",
+        status: "ACTIVE",
+        isCurrent: true,
+      },
+    ];
+
+    await page.route("**/backend/employees**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(buildListResponse(employees)),
+      });
+    });
+    await page.route("**/backend/sections**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(buildListResponse(sections)),
+      });
+    });
+    await page.route("**/backend/academic-years**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(buildListResponse(academicYears)),
+      });
+    });
+
+    await mockListWithPost({
+      page,
+      urlPattern: "**/backend/employee-section-supervisions**",
+      initialItems: [
+        {
+          id: "sup-1",
+          employeeId: "emp-1",
+          sectionId: "sec-1",
+          academicYearId: "year-1",
+          canViewStudents: true,
+          canManageHomeworks: true,
+          canManageGrades: false,
+          isActive: true,
+          createdAt: "2026-03-01T00:00:00.000Z",
+          updatedAt: "2026-03-01T00:00:00.000Z",
+          employee: {
+            id: "emp-1",
+            fullName: "أحمد علي",
+            jobNumber: "EMP-0001",
+            jobTitle: "مشرف",
+          },
+          section: {
+            id: "sec-1",
+            code: "A-1",
+            name: "الشعبة أ",
+            gradeLevel: {
+              id: "grade-1",
+              code: "G1",
+              name: "الصف الأول",
+            },
+          },
+          academicYear: {
+            id: "year-1",
+            code: "2026-2027",
+            name: "العام 2026-2027",
+            status: "ACTIVE",
+          },
+        },
+      ],
+    });
+
+    await openModulePage({
+      page,
+      path: "/app/employee-section-supervisions",
+      heading: "نطاقات إشراف الموظفين",
+    });
+
+    await expectCardsCount(page, "employee-section-supervision-card", 1);
+    await expect(page.getByRole("button", { name: "إضافة إشراف شعبة" })).toBeDisabled();
+    await expect(
+      page
+        .getByTestId("employee-section-supervision-card")
+        .first()
+        .getByRole("button", { name: "تعديل" }),
+    ).toBeDisabled();
+    await expect(
+      page
+        .getByTestId("employee-section-supervision-card")
+        .first()
+        .getByRole("button", { name: "حذف" }),
+    ).toBeDisabled();
+  });
+
   test("loads list and creates a supervision scope", async ({ page }) => {
     await injectAuthSession(page, e2ePermissionSets.employeeSectionSupervisionsCrud);
 
@@ -170,6 +432,8 @@ test.describe("Employee Section Supervisions", () => {
 
     await expectCardsCount(page, "employee-section-supervision-card", 1);
 
+    await page.getByRole("button", { name: "إضافة إشراف شعبة" }).focus();
+    await page.keyboard.press("Enter");
     await page
       .getByTestId("employee-section-supervision-form-employee")
       .selectOption("emp-2");
@@ -189,6 +453,177 @@ test.describe("Employee Section Supervisions", () => {
     expect(payload?.["employeeId"]).toBe("emp-2");
     expect(payload?.["sectionId"]).toBe("sec-2");
     expect(payload?.["academicYearId"]).toBe("year-1");
+  });
+
+  test("updates then deletes a supervision scope", async ({ page }) => {
+    await injectAuthSession(page, e2ePermissionSets.employeeSectionSupervisionsCrud);
+
+    const employees = [
+      {
+        id: "emp-1",
+        fullName: "أحمد علي",
+        jobNumber: "EMP-0001",
+        jobTitle: "مشرف",
+        isActive: true,
+      },
+      {
+        id: "emp-2",
+        fullName: "سارة محمد",
+        jobNumber: "EMP-0002",
+        jobTitle: "معلم",
+        isActive: true,
+      },
+    ];
+
+    const sections = [
+      {
+        id: "sec-1",
+        code: "A-1",
+        name: "الشعبة أ",
+        isActive: true,
+      },
+      {
+        id: "sec-2",
+        code: "B-2",
+        name: "الشعبة ب",
+        isActive: true,
+      },
+    ];
+
+    const academicYears = [
+      {
+        id: "year-1",
+        code: "2026-2027",
+        name: "العام 2026-2027",
+        status: "ACTIVE",
+        isCurrent: true,
+      },
+    ];
+
+    await page.route("**/backend/employees**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(buildListResponse(employees)),
+      });
+    });
+
+    await page.route("**/backend/sections**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(buildListResponse(sections)),
+      });
+    });
+
+    await page.route("**/backend/academic-years**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(buildListResponse(academicYears)),
+      });
+    });
+
+    const supervisionApi = await mockCrudList({
+      page,
+      urlPattern: "**/backend/employee-section-supervisions**",
+      initialItems: [
+        {
+          id: "sup-1",
+          employeeId: "emp-1",
+          sectionId: "sec-1",
+          academicYearId: "year-1",
+          canViewStudents: true,
+          canManageHomeworks: true,
+          canManageGrades: false,
+          isActive: true,
+          createdAt: "2026-03-01T00:00:00.000Z",
+          updatedAt: "2026-03-01T00:00:00.000Z",
+          employee: {
+            id: "emp-1",
+            fullName: "أحمد علي",
+            jobNumber: "EMP-0001",
+            jobTitle: "مشرف",
+          },
+          section: {
+            id: "sec-1",
+            code: "A-1",
+            name: "الشعبة أ",
+            gradeLevel: {
+              id: "grade-1",
+              code: "G1",
+              name: "الصف الأول",
+            },
+          },
+          academicYear: {
+            id: "year-1",
+            code: "2026-2027",
+            name: "العام 2026-2027",
+            status: "ACTIVE",
+          },
+        },
+      ],
+      onUpdate: (payload, context) => ({
+        ...context.item,
+        canManageGrades:
+          typeof payload.canManageGrades === "boolean"
+            ? payload.canManageGrades
+            : context.item.canManageGrades,
+        canManageHomeworks:
+          typeof payload.canManageHomeworks === "boolean"
+            ? payload.canManageHomeworks
+            : context.item.canManageHomeworks,
+        updatedAt: "2026-03-03T00:00:00.000Z",
+      }),
+    });
+
+    await openModulePage({
+      page,
+      path: "/app/employee-section-supervisions",
+      heading: "نطاقات إشراف الموظفين",
+    });
+
+    await expectCardsCount(page, "employee-section-supervision-card", 1);
+
+    await page
+      .getByTestId("employee-section-supervision-card")
+      .first()
+      .getByRole("button", { name: "تعديل" })
+      .click();
+
+    await page
+      .locator("label")
+      .filter({ hasText: "إدارة الدرجات" })
+      .locator('input[type="checkbox"]')
+      .check();
+    await page
+      .locator("label")
+      .filter({ hasText: "إدارة الواجبات" })
+      .locator('input[type="checkbox"]')
+      .uncheck();
+    await page.getByTestId("employee-section-supervision-form-submit").click();
+
+    await expect(
+      page.getByTestId("employee-section-supervision-card").first(),
+    ).toContainText("إدارة الدرجات: نعم");
+    await expect(
+      page.getByTestId("employee-section-supervision-card").first(),
+    ).toContainText("إدارة الواجبات: لا");
+
+    const updatePayload = supervisionApi.getLastUpdatePayload();
+    expect(updatePayload).not.toBeNull();
+    expect(updatePayload?.["canManageGrades"]).toBe(true);
+    expect(updatePayload?.["canManageHomeworks"]).toBe(false);
+
+    page.once("dialog", (dialog) => dialog.accept());
+    await page
+      .getByTestId("employee-section-supervision-card")
+      .first()
+      .getByRole("button", { name: "حذف" })
+      .click();
+
+    await expect(page.getByTestId("employee-section-supervision-card")).toHaveCount(0);
+    expect(supervisionApi.getLastDeletedId()).toBe("sup-1");
   });
 });
 

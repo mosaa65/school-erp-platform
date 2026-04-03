@@ -121,4 +121,13 @@ export class CreateCommunityContributionDto {
   @IsString()
   @MaxLength(191)
   journalEntryId?: string;
+
+  @ApiPropertyOptional({
+    example: true,
+    description:
+      'Create and link invoice/payment journal automatically when possible',
+  })
+  @IsOptional()
+  @IsBoolean()
+  autoBridge?: boolean;
 }

@@ -1,7 +1,9 @@
 ﻿import {
   AlertTriangle,
+  BellRing,
   BookOpenText,
   BookText,
+  Briefcase,
   Building,
   Cable,
   CalendarClock,
@@ -25,12 +27,12 @@
   Users,
   type LucideIcon,
 } from "lucide-react";
+import type { PermissionRequirement } from "@/features/auth/lib";
 
-export type AppNavItem = {
+export type AppNavItem = PermissionRequirement & {
   href: string;
   label: string;
   icon: LucideIcon;
-  requiredPermission?: string;
   iconClassName?: string;
 };
 
@@ -106,6 +108,12 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         label: "شريط التنبيهات",
         icon: ScrollText,
         requiredPermission: "reminders-ticker.read",
+      },
+      {
+        href: "/app/user-notifications",
+        label: "إشعاراتي",
+        icon: BellRing,
+        requiredPermission: "user-notifications.read",
       },
       {
         href: "/app/user-permissions",
@@ -243,10 +251,46 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         requiredPermission: "employee-tasks.read",
       },
       {
+        href: "/app/employee-contracts",
+        label: "عقود الموظفين",
+        icon: ScrollText,
+        requiredPermission: "employee-contracts.read",
+      },
+      {
+        href: "/app/employee-departments",
+        label: "أقسام الموظفين",
+        icon: Briefcase,
+        requiredPermission: "employee-departments.read",
+      },
+      {
+        href: "/app/employee-documents",
+        label: "مستندات الموظفين",
+        icon: BookOpenText,
+        requiredPermission: "employee-documents.read",
+      },
+      {
+        href: "/app/employee-leaves",
+        label: "طلبات الإجازات",
+        icon: CalendarRange,
+        requiredPermission: "employee-leaves.read",
+      },
+      {
+        href: "/app/employee-leave-balances",
+        label: "أرصدة الإجازات",
+        icon: CalendarDays,
+        requiredPermission: "employee-leave-balances.read",
+      },
+      {
         href: "/app/employee-courses",
         label: "دورات الموظفين",
         icon: BookText,
         requiredPermission: "employee-courses.read",
+      },
+      {
+        href: "/app/employee-lifecycle-checklists",
+        label: "التهيئة وإنهاء الخدمة",
+        icon: ClipboardList,
+        requiredPermission: "employee-lifecycle-checklists.read",
       },
       {
         href: "/app/talents",
@@ -539,6 +583,190 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         icon: Coins,
         iconClassName:
           "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+      },
+      {
+        href: "/app/branches",
+        label: "الفروع",
+        icon: Building,
+        requiredPermission: "branches.read",
+      },
+      {
+        href: "/app/currencies",
+        label: "العملات",
+        icon: Coins,
+        requiredPermission: "currencies.read",
+      },
+      {
+        href: "/app/currency-exchange-rates",
+        label: "أسعار الصرف",
+        icon: Shuffle,
+        requiredPermission: "currency-exchange-rates.read",
+      },
+      {
+        href: "/app/fiscal-years",
+        label: "السنوات المالية",
+        icon: CalendarDays,
+        requiredPermission: "fiscal-years.read",
+      },
+      {
+        href: "/app/fiscal-periods",
+        label: "الفترات المالية",
+        icon: CalendarRange,
+        requiredPermission: "fiscal-periods.read",
+      },
+      {
+        href: "/app/chart-of-accounts",
+        label: "دليل الحسابات",
+        icon: Layers3,
+        requiredPermission: "chart-of-accounts.read",
+      },
+      {
+        href: "/app/cost-centers",
+        label: "مراكز التكلفة",
+        icon: Layers3,
+        requiredPermission: "cost-centers.read",
+      },
+      {
+        href: "/app/tax-configurations",
+        label: "إعدادات الضرائب",
+        icon: Settings2,
+        requiredPermission: "tax-configurations.read",
+      },
+      {
+        href: "/app/fee-structures",
+        label: "هياكل الرسوم",
+        icon: BookText,
+        requiredPermission: "fee-structures.read",
+      },
+      {
+        href: "/app/discount-rules",
+        label: "قواعد الخصم",
+        icon: Medal,
+        requiredPermission: "discount-rules.read",
+      },
+      {
+        href: "/app/student-invoices",
+        label: "فواتير الطلاب",
+        icon: ClipboardList,
+        requiredPermission: "student-invoices.read",
+      },
+      {
+        href: "/app/invoice-installments",
+        label: "أقساط الفواتير",
+        icon: CalendarClock,
+        requiredPermission: "invoice-installments.read",
+      },
+      {
+        href: "/app/billing-engine",
+        label: "محرك الفوترة",
+        icon: Gauge,
+        requiredPermission: "billing.read-statement",
+      },
+      {
+        href: "/app/hr-integrations",
+        label: "تكاملات الموارد البشرية",
+        icon: Users,
+        requiredAnyPermission: [
+          "finance-hr.payroll-summary",
+          "finance-hr.payroll-journal",
+          "finance-hr.deduction-journal",
+        ],
+      },
+      {
+        href: "/app/procurement-integrations",
+        label: "تكاملات المشتريات",
+        icon: ClipboardCheck,
+        requiredPermission: "finance-procurement.purchase-journal",
+      },
+      {
+        href: "/app/transport-integrations",
+        label: "تكاملات النقل",
+        icon: Cable,
+        requiredPermission: "finance-transport.generate-invoices",
+      },
+      {
+        href: "/app/journal-entries",
+        label: "القيود اليومية",
+        icon: ClipboardList,
+        requiredPermission: "journal-entries.read",
+      },
+      {
+        href: "/app/payment-gateways",
+        label: "بوابات الدفع",
+        icon: Cable,
+        requiredPermission: "payment-gateways.read",
+      },
+      {
+        href: "/app/payment-transactions",
+        label: "عمليات الدفع",
+        icon: Coins,
+        requiredPermission: "payment-transactions.read",
+      },
+      {
+        href: "/app/bank-reconciliations",
+        label: "التسويات البنكية",
+        icon: ScrollText,
+        requiredPermission: "bank-reconciliations.read",
+      },
+      {
+        href: "/app/credit-debit-notes",
+        label: "إشعارات خصم/إضافة",
+        icon: AlertTriangle,
+        requiredPermission: "credit-debit-notes.read",
+      },
+      {
+        href: "/app/recurring-journals",
+        label: "القيود الدورية",
+        icon: CalendarClock,
+        requiredPermission: "recurring-journals.read",
+      },
+      {
+        href: "/app/budgets",
+        label: "الميزانيات",
+        icon: ClipboardCheck,
+        requiredPermission: "budgets.read",
+      },
+      {
+        href: "/app/financial-funds",
+        label: "الصناديق المالية",
+        icon: Coins,
+        requiredPermission: "financial-funds.read",
+      },
+      {
+        href: "/app/financial-categories",
+        label: "الفئات المالية",
+        icon: Layers3,
+        requiredPermission: "financial-categories.read",
+      },
+      {
+        href: "/app/revenues",
+        label: "الإيرادات",
+        icon: Coins,
+        requiredPermission: "revenues.read",
+      },
+      {
+        href: "/app/expenses",
+        label: "المصروفات",
+        icon: AlertTriangle,
+        requiredPermission: "expenses.read",
+      },
+      {
+        href: "/app/community-contributions",
+        label: "المساهمات المجتمعية",
+        icon: Sparkles,
+        requiredPermission: "community-contributions.read",
+      },
+      {
+        href: "/app/financial-reports",
+        label: "التقارير المالية",
+        icon: ScrollText,
+        requiredPermission: "financial-reports.read",
+      },
+      {
+        href: "/app/audit-trail",
+        label: "سجل الأثر المالي",
+        icon: ScrollText,
+        requiredPermission: "audit-trail.read",
       },
     ],
   },

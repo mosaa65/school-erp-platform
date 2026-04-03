@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  BellRing,
   ChevronDown,
   GraduationCap,
   LogOut,
@@ -17,8 +18,10 @@ import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SearchField } from "@/components/ui/search-field";
+import { matchesPermissionRequirement } from "@/features/auth/lib";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useAuth } from "@/features/auth/providers/auth-provider";
+import { useUserNotificationsUnreadCountQuery } from "@/features/user-notifications/hooks/use-user-notifications-query";
 import { translateRoleCode } from "@/lib/i18n/ar";
 import { cn } from "@/lib/utils";
 
@@ -286,7 +289,8 @@ export function AppShell({ children }: AppShellProps) {
   const auth = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const { hasPermission } = useRbac();
+  const { hasAnyPermission, hasPermission } = useRbac();
+  const canReadUserNotifications = hasPermission("user-notifications.read");
   const navScrollContainerRef = React.useRef<HTMLDivElement | null>(null);
   const navScrollTopRef = React.useRef(0);
   const restoreFrameIdsRef = React.useRef<number[]>([]);
@@ -294,6 +298,9 @@ export function AppShell({ children }: AppShellProps) {
   const [isSidebarOpen, setSidebarOpen] = React.useState(false);
   const [expandedGroupIds, setExpandedGroupIds] = React.useState<string[]>([]);
   const [navSearch, setNavSearch] = React.useState("");
+  const unreadNotificationsQuery = useUserNotificationsUnreadCountQuery({
+    enabled: canReadUserNotifications,
+  });
 
   const persistNavScrollPosition = React.useCallback((nextScrollTop?: number) => {
     const resolvedScrollTop =
@@ -403,10 +410,13 @@ export function AppShell({ children }: AppShellProps) {
       surfaceClassName: group.surfaceClassName,
       items: group.items.filter(
         (item) =>
-          item.requiredPermission === undefined || hasPermission(item.requiredPermission),
+          matchesPermissionRequirement(item, {
+            hasPermission,
+            hasAnyPermission,
+          }),
       ),
     })).filter((group) => group.items.length > 0);
-  }, [hasPermission]);
+  }, [hasAnyPermission, hasPermission]);
 
   const filteredNavGroups = React.useMemo(() => {
     const query = normalizeText(navSearch);
@@ -460,6 +470,7 @@ export function AppShell({ children }: AppShellProps) {
     () => resolveGroupTheme(activeGroupId),
     [activeGroupId],
   );
+  const unreadNotificationsCount = unreadNotificationsQuery.data?.unreadCount ?? 0;
 
   React.useEffect(() => {
     setExpandedGroupIds((previous) => {
@@ -789,6 +800,35 @@ export function AppShell({ children }: AppShellProps) {
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-2 rounded-[22px] border border-white/35 bg-white/45 p-1.5 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/5">
+                {canReadUserNotifications ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="relative h-11 gap-2 rounded-2xl border-white/40 bg-white/70 px-3.5 text-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:bg-white/90 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
+                    asChild
+                  >
+                    <Link
+                      href="/app/user-notifications"
+                      data-testid="header-user-notifications-link"
+                    >
+                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]">
+                        <BellRing className="h-4 w-4" />
+                      </span>
+                      <span className="hidden text-sm font-medium sm:inline">إشعاراتي</span>
+                      {unreadNotificationsCount > 0 ? (
+                        <Badge
+                          variant="destructive"
+                          className="min-w-6 rounded-full px-1.5 py-0 text-[10px]"
+                          data-testid="header-user-notifications-badge"
+                        >
+                          {unreadNotificationsCount > 99
+                            ? "99+"
+                            : unreadNotificationsCount}
+                        </Badge>
+                      ) : null}
+                    </Link>
+                  </Button>
+                ) : null}
                 <ThemeToggle
                   label="المظهر"
                   className="border-0 bg-transparent shadow-none hover:bg-white/70 dark:hover:bg-white/10"

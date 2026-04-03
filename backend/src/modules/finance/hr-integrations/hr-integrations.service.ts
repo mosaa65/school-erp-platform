@@ -3,11 +3,19 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AuditStatus, DocumentType, JournalEntryStatus, Prisma } from '@prisma/client';
+import {
+  AuditStatus,
+  DocumentType,
+  EmployeeLeaveRequestStatus,
+  EmployeeLeaveType,
+  JournalEntryStatus,
+  Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogsService } from '../../audit-logs/audit-logs.service';
 import { DocumentSequencesService } from '../document-sequences/document-sequences.service';
 import { DeductionJournalDto } from './dto/deduction-journal.dto';
+import { PayrollPreviewQueryDto } from './dto/payroll-preview-query.dto';
 import { PayrollJournalDto } from './dto/payroll-journal.dto';
 
 const DEFAULT_SALARY_EXPENSE_ACCOUNT_CODE = '5001';
@@ -21,6 +29,34 @@ type PostingLineInput = {
   description: string;
   employeeId?: string | null;
   branchId?: number | null;
+};
+
+type PayrollSummaryBreakdownItem = {
+  accountCode: string;
+  accountName: string;
+  amount: number;
+  entryCount: number;
+};
+
+type EmployeeBalanceBreakdownItem = {
+  entryNumber: string;
+  entryDate: string;
+  referenceType: string | null;
+  accountCode: string;
+  accountName: string;
+  debitAmount: number;
+  creditAmount: number;
+  netAmount: number;
+};
+
+type EmployeePayrollPreviewAccumulator = {
+  employeeId: string;
+  employeeName: string;
+  jobNumber: string | null;
+  branchId: number | null;
+  grossSalary: number;
+  activeDateKeys: Set<string>;
+  unpaidLeaveDateKeys: Set<string>;
 };
 
 @Injectable()
@@ -172,6 +208,403 @@ export class HrIntegrationsService {
       journalEntryId: entry.id,
       entryNumber: entry.entryNumber,
       amount: this.roundMoney(payload.amount),
+    };
+  }
+
+  async getPayrollSummary(month: number, year?: number) {
+    if (month < 1 || month > 12) {
+      throw new BadRequestException('Month must be between 1 and 12');
+    }
+
+    const effectiveYear = year ?? new Date().getFullYear();
+
+    const entries = await this.prisma.journalEntry.findMany({
+      where: {
+        deletedAt: null,
+        isActive: true,
+        status: JournalEntryStatus.POSTED,
+        referenceType: 'HR_PAYROLL',
+        referenceId: `${effectiveYear}-${month}`,
+      },
+      select: {
+        id: true,
+        entryNumber: true,
+        totalDebit: true,
+        totalCredit: true,
+        lines: {
+          select: {
+            debitAmount: true,
+            creditAmount: true,
+            account: {
+              select: {
+                accountCode: true,
+                nameAr: true,
+                accountType: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: [{ entryNumber: 'asc' }],
+    });
+
+    const breakdown = new Map<string, PayrollSummaryBreakdownItem>();
+    let gross = 0;
+    let deductions = 0;
+
+    for (const entry of entries) {
+      gross += Number(entry.totalDebit);
+
+      for (const line of entry.lines) {
+        if (line.account.accountCode !== DEFAULT_EMPLOYEE_RECEIVABLE_ACCOUNT_CODE) {
+          continue;
+        }
+
+        const lineAmount = this.roundMoney(Number(line.creditAmount));
+        if (lineAmount <= 0) {
+          continue;
+        }
+
+        deductions += lineAmount;
+
+        const existing = breakdown.get(line.account.accountCode);
+        if (existing) {
+          existing.amount = this.roundMoney(existing.amount + lineAmount);
+          existing.entryCount += 1;
+          continue;
+        }
+
+        breakdown.set(line.account.accountCode, {
+          accountCode: line.account.accountCode,
+          accountName: line.account.nameAr,
+          amount: lineAmount,
+          entryCount: 1,
+        });
+      }
+    }
+
+    const roundedGross = this.roundMoney(gross);
+    const roundedDeductions = this.roundMoney(deductions);
+    const net = this.roundMoney(roundedGross - roundedDeductions);
+
+    return {
+      month,
+      year: effectiveYear,
+      gross: roundedGross,
+      deductions: roundedDeductions,
+      net,
+      deductionsBreakdown: Array.from(breakdown.values()),
+      entryCount: entries.length,
+    };
+  }
+
+  async getPayrollPreview(month: number, query: PayrollPreviewQueryDto) {
+    if (month < 1 || month > 12) {
+      throw new BadRequestException('Month must be between 1 and 12');
+    }
+
+    const effectiveYear = query.year ?? new Date().getUTCFullYear();
+    const monthBounds = this.getMonthBounds(effectiveYear, month);
+    const daysInMonth = monthBounds.totalDays;
+
+    const contracts = await this.prisma.employeeContract.findMany({
+      where: {
+        deletedAt: null,
+        isActive: true,
+        isCurrent: true,
+        salaryAmount: {
+          not: null,
+        },
+        contractStartDate: {
+          lte: monthBounds.end,
+        },
+        OR: [
+          {
+            contractEndDate: null,
+          },
+          {
+            contractEndDate: {
+              gte: monthBounds.start,
+            },
+          },
+        ],
+        employee: {
+          deletedAt: null,
+          isActive: true,
+          branchId: query.branchId,
+        },
+      },
+      select: {
+        employeeId: true,
+        contractStartDate: true,
+        contractEndDate: true,
+        salaryAmount: true,
+        employee: {
+          select: {
+            fullName: true,
+            jobNumber: true,
+            branchId: true,
+          },
+        },
+      },
+    });
+
+    const employeeMap = new Map<string, EmployeePayrollPreviewAccumulator>();
+
+    for (const contract of contracts) {
+      const salaryAmount = Number(contract.salaryAmount ?? 0);
+      if (salaryAmount <= 0) {
+        continue;
+      }
+
+      const activeStart = this.maxDate(contract.contractStartDate, monthBounds.start);
+      const activeEnd = this.minDate(
+        contract.contractEndDate ?? monthBounds.end,
+        monthBounds.end,
+      );
+
+      if (activeStart > activeEnd) {
+        continue;
+      }
+
+      const activeDays = this.calculateDaysInclusive(activeStart, activeEnd);
+      const proratedGross = this.roundMoney((salaryAmount * activeDays) / daysInMonth);
+
+      const existing = employeeMap.get(contract.employeeId);
+      if (existing) {
+        existing.grossSalary = this.roundMoney(existing.grossSalary + proratedGross);
+        for (const dateKey of this.enumerateDateKeys(activeStart, activeEnd)) {
+          existing.activeDateKeys.add(dateKey);
+        }
+        continue;
+      }
+
+      employeeMap.set(contract.employeeId, {
+        employeeId: contract.employeeId,
+        employeeName: contract.employee.fullName,
+        jobNumber: contract.employee.jobNumber,
+        branchId: contract.employee.branchId,
+        grossSalary: proratedGross,
+        activeDateKeys: new Set(this.enumerateDateKeys(activeStart, activeEnd)),
+        unpaidLeaveDateKeys: new Set<string>(),
+      });
+    }
+
+    if (employeeMap.size > 0) {
+      const leaves = await this.prisma.employeeLeaveRequest.findMany({
+        where: {
+          deletedAt: null,
+          isActive: true,
+          leaveType: EmployeeLeaveType.UNPAID,
+          status: EmployeeLeaveRequestStatus.APPROVED,
+          employeeId: {
+            in: Array.from(employeeMap.keys()),
+          },
+          startDate: {
+            lte: monthBounds.end,
+          },
+          endDate: {
+            gte: monthBounds.start,
+          },
+        },
+        select: {
+          employeeId: true,
+          startDate: true,
+          endDate: true,
+        },
+      });
+
+      for (const leave of leaves) {
+        const accumulator = employeeMap.get(leave.employeeId);
+        if (!accumulator) {
+          continue;
+        }
+
+        const overlapStart = this.maxDate(leave.startDate, monthBounds.start);
+        const overlapEnd = this.minDate(leave.endDate, monthBounds.end);
+        if (overlapStart > overlapEnd) {
+          continue;
+        }
+
+        for (const dateKey of this.enumerateDateKeys(overlapStart, overlapEnd)) {
+          accumulator.unpaidLeaveDateKeys.add(dateKey);
+        }
+      }
+    }
+
+    const employeeBreakdown = Array.from(employeeMap.values())
+      .map((item) => {
+        const activeDays = item.activeDateKeys.size;
+        const unpaidLeaveDays = Array.from(item.unpaidLeaveDateKeys).filter((dateKey) =>
+          item.activeDateKeys.has(dateKey),
+        ).length;
+        const dailyRate =
+          activeDays > 0
+            ? this.roundMoney(item.grossSalary / activeDays)
+            : this.roundMoney(item.grossSalary / daysInMonth);
+        const estimatedDeductions = this.roundMoney(dailyRate * unpaidLeaveDays);
+        const estimatedNetSalary = this.roundMoney(item.grossSalary - estimatedDeductions);
+
+        return {
+          employeeId: item.employeeId,
+          employeeName: item.employeeName,
+          jobNumber: item.jobNumber,
+          branchId: item.branchId,
+          grossSalary: item.grossSalary,
+          activeDays,
+          unpaidLeaveDays,
+          estimatedDeductions,
+          estimatedNetSalary,
+        };
+      })
+      .sort((left, right) => {
+        if (right.estimatedNetSalary !== left.estimatedNetSalary) {
+          return right.estimatedNetSalary - left.estimatedNetSalary;
+        }
+
+        return left.employeeName.localeCompare(right.employeeName);
+      });
+
+    const totalGrossSalaries = this.roundMoney(
+      employeeBreakdown.reduce((sum, item) => sum + item.grossSalary, 0),
+    );
+    const totalEstimatedDeductions = this.roundMoney(
+      employeeBreakdown.reduce((sum, item) => sum + item.estimatedDeductions, 0),
+    );
+    const estimatedNetSalaries = this.roundMoney(
+      totalGrossSalaries - totalEstimatedDeductions,
+    );
+    const totalUnpaidLeaveDays = employeeBreakdown.reduce(
+      (sum, item) => sum + item.unpaidLeaveDays,
+      0,
+    );
+
+    return {
+      month,
+      year: effectiveYear,
+      branchId: query.branchId ?? null,
+      totals: {
+        grossSalaries: totalGrossSalaries,
+        estimatedDeductions: totalEstimatedDeductions,
+        estimatedNetSalaries,
+      },
+      assumptions: {
+        daysInMonth,
+        deductionSource: 'APPROVED_UNPAID_LEAVES',
+        contractsIncluded: contracts.length,
+        employeesIncluded: employeeBreakdown.length,
+        employeesWithUnpaidLeave: employeeBreakdown.filter(
+          (item) => item.unpaidLeaveDays > 0,
+        ).length,
+        totalUnpaidLeaveDays,
+      },
+      recommendedJournal: {
+        month,
+        year: effectiveYear,
+        totalSalaries: totalGrossSalaries,
+        totalDeductions: totalEstimatedDeductions,
+        netSalaries: estimatedNetSalaries,
+        description: `قيد رواتب تقديري ${month}/${effectiveYear}`,
+      },
+      employeeBreakdown,
+    };
+  }
+
+  async getEmployeeBalance(employeeId: string) {
+    const employee = await this.prisma.employee.findFirst({
+      where: {
+        id: employeeId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        fullName: true,
+        jobNumber: true,
+        financialNumber: true,
+      },
+    });
+
+    if (!employee) {
+      throw new NotFoundException(`Employee ${employeeId} was not found`);
+    }
+
+    const lines = await this.prisma.journalEntryLine.findMany({
+      where: {
+        employeeId,
+        deletedAt: null,
+        isActive: true,
+        journalEntry: {
+          deletedAt: null,
+          isActive: true,
+          status: JournalEntryStatus.POSTED,
+        },
+      },
+      select: {
+        debitAmount: true,
+        creditAmount: true,
+        account: {
+          select: {
+            accountCode: true,
+            nameAr: true,
+            accountType: true,
+          },
+        },
+        journalEntry: {
+          select: {
+            entryNumber: true,
+            entryDate: true,
+            referenceType: true,
+          },
+        },
+      },
+      orderBy: [{ createdAt: 'asc' }, { lineNumber: 'asc' }],
+    });
+
+    const breakdown: EmployeeBalanceBreakdownItem[] = [];
+    let advances = 0;
+    let deductions = 0;
+
+    for (const line of lines) {
+      if (line.account.accountCode !== DEFAULT_EMPLOYEE_RECEIVABLE_ACCOUNT_CODE) {
+        continue;
+      }
+
+      const debitAmount = this.roundMoney(Number(line.debitAmount));
+      const creditAmount = this.roundMoney(Number(line.creditAmount));
+
+      if (debitAmount > 0) {
+        deductions += debitAmount;
+      }
+
+      if (creditAmount > 0) {
+        advances += creditAmount;
+      }
+
+      if (debitAmount > 0 || creditAmount > 0) {
+        breakdown.push({
+          entryNumber: line.journalEntry.entryNumber,
+          entryDate: line.journalEntry.entryDate.toISOString().slice(0, 10),
+          referenceType: line.journalEntry.referenceType,
+          accountCode: line.account.accountCode,
+          accountName: line.account.nameAr,
+          debitAmount,
+          creditAmount,
+          netAmount: this.roundMoney(debitAmount - creditAmount),
+        });
+      }
+    }
+
+    const netDue = this.roundMoney(deductions - advances);
+
+    return {
+      employeeId: employee.id,
+      employeeName: employee.fullName,
+      jobNumber: employee.jobNumber,
+      financialNumber: employee.financialNumber,
+      advances: this.roundMoney(advances),
+      deductions: this.roundMoney(deductions),
+      netDue,
+      breakdown,
     };
   }
 
@@ -358,5 +791,54 @@ export class HrIntegrationsService {
 
   private roundMoney(value: number) {
     return Number(value.toFixed(2));
+  }
+
+  private getMonthBounds(year: number, month: number) {
+    const start = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
+    const end = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
+
+    return {
+      start,
+      end,
+      totalDays: end.getUTCDate(),
+    };
+  }
+
+  private calculateDaysInclusive(start: Date, end: Date) {
+    const startUtc = Date.UTC(
+      start.getUTCFullYear(),
+      start.getUTCMonth(),
+      start.getUTCDate(),
+    );
+    const endUtc = Date.UTC(
+      end.getUTCFullYear(),
+      end.getUTCMonth(),
+      end.getUTCDate(),
+    );
+
+    return Math.floor((endUtc - startUtc) / (24 * 60 * 60 * 1000)) + 1;
+  }
+
+  private enumerateDateKeys(start: Date, end: Date) {
+    const keys: string[] = [];
+    const cursor = new Date(
+      Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()),
+    );
+    const endUtc = Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate());
+
+    while (cursor.getTime() <= endUtc) {
+      keys.push(cursor.toISOString().slice(0, 10));
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+
+    return keys;
+  }
+
+  private minDate(left: Date, right: Date) {
+    return left.getTime() <= right.getTime() ? left : right;
+  }
+
+  private maxDate(left: Date, right: Date) {
+    return left.getTime() >= right.getTime() ? left : right;
   }
 }

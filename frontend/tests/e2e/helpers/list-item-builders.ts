@@ -24,6 +24,116 @@ export type EmployeeCourseListItem = {
   employee: EmployeeFixture;
 };
 
+export type EmployeeContractListItem = {
+  id: string;
+  employeeId: string;
+  contractTitle: string;
+  contractNumber: string | null;
+  contractStartDate: string;
+  contractEndDate: string | null;
+  salaryAmount: string | null;
+  notes: string | null;
+  isCurrent: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  employee: EmployeeFixture;
+};
+
+export type EmployeeDocumentListItem = {
+  id: string;
+  employeeId: string;
+  fileName: string;
+  filePath: string;
+  fileType: string | null;
+  fileSize: number | null;
+  fileCategory: string | null;
+  description: string | null;
+  expiresAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  employee: EmployeeFixture | null;
+};
+
+export type EmployeeLeaveListItem = {
+  id: string;
+  employeeId: string;
+  leaveType: string;
+  startDate: string;
+  endDate: string;
+  totalDays: number;
+  status: string;
+  reason: string | null;
+  notes: string | null;
+  approvedAt: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  employee: EmployeeFixture;
+  approvedBy: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+};
+
+export type EmployeeLeaveBalanceListItem = {
+  id: string;
+  employeeId: string;
+  leaveType: string;
+  balanceYear: number;
+  allocatedDays: number;
+  carriedForwardDays: number;
+  manualAdjustmentDays: number;
+  totalEntitledDays: number;
+  usedDays: number;
+  remainingDays: number;
+  notes: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  employee: EmployeeFixture;
+};
+
+export type EmployeeDepartmentListItem = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  _count: {
+    employees: number;
+  };
+  createdBy: {
+    id: string;
+    email: string;
+  } | null;
+  updatedBy: {
+    id: string;
+    email: string;
+  } | null;
+};
+
+export type EmployeeLifecycleChecklistListItem = {
+  id: string;
+  employeeId: string;
+  checklistType: string;
+  title: string;
+  status: string;
+  assignedToEmployeeId: string | null;
+  dueDate: string | null;
+  completedAt: string | null;
+  notes: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  employee: EmployeeFixture;
+  assignedTo: EmployeeFixture | null;
+};
+
 export type EmployeeTalentMappingListItem = {
   id: string;
   employeeId: string;
@@ -304,6 +414,13 @@ export type HrSummaryReportResponse = {
   attendance: {
     total: number;
     byStatus: Array<{ status: string; count: number }>;
+    indicators: {
+      presentRate: number;
+      absentRate: number;
+      lateRate: number;
+      excusedAbsenceRate: number;
+      earlyLeaveRate: number;
+    };
   };
   violations: {
     total: number;
@@ -320,6 +437,26 @@ export type HrSummaryReportResponse = {
   performance: {
     totalEvaluations: number;
     byRating: Array<{ ratingLevel: string; count: number }>;
+  };
+  organization: {
+    departmentDistribution: Array<{
+      departmentId: string;
+      departmentCode: string | null;
+      departmentName: string;
+      employeeCount: number;
+    }>;
+    unassignedEmployees: number;
+  };
+  compliance: {
+    thresholdDays: number;
+    incompleteProfiles: number;
+    employeesWithoutDocuments: number;
+    contractsExpiringSoon: number;
+    contractsExpired: number;
+    documentsExpiringSoon: number;
+    documentsExpired: number;
+    identitiesExpiringSoon: number;
+    identitiesExpired: number;
   };
 };
 
@@ -340,6 +477,146 @@ export function buildEmployeeCourseListItem(
     createdAt: overrides.createdAt ?? "2026-01-10T00:00:00.000Z",
     updatedAt: overrides.updatedAt ?? "2026-01-10T00:00:00.000Z",
     employee,
+  };
+}
+
+export function buildEmployeeContractListItem(
+  employee: EmployeeFixture,
+  overrides: Partial<Omit<EmployeeContractListItem, "employee">> = {},
+): EmployeeContractListItem {
+  return {
+    id: overrides.id ?? "contract-1",
+    employeeId: overrides.employeeId ?? employee.id,
+    contractTitle: overrides.contractTitle ?? "Math Teacher Contract",
+    contractNumber: overrides.contractNumber ?? "CNT-2026-001",
+    contractStartDate: overrides.contractStartDate ?? "2026-01-01T00:00:00.000Z",
+    contractEndDate: overrides.contractEndDate ?? "2026-12-31T23:59:59.000Z",
+    salaryAmount: overrides.salaryAmount ?? "120000.00",
+    notes: overrides.notes ?? "Renewable based on performance",
+    isCurrent: overrides.isCurrent ?? true,
+    isActive: overrides.isActive ?? true,
+    createdAt: overrides.createdAt ?? "2026-01-01T00:00:00.000Z",
+    updatedAt: overrides.updatedAt ?? "2026-01-01T00:00:00.000Z",
+    employee,
+  };
+}
+
+export function buildEmployeeDepartmentListItem(
+  overrides: Partial<EmployeeDepartmentListItem> = {},
+): EmployeeDepartmentListItem {
+  return {
+    id: overrides.id ?? "department-1",
+    code: overrides.code ?? "HR-OPS",
+    name: overrides.name ?? "العمليات والموارد البشرية",
+    description: overrides.description ?? "قسم يتابع شؤون الموظفين.",
+    isActive: overrides.isActive ?? true,
+    createdAt: overrides.createdAt ?? "2026-04-01T00:00:00.000Z",
+    updatedAt: overrides.updatedAt ?? "2026-04-01T00:00:00.000Z",
+    _count: overrides._count ?? { employees: 3 },
+    createdBy: overrides.createdBy ?? null,
+    updatedBy: overrides.updatedBy ?? null,
+  };
+}
+
+export function buildEmployeeDocumentListItem(
+  employee: EmployeeFixture,
+  overrides: Partial<Omit<EmployeeDocumentListItem, "employee">> = {},
+): EmployeeDocumentListItem {
+  return {
+    id: overrides.id ?? "9001",
+    employeeId: overrides.employeeId ?? employee.id,
+    fileName: overrides.fileName ?? "National ID.pdf",
+    filePath:
+      overrides.filePath ??
+      "https://cdn.school.local/hr/employees/emp-1/national-id.pdf",
+    fileType: overrides.fileType ?? "application/pdf",
+    fileSize: overrides.fileSize ?? 245000,
+    fileCategory: overrides.fileCategory ?? "هوية",
+    description: overrides.description ?? "نسخة واضحة من بطاقة الهوية",
+    expiresAt: overrides.expiresAt ?? null,
+    createdAt: overrides.createdAt ?? "2026-03-31T00:00:00.000Z",
+    updatedAt: overrides.updatedAt ?? "2026-03-31T00:00:00.000Z",
+    employee,
+  };
+}
+
+export function buildEmployeeLeaveListItem(
+  employee: EmployeeFixture,
+  overrides: Partial<Omit<EmployeeLeaveListItem, "employee" | "approvedBy">> = {},
+): EmployeeLeaveListItem {
+  return {
+    id: overrides.id ?? "leave-1",
+    employeeId: overrides.employeeId ?? employee.id,
+    leaveType: overrides.leaveType ?? "ANNUAL",
+    startDate: overrides.startDate ?? "2026-04-10T00:00:00.000Z",
+    endDate: overrides.endDate ?? "2026-04-12T00:00:00.000Z",
+    totalDays: overrides.totalDays ?? 3,
+    status: overrides.status ?? "PENDING",
+    reason: overrides.reason ?? "Family commitment",
+    notes: overrides.notes ?? "Awaiting approval",
+    approvedAt: overrides.approvedAt ?? null,
+    isActive: overrides.isActive ?? true,
+    createdAt: overrides.createdAt ?? "2026-04-01T00:00:00.000Z",
+    updatedAt: overrides.updatedAt ?? "2026-04-01T00:00:00.000Z",
+    employee,
+    approvedBy: null,
+  };
+}
+
+export function buildEmployeeLeaveBalanceListItem(
+  employee: EmployeeFixture,
+  overrides: Partial<Omit<EmployeeLeaveBalanceListItem, "employee">> = {},
+): EmployeeLeaveBalanceListItem {
+  const allocatedDays = overrides.allocatedDays ?? 30;
+  const carriedForwardDays = overrides.carriedForwardDays ?? 3;
+  const manualAdjustmentDays = overrides.manualAdjustmentDays ?? 0;
+  const usedDays = overrides.usedDays ?? 5;
+  const totalEntitledDays =
+    overrides.totalEntitledDays ??
+    allocatedDays + carriedForwardDays + manualAdjustmentDays;
+
+  return {
+    id: overrides.id ?? "leave-balance-1",
+    employeeId: overrides.employeeId ?? employee.id,
+    leaveType: overrides.leaveType ?? "ANNUAL",
+    balanceYear: overrides.balanceYear ?? 2026,
+    allocatedDays,
+    carriedForwardDays,
+    manualAdjustmentDays,
+    totalEntitledDays,
+    usedDays,
+    remainingDays: overrides.remainingDays ?? totalEntitledDays - usedDays,
+    notes: overrides.notes ?? "رصيد سنوي أساسي",
+    isActive: overrides.isActive ?? true,
+    createdAt: overrides.createdAt ?? "2026-04-01T00:00:00.000Z",
+    updatedAt: overrides.updatedAt ?? "2026-04-01T00:00:00.000Z",
+    employee,
+  };
+}
+
+export function buildEmployeeLifecycleChecklistListItem(
+  employee: EmployeeFixture,
+  assignedTo: EmployeeFixture | null = null,
+  overrides: Partial<Omit<EmployeeLifecycleChecklistListItem, "employee" | "assignedTo">> = {},
+): EmployeeLifecycleChecklistListItem {
+  return {
+    id: overrides.id ?? "lifecycle-1",
+    employeeId: overrides.employeeId ?? employee.id,
+    checklistType: overrides.checklistType ?? "ONBOARDING",
+    title: overrides.title ?? "تسليم البريد المؤسسي",
+    status: overrides.status ?? "PENDING",
+    assignedToEmployeeId:
+      overrides.assignedToEmployeeId === undefined
+        ? assignedTo?.id ?? null
+        : overrides.assignedToEmployeeId,
+    dueDate: overrides.dueDate ?? "2026-04-05T00:00:00.000Z",
+    completedAt: overrides.completedAt ?? null,
+    notes: overrides.notes ?? "بالتنسيق مع تقنية المعلومات",
+    isActive: overrides.isActive ?? true,
+    createdAt: overrides.createdAt ?? "2026-04-01T00:00:00.000Z",
+    updatedAt: overrides.updatedAt ?? "2026-04-01T00:00:00.000Z",
+    employee,
+    assignedTo,
   };
 }
 
@@ -934,6 +1211,13 @@ export function buildHrSummaryReportResponse(
         { status: "ABSENT", count: 10 },
         { status: "LATE", count: 10 },
       ],
+      indicators: {
+        presentRate: 83.33,
+        absentRate: 8.33,
+        lateRate: 8.33,
+        excusedAbsenceRate: 0,
+        earlyLeaveRate: 0,
+      },
     },
     violations: {
       total: 8,
@@ -958,6 +1242,34 @@ export function buildHrSummaryReportResponse(
         { ratingLevel: "VERY_GOOD", count: 3 },
         { ratingLevel: "GOOD", count: 3 },
       ],
+    },
+    organization: {
+      departmentDistribution: [
+        {
+          departmentId: "dept-1",
+          departmentCode: "HR",
+          departmentName: "الموارد البشرية",
+          employeeCount: 4,
+        },
+        {
+          departmentId: "dept-2",
+          departmentCode: "ACA",
+          departmentName: "الشؤون الأكاديمية",
+          employeeCount: 3,
+        },
+      ],
+      unassignedEmployees: 2,
+    },
+    compliance: {
+      thresholdDays: 30,
+      incompleteProfiles: 2,
+      employeesWithoutDocuments: 3,
+      contractsExpiringSoon: 1,
+      contractsExpired: 1,
+      documentsExpiringSoon: 2,
+      documentsExpired: 1,
+      identitiesExpiringSoon: 1,
+      identitiesExpired: 1,
     },
     ...overrides,
   };

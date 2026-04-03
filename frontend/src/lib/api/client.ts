@@ -2538,6 +2538,10 @@ export type EmployeeListItem = {
   idNumber: string | null;
   idTypeId: number | null;
   localityId: number | null;
+  departmentId: string | null;
+  branchId: number | null;
+  directManagerEmployeeId: string | null;
+  costCenterId: number | null;
   idExpiryDate: string | null;
   experienceYears: number;
   employmentType: EmploymentType | null;
@@ -2590,6 +2594,31 @@ export type EmployeeListItem = {
     code: string;
     nameAr: string;
     nameArFemale: string | null;
+    isActive: boolean;
+  } | null;
+  department: {
+    id: string;
+    code: string;
+    name: string;
+    isActive: boolean;
+  } | null;
+  branch: {
+    id: number;
+    code: string;
+    nameAr: string;
+    isActive: boolean;
+  } | null;
+  costCenter: {
+    id: number;
+    code: string;
+    nameAr: string;
+    isActive: boolean;
+  } | null;
+  directManager: {
+    id: string;
+    fullName: string;
+    jobNumber: string | null;
+    jobTitle: string | null;
     isActive: boolean;
   } | null;
   userAccount: {
@@ -2814,6 +2843,239 @@ export type EmployeeCourseListItem = {
   };
 };
 
+export type EmployeeContractListItem = {
+  id: string;
+  employeeId: string;
+  contractTitle: string;
+  contractNumber: string | null;
+  contractStartDate: string;
+  contractEndDate: string | null;
+  salaryAmount: number | string | null;
+  notes: string | null;
+  isCurrent: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  employee: {
+    id: string;
+    fullName: string;
+    jobNumber: string | null;
+    jobTitle: string | null;
+  };
+};
+
+export type GenerateEmployeeContractExpiryAlertsPayload = {
+  daysThreshold?: number;
+};
+
+export type GenerateEmployeeContractExpiryAlertsResponse = {
+  success: boolean;
+  scannedCount: number;
+  generatedCount: number;
+  daysThreshold: number;
+};
+
+export type EmployeeDepartmentListItem = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  _count: {
+    employees: number;
+  };
+  createdBy: {
+    id: string;
+    email: string;
+  } | null;
+  updatedBy: {
+    id: string;
+    email: string;
+  } | null;
+};
+
+export type UserNotificationType =
+  | "INFO"
+  | "SUCCESS"
+  | "WARNING"
+  | "ACTION_REQUIRED";
+
+export type UserNotificationListItem = {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  notificationType: UserNotificationType;
+  resource: string | null;
+  resourceId: string | null;
+  actionUrl: string | null;
+  isRead: boolean;
+  readAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  triggeredByUser: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+};
+
+export type UserNotificationsListResponse = PaginatedResponse<UserNotificationListItem> & {
+  unreadCount: number;
+};
+
+export type EmployeeDocumentListItem = {
+  id: string;
+  employeeId: string;
+  fileName: string;
+  filePath: string;
+  fileType: string | null;
+  fileSize: number | null;
+  fileCategory: string | null;
+  description: string | null;
+  expiresAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  employee: {
+    id: string;
+    fullName: string;
+    jobNumber: string | null;
+    jobTitle: string | null;
+  } | null;
+};
+
+export type EmployeeLeaveType =
+  | "ANNUAL"
+  | "SICK"
+  | "EMERGENCY"
+  | "UNPAID"
+  | "MATERNITY"
+  | "OTHER";
+
+export type EmployeeLeaveRequestStatus =
+  | "PENDING"
+  | "APPROVED"
+  | "REJECTED"
+  | "CANCELLED";
+
+export type EmployeeLifecycleChecklistType = "ONBOARDING" | "OFFBOARDING";
+
+export type EmployeeLifecycleChecklistStatus =
+  | "PENDING"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "WAIVED";
+
+export type EmployeeLeaveListItem = {
+  id: string;
+  employeeId: string;
+  leaveType: EmployeeLeaveType;
+  startDate: string;
+  endDate: string;
+  totalDays: number;
+  status: EmployeeLeaveRequestStatus;
+  reason: string | null;
+  notes: string | null;
+  approvedAt: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  employee: {
+    id: string;
+    fullName: string;
+    jobNumber: string | null;
+    jobTitle: string | null;
+  };
+  approvedBy: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+};
+
+export type EmployeeLeaveBalanceListItem = {
+  id: string;
+  employeeId: string;
+  leaveType: EmployeeLeaveType;
+  balanceYear: number;
+  allocatedDays: number;
+  carriedForwardDays: number;
+  manualAdjustmentDays: number;
+  totalEntitledDays: number;
+  usedDays: number;
+  remainingDays: number;
+  notes: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  employee: {
+    id: string;
+    fullName: string;
+    jobNumber: string | null;
+    jobTitle: string | null;
+  };
+};
+
+export type EmployeeLifecycleChecklistListItem = {
+  id: string;
+  employeeId: string;
+  checklistType: EmployeeLifecycleChecklistType;
+  title: string;
+  status: EmployeeLifecycleChecklistStatus;
+  assignedToEmployeeId: string | null;
+  dueDate: string | null;
+  completedAt: string | null;
+  notes: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  employee: {
+    id: string;
+    fullName: string;
+    jobNumber: string | null;
+    jobTitle: string | null;
+  };
+  assignedTo: {
+    id: string;
+    fullName: string;
+    jobNumber: string | null;
+    jobTitle: string | null;
+  } | null;
+};
+
+export type EmployeeOrganizationOptionsResponse = {
+  departments: Array<{
+    id: string;
+    code: string;
+    name: string;
+    isActive: boolean;
+  }>;
+  branches: Array<{
+    id: number;
+    code: string;
+    nameAr: string;
+    isActive: boolean;
+  }>;
+  costCenters: Array<{
+    id: number;
+    code: string;
+    nameAr: string;
+    isActive: boolean;
+    branchId: number | null;
+  }>;
+  managers: Array<{
+    id: string;
+    fullName: string;
+    jobNumber: string | null;
+    jobTitle: string | null;
+    isActive: boolean;
+  }>;
+};
+
 export type EmployeeTalentListItem = {
   id: string;
   employeeId: string;
@@ -2983,6 +3245,13 @@ export type HrSummaryReportResponse = {
       status: EmployeeAttendanceStatus;
       count: number;
     }>;
+    indicators: {
+      presentRate: number;
+      absentRate: number;
+      lateRate: number;
+      excusedAbsenceRate: number;
+      earlyLeaveRate: number;
+    };
   };
   violations: {
     total: number;
@@ -3005,6 +3274,26 @@ export type HrSummaryReportResponse = {
       ratingLevel: PerformanceRatingLevel;
       count: number;
     }>;
+  };
+  organization: {
+    departmentDistribution: Array<{
+      departmentId: string;
+      departmentCode: string | null;
+      departmentName: string;
+      employeeCount: number;
+    }>;
+    unassignedEmployees: number;
+  };
+  compliance: {
+    thresholdDays: number;
+    incompleteProfiles: number;
+    employeesWithoutDocuments: number;
+    contractsExpiringSoon: number;
+    contractsExpired: number;
+    documentsExpiringSoon: number;
+    documentsExpired: number;
+    identitiesExpiringSoon: number;
+    identitiesExpired: number;
   };
 };
 
@@ -3115,6 +3404,14 @@ export type UpdateReminderTickerPayload = {
   displayOrder?: number;
   startDate?: string;
   endDate?: string;
+};
+
+export type UserNotificationsQuery = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  notificationType?: UserNotificationType;
+  isRead?: boolean;
 };
 
 export type CreateUserPermissionPayload = {
@@ -4273,6 +4570,10 @@ export type CreateEmployeePayload = {
   idNumber?: string;
   idTypeId?: number | null;
   localityId?: number | null;
+  departmentId?: string | null;
+  branchId?: number | null;
+  directManagerEmployeeId?: string | null;
+  costCenterId?: number | null;
   idExpiryDate?: string;
   experienceYears?: number;
   employmentType?: EmploymentType;
@@ -4302,6 +4603,10 @@ export type UpdateEmployeePayload = {
   idNumber?: string;
   idTypeId?: number | null;
   localityId?: number | null;
+  departmentId?: string | null;
+  branchId?: number | null;
+  directManagerEmployeeId?: string | null;
+  costCenterId?: number | null;
   idExpiryDate?: string;
   experienceYears?: number;
   employmentType?: EmploymentType;
@@ -4462,6 +4767,165 @@ export type UpdateEmployeeCoursePayload = {
   isActive?: boolean;
 };
 
+export type CreateEmployeeContractPayload = {
+  employeeId: string;
+  contractTitle: string;
+  contractNumber?: string;
+  contractStartDate: string;
+  contractEndDate?: string;
+  salaryAmount?: string;
+  notes?: string;
+  isCurrent?: boolean;
+  isActive?: boolean;
+};
+
+export type CreateEmployeeDepartmentPayload = {
+  code: string;
+  name: string;
+  description?: string;
+  isActive?: boolean;
+};
+
+export type UpdateEmployeeDepartmentPayload = {
+  code?: string;
+  name?: string;
+  description?: string;
+  isActive?: boolean;
+};
+
+export type UpdateEmployeeContractPayload = {
+  employeeId?: string;
+  contractTitle?: string;
+  contractNumber?: string;
+  contractStartDate?: string;
+  contractEndDate?: string;
+  salaryAmount?: string;
+  notes?: string;
+  isCurrent?: boolean;
+  isActive?: boolean;
+};
+
+export type CreateEmployeeDocumentPayload = {
+  employeeId: string;
+  fileName: string;
+  filePath: string;
+  fileType?: string;
+  fileSize?: number;
+  fileCategory?: string;
+  description?: string;
+  expiresAt?: string;
+};
+
+export type UpdateEmployeeDocumentPayload = {
+  employeeId?: string;
+  fileName?: string;
+  filePath?: string;
+  fileType?: string;
+  fileSize?: number;
+  fileCategory?: string;
+  description?: string;
+  expiresAt?: string;
+};
+
+export type GenerateEmployeeDocumentExpiryAlertsPayload = {
+  daysThreshold?: number;
+};
+
+export type GenerateEmployeeDocumentExpiryAlertsResponse = {
+  success: boolean;
+  scannedCount: number;
+  generatedCount: number;
+  daysThreshold: number;
+};
+
+export type CreateEmployeeLeavePayload = {
+  employeeId: string;
+  leaveType: EmployeeLeaveType;
+  startDate: string;
+  endDate: string;
+  reason?: string;
+  notes?: string;
+  isActive?: boolean;
+};
+
+export type UpdateEmployeeLeavePayload = {
+  employeeId?: string;
+  leaveType?: EmployeeLeaveType;
+  startDate?: string;
+  endDate?: string;
+  reason?: string;
+  notes?: string;
+  isActive?: boolean;
+};
+
+export type CreateEmployeeLeaveBalancePayload = {
+  employeeId: string;
+  leaveType: EmployeeLeaveType;
+  balanceYear: number;
+  allocatedDays: number;
+  carriedForwardDays?: number;
+  manualAdjustmentDays?: number;
+  notes?: string;
+  isActive?: boolean;
+};
+
+export type UpdateEmployeeLeaveBalancePayload = {
+  employeeId?: string;
+  leaveType?: EmployeeLeaveType;
+  balanceYear?: number;
+  allocatedDays?: number;
+  carriedForwardDays?: number;
+  manualAdjustmentDays?: number;
+  notes?: string;
+  isActive?: boolean;
+};
+
+export type GenerateEmployeeLeaveBalancesPayload = {
+  balanceYear: number;
+  employeeId?: string;
+  leaveType?: EmployeeLeaveType;
+};
+
+export type GenerateEmployeeLeaveBalancesResponse = {
+  success: boolean;
+  balanceYear: number;
+  employeesScanned: number;
+  generatedCount: number;
+  skippedExistingCount: number;
+  leaveTypes: EmployeeLeaveType[];
+};
+
+export type CreateEmployeeLifecycleChecklistPayload = {
+  employeeId: string;
+  checklistType: EmployeeLifecycleChecklistType;
+  title: string;
+  assignedToEmployeeId?: string;
+  dueDate?: string;
+  notes?: string;
+  isActive?: boolean;
+};
+
+export type UpdateEmployeeLifecycleChecklistPayload = {
+  employeeId?: string;
+  checklistType?: EmployeeLifecycleChecklistType;
+  title?: string;
+  assignedToEmployeeId?: string;
+  dueDate?: string;
+  notes?: string;
+  isActive?: boolean;
+};
+
+export type GenerateEmployeeLifecycleChecklistDueAlertsPayload = {
+  daysThreshold?: number;
+};
+
+export type GenerateEmployeeLifecycleChecklistDueAlertsResponse = {
+  success: boolean;
+  scannedCount: number;
+  generatedCount: number;
+  daysThreshold: number;
+};
+
 export type CreateEmployeeTalentPayload = {
   employeeId: string;
   talentId: string;
@@ -4474,6 +4938,1607 @@ export type UpdateEmployeeTalentPayload = {
   talentId?: string;
   notes?: string;
   isActive?: boolean;
+};
+
+export type FinanceBranchListItem = {
+  id: number;
+  code: string;
+  nameAr: string;
+  nameEn: string | null;
+  address: string | null;
+  phone: string | null;
+  isHeadquarters: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: {
+    id: string;
+    email: string;
+  } | null;
+  updatedBy?: {
+    id: string;
+    email: string;
+  } | null;
+};
+
+export type CreateFinanceBranchPayload = {
+  code: string;
+  nameAr: string;
+  nameEn?: string;
+  address?: string;
+  phone?: string;
+  isHeadquarters?: boolean;
+  isActive?: boolean;
+};
+
+export type UpdateFinanceBranchPayload = {
+  code?: string;
+  nameAr?: string;
+  nameEn?: string;
+  address?: string;
+  phone?: string;
+  isHeadquarters?: boolean;
+  isActive?: boolean;
+};
+
+export type CurrencyListItem = {
+  id: number;
+  code: string;
+  nameAr: string;
+  symbol: string;
+  decimalPlaces: number;
+  isBase: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: {
+    id: string;
+    email: string;
+  } | null;
+  updatedBy?: {
+    id: string;
+    email: string;
+  } | null;
+};
+
+export type CreateCurrencyPayload = {
+  code: string;
+  nameAr: string;
+  symbol: string;
+  decimalPlaces?: number;
+  isBase?: boolean;
+  isActive?: boolean;
+};
+
+export type UpdateCurrencyPayload = {
+  code?: string;
+  nameAr?: string;
+  symbol?: string;
+  decimalPlaces?: number;
+  isBase?: boolean;
+  isActive?: boolean;
+};
+
+export type CurrencyExchangeRateListItem = {
+  id: number;
+  fromCurrencyId: number;
+  toCurrencyId: number;
+  rate: number;
+  effectiveDate: string;
+  source: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  fromCurrency: {
+    id: number;
+    code: string;
+    nameAr: string;
+    symbol: string;
+  };
+  toCurrency: {
+    id: number;
+    code: string;
+    nameAr: string;
+    symbol: string;
+  };
+};
+
+export type CreateCurrencyExchangeRatePayload = {
+  fromCurrencyId: number;
+  toCurrencyId: number;
+  rate: number;
+  effectiveDate: string;
+  source?: string;
+  isActive?: boolean;
+};
+
+export type UpdateCurrencyExchangeRatePayload = {
+  fromCurrencyId?: number;
+  toCurrencyId?: number;
+  rate?: number;
+  effectiveDate?: string;
+  source?: string;
+  isActive?: boolean;
+};
+
+export type FiscalYearListItem = {
+  id: number;
+  nameAr: string;
+  startDate: string;
+  endDate: string;
+  academicYearId: string | null;
+  isClosed: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  academicYear?: {
+    id: string;
+    code: string;
+    name: string;
+    status: string;
+    isCurrent: boolean;
+  } | null;
+};
+
+export type CreateFiscalYearPayload = {
+  nameAr: string;
+  startDate: string;
+  endDate: string;
+  academicYearId?: string;
+  isClosed?: boolean;
+  isActive?: boolean;
+};
+
+export type UpdateFiscalYearPayload = {
+  nameAr?: string;
+  startDate?: string;
+  endDate?: string;
+  academicYearId?: string;
+  isClosed?: boolean;
+  isActive?: boolean;
+};
+
+export type FiscalPeriodListItem = {
+  id: number;
+  fiscalYearId: number;
+  periodNumber: number;
+  nameAr: string;
+  periodType: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  closeNotes: string | null;
+  reopenReason: string | null;
+  reopenDeadline: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  fiscalYear: {
+    id: number;
+    nameAr: string;
+    startDate: string;
+    endDate: string;
+    isClosed: boolean;
+  };
+};
+
+export type CreateFiscalPeriodPayload = {
+  fiscalYearId: number;
+  periodNumber: number;
+  nameAr: string;
+  periodType?: string;
+  startDate: string;
+  endDate: string;
+  status?: string;
+  closeNotes?: string;
+  reopenReason?: string;
+  reopenDeadline?: string;
+  isActive?: boolean;
+};
+
+export type UpdateFiscalPeriodPayload = {
+  fiscalYearId?: number;
+  periodNumber?: number;
+  nameAr?: string;
+  periodType?: string;
+  startDate?: string;
+  endDate?: string;
+  status?: string;
+  closeNotes?: string;
+  reopenReason?: string;
+  reopenDeadline?: string;
+  isActive?: boolean;
+};
+
+export type ChartOfAccountListItem = {
+  id: number;
+  accountCode: string;
+  nameAr: string;
+  nameEn: string | null;
+  accountType: string;
+  parentId: number | null;
+  isHeader: boolean;
+  isBankAccount: boolean;
+  defaultCurrencyId: number | null;
+  branchId: number | null;
+  normalBalance: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  parent: {
+    id: number;
+    accountCode: string;
+    nameAr: string;
+  } | null;
+};
+
+export type CreateChartOfAccountPayload = {
+  accountCode: string;
+  nameAr: string;
+  nameEn?: string;
+  accountType: string;
+  parentId?: number;
+  isHeader?: boolean;
+  isBankAccount?: boolean;
+  defaultCurrencyId?: number;
+  branchId?: number;
+  normalBalance?: string;
+  isActive?: boolean;
+};
+
+export type UpdateChartOfAccountPayload = {
+  accountCode?: string;
+  nameAr?: string;
+  nameEn?: string;
+  accountType?: string;
+  parentId?: number;
+  isHeader?: boolean;
+  isBankAccount?: boolean;
+  defaultCurrencyId?: number;
+  branchId?: number;
+  normalBalance?: string;
+  isActive?: boolean;
+};
+
+export type JournalEntryLineItem = {
+  id: string;
+  accountId: string;
+  debit: number;
+  credit: number;
+  description: string | null;
+  costCenterId: string | null;
+  account: {
+    id: string;
+    code: string;
+    name: string;
+  };
+  costCenter: {
+    id: string;
+    code: string;
+    name: string;
+  } | null;
+};
+
+export type JournalEntryListItem = {
+  id: string;
+  entryNo: string;
+  fiscalPeriodId: string;
+  postingDate: string;
+  status: string;
+  description: string | null;
+  totalDebit: number;
+  totalCredit: number;
+  isPosted: boolean;
+  isReversed: boolean;
+  createdAt: string;
+  updatedAt: string;
+  lines: JournalEntryLineItem[];
+  fiscalPeriod: {
+    id: string;
+    code: string;
+    name: string;
+  };
+};
+
+export type CreateJournalEntryPayload = {
+  fiscalPeriodId: string;
+  postingDate: string;
+  description?: string | null;
+  lines: Array<{
+    accountId: string;
+    debit: number;
+    credit: number;
+    description?: string | null;
+    costCenterId?: string | null;
+  }>;
+};
+
+export type UpdateJournalEntryPayload = {
+  fiscalPeriodId?: string;
+  postingDate?: string;
+  description?: string | null;
+  lines?: Array<{
+    id?: string;
+    accountId: string;
+    debit: number;
+    credit: number;
+    description?: string | null;
+    costCenterId?: string | null;
+  }>;
+};
+
+export type PaymentGatewayType = "ONLINE" | "OFFLINE";
+
+export type PaymentGatewayListItem = {
+  id: number;
+  nameAr: string;
+  nameEn: string;
+  providerCode: string;
+  gatewayType: PaymentGatewayType;
+  apiEndpoint: string | null;
+  merchantId: string | null;
+  settlementAccountId: number | null;
+  settlementAccount: {
+    id: number;
+    accountCode: string;
+    nameAr: string;
+  } | null;
+  isActive: boolean;
+};
+
+export type CreatePaymentGatewayPayload = {
+  nameAr: string;
+  nameEn: string;
+  providerCode: string;
+  gatewayType: PaymentGatewayType;
+  apiEndpoint?: string | null;
+  merchantId?: string | null;
+  settlementAccountId?: number | null;
+  isActive?: boolean;
+};
+
+export type UpdatePaymentGatewayPayload = {
+  nameAr?: string;
+  nameEn?: string;
+  providerCode?: string;
+  gatewayType?: PaymentGatewayType;
+  apiEndpoint?: string | null;
+  merchantId?: string | null;
+  settlementAccountId?: number | null;
+  isActive?: boolean;
+};
+
+export type PaymentMethod =
+  | "CASH"
+  | "CARD"
+  | "BANK_TRANSFER"
+  | "MOBILE_WALLET"
+  | "CHEQUE";
+
+export type PaymentTransactionStatus =
+  | "PENDING"
+  | "COMPLETED"
+  | "FAILED"
+  | "REFUNDED"
+  | "CANCELLED";
+
+export type PaymentTransactionListItem = {
+  id: string;
+  transactionNumber: string;
+  gatewayId: number;
+  gatewayTransactionId: string | null;
+  invoiceId: string | null;
+  installmentId: string | null;
+  enrollmentId: string | null;
+  amount: number;
+  currencyId: number | null;
+  paymentMethod: PaymentMethod;
+  status: PaymentTransactionStatus;
+  paidAt: string | null;
+  receiptNumber: string | null;
+  payerName: string | null;
+  payerPhone: string | null;
+  journalEntryId: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string | null;
+  gateway: {
+    id: number;
+    nameAr: string;
+    nameEn: string;
+    providerCode: string;
+    gatewayType: PaymentGatewayType;
+    apiEndpoint: string | null;
+    merchantId: string | null;
+    settlementAccountId: number | null;
+    isActive: boolean;
+  };
+  enrollment: {
+    id: string;
+    studentId: string;
+    academicYearId: string;
+    sectionId: string | null;
+  } | null;
+  invoice: {
+    id: string;
+    invoiceNumber: string;
+    status: string;
+  } | null;
+  installment: {
+    id: string;
+    installmentNumber: string;
+    dueDate: string;
+    status: string;
+  } | null;
+  journalEntry: {
+    id: string;
+    entryNumber: string;
+    status: string;
+  } | null;
+  createdBy: {
+    id: string;
+    email: string;
+  } | null;
+};
+
+export type CreatePaymentTransactionPayload = {
+  gatewayId?: number;
+  providerCode?: string;
+  enrollmentId?: string;
+  invoiceId?: string;
+  installmentId?: string;
+  currencyId?: number;
+  amount: number;
+  paymentMethod: PaymentMethod;
+  status?: PaymentTransactionStatus;
+  paidAt?: string;
+  receiptNumber?: string;
+  gatewayTransactionId?: string;
+  payerName?: string;
+  payerPhone?: string;
+  notes?: string;
+};
+
+export type UpdatePaymentTransactionPayload = {
+  gatewayId?: number;
+  providerCode?: string;
+  enrollmentId?: string;
+  invoiceId?: string;
+  installmentId?: string;
+  currencyId?: number;
+  amount?: number;
+  paymentMethod?: PaymentMethod;
+  status?: PaymentTransactionStatus;
+  paidAt?: string | null;
+  receiptNumber?: string | null;
+  gatewayTransactionId?: string | null;
+  payerName?: string | null;
+  payerPhone?: string | null;
+  notes?: string | null;
+};
+
+export type BankReconciliationStatus = "OPEN" | "IN_PROGRESS" | "RECONCILED";
+
+export type FeeType =
+  | "TUITION"
+  | "TRANSPORT"
+  | "UNIFORM"
+  | "REGISTRATION"
+  | "ACTIVITY"
+  | "PENALTY"
+  | "OTHER";
+
+export type DiscountType =
+  | "SIBLING"
+  | "ORPHAN"
+  | "EMPLOYEE_CHILD"
+  | "SCHOLARSHIP"
+  | "HARDSHIP"
+  | "CUSTOM";
+
+export type DiscountCalculationMethod = "PERCENTAGE" | "FIXED";
+
+export type DiscountAppliesToFeeType = "TUITION" | "TRANSPORT" | "ALL";
+
+export type InvoiceStatus =
+  | "DRAFT"
+  | "ISSUED"
+  | "PARTIAL"
+  | "PAID"
+  | "CANCELLED"
+  | "CREDITED";
+
+export type InstallmentStatus =
+  | "PENDING"
+  | "PARTIAL"
+  | "PAID"
+  | "OVERDUE"
+  | "CANCELLED";
+
+export type BankReconciliationListItem = {
+  id: string;
+  bankAccountId: number;
+  statementDate: string;
+  statementReference: string | null;
+  bankBalance: number;
+  bookBalance: number;
+  difference: number;
+  status: BankReconciliationStatus;
+  reconciledAt: string | null;
+  notes: string | null;
+  createdAt: string;
+  bankAccount: {
+    id: number;
+    accountCode: string;
+    nameAr: string;
+    nameEn: string | null;
+    accountType: string;
+    isBankAccount: boolean;
+  };
+  reconciledByUser: {
+    id: string;
+    email: string;
+  } | null;
+  items?: Array<{
+    id: string;
+    transactionId: string | null;
+    journalEntryId: string | null;
+    bankReference: string | null;
+    amount: number;
+    itemType: string;
+    matchedAt: string | null;
+  }>;
+};
+
+export type CreateBankReconciliationPayload = {
+  bankAccountId: number;
+  statementDate: string;
+  statementReference?: string | null;
+  bankBalance: number;
+  bookBalance: number;
+  status?: BankReconciliationStatus;
+  notes?: string | null;
+};
+
+export type UpdateBankReconciliationPayload = {
+  bankAccountId?: number;
+  statementDate?: string;
+  statementReference?: string | null;
+  bankBalance?: number;
+  bookBalance?: number;
+  status?: BankReconciliationStatus;
+  notes?: string | null;
+};
+
+export type BankReconciliationAutoMatchResponse = {
+  matchedCount: number;
+  totalMatchedAmount: number;
+  reconciliation: BankReconciliationListItem | null;
+};
+
+export type FeeStructureListItem = {
+  id: number;
+  nameAr: string;
+  academicYearId: string;
+  gradeLevelId: string | null;
+  feeType: FeeType;
+  amount: number;
+  currencyId: number | null;
+  vatRate: number;
+  isActive: boolean;
+  createdAt: string;
+  academicYear: {
+    id: string;
+    name: string;
+  };
+  gradeLevel: {
+    id: string;
+    name: string;
+  } | null;
+  currency: {
+    id: number;
+    code: string;
+    nameAr: string;
+  } | null;
+};
+
+export type CreateFeeStructurePayload = {
+  academicYearId: string;
+  gradeLevelId?: string;
+  feeType: FeeType;
+  nameAr: string;
+  amount: number;
+  currencyId?: number;
+  vatRate?: number;
+  isActive?: boolean;
+};
+
+export type UpdateFeeStructurePayload = {
+  academicYearId?: string;
+  gradeLevelId?: string;
+  feeType?: FeeType;
+  nameAr?: string;
+  amount?: number;
+  currencyId?: number;
+  vatRate?: number;
+  isActive?: boolean;
+};
+
+export type DiscountRuleListItem = {
+  id: number;
+  nameAr: string;
+  discountType: DiscountType;
+  calculationMethod: DiscountCalculationMethod;
+  value: number;
+  appliesToFeeType: DiscountAppliesToFeeType;
+  siblingOrderFrom: number | null;
+  maxDiscountPercentage: number;
+  requiresApproval: boolean;
+  discountGlAccountId: number | null;
+  contraGlAccountId: number | null;
+  academicYearId: string | null;
+  isActive: boolean;
+  createdAt: string;
+  academicYear?: {
+    id: string;
+    name: string;
+  } | null;
+  discountGlAccount?: {
+    id: number;
+    accountCode: string;
+    nameAr: string;
+  } | null;
+  contraGlAccount?: {
+    id: number;
+    accountCode: string;
+    nameAr: string;
+  } | null;
+};
+
+export type CreateDiscountRulePayload = {
+  nameAr: string;
+  discountType: DiscountType;
+  calculationMethod: DiscountCalculationMethod;
+  value: number;
+  appliesToFeeType: DiscountAppliesToFeeType;
+  siblingOrderFrom?: number;
+  maxDiscountPercentage?: number;
+  requiresApproval?: boolean;
+  discountGlAccountId?: number;
+  contraGlAccountId?: number;
+  academicYearId?: string;
+  isActive?: boolean;
+};
+
+export type UpdateDiscountRulePayload = {
+  nameAr?: string;
+  discountType?: DiscountType;
+  calculationMethod?: DiscountCalculationMethod;
+  value?: number;
+  appliesToFeeType?: DiscountAppliesToFeeType;
+  siblingOrderFrom?: number;
+  maxDiscountPercentage?: number;
+  requiresApproval?: boolean;
+  discountGlAccountId?: number;
+  contraGlAccountId?: number;
+  academicYearId?: string;
+  isActive?: boolean;
+};
+
+export type TaxType = "OUTPUT" | "INPUT" | "EXEMPT" | "ZERO_RATED";
+
+export type TaxConfigurationListItem = {
+  id: number;
+  taxCode: string;
+  taxNameAr: string;
+  taxNameEn: string | null;
+  rate: number;
+  taxType: TaxType;
+  isInclusive: boolean;
+  outputGlAccountId: number | null;
+  inputGlAccountId: number | null;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string | null;
+  outputGlAccount: {
+    id: number;
+    accountCode: string;
+    nameAr: string;
+  } | null;
+  inputGlAccount: {
+    id: number;
+    accountCode: string;
+    nameAr: string;
+  } | null;
+};
+
+export type CreateTaxConfigurationPayload = {
+  taxCode: string;
+  taxNameAr: string;
+  taxNameEn?: string;
+  rate: number;
+  taxType: TaxType;
+  isInclusive?: boolean;
+  outputGlAccountId?: number;
+  inputGlAccountId?: number;
+  effectiveFrom: string;
+  effectiveTo?: string;
+  isActive?: boolean;
+};
+
+export type UpdateTaxConfigurationPayload = {
+  taxCode?: string;
+  taxNameAr?: string;
+  taxNameEn?: string | null;
+  rate?: number;
+  taxType?: TaxType;
+  isInclusive?: boolean;
+  outputGlAccountId?: number | null;
+  inputGlAccountId?: number | null;
+  effectiveFrom?: string;
+  effectiveTo?: string | null;
+  isActive?: boolean;
+};
+
+export type StudentInvoiceListItem = {
+  id: string;
+  invoiceNumber: string;
+  enrollmentId: string;
+  academicYearId: string;
+  branchId: number | null;
+  invoiceDate: string;
+  dueDate: string;
+  subtotal: number;
+  discountAmount: number;
+  vatAmount: number;
+  totalAmount: number;
+  paidAmount: number;
+  balanceDue: number;
+  currencyId: number | null;
+  status: InvoiceStatus;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string | null;
+  enrollment: {
+    id: string;
+    studentId: string;
+    sectionId: string | null;
+    student: {
+      id: string;
+      fullName: string;
+    };
+  };
+  academicYear: {
+    id: string;
+    name: string;
+  };
+  branch: {
+    id: number;
+    nameAr: string;
+  } | null;
+  currency: {
+    id: number;
+    code: string;
+    nameAr: string;
+  } | null;
+  createdByUser: {
+    id: string;
+    email: string;
+  } | null;
+};
+
+export type CreateStudentInvoicePayload = {
+  invoiceNumber?: string;
+  enrollmentId: string;
+  academicYearId: string;
+  branchId?: number;
+  invoiceDate: string;
+  dueDate: string;
+  currencyId?: number;
+  status?: InvoiceStatus;
+  notes?: string;
+  lines: Array<{
+    feeType: FeeType;
+    feeStructureId?: number;
+    descriptionAr: string;
+    quantity: number;
+    unitPrice: number;
+    discountAmount?: number;
+    discountRuleId?: number;
+    discountGlAccountId?: number;
+    vatRate?: number;
+    vatAmount?: number;
+    taxCodeId?: number;
+    accountId?: number;
+  }>;
+  installments?: Array<{
+    dueDate: string;
+    amount: number;
+    installmentNumber: number;
+    paymentDate?: string;
+    lateFee?: number;
+    notes?: string;
+  }>;
+};
+
+export type UpdateStudentInvoicePayload = {
+  invoiceDate?: string;
+  dueDate?: string;
+  status?: InvoiceStatus;
+  branchId?: number;
+  currencyId?: number;
+  notes?: string;
+};
+
+export type InvoiceInstallmentListItem = {
+  id: string;
+  invoiceId: string;
+  installmentNumber: number;
+  dueDate: string;
+  amount: number;
+  paidAmount: number;
+  paymentDate: string | null;
+  status: InstallmentStatus;
+  lateFee: number;
+  notes: string | null;
+  invoice: {
+    id: string;
+    invoiceNumber: string;
+    enrollmentId: string;
+    totalAmount: number;
+    status: InvoiceStatus;
+  };
+};
+
+export type CreateInvoiceInstallmentPayload = {
+  invoiceId: string;
+  installmentNumber: number;
+  dueDate: string;
+  amount: number;
+  paidAmount?: number;
+  status?: InstallmentStatus;
+  paymentDate?: string;
+  lateFee?: number;
+  notes?: string;
+};
+
+export type UpdateInvoiceInstallmentPayload = {
+  invoiceId?: string;
+  installmentNumber?: number;
+  dueDate?: string;
+  amount?: number;
+  paidAmount?: number;
+  status?: InstallmentStatus;
+  paymentDate?: string;
+  lateFee?: number;
+  notes?: string;
+};
+
+export type BillingEngineBulkGenerateResponse = {
+  message: string;
+  generated: number;
+  skipped: number;
+  invoices: Array<{
+    enrollmentId: string;
+    studentName: string;
+    invoiceNumber: string;
+    totalAmount: number;
+  }>;
+  errors?: Array<{
+    enrollmentId: string;
+    error: string;
+  }>;
+};
+
+export type BillingEngineSiblingDiscountResponse = {
+  message: string;
+  applied: number;
+  siblings: number;
+  details?: Array<{
+    studentName: string;
+    invoiceNumber: string;
+    siblingOrder: number;
+    discountPercent: number;
+    discountAmount: number;
+  }>;
+};
+
+export type BillingEngineStudentStatementResponse = {
+  student: {
+    id: string;
+    fullName: string;
+    admissionNo: string | null;
+  };
+  academicYear: {
+    id: string;
+    name: string;
+  };
+  enrollmentId: string;
+  summary: {
+    totalBilled: number;
+    totalPaid: number;
+    totalCredits: number;
+    totalDebits: number;
+    balance: number;
+    status: string;
+  };
+  invoices: Array<{
+    id: string;
+    invoiceNumber: string;
+    invoiceDate: string;
+    dueDate: string | null;
+    subtotal: number;
+    discountAmount: number;
+    vatAmount: number;
+    totalAmount: number;
+    paidAmount: number;
+    balanceDue: number;
+    status: string;
+    lines: Array<{
+      description: string;
+      feeType: string;
+      unitPrice: number;
+      discountAmount: number;
+      vatAmount: number;
+      lineTotal: number;
+    }>;
+    installments: Array<{
+      number: number;
+      dueDate: string;
+      amount: number;
+      paidAmount: number;
+      status: string;
+    }>;
+  }>;
+  payments: Array<{
+    id: string;
+    transactionNumber: string;
+    amount: number;
+    paidAt: string | null;
+    paymentMethod: string;
+    receiptNumber: string | null;
+    gateway: string | null;
+  }>;
+  creditDebitNotes: Array<{
+    id: string;
+    noteNumber: string;
+    noteType: string;
+    amount: number;
+    totalAmount: number;
+    reason: string;
+    status: string;
+  }>;
+};
+
+export type BillingEngineFamilyBalanceResponse = {
+  guardian: {
+    id: string;
+    fullName: string;
+    phone: string | null;
+  };
+  summary: {
+    childrenCount: number;
+    totalBilled: number;
+    totalPaid: number;
+    balance: number;
+    status: string;
+  };
+  children: Array<{
+    studentId: string;
+    studentName: string;
+    admissionNo: string | null;
+    relationship: string;
+    totalBilled: number;
+    totalPaid: number;
+    balance: number;
+    enrollmentCount: number;
+    hasOverdue: boolean;
+  }>;
+};
+
+export type BillingEngineBulkGeneratePayload = {
+  academicYearId: string;
+  gradeLevelId?: string | null;
+  branchId?: number | null;
+  installmentCount?: number | null;
+  invoiceDate?: string | null;
+  dueDate?: string | null;
+  applySiblingDiscount?: boolean;
+};
+
+export type BillingEngineDefaultsResponse = {
+  academicYear: {
+    id: string;
+    code: string;
+    name: string;
+    status: string;
+    isCurrent: boolean;
+  } | null;
+  baseCurrency: {
+    id: number;
+    code: string;
+    nameAr: string;
+  } | null;
+  invoiceDate: string;
+  dueDate: string;
+  installmentCount: number;
+  applySiblingDiscount: boolean;
+};
+
+export type BillingEngineApplySiblingDiscountPayload = {
+  guardianId: string;
+  academicYearId: string;
+};
+
+export type BillingEngineProcessWithdrawalPayload = {
+  enrollmentId: string;
+  withdrawalDate: string;
+  academicTermId?: string | null;
+  reason?: string | null;
+};
+
+export type BillingEngineWithdrawalResponse = {
+  enrollmentId: string;
+  studentName: string;
+  term: {
+    id: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+  } | null;
+  period: {
+    startDate: string;
+    endDate: string;
+  };
+  totals: {
+    totalFee: number;
+    earnedFee: number;
+    totalPaid: number;
+    adjustment: number;
+  };
+  proration: {
+    totalSchoolDays: number;
+    attendedDays: number;
+    ratio: number;
+  };
+  creditNoteId: string | null;
+};
+
+export type PaymentTransactionActionPayload = {
+  payload?: Record<string, unknown> | null;
+};
+
+export type BudgetType =
+  | "ANNUAL"
+  | "SEMESTER"
+  | "QUARTERLY"
+  | "MONTHLY"
+  | "PROJECT";
+
+export type BudgetStatus = "DRAFT" | "APPROVED" | "ACTIVE" | "CLOSED" | "REVISED";
+
+export type BudgetListItem = {
+  id: number;
+  nameAr: string;
+  fiscalYearId: number;
+  branchId: number | null;
+  budgetType: BudgetType;
+  startDate: string;
+  endDate: string;
+  totalAmount: number;
+  status: BudgetStatus;
+  approvedByUserId: string | null;
+  approvedAt: string | null;
+  notes: string | null;
+  createdByUserId: string | null;
+  createdAt: string;
+  updatedAt: string | null;
+  fiscalYear: {
+    id: number;
+    yearName: string;
+  };
+  branch: {
+    id: number;
+    nameAr: string;
+  } | null;
+  createdByUser: {
+    id: string;
+    email: string;
+  } | null;
+  approvedByUser?: {
+    id: string;
+    email: string;
+  } | null;
+};
+
+export type CreateBudgetPayload = {
+  nameAr: string;
+  fiscalYearId: number;
+  branchId?: number | null;
+  budgetType?: BudgetType;
+  startDate: string;
+  endDate: string;
+  notes?: string;
+  lines: Array<{
+    accountId: number;
+    lineDescription?: string;
+    budgetedAmount: number;
+    notes?: string;
+  }>;
+};
+
+export type UpdateBudgetPayload = {
+  nameAr?: string;
+  fiscalYearId?: number;
+  branchId?: number | null;
+  budgetType?: BudgetType;
+  startDate?: string;
+  endDate?: string;
+  notes?: string;
+};
+
+export type CostCenterListItem = {
+  id: number;
+  code: string;
+  nameAr: string;
+  nameEn: string | null;
+  parentId: number | null;
+  branchId: number | null;
+  managerEmployeeId: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string | null;
+  parent: {
+    id: number;
+    code: string;
+    nameAr: string;
+  } | null;
+  branch: {
+    id: number;
+    nameAr: string;
+  } | null;
+  managerEmployee: {
+    id: string;
+    fullNameAr: string;
+  } | null;
+  children: Array<{
+    id: number;
+    code: string;
+    nameAr: string;
+  }>;
+};
+
+export type CreateCostCenterPayload = {
+  code: string;
+  nameAr: string;
+  nameEn?: string;
+  parentId?: number;
+  branchId?: number;
+  managerEmployeeId?: string;
+  isActive?: boolean;
+};
+
+export type UpdateCostCenterPayload = {
+  code?: string;
+  nameAr?: string;
+  nameEn?: string;
+  parentId?: number | null;
+  branchId?: number | null;
+  managerEmployeeId?: string | null;
+  isActive?: boolean;
+};
+
+export type CreditDebitNoteType = "CREDIT" | "DEBIT";
+export type CreditDebitNoteStatus = "DRAFT" | "APPROVED" | "APPLIED" | "CANCELLED";
+export type CreditDebitNoteReason =
+  | "WITHDRAWAL"
+  | "OVERCHARGE"
+  | "SCHOLARSHIP"
+  | "FEE_ADJUSTMENT"
+  | "REFUND"
+  | "PENALTY"
+  | "OTHER";
+
+export type CreditDebitNoteListItem = {
+  id: string;
+  noteNumber: string;
+  noteType: CreditDebitNoteType;
+  originalInvoiceId: string;
+  enrollmentId: string | null;
+  amount: number;
+  vatAmount: number;
+  totalAmount: number;
+  reason: CreditDebitNoteReason;
+  reasonDetails: string | null;
+  status: CreditDebitNoteStatus;
+  appliedAt: string | null;
+  journalEntryId: string | null;
+  createdByUserId: string | null;
+  approvedByUserId: string | null;
+  approvedAt: string | null;
+  createdAt: string;
+  updatedAt: string | null;
+  originalInvoice: {
+    id: string;
+    invoiceNumber: string;
+    totalAmount: number;
+    paidAmount: number;
+    status: string;
+  };
+  enrollment: {
+    id: string;
+    student: {
+      id: string;
+      fullName: string;
+    };
+  } | null;
+  journalEntry: {
+    id: string;
+    entryNumber: string;
+  } | null;
+  createdByUser: {
+    id: string;
+    email: string;
+  } | null;
+  approvedByUser: {
+    id: string;
+    email: string;
+  } | null;
+};
+
+export type CreateCreditDebitNotePayload = {
+  noteType: CreditDebitNoteType;
+  originalInvoiceId: string;
+  enrollmentId?: string;
+  amount: number;
+  vatAmount?: number;
+  reason: CreditDebitNoteReason;
+  reasonDetails?: string;
+};
+
+export type UpdateCreditDebitNotePayload = {
+  enrollmentId?: string | null;
+  amount?: number;
+  vatAmount?: number;
+  reason?: CreditDebitNoteReason;
+  reasonDetails?: string | null;
+};
+
+export type RecurringFrequency =
+  | "DAILY"
+  | "WEEKLY"
+  | "MONTHLY"
+  | "QUARTERLY"
+  | "SEMI_ANNUAL"
+  | "ANNUAL";
+
+export type RecurringJournalListItem = {
+  id: number;
+  templateName: string;
+  description: string | null;
+  frequency: RecurringFrequency;
+  startDate: string;
+  endDate: string | null;
+  nextRunDate: string;
+  branchId: number | null;
+  currencyId: number | null;
+  entryDescription: string;
+  referenceType: string | null;
+  totalAmount: number;
+  autoPost: boolean;
+  isActive: boolean;
+  lastGeneratedAt: string | null;
+  lastGeneratedJeId: string | null;
+  totalGenerated: number;
+  createdByUserId: string;
+  createdAt: string;
+  updatedAt: string | null;
+  branch: {
+    id: number;
+    nameAr: string;
+  } | null;
+  createdByUser: {
+    id: string;
+    email: string;
+  } | null;
+  lastGeneratedJournalEntry?: {
+    id: string;
+    entryNumber: string;
+  } | null;
+};
+
+export type RecurringJournalGenerateResponse = {
+  success: boolean;
+  journalEntry: {
+    id: string;
+    entryNumber: string;
+    entryDate: string;
+    status: string;
+    totalDebit: number;
+    totalCredit: number;
+  };
+  message: string;
+};
+
+export type CreateRecurringJournalPayload = {
+  templateName: string;
+  description?: string;
+  frequency?: RecurringFrequency;
+  startDate: string;
+  endDate?: string;
+  branchId?: number;
+  currencyId?: number;
+  entryDescription: string;
+  referenceType?: string;
+  autoPost?: boolean;
+  lines: Array<{
+    lineNumber: number;
+    accountId: number;
+    description?: string;
+    debitAmount: number;
+    creditAmount: number;
+    costCenterId?: number;
+  }>;
+};
+
+export type UpdateRecurringJournalPayload = {
+  templateName?: string;
+  description?: string;
+  frequency?: RecurringFrequency;
+  startDate?: string;
+  endDate?: string | null;
+  branchId?: number | null;
+  currencyId?: number | null;
+  entryDescription?: string;
+  referenceType?: string | null;
+  autoPost?: boolean;
+  isActive?: boolean;
+};
+
+export type FinancialAuditTrailListItem = {
+  id: string;
+  action: string;
+  entity: string;
+  entityId: string | null;
+  status: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+  details: unknown;
+  occurredAt: string;
+  actorUser: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+};
+
+export type FinancialFundListItem = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateFinancialFundPayload = {
+  code: string;
+  name: string;
+  description?: string | null;
+  isActive?: boolean;
+};
+
+export type UpdateFinancialFundPayload = {
+  code?: string;
+  name?: string;
+  description?: string | null;
+  isActive?: boolean;
+};
+
+export type FinancialCategoryListItem = {
+  id: string;
+  code: string;
+  name: string;
+  categoryType: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateFinancialCategoryPayload = {
+  code: string;
+  name: string;
+  categoryType: string;
+  isActive?: boolean;
+};
+
+export type UpdateFinancialCategoryPayload = {
+  code?: string;
+  name?: string;
+  categoryType?: string;
+  isActive?: boolean;
+};
+
+export type RevenueListItem = {
+  id: string;
+  reference: string | null;
+  revenueDate: string;
+  amount: number;
+  currencyId: string;
+  categoryId: string | null;
+  fundId: string | null;
+  notes: string | null;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  currency: {
+    id: string;
+    code: string;
+    name: string;
+  };
+};
+
+export type CreateRevenuePayload = {
+  revenueDate: string;
+  amount: number;
+  currencyId: string;
+  categoryId?: string | null;
+  fundId?: string | null;
+  reference?: string | null;
+  notes?: string | null;
+};
+
+export type UpdateRevenuePayload = {
+  revenueDate?: string;
+  amount?: number;
+  currencyId?: string;
+  categoryId?: string | null;
+  fundId?: string | null;
+  reference?: string | null;
+  notes?: string | null;
+  status?: string;
+};
+
+export type ExpenseListItem = {
+  id: string;
+  reference: string | null;
+  expenseDate: string;
+  amount: number;
+  currencyId: string;
+  categoryId: string | null;
+  fundId: string | null;
+  notes: string | null;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  currency: {
+    id: string;
+    code: string;
+    name: string;
+  };
+};
+
+export type CreateExpensePayload = {
+  expenseDate: string;
+  amount: number;
+  currencyId: string;
+  categoryId?: string | null;
+  fundId?: string | null;
+  reference?: string | null;
+  notes?: string | null;
+};
+
+export type UpdateExpensePayload = {
+  expenseDate?: string;
+  amount?: number;
+  currencyId?: string;
+  categoryId?: string | null;
+  fundId?: string | null;
+  reference?: string | null;
+  notes?: string | null;
+  status?: string;
+};
+
+export type CommunityContributionListItem = {
+  id: string;
+  contributorName: string;
+  contributionDate: string;
+  amount: number;
+  currencyId: string;
+  notes: string | null;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  currency: {
+    id: string;
+    code: string;
+    name: string;
+  };
+};
+
+export type CreateCommunityContributionPayload = {
+  contributorName: string;
+  contributionDate: string;
+  amount: number;
+  currencyId: string;
+  notes?: string | null;
+  status?: string;
+};
+
+export type UpdateCommunityContributionPayload = {
+  contributorName?: string;
+  contributionDate?: string;
+  amount?: number;
+  currencyId?: string;
+  notes?: string | null;
+  status?: string;
+};
+
+export type TrialBalanceReportResponse = {
+  generatedAt: string;
+  scope: Record<string, unknown>;
+  rows: Array<Record<string, unknown>>;
+  summary: Record<string, unknown>;
+};
+
+export type GeneralLedgerReportResponse = {
+  generatedAt: string;
+  scope: Record<string, unknown>;
+  rows: Array<Record<string, unknown>>;
+  summary: Record<string, unknown>;
+};
+
+export type AccountSummaryReportResponse = {
+  generatedAt: string;
+  scope: Record<string, unknown>;
+  rows: Array<Record<string, unknown>>;
+  summary: Record<string, unknown>;
+};
+
+export type IncomeStatementReportResponse = {
+  generatedAt: string;
+  scope: Record<string, unknown>;
+  rows: Array<Record<string, unknown>>;
+  summary: Record<string, unknown>;
+};
+
+export type BalanceSheetReportResponse = {
+  generatedAt: string;
+  scope: Record<string, unknown>;
+  rows: Array<Record<string, unknown>>;
+  summary: Record<string, unknown>;
+};
+
+export type StudentAccountStatementReportResponse = {
+  generatedAt: string;
+  scope: Record<string, unknown>;
+  rows: Array<Record<string, unknown>>;
+  summary: Record<string, unknown>;
+};
+
+export type VatReportResponse = {
+  generatedAt: string;
+  scope: Record<string, unknown>;
+  rows: Array<Record<string, unknown>>;
+  summary: Record<string, unknown>;
+};
+
+export type AccountsReceivableAgingReportResponse = {
+  generatedAt: string;
+  scope: Record<string, unknown>;
+  rows: Array<Record<string, unknown>>;
+  summary: Record<string, unknown>;
+};
+
+export type BudgetVsActualReportResponse = {
+  generatedAt: string;
+  scope: Record<string, unknown>;
+  rows: Array<Record<string, unknown>>;
+  summary: Record<string, unknown>;
 };
 
 export type PaginatedResponse<T> = {
@@ -4542,6 +6607,55 @@ function resolveErrorMessage(body: unknown, status: number): string {
   return `فشل الطلب (رمز الحالة: ${status})`;
 }
 
+const FINANCE_PATH_PREFIXES = [
+  "/branches",
+  "/currencies",
+  "/currency-exchange-rates",
+  "/fiscal-years",
+  "/fiscal-periods",
+  "/chart-of-accounts",
+  "/journal-entries",
+  "/payment-gateways",
+  "/payment-transactions",
+  "/payment-webhooks",
+  "/bank-reconciliations",
+  "/financial-reports",
+  "/reports",
+  "/fee-structures",
+  "/discount-rules",
+  "/student-invoices",
+  "/invoice-installments",
+  "/tax-configurations",
+  "/document-sequences",
+  "/billing",
+  "/cost-centers",
+  "/budgets",
+  "/credit-debit-notes",
+  "/recurring-journals",
+  "/hr-integrations",
+  "/procurement-integrations",
+  "/transport-integrations",
+  "/audit-trail",
+  "/financial-funds",
+  "/financial-categories",
+  "/revenues",
+  "/expenses",
+  "/community-contributions",
+];
+
+function resolveApiPath(path: string): string {
+  if (path.startsWith("/finance/") || path === "/finance") {
+    return path;
+  }
+
+  const basePath = path.split("?")[0];
+  const isFinancePath = FINANCE_PATH_PREFIXES.some(
+    (prefix) => basePath === prefix || basePath.startsWith(`${prefix}/`),
+  );
+
+  return isFinancePath ? `/finance${path}` : path;
+}
+
 async function request<T>(
   path: string,
   method: HttpMethod = "GET",
@@ -4567,7 +6681,7 @@ async function request<T>(
     requestBody = JSON.stringify(json);
   }
 
-  const response = await fetch(`${appConfig.apiProxyPrefix}${path}`, {
+  const response = await fetch(`${appConfig.apiProxyPrefix}${resolveApiPath(path)}`, {
     ...fetchOptions,
     method,
     headers,
@@ -4821,6 +6935,36 @@ export const apiClient = {
         withAuth: true,
       },
     ),
+  listUserNotifications: (query?: UserNotificationsQuery) =>
+    request<UserNotificationsListResponse>(
+      `/user-notifications${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        notificationType: query?.notificationType,
+        isRead: query?.isRead,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  getUserNotificationsUnreadCount: () =>
+    request<{ unreadCount: number }>("/user-notifications/unread-count", "GET", {
+      withAuth: true,
+    }),
+  markUserNotificationRead: (notificationId: string) =>
+    request<UserNotificationListItem>(`/user-notifications/${notificationId}/read`, "PATCH", {
+      withAuth: true,
+    }),
+  markAllUserNotificationsRead: () =>
+    request<{ success: boolean; updatedCount: number }>("/user-notifications/mark-all-read", "PATCH", {
+      withAuth: true,
+    }),
+  deleteUserNotification: (notificationId: string) =>
+    request<DeleteEntityResponse>(`/user-notifications/${notificationId}`, "DELETE", {
+      withAuth: true,
+    }),
   listUserPermissions: (query?: {
     page?: number;
     limit?: number;
@@ -7639,6 +9783,10 @@ export const apiClient = {
     employmentType?: EmploymentType;
     idTypeId?: number;
     localityId?: number;
+    departmentId?: string;
+    branchId?: number;
+    directManagerEmployeeId?: string;
+    costCenterId?: number;
     jobTitle?: string;
     qualificationId?: number;
     jobRoleId?: number;
@@ -7655,12 +9803,24 @@ export const apiClient = {
         employmentType: query?.employmentType,
         idTypeId: query?.idTypeId,
         localityId: query?.localityId,
+        departmentId: query?.departmentId,
+        branchId: query?.branchId,
+        directManagerEmployeeId: query?.directManagerEmployeeId,
+        costCenterId: query?.costCenterId,
         jobTitle: query?.jobTitle,
         qualificationId: query?.qualificationId,
         jobRoleId: query?.jobRoleId,
         isActive: query?.isActive,
         operationalReadiness: query?.operationalReadiness,
       })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  listEmployeeOrganizationOptions: () =>
+    request<EmployeeOrganizationOptionsResponse>(
+      "/employees/organization-options",
       "GET",
       {
         withAuth: true,
@@ -8025,6 +10185,349 @@ export const apiClient = {
     request<DeleteEntityResponse>(`/employee-courses/${courseId}`, "DELETE", {
       withAuth: true,
     }),
+  listEmployeeContracts: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    employeeId?: string;
+    fromDate?: string;
+    toDate?: string;
+    isCurrent?: boolean;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<EmployeeContractListItem>>(
+      `/employee-contracts${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        employeeId: query?.employeeId,
+        fromDate: query?.fromDate,
+        toDate: query?.toDate,
+        isCurrent: query?.isCurrent,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  generateEmployeeContractExpiryAlerts: (
+    payload: GenerateEmployeeContractExpiryAlertsPayload = {},
+  ) =>
+    request<GenerateEmployeeContractExpiryAlertsResponse>(
+      "/employee-contracts/generate-expiry-alerts",
+      "POST",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  createEmployeeContract: (payload: CreateEmployeeContractPayload) =>
+    request<EmployeeContractListItem>("/employee-contracts", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateEmployeeContract: (
+    contractId: string,
+    payload: UpdateEmployeeContractPayload,
+  ) =>
+    request<EmployeeContractListItem>(`/employee-contracts/${contractId}`, "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  deleteEmployeeContract: (contractId: string) =>
+    request<DeleteEntityResponse>(`/employee-contracts/${contractId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listEmployeeDepartments: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<EmployeeDepartmentListItem>>(
+      `/employee-departments${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createEmployeeDepartment: (payload: CreateEmployeeDepartmentPayload) =>
+    request<EmployeeDepartmentListItem>("/employee-departments", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateEmployeeDepartment: (
+    departmentId: string,
+    payload: UpdateEmployeeDepartmentPayload,
+  ) =>
+    request<EmployeeDepartmentListItem>(
+      `/employee-departments/${departmentId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  deleteEmployeeDepartment: (departmentId: string) =>
+    request<DeleteEntityResponse>(`/employee-departments/${departmentId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listEmployeeDocuments: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    employeeId?: string;
+    fileCategory?: string;
+    fileType?: string;
+  }) =>
+    request<PaginatedResponse<EmployeeDocumentListItem>>(
+      `/employee-documents${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        employeeId: query?.employeeId,
+        fileCategory: query?.fileCategory,
+        fileType: query?.fileType,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createEmployeeDocument: (payload: CreateEmployeeDocumentPayload) =>
+    request<EmployeeDocumentListItem>("/employee-documents", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateEmployeeDocument: (
+    documentId: string,
+    payload: UpdateEmployeeDocumentPayload,
+  ) =>
+    request<EmployeeDocumentListItem>(`/employee-documents/${documentId}`, "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  deleteEmployeeDocument: (documentId: string) =>
+    request<DeleteEntityResponse>(`/employee-documents/${documentId}`, "DELETE", {
+      withAuth: true,
+    }),
+  generateEmployeeDocumentExpiryAlerts: (
+    payload: GenerateEmployeeDocumentExpiryAlertsPayload = {},
+  ) =>
+    request<GenerateEmployeeDocumentExpiryAlertsResponse>(
+      "/employee-documents/generate-expiry-alerts",
+      "POST",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  listEmployeeLeaves: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    employeeId?: string;
+    leaveType?: EmployeeLeaveType;
+    status?: EmployeeLeaveRequestStatus;
+    fromDate?: string;
+    toDate?: string;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<EmployeeLeaveListItem>>(
+      `/employee-leaves${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        employeeId: query?.employeeId,
+        leaveType: query?.leaveType,
+        status: query?.status,
+        fromDate: query?.fromDate,
+        toDate: query?.toDate,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createEmployeeLeave: (payload: CreateEmployeeLeavePayload) =>
+    request<EmployeeLeaveListItem>("/employee-leaves", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateEmployeeLeave: (leaveId: string, payload: UpdateEmployeeLeavePayload) =>
+    request<EmployeeLeaveListItem>(`/employee-leaves/${leaveId}`, "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  approveEmployeeLeave: (leaveId: string) =>
+    request<EmployeeLeaveListItem>(`/employee-leaves/${leaveId}/approve`, "PATCH", {
+      withAuth: true,
+    }),
+  rejectEmployeeLeave: (leaveId: string) =>
+    request<EmployeeLeaveListItem>(`/employee-leaves/${leaveId}/reject`, "PATCH", {
+      withAuth: true,
+    }),
+  deleteEmployeeLeave: (leaveId: string) =>
+    request<DeleteEntityResponse>(`/employee-leaves/${leaveId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listEmployeeLeaveBalances: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    employeeId?: string;
+    leaveType?: EmployeeLeaveType;
+    balanceYear?: number;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<EmployeeLeaveBalanceListItem>>(
+      `/employee-leave-balances${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        employeeId: query?.employeeId,
+        leaveType: query?.leaveType,
+        balanceYear: query?.balanceYear,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createEmployeeLeaveBalance: (payload: CreateEmployeeLeaveBalancePayload) =>
+    request<EmployeeLeaveBalanceListItem>("/employee-leave-balances", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  generateEmployeeLeaveBalances: (payload: GenerateEmployeeLeaveBalancesPayload) =>
+    request<GenerateEmployeeLeaveBalancesResponse>(
+      "/employee-leave-balances/generate",
+      "POST",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  updateEmployeeLeaveBalance: (
+    balanceId: string,
+    payload: UpdateEmployeeLeaveBalancePayload,
+  ) =>
+    request<EmployeeLeaveBalanceListItem>(
+      `/employee-leave-balances/${balanceId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  deleteEmployeeLeaveBalance: (balanceId: string) =>
+    request<DeleteEntityResponse>(`/employee-leave-balances/${balanceId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listEmployeeLifecycleChecklists: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    employeeId?: string;
+    assignedToEmployeeId?: string;
+    checklistType?: EmployeeLifecycleChecklistType;
+    status?: EmployeeLifecycleChecklistStatus;
+    dueDateFrom?: string;
+    dueDateTo?: string;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<EmployeeLifecycleChecklistListItem>>(
+      `/employee-lifecycle-checklists${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        employeeId: query?.employeeId,
+        assignedToEmployeeId: query?.assignedToEmployeeId,
+        checklistType: query?.checklistType,
+        status: query?.status,
+        dueDateFrom: query?.dueDateFrom,
+        dueDateTo: query?.dueDateTo,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createEmployeeLifecycleChecklist: (
+    payload: CreateEmployeeLifecycleChecklistPayload,
+  ) =>
+    request<EmployeeLifecycleChecklistListItem>(
+      "/employee-lifecycle-checklists",
+      "POST",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  updateEmployeeLifecycleChecklist: (
+    checklistId: string,
+    payload: UpdateEmployeeLifecycleChecklistPayload,
+  ) =>
+    request<EmployeeLifecycleChecklistListItem>(
+      `/employee-lifecycle-checklists/${checklistId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  startEmployeeLifecycleChecklist: (checklistId: string) =>
+    request<EmployeeLifecycleChecklistListItem>(
+      `/employee-lifecycle-checklists/${checklistId}/start`,
+      "PATCH",
+      {
+        withAuth: true,
+      },
+    ),
+  completeEmployeeLifecycleChecklist: (checklistId: string) =>
+    request<EmployeeLifecycleChecklistListItem>(
+      `/employee-lifecycle-checklists/${checklistId}/complete`,
+      "PATCH",
+      {
+        withAuth: true,
+      },
+    ),
+  waiveEmployeeLifecycleChecklist: (checklistId: string) =>
+    request<EmployeeLifecycleChecklistListItem>(
+      `/employee-lifecycle-checklists/${checklistId}/waive`,
+      "PATCH",
+      {
+        withAuth: true,
+      },
+    ),
+  generateEmployeeLifecycleChecklistDueAlerts: (
+    payload: GenerateEmployeeLifecycleChecklistDueAlertsPayload,
+  ) =>
+    request<GenerateEmployeeLifecycleChecklistDueAlertsResponse>(
+      "/employee-lifecycle-checklists/generate-due-alerts",
+      "POST",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  deleteEmployeeLifecycleChecklist: (checklistId: string) =>
+    request<DeleteEntityResponse>(
+      `/employee-lifecycle-checklists/${checklistId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listEmployeeTalents: (query?: {
     page?: number;
     limit?: number;
@@ -8064,5 +10567,1359 @@ export const apiClient = {
     request<DeleteEntityResponse>(`/employee-talents/${mappingId}`, "DELETE", {
       withAuth: true,
     }),
+  listBranches: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    isHeadquarters?: boolean;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<FinanceBranchListItem>>(
+      `/branches${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        isHeadquarters: query?.isHeadquarters,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createBranch: (payload: CreateFinanceBranchPayload) =>
+    request<FinanceBranchListItem>("/branches", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateBranch: (branchId: string, payload: UpdateFinanceBranchPayload) =>
+    request<FinanceBranchListItem>(`/branches/${branchId}`, "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  deleteBranch: (branchId: string) =>
+    request<DeleteEntityResponse>(`/branches/${branchId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listCurrencies: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    isBase?: boolean;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<CurrencyListItem>>(
+      `/currencies${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        isBase: query?.isBase,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createCurrency: (payload: CreateCurrencyPayload) =>
+    request<CurrencyListItem>("/currencies", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateCurrency: (currencyId: string, payload: UpdateCurrencyPayload) =>
+    request<CurrencyListItem>(`/currencies/${currencyId}`, "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  deleteCurrency: (currencyId: string) =>
+    request<DeleteEntityResponse>(`/currencies/${currencyId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listCurrencyExchangeRates: (query?: {
+    page?: number;
+    limit?: number;
+    fromCurrencyId?: number;
+    toCurrencyId?: number;
+    dateFrom?: string;
+    dateTo?: string;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<CurrencyExchangeRateListItem>>(
+      `/currency-exchange-rates${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        fromCurrencyId: query?.fromCurrencyId,
+        toCurrencyId: query?.toCurrencyId,
+        dateFrom: query?.dateFrom,
+        dateTo: query?.dateTo,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createCurrencyExchangeRate: (payload: CreateCurrencyExchangeRatePayload) =>
+    request<CurrencyExchangeRateListItem>(
+      "/currency-exchange-rates",
+      "POST",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  updateCurrencyExchangeRate: (
+    exchangeRateId: string,
+    payload: UpdateCurrencyExchangeRatePayload,
+  ) =>
+    request<CurrencyExchangeRateListItem>(
+      `/currency-exchange-rates/${exchangeRateId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  deleteCurrencyExchangeRate: (exchangeRateId: string) =>
+    request<DeleteEntityResponse>(
+      `/currency-exchange-rates/${exchangeRateId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
+  listFiscalYears: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    academicYearId?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    isClosed?: boolean;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<FiscalYearListItem>>(
+      `/fiscal-years${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        academicYearId: query?.academicYearId,
+        dateFrom: query?.dateFrom,
+        dateTo: query?.dateTo,
+        isClosed: query?.isClosed,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createFiscalYear: (payload: CreateFiscalYearPayload) =>
+    request<FiscalYearListItem>("/fiscal-years", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateFiscalYear: (fiscalYearId: string, payload: UpdateFiscalYearPayload) =>
+    request<FiscalYearListItem>(`/fiscal-years/${fiscalYearId}`, "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  deleteFiscalYear: (fiscalYearId: string) =>
+    request<DeleteEntityResponse>(`/fiscal-years/${fiscalYearId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listFiscalPeriods: (query?: {
+    page?: number;
+    limit?: number;
+    fiscalYearId?: number;
+    periodType?: string;
+    status?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<FiscalPeriodListItem>>(
+      `/fiscal-periods${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        fiscalYearId: query?.fiscalYearId,
+        periodType: query?.periodType,
+        status: query?.status,
+        dateFrom: query?.dateFrom,
+        dateTo: query?.dateTo,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createFiscalPeriod: (payload: CreateFiscalPeriodPayload) =>
+    request<FiscalPeriodListItem>("/fiscal-periods", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateFiscalPeriod: (
+    fiscalPeriodId: string,
+    payload: UpdateFiscalPeriodPayload,
+  ) =>
+    request<FiscalPeriodListItem>(`/fiscal-periods/${fiscalPeriodId}`, "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  deleteFiscalPeriod: (fiscalPeriodId: string) =>
+    request<DeleteEntityResponse>(
+      `/fiscal-periods/${fiscalPeriodId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
+  listChartOfAccounts: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    accountType?: string;
+    parentId?: number;
+    branchId?: number;
+    isHeader?: boolean;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<ChartOfAccountListItem>>(
+      `/chart-of-accounts${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        accountType: query?.accountType,
+        parentId: query?.parentId,
+        branchId: query?.branchId,
+        isHeader: query?.isHeader,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createChartOfAccount: (payload: CreateChartOfAccountPayload) =>
+    request<ChartOfAccountListItem>("/chart-of-accounts", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateChartOfAccount: (
+    accountId: string,
+    payload: UpdateChartOfAccountPayload,
+  ) =>
+    request<ChartOfAccountListItem>(
+      `/chart-of-accounts/${accountId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  deleteChartOfAccount: (accountId: string) =>
+    request<DeleteEntityResponse>(`/chart-of-accounts/${accountId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listJournalEntries: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    fiscalYearId?: number;
+    fiscalPeriodId?: number;
+    branchId?: number;
+    status?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<JournalEntryListItem>>(
+      `/journal-entries${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        fiscalYearId: query?.fiscalYearId,
+        fiscalPeriodId: query?.fiscalPeriodId,
+        branchId: query?.branchId,
+        status: query?.status,
+        dateFrom: query?.dateFrom,
+        dateTo: query?.dateTo,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createJournalEntry: (payload: CreateJournalEntryPayload) =>
+    request<JournalEntryListItem>("/journal-entries", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateJournalEntry: (
+    journalEntryId: string,
+    payload: UpdateJournalEntryPayload,
+  ) =>
+    request<JournalEntryListItem>(
+      `/journal-entries/${journalEntryId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  approveJournalEntry: (journalEntryId: string) =>
+    request<JournalEntryListItem>(
+      `/journal-entries/${journalEntryId}/approve`,
+      "PATCH",
+      {
+        withAuth: true,
+      },
+    ),
+  postJournalEntry: (journalEntryId: string) =>
+    request<JournalEntryListItem>(
+      `/journal-entries/${journalEntryId}/post`,
+      "PATCH",
+      {
+        withAuth: true,
+      },
+    ),
+  reverseJournalEntry: (journalEntryId: string, reason: string) =>
+    request<JournalEntryListItem>(
+      `/journal-entries/${journalEntryId}/reverse`,
+      "POST",
+      {
+        withAuth: true,
+        json: { reason },
+      },
+    ),
+  deleteJournalEntry: (journalEntryId: string) =>
+    request<DeleteEntityResponse>(
+      `/journal-entries/${journalEntryId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
+  listPaymentGateways: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    gatewayType?: PaymentGatewayType;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<PaymentGatewayListItem>>(
+      `/payment-gateways${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        gatewayType: query?.gatewayType,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createPaymentGateway: (payload: CreatePaymentGatewayPayload) =>
+    request<PaymentGatewayListItem>("/payment-gateways", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updatePaymentGateway: (
+    gatewayId: number,
+    payload: UpdatePaymentGatewayPayload,
+  ) =>
+    request<PaymentGatewayListItem>(`/payment-gateways/${gatewayId}`, "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  deletePaymentGateway: (gatewayId: number) =>
+    request<DeleteEntityResponse>(`/payment-gateways/${gatewayId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listPaymentTransactions: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    gatewayId?: number;
+    enrollmentId?: string;
+    status?: PaymentTransactionStatus;
+  }) =>
+    request<PaginatedResponse<PaymentTransactionListItem>>(
+      `/payment-transactions${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        gatewayId: query?.gatewayId,
+        enrollmentId: query?.enrollmentId,
+        status: query?.status,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createPaymentTransaction: (payload: CreatePaymentTransactionPayload) =>
+    request<PaymentTransactionListItem>("/payment-transactions", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updatePaymentTransaction: (
+    paymentTransactionId: string,
+    payload: UpdatePaymentTransactionPayload,
+  ) =>
+    request<PaymentTransactionListItem>(
+      `/payment-transactions/${paymentTransactionId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  completeAndReconcilePaymentTransaction: (paymentTransactionId: string) =>
+    request<PaymentTransactionListItem>(
+      `/payment-transactions/${paymentTransactionId}/complete-and-reconcile`,
+      "POST",
+      {
+        withAuth: true,
+      },
+    ),
+  simulatePaymentTransaction: (payload?: PaymentTransactionActionPayload) =>
+    request<PaymentTransactionListItem>("/payment-transactions/simulate", "POST", {
+      withAuth: true,
+      json: payload ?? {},
+    }),
+  reconcilePaymentTransaction: (
+    paymentTransactionId: string,
+    payload?: PaymentTransactionActionPayload,
+  ) =>
+    request<PaymentTransactionListItem>(
+      `/payment-transactions/${paymentTransactionId}/reconcile`,
+      "POST",
+      {
+        withAuth: true,
+        json: payload ?? {},
+      },
+    ),
+  deletePaymentTransaction: (paymentTransactionId: string) =>
+    request<DeleteEntityResponse>(
+      `/payment-transactions/${paymentTransactionId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
+  listBankReconciliations: (query?: {
+    page?: number;
+    limit?: number;
+    bankAccountId?: number;
+    status?: BankReconciliationStatus;
+    dateFrom?: string;
+    dateTo?: string;
+  }) =>
+    request<PaginatedResponse<BankReconciliationListItem>>(
+      `/bank-reconciliations${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        bankAccountId: query?.bankAccountId,
+        status: query?.status,
+        dateFrom: query?.dateFrom,
+        dateTo: query?.dateTo,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createBankReconciliation: (payload: CreateBankReconciliationPayload) =>
+    request<BankReconciliationListItem>("/bank-reconciliations", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateBankReconciliation: (
+    reconciliationId: string,
+    payload: UpdateBankReconciliationPayload,
+  ) =>
+    request<BankReconciliationListItem>(
+      `/bank-reconciliations/${reconciliationId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  autoMatchBankReconciliationTransactions: (reconciliationId: string) =>
+    request<BankReconciliationAutoMatchResponse>(
+      `/bank-reconciliations/${reconciliationId}/auto-match-transactions`,
+      "POST",
+      {
+        withAuth: true,
+      },
+    ),
+  deleteBankReconciliation: (reconciliationId: string) =>
+    request<DeleteEntityResponse>(
+      `/bank-reconciliations/${reconciliationId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
+  listFeeStructures: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    academicYearId?: string;
+    gradeLevelId?: string;
+    feeType?: FeeType;
+    currencyId?: number;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<FeeStructureListItem>>(
+      `/fee-structures${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        academicYearId: query?.academicYearId,
+        gradeLevelId: query?.gradeLevelId,
+        feeType: query?.feeType,
+        currencyId: query?.currencyId,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createFeeStructure: (payload: CreateFeeStructurePayload) =>
+    request<FeeStructureListItem>("/fee-structures", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateFeeStructure: (
+    feeStructureId: string,
+    payload: UpdateFeeStructurePayload,
+  ) =>
+    request<FeeStructureListItem>(`/fee-structures/${feeStructureId}`, "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  deleteFeeStructure: (feeStructureId: string) =>
+    request<DeleteEntityResponse>(`/fee-structures/${feeStructureId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listDiscountRules: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    discountType?: DiscountType;
+    appliesToFeeType?: DiscountAppliesToFeeType;
+    academicYearId?: string;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<DiscountRuleListItem>>(
+      `/discount-rules${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        discountType: query?.discountType,
+        appliesToFeeType: query?.appliesToFeeType,
+        academicYearId: query?.academicYearId,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createDiscountRule: (payload: CreateDiscountRulePayload) =>
+    request<DiscountRuleListItem>("/discount-rules", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateDiscountRule: (
+    discountRuleId: string,
+    payload: UpdateDiscountRulePayload,
+  ) =>
+    request<DiscountRuleListItem>(`/discount-rules/${discountRuleId}`, "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  deleteDiscountRule: (discountRuleId: string) =>
+    request<DeleteEntityResponse>(
+      `/discount-rules/${discountRuleId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
+  listTaxConfigurations: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    taxType?: TaxType;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<TaxConfigurationListItem>>(
+      `/tax-configurations${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        taxType: query?.taxType,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createTaxConfiguration: (payload: CreateTaxConfigurationPayload) =>
+    request<TaxConfigurationListItem>("/tax-configurations", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateTaxConfiguration: (
+    taxConfigurationId: number,
+    payload: UpdateTaxConfigurationPayload,
+  ) =>
+    request<TaxConfigurationListItem>(
+      `/tax-configurations/${taxConfigurationId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  deleteTaxConfiguration: (taxConfigurationId: number) =>
+    request<DeleteEntityResponse>(
+      `/tax-configurations/${taxConfigurationId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
+  listStudentInvoices: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    enrollmentId?: string;
+    academicYearId?: string;
+    branchId?: number;
+    currencyId?: number;
+    status?: InvoiceStatus;
+  }) =>
+    request<PaginatedResponse<StudentInvoiceListItem>>(
+      `/student-invoices${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        enrollmentId: query?.enrollmentId,
+        academicYearId: query?.academicYearId,
+        branchId: query?.branchId,
+        currencyId: query?.currencyId,
+        status: query?.status,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createStudentInvoice: (payload: CreateStudentInvoicePayload) =>
+    request<StudentInvoiceListItem>("/student-invoices", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateStudentInvoice: (
+    invoiceId: string,
+    payload: UpdateStudentInvoicePayload,
+  ) =>
+    request<StudentInvoiceListItem>(`/student-invoices/${invoiceId}`, "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  deleteStudentInvoice: (invoiceId: string) =>
+    request<DeleteEntityResponse>(`/student-invoices/${invoiceId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listInvoiceInstallments: (query?: {
+    page?: number;
+    limit?: number;
+    invoiceId?: string;
+    status?: InstallmentStatus;
+    dueDateFrom?: string;
+    dueDateTo?: string;
+  }) =>
+    request<PaginatedResponse<InvoiceInstallmentListItem>>(
+      `/invoice-installments${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        invoiceId: query?.invoiceId,
+        status: query?.status,
+        dueDateFrom: query?.dueDateFrom,
+        dueDateTo: query?.dueDateTo,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createInvoiceInstallment: (payload: CreateInvoiceInstallmentPayload) =>
+    request<InvoiceInstallmentListItem>("/invoice-installments", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateInvoiceInstallment: (
+    installmentId: string,
+    payload: UpdateInvoiceInstallmentPayload,
+  ) =>
+    request<InvoiceInstallmentListItem>(
+      `/invoice-installments/${installmentId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  deleteInvoiceInstallment: (installmentId: string) =>
+    request<DeleteEntityResponse>(
+      `/invoice-installments/${installmentId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
+  bulkGenerateBilling: (payload: BillingEngineBulkGeneratePayload) =>
+    request<BillingEngineBulkGenerateResponse>(
+      "/billing/bulk-generate",
+      "POST",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  getBillingDefaults: () =>
+    request<BillingEngineDefaultsResponse>("/billing/defaults", "GET", {
+      withAuth: true,
+    }),
+  applySiblingDiscount: (payload: BillingEngineApplySiblingDiscountPayload) =>
+    request<BillingEngineSiblingDiscountResponse>(
+      "/billing/apply-sibling-discount",
+      "POST",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  getStudentStatement: (enrollmentId: string) =>
+    request<BillingEngineStudentStatementResponse>(
+      `/billing/student-statement/${enrollmentId}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  getFamilyBalance: (guardianId: string) =>
+    request<BillingEngineFamilyBalanceResponse>(
+      `/billing/family-balance/${guardianId}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  processBillingWithdrawal: (payload: BillingEngineProcessWithdrawalPayload) =>
+    request<BillingEngineWithdrawalResponse>(
+      "/billing/process-withdrawal",
+      "POST",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  listBudgets: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: BudgetStatus;
+    budgetType?: BudgetType;
+    fiscalYearId?: number;
+    branchId?: number;
+  }) =>
+    request<PaginatedResponse<BudgetListItem>>(
+      `/budgets${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        status: query?.status,
+        budgetType: query?.budgetType,
+        fiscalYearId: query?.fiscalYearId,
+        branchId: query?.branchId,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createBudget: (payload: CreateBudgetPayload) =>
+    request<BudgetListItem>("/budgets", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateBudget: (budgetId: number, payload: UpdateBudgetPayload) =>
+    request<BudgetListItem>(`/budgets/${budgetId}`, "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  approveBudget: (budgetId: number) =>
+    request<BudgetListItem>(`/budgets/${budgetId}/approve`, "PATCH", {
+      withAuth: true,
+    }),
+  deleteBudget: (budgetId: number) =>
+    request<DeleteEntityResponse>(`/budgets/${budgetId}`, "DELETE", {
+      withAuth: true,
+    }),
+  getBudgetVsActual: (budgetId: number) =>
+    request<BudgetVsActualReportResponse>(
+      `/budgets/${budgetId}/budget-vs-actual`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  listCostCenters: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    isActive?: boolean;
+    branchId?: number;
+  }) =>
+    request<PaginatedResponse<CostCenterListItem>>(
+      `/cost-centers${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        isActive: query?.isActive,
+        branchId: query?.branchId,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createCostCenter: (payload: CreateCostCenterPayload) =>
+    request<CostCenterListItem>("/cost-centers", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateCostCenter: (costCenterId: number, payload: UpdateCostCenterPayload) =>
+    request<CostCenterListItem>(`/cost-centers/${costCenterId}`, "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  deleteCostCenter: (costCenterId: number) =>
+    request<DeleteEntityResponse>(`/cost-centers/${costCenterId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listCreditDebitNotes: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    noteType?: CreditDebitNoteType;
+    status?: CreditDebitNoteStatus;
+    reason?: CreditDebitNoteReason;
+  }) =>
+    request<PaginatedResponse<CreditDebitNoteListItem>>(
+      `/credit-debit-notes${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        noteType: query?.noteType,
+        status: query?.status,
+        reason: query?.reason,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createCreditDebitNote: (payload: CreateCreditDebitNotePayload) =>
+    request<CreditDebitNoteListItem>("/credit-debit-notes", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateCreditDebitNote: (
+    noteId: string,
+    payload: UpdateCreditDebitNotePayload,
+  ) =>
+    request<CreditDebitNoteListItem>(`/credit-debit-notes/${noteId}`, "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  approveCreditDebitNote: (noteId: string) =>
+    request<CreditDebitNoteListItem>(
+      `/credit-debit-notes/${noteId}/approve`,
+      "PATCH",
+      {
+        withAuth: true,
+      },
+    ),
+  applyCreditDebitNote: (noteId: string) =>
+    request<CreditDebitNoteListItem>(`/credit-debit-notes/${noteId}/apply`, "PATCH", {
+      withAuth: true,
+    }),
+  deleteCreditDebitNote: (noteId: string) =>
+    request<DeleteEntityResponse>(`/credit-debit-notes/${noteId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listRecurringJournals: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    frequency?: RecurringFrequency;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<RecurringJournalListItem>>(
+      `/recurring-journals${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        frequency: query?.frequency,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createRecurringJournal: (payload: CreateRecurringJournalPayload) =>
+    request<RecurringJournalListItem>("/recurring-journals", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateRecurringJournal: (
+    recurringJournalId: number,
+    payload: UpdateRecurringJournalPayload,
+  ) =>
+    request<RecurringJournalListItem>(
+      `/recurring-journals/${recurringJournalId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  generateRecurringJournal: (recurringJournalId: number) =>
+    request<RecurringJournalGenerateResponse>(
+      `/recurring-journals/${recurringJournalId}/generate`,
+      "POST",
+      {
+        withAuth: true,
+      },
+    ),
+  deleteRecurringJournal: (recurringJournalId: number) =>
+    request<DeleteEntityResponse>(
+      `/recurring-journals/${recurringJournalId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
+  getTrialBalanceReport: (query?: {
+    fiscalYearId?: string;
+    fiscalPeriodId?: string;
+    fromDate?: string;
+    toDate?: string;
+  }) =>
+    request<TrialBalanceReportResponse>(
+      `/reports/trial-balance${buildQueryString({
+        fiscalYearId: query?.fiscalYearId,
+        fiscalPeriodId: query?.fiscalPeriodId,
+        fromDate: query?.fromDate,
+        toDate: query?.toDate,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  getGeneralLedgerReport: (query?: {
+    accountId?: string;
+    fiscalYearId?: string;
+    fiscalPeriodId?: string;
+    fromDate?: string;
+    toDate?: string;
+  }) =>
+    request<GeneralLedgerReportResponse>(
+      `/reports/general-ledger${buildQueryString({
+        accountId: query?.accountId,
+        fiscalYearId: query?.fiscalYearId,
+        fiscalPeriodId: query?.fiscalPeriodId,
+        fromDate: query?.fromDate,
+        toDate: query?.toDate,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  getAccountSummaryReport: (query?: {
+    accountId?: string;
+    fiscalYearId?: string;
+    fiscalPeriodId?: string;
+  }) =>
+    request<AccountSummaryReportResponse>(
+      `/reports/account-summary${buildQueryString({
+        accountId: query?.accountId,
+        fiscalYearId: query?.fiscalYearId,
+        fiscalPeriodId: query?.fiscalPeriodId,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  getIncomeStatementReport: (query?: {
+    fiscalYearId?: string;
+    fiscalPeriodId?: string;
+    fromDate?: string;
+    toDate?: string;
+  }) =>
+    request<IncomeStatementReportResponse>(
+      `/reports/income-statement${buildQueryString({
+        fiscalYearId: query?.fiscalYearId,
+        fiscalPeriodId: query?.fiscalPeriodId,
+        fromDate: query?.fromDate,
+        toDate: query?.toDate,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  getBalanceSheetReport: (query?: {
+    fiscalYearId?: string;
+    fiscalPeriodId?: string;
+    asOfDate?: string;
+  }) =>
+    request<BalanceSheetReportResponse>(
+      `/reports/balance-sheet${buildQueryString({
+        fiscalYearId: query?.fiscalYearId,
+        fiscalPeriodId: query?.fiscalPeriodId,
+        asOfDate: query?.asOfDate,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  getStudentAccountStatementReport: (query?: {
+    studentId?: string;
+    fromDate?: string;
+    toDate?: string;
+  }) =>
+    request<StudentAccountStatementReportResponse>(
+      `/reports/student-account-statement${buildQueryString({
+        studentId: query?.studentId,
+        fromDate: query?.fromDate,
+        toDate: query?.toDate,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  getVatReport: (query?: {
+    fiscalYearId?: string;
+    fiscalPeriodId?: string;
+    fromDate?: string;
+    toDate?: string;
+  }) =>
+    request<VatReportResponse>(
+      `/reports/vat-report${buildQueryString({
+        fiscalYearId: query?.fiscalYearId,
+        fiscalPeriodId: query?.fiscalPeriodId,
+        fromDate: query?.fromDate,
+        toDate: query?.toDate,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  getAccountsReceivableAgingReport: (query?: {
+    asOfDate?: string;
+    studentId?: string;
+  }) =>
+    request<AccountsReceivableAgingReportResponse>(
+      `/reports/accounts-receivable-aging${buildQueryString({
+        asOfDate: query?.asOfDate,
+        studentId: query?.studentId,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  getFinancialBudgetVsActualReport: (query?: {
+    budgetId?: string;
+    fiscalYearId?: string;
+    fromDate?: string;
+    toDate?: string;
+  }) =>
+    request<BudgetVsActualReportResponse>(
+      `/reports/budget-vs-actual${buildQueryString({
+        budgetId: query?.budgetId,
+        fiscalYearId: query?.fiscalYearId,
+        fromDate: query?.fromDate,
+        toDate: query?.toDate,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  listAuditTrail: (query?: {
+    page?: number;
+    limit?: number;
+    action?: string;
+    entity?: string;
+    status?: string;
+    fromDate?: string;
+    toDate?: string;
+  }) =>
+    request<PaginatedResponse<FinancialAuditTrailListItem>>(
+      `/audit-trail${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        action: query?.action,
+        entity: query?.entity,
+        status: query?.status,
+        fromDate: query?.fromDate,
+        toDate: query?.toDate,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  listFinancialFunds: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<FinancialFundListItem>>(
+      `/financial-funds${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createFinancialFund: (payload: CreateFinancialFundPayload) =>
+    request<FinancialFundListItem>("/financial-funds", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateFinancialFund: (
+    fundId: string,
+    payload: UpdateFinancialFundPayload,
+  ) =>
+    request<FinancialFundListItem>(`/financial-funds/${fundId}`, "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  deleteFinancialFund: (fundId: string) =>
+    request<DeleteEntityResponse>(`/financial-funds/${fundId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listFinancialCategories: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    categoryType?: string;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<FinancialCategoryListItem>>(
+      `/financial-categories${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        categoryType: query?.categoryType,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createFinancialCategory: (payload: CreateFinancialCategoryPayload) =>
+    request<FinancialCategoryListItem>("/financial-categories", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateFinancialCategory: (
+    categoryId: string,
+    payload: UpdateFinancialCategoryPayload,
+  ) =>
+    request<FinancialCategoryListItem>(
+      `/financial-categories/${categoryId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  deleteFinancialCategory: (categoryId: string) =>
+    request<DeleteEntityResponse>(
+      `/financial-categories/${categoryId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
+  listRevenues: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    categoryId?: string;
+    fundId?: string;
+    currencyId?: string;
+    status?: string;
+    fromDate?: string;
+    toDate?: string;
+  }) =>
+    request<PaginatedResponse<RevenueListItem>>(
+      `/revenues${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        categoryId: query?.categoryId,
+        fundId: query?.fundId,
+        currencyId: query?.currencyId,
+        status: query?.status,
+        fromDate: query?.fromDate,
+        toDate: query?.toDate,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createRevenue: (payload: CreateRevenuePayload) =>
+    request<RevenueListItem>("/revenues", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateRevenue: (revenueId: string, payload: UpdateRevenuePayload) =>
+    request<RevenueListItem>(`/revenues/${revenueId}`, "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  deleteRevenue: (revenueId: string) =>
+    request<DeleteEntityResponse>(`/revenues/${revenueId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listExpenses: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    categoryId?: string;
+    fundId?: string;
+    currencyId?: string;
+    status?: string;
+    fromDate?: string;
+    toDate?: string;
+  }) =>
+    request<PaginatedResponse<ExpenseListItem>>(
+      `/expenses${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        categoryId: query?.categoryId,
+        fundId: query?.fundId,
+        currencyId: query?.currencyId,
+        status: query?.status,
+        fromDate: query?.fromDate,
+        toDate: query?.toDate,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createExpense: (payload: CreateExpensePayload) =>
+    request<ExpenseListItem>("/expenses", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateExpense: (expenseId: string, payload: UpdateExpensePayload) =>
+    request<ExpenseListItem>(`/expenses/${expenseId}`, "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  approveExpense: (expenseId: string) =>
+    request<ExpenseListItem>(`/expenses/${expenseId}/approve`, "POST", {
+      withAuth: true,
+    }),
+  deleteExpense: (expenseId: string) =>
+    request<DeleteEntityResponse>(`/expenses/${expenseId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listCommunityContributions: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    fromDate?: string;
+    toDate?: string;
+  }) =>
+    request<PaginatedResponse<CommunityContributionListItem>>(
+      `/community-contributions${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        status: query?.status,
+        fromDate: query?.fromDate,
+        toDate: query?.toDate,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createCommunityContribution: (payload: CreateCommunityContributionPayload) =>
+    request<CommunityContributionListItem>(
+      "/community-contributions",
+      "POST",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  updateCommunityContribution: (
+    contributionId: string,
+    payload: UpdateCommunityContributionPayload,
+  ) =>
+    request<CommunityContributionListItem>(
+      `/community-contributions/${contributionId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  deleteCommunityContribution: (contributionId: string) =>
+    request<DeleteEntityResponse>(
+      `/community-contributions/${contributionId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
 };
 

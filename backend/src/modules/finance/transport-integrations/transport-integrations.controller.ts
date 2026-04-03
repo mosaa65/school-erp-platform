@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { RequirePermissions } from '../../../common/decorators/permissions.decorator';
@@ -6,6 +6,7 @@ import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import type { AuthUser } from '../../../common/interfaces/auth-user.interface';
 import { GenerateTransportInvoicesDto } from './dto/generate-transport-invoices.dto';
+import { TransportRevenueReportQueryDto } from './dto/transport-revenue-report-query.dto';
 import { TransportMaintenanceExpenseDto } from './dto/transport-maintenance-expense.dto';
 import { TransportSubscriptionFeeDto } from './dto/transport-subscription-fee.dto';
 import { TransportIntegrationsService } from './transport-integrations.service';
@@ -18,6 +19,13 @@ export class TransportIntegrationsController {
   constructor(
     private readonly transportIntegrationsService: TransportIntegrationsService,
   ) {}
+
+  @Get('revenue-report')
+  @RequirePermissions('finance-transport.generate-invoices')
+  @ApiOperation({ summary: 'Transport revenue report' })
+  getRevenueReport(@Query() query: TransportRevenueReportQueryDto) {
+    return this.transportIntegrationsService.getRevenueReport(query);
+  }
 
   @Post('generate-invoices')
   @RequirePermissions('finance-transport.generate-invoices')

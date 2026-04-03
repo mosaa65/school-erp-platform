@@ -28,6 +28,13 @@ import { ProcessWithdrawalDto } from './dto/process-withdrawal.dto';
 export class BillingEngineController {
   constructor(private readonly billingEngineService: BillingEngineService) {}
 
+  @Get('defaults')
+  @RequirePermissions('billing.read-statement')
+  @ApiOperation({ summary: 'Suggested daily billing defaults' })
+  getDefaults() {
+    return this.billingEngineService.getDefaults();
+  }
+
   @Post('bulk-generate')
   @RequirePermissions('billing.generate')
   @ApiOperation({ summary: 'توليد فواتير جماعية — Bulk Invoice Generation' })

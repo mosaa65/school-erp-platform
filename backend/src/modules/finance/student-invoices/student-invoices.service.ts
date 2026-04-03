@@ -15,6 +15,10 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogsService } from '../../audit-logs/audit-logs.service';
 import { DocumentSequencesService } from '../document-sequences/document-sequences.service';
 import {
+  buildHybridBranchClause,
+  combineWhereClauses,
+} from '../utils/hybrid-branch-scope';
+import {
   CreateStudentInvoiceDto,
   InvoiceInstallmentInputDto,
   InvoiceLineInputDto,
@@ -231,22 +235,31 @@ export class StudentInvoicesService {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
 
-    const where: Prisma.StudentInvoiceWhereInput = {
+    const baseWhere: Prisma.StudentInvoiceWhereInput = {
       enrollmentId: query.enrollmentId,
       academicYearId: query.academicYearId,
-      branchId: query.branchId,
       currencyId: query.currencyId,
       status: query.status,
-      OR: query.search
-        ? [
+    };
+    const branchWhere = buildHybridBranchClause(query.branchId) as
+      | Prisma.StudentInvoiceWhereInput
+      | undefined;
+    const searchWhere: Prisma.StudentInvoiceWhereInput | undefined = query.search
+      ? {
+          OR: [
             {
               invoiceNumber: {
                 contains: query.search,
               },
             },
-          ]
-        : undefined,
-    };
+          ],
+        }
+      : undefined;
+    const where = combineWhereClauses<Prisma.StudentInvoiceWhereInput>(
+      baseWhere,
+      branchWhere,
+      searchWhere,
+    );
 
     const [total, items] = await this.prisma.$transaction([
       this.prisma.studentInvoice.count({ where }),

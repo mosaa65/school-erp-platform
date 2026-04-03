@@ -4,9 +4,11 @@ import {
   InvoiceStatus,
   JournalEntryStatus,
   PaymentTransactionStatus,
+  Prisma,
   TaxType,
 } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { buildHybridBranchClause } from '../utils/hybrid-branch-scope';
 
 // ─── Existing Interfaces ────────────────────────────────────────────
 
@@ -114,7 +116,7 @@ export interface VatReportResult {
 }
 
 export interface AgingBucket {
-  current: number;   // 0-30 days
+  current: number; // 0-30 days
   days31to60: number;
   days61to90: number;
   over90: number;
@@ -135,6 +137,16 @@ export interface AccountsReceivableAgingResult {
   asOfDate: string;
 }
 
+type ReportAccount = {
+  id: number;
+  accountCode: string;
+  nameAr: string;
+  nameEn: string | null;
+  accountType: AccountType;
+  hierarchyLevel: number;
+  isHeader: boolean;
+};
+
 @Injectable()
 export class FinancialReportsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -148,30 +160,23 @@ export class FinancialReportsService {
     branchId?: number;
     includeHeaders?: boolean;
     asOfDate?: string;
-  }): Promise<{ data: TrialBalanceEntry[]; totals: { totalDebit: number; totalCredit: number } }> {
-    const accounts = await this.prisma.chartOfAccount.findMany({
-      where: {
-        deletedAt: null,
-        isActive: true,
-        ...(query.branchId ? { branchId: query.branchId } : {}),
-        ...(query.includeHeaders === false ? { isHeader: false } : {}),
-      },
-      select: {
-        id: true,
-        accountCode: true,
-        nameAr: true,
-        nameEn: true,
-        accountType: true,
-        hierarchyLevel: true,
-        isHeader: true,
-        normalBalance: true,
-        currentBalance: true,
-      },
-      orderBy: { accountCode: 'asc' },
+  }): Promise<{
+    data: TrialBalanceEntry[];
+    totals: { totalDebit: number; totalCredit: number };
+  }> {
+    const accounts = await this.listAccountsForReports({
+      branchId: query.branchId,
+      includeHeaders: query.includeHeaders,
+    });
+    const balanceMap = await this.loadAccountBalanceMap({
+      accountIds: accounts.map((account) => account.id),
+      fiscalYearId: query.fiscalYearId,
+      branchId: query.branchId,
+      dateTo: query.asOfDate,
     });
 
     const trialBalance: TrialBalanceEntry[] = accounts.map((account) => {
-      const balance = Number(account.currentBalance);
+      const balance = this.round(balanceMap.get(account.id) ?? 0);
       const debitBalance = balance >= 0 ? balance : 0;
       const creditBalance = balance < 0 ? Math.abs(balance) : 0;
 
@@ -221,27 +226,25 @@ export class FinancialReportsService {
     limit?: number;
   }): Promise<{
     data: GeneralLedgerEntry[];
-    pagination: { page: number; limit: number; total: number; totalPages: number };
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
   }> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 50;
 
     const where: any = {
       journalEntry: {
-        deletedAt: null,
-        isActive: true,
-        status: JournalEntryStatus.POSTED,
-        ...(query.fiscalYearId ? { fiscalYearId: query.fiscalYearId } : {}),
-        ...(query.fiscalPeriodId ? { fiscalPeriodId: query.fiscalPeriodId } : {}),
-        ...(query.branchId ? { branchId: query.branchId } : {}),
-        ...(query.dateFrom || query.dateTo
-          ? {
-              entryDate: {
-                ...(query.dateFrom ? { gte: new Date(query.dateFrom) } : {}),
-                ...(query.dateTo ? { lte: new Date(query.dateTo) } : {}),
-              },
-            }
-          : {}),
+        ...this.buildPostedJournalEntryWhere({
+          fiscalYearId: query.fiscalYearId,
+          fiscalPeriodId: query.fiscalPeriodId,
+          branchId: query.branchId,
+          dateFrom: query.dateFrom,
+          dateTo: query.dateTo,
+        }),
       },
       deletedAt: null,
       isActive: true,
@@ -380,62 +383,7 @@ export class FinancialReportsService {
     dateFrom?: string;
     dateTo?: string;
   }): Promise<IncomeStatementResult> {
-    const useDateRange = !!(query.dateFrom || query.dateTo);
-
-    if (useDateRange) {
-      return this.getIncomeStatementByDateRange(query);
-    }
-
-    // Fall back to currentBalance on ChartOfAccount
-    const accounts = await this.prisma.chartOfAccount.findMany({
-      where: {
-        deletedAt: null,
-        isActive: true,
-        isHeader: false,
-        accountType: { in: [AccountType.REVENUE, AccountType.EXPENSE] },
-        ...(query.branchId ? { branchId: query.branchId } : {}),
-      },
-      select: {
-        id: true,
-        accountCode: true,
-        nameAr: true,
-        nameEn: true,
-        accountType: true,
-        currentBalance: true,
-      },
-      orderBy: { accountCode: 'asc' },
-    });
-
-    const revenueAccounts: IncomeStatementLineItem[] = [];
-    const expenseAccounts: IncomeStatementLineItem[] = [];
-
-    for (const account of accounts) {
-      const item: IncomeStatementLineItem = {
-        accountId: account.id,
-        accountCode: account.accountCode,
-        nameAr: account.nameAr,
-        nameEn: account.nameEn,
-        balance: Math.abs(Number(account.currentBalance)),
-      };
-
-      if (account.accountType === AccountType.REVENUE) {
-        revenueAccounts.push(item);
-      } else {
-        expenseAccounts.push(item);
-      }
-    }
-
-    const totalRevenue = this.round(revenueAccounts.reduce((s, a) => s + a.balance, 0));
-    const totalExpenses = this.round(expenseAccounts.reduce((s, a) => s + a.balance, 0));
-
-    return {
-      revenueAccounts,
-      expenseAccounts,
-      totalRevenue,
-      totalExpenses,
-      netIncome: this.round(totalRevenue - totalExpenses),
-      period: { dateFrom: query.dateFrom, dateTo: query.dateTo },
-    };
+    return this.getIncomeStatementByDateRange(query);
   }
 
   /**
@@ -447,63 +395,18 @@ export class FinancialReportsService {
     dateFrom?: string;
     dateTo?: string;
   }): Promise<IncomeStatementResult> {
-    const accounts = await this.prisma.chartOfAccount.findMany({
-      where: {
-        deletedAt: null,
-        isActive: true,
-        isHeader: false,
-        accountType: { in: [AccountType.REVENUE, AccountType.EXPENSE] },
-        ...(query.branchId ? { branchId: query.branchId } : {}),
-      },
-      select: {
-        id: true,
-        accountCode: true,
-        nameAr: true,
-        nameEn: true,
-        accountType: true,
-      },
-      orderBy: { accountCode: 'asc' },
+    const accounts = await this.listAccountsForReports({
+      branchId: query.branchId,
+      includeHeaders: false,
+      accountTypes: [AccountType.REVENUE, AccountType.EXPENSE],
     });
-
-    const accountIds = accounts.map((a) => a.id);
-
-    // Aggregate debit/credit from posted journal entry lines
-    const lines = await this.prisma.journalEntryLine.findMany({
-      where: {
-        accountId: { in: accountIds },
-        deletedAt: null,
-        isActive: true,
-        journalEntry: {
-          deletedAt: null,
-          isActive: true,
-          status: JournalEntryStatus.POSTED,
-          ...(query.fiscalYearId ? { fiscalYearId: query.fiscalYearId } : {}),
-          ...(query.branchId ? { branchId: query.branchId } : {}),
-          entryDate: {
-            ...(query.dateFrom ? { gte: new Date(query.dateFrom) } : {}),
-            ...(query.dateTo ? { lte: new Date(query.dateTo) } : {}),
-          },
-        },
-      },
-      select: {
-        accountId: true,
-        debitAmount: true,
-        creditAmount: true,
-      },
+    const balanceMap = await this.loadAccountBalanceMap({
+      accountIds: accounts.map((account) => account.id),
+      fiscalYearId: query.fiscalYearId,
+      branchId: query.branchId,
+      dateFrom: query.dateFrom,
+      dateTo: query.dateTo,
     });
-
-    // Build a map: accountId → net balance
-    const balanceMap = new Map<number, number>();
-    for (const line of lines) {
-      const prev = balanceMap.get(line.accountId) ?? 0;
-      // For revenue accounts: credit increases, debit decreases
-      // For expense accounts: debit increases, credit decreases
-      // We compute net = debit - credit; revenue will be negative, expense positive
-      balanceMap.set(
-        line.accountId,
-        prev + Number(line.debitAmount) - Number(line.creditAmount),
-      );
-    }
 
     const revenueAccounts: IncomeStatementLineItem[] = [];
     const expenseAccounts: IncomeStatementLineItem[] = [];
@@ -525,8 +428,12 @@ export class FinancialReportsService {
       }
     }
 
-    const totalRevenue = this.round(revenueAccounts.reduce((s, a) => s + a.balance, 0));
-    const totalExpenses = this.round(expenseAccounts.reduce((s, a) => s + a.balance, 0));
+    const totalRevenue = this.round(
+      revenueAccounts.reduce((s, a) => s + a.balance, 0),
+    );
+    const totalExpenses = this.round(
+      expenseAccounts.reduce((s, a) => s + a.balance, 0),
+    );
 
     return {
       revenueAccounts,
@@ -548,22 +455,14 @@ export class FinancialReportsService {
   }): Promise<BalanceSheetResult> {
     const asOfDate = query.asOfDate ?? new Date().toISOString().slice(0, 10);
 
-    const accounts = await this.prisma.chartOfAccount.findMany({
-      where: {
-        deletedAt: null,
-        isActive: true,
-        isHeader: false,
-        ...(query.branchId ? { branchId: query.branchId } : {}),
-      },
-      select: {
-        id: true,
-        accountCode: true,
-        nameAr: true,
-        nameEn: true,
-        accountType: true,
-        currentBalance: true,
-      },
-      orderBy: { accountCode: 'asc' },
+    const accounts = await this.listAccountsForReports({
+      branchId: query.branchId,
+      includeHeaders: false,
+    });
+    const balanceMap = await this.loadAccountBalanceMap({
+      accountIds: accounts.map((account) => account.id),
+      branchId: query.branchId,
+      dateTo: asOfDate,
     });
 
     const assetAccounts: BalanceSheetLineItem[] = [];
@@ -573,7 +472,7 @@ export class FinancialReportsService {
     let totalExpenses = 0;
 
     for (const account of accounts) {
-      const balance = Number(account.currentBalance);
+      const balance = this.round(balanceMap.get(account.id) ?? 0);
       const item: BalanceSheetLineItem = {
         accountId: account.id,
         accountCode: account.accountCode,
@@ -597,19 +496,27 @@ export class FinancialReportsService {
           totalRevenue += Math.abs(balance);
           break;
         case AccountType.EXPENSE:
-          totalExpenses += balance;
+          totalExpenses += Math.abs(balance);
           break;
       }
     }
 
-    const totalAssets = this.round(assetAccounts.reduce((s, a) => s + a.balance, 0));
-    const totalLiabilities = this.round(liabilityAccounts.reduce((s, a) => s + a.balance, 0));
-    const totalEquity = this.round(equityAccounts.reduce((s, a) => s + a.balance, 0));
+    const totalAssets = this.round(
+      assetAccounts.reduce((s, a) => s + a.balance, 0),
+    );
+    const totalLiabilities = this.round(
+      liabilityAccounts.reduce((s, a) => s + a.balance, 0),
+    );
+    const totalEquity = this.round(
+      equityAccounts.reduce((s, a) => s + a.balance, 0),
+    );
     const retainedEarnings = this.round(totalRevenue - totalExpenses);
     const totalEquityWithEarnings = this.round(totalEquity + retainedEarnings);
 
     // Accounting equation: Assets = Liabilities + Equity (+ Retained Earnings)
-    const isBalanced = Math.abs(totalAssets - (totalLiabilities + totalEquityWithEarnings)) < 0.01;
+    const isBalanced =
+      Math.abs(totalAssets - (totalLiabilities + totalEquityWithEarnings)) <
+      0.01;
 
     return {
       assets: { accounts: assetAccounts, total: totalAssets },
@@ -636,7 +543,9 @@ export class FinancialReportsService {
     const invoices = await this.prisma.studentInvoice.findMany({
       where: {
         enrollmentId: query.enrollmentId,
-        ...(query.academicYearId ? { academicYearId: query.academicYearId } : {}),
+        ...(query.academicYearId
+          ? { academicYearId: query.academicYearId }
+          : {}),
         status: { notIn: [InvoiceStatus.CANCELLED] },
         ...(query.dateFrom || query.dateTo
           ? {
@@ -763,10 +672,9 @@ export class FinancialReportsService {
     const lineItems = await this.prisma.invoiceLineItem.findMany({
       where: {
         taxCodeId: { not: null },
-        vatAmount: { not: 0 },
         invoice: {
           status: { notIn: [InvoiceStatus.CANCELLED, InvoiceStatus.DRAFT] },
-          ...(query.branchId ? { branchId: query.branchId } : {}),
+          ...(buildHybridBranchClause(query.branchId) ?? {}),
           ...(query.dateFrom || query.dateTo
             ? {
                 invoiceDate: {
@@ -818,7 +726,8 @@ export class FinancialReportsService {
       const key = item.taxCode.id;
       const existing = taxMap.get(key);
       const lineBase =
-        Number(item.quantity) * Number(item.unitPrice) - Number(item.discountAmount);
+        Number(item.quantity) * Number(item.unitPrice) -
+        Number(item.discountAmount);
 
       if (existing) {
         existing.taxableBase += lineBase;
@@ -863,8 +772,12 @@ export class FinancialReportsService {
       }
     }
 
-    const totalOutputVat = this.round(outputVat.reduce((s, v) => s + v.vatAmount, 0));
-    const totalInputVat = this.round(inputVat.reduce((s, v) => s + v.vatAmount, 0));
+    const totalOutputVat = this.round(
+      outputVat.reduce((s, v) => s + v.vatAmount, 0),
+    );
+    const totalInputVat = this.round(
+      inputVat.reduce((s, v) => s + v.vatAmount, 0),
+    );
 
     return {
       outputVat,
@@ -892,8 +805,10 @@ export class FinancialReportsService {
     const invoices = await this.prisma.studentInvoice.findMany({
       where: {
         status: { in: [InvoiceStatus.ISSUED, InvoiceStatus.PARTIAL] },
-        ...(query.branchId ? { branchId: query.branchId } : {}),
-        ...(query.academicYearId ? { academicYearId: query.academicYearId } : {}),
+        ...(buildHybridBranchClause(query.branchId) ?? {}),
+        ...(query.academicYearId
+          ? { academicYearId: query.academicYearId }
+          : {}),
       },
       select: {
         id: true,
@@ -925,13 +840,16 @@ export class FinancialReportsService {
     >();
 
     for (const inv of invoices) {
-      const balance = Number(inv.balanceDue ?? (Number(inv.totalAmount) - Number(inv.paidAmount)));
+      const balance = Number(
+        inv.balanceDue ?? Number(inv.totalAmount) - Number(inv.paidAmount),
+      );
       if (balance <= 0) continue;
 
       const daysOverdue = Math.max(
         0,
         Math.floor(
-          (asOfDate.getTime() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24),
+          (asOfDate.getTime() - new Date(inv.dueDate).getTime()) /
+            (1000 * 60 * 60 * 24),
         ),
       );
 
@@ -1016,5 +934,101 @@ export class FinancialReportsService {
 
   private round(value: number): number {
     return Number(value.toFixed(2));
+  }
+
+  private async listAccountsForReports(input: {
+    branchId?: number;
+    includeHeaders?: boolean;
+    accountTypes?: AccountType[];
+  }): Promise<ReportAccount[]> {
+    const where: Prisma.ChartOfAccountWhereInput = {
+      deletedAt: null,
+      isActive: true,
+      ...(input.includeHeaders === false ? { isHeader: false } : {}),
+      ...(input.accountTypes?.length
+        ? { accountType: { in: input.accountTypes } }
+        : {}),
+      ...(buildHybridBranchClause(input.branchId) ?? {}),
+    };
+
+    return this.prisma.chartOfAccount.findMany({
+      where,
+      select: {
+        id: true,
+        accountCode: true,
+        nameAr: true,
+        nameEn: true,
+        accountType: true,
+        hierarchyLevel: true,
+        isHeader: true,
+      },
+      orderBy: { accountCode: 'asc' },
+    });
+  }
+
+  private buildPostedJournalEntryWhere(input: {
+    fiscalYearId?: number;
+    fiscalPeriodId?: number;
+    branchId?: number;
+    dateFrom?: string;
+    dateTo?: string;
+  }): Prisma.JournalEntryWhereInput {
+    return {
+      deletedAt: null,
+      isActive: true,
+      status: JournalEntryStatus.POSTED,
+      ...(input.fiscalYearId ? { fiscalYearId: input.fiscalYearId } : {}),
+      ...(input.fiscalPeriodId ? { fiscalPeriodId: input.fiscalPeriodId } : {}),
+      ...(buildHybridBranchClause(input.branchId) ?? {}),
+      ...(input.dateFrom || input.dateTo
+        ? {
+            entryDate: {
+              ...(input.dateFrom ? { gte: new Date(input.dateFrom) } : {}),
+              ...(input.dateTo ? { lte: new Date(input.dateTo) } : {}),
+            },
+          }
+        : {}),
+    };
+  }
+
+  private async loadAccountBalanceMap(input: {
+    accountIds: number[];
+    fiscalYearId?: number;
+    fiscalPeriodId?: number;
+    branchId?: number;
+    dateFrom?: string;
+    dateTo?: string;
+  }) {
+    if (input.accountIds.length === 0) {
+      return new Map<number, number>();
+    }
+
+    const lines = await this.prisma.journalEntryLine.findMany({
+      where: {
+        accountId: {
+          in: input.accountIds,
+        },
+        deletedAt: null,
+        isActive: true,
+        journalEntry: this.buildPostedJournalEntryWhere(input),
+      },
+      select: {
+        accountId: true,
+        debitAmount: true,
+        creditAmount: true,
+      },
+    });
+
+    const balanceMap = new Map<number, number>();
+
+    for (const line of lines) {
+      const previous = balanceMap.get(line.accountId) ?? 0;
+      balanceMap.set(
+        line.accountId,
+        previous + Number(line.debitAmount) - Number(line.creditAmount),
+      );
+    }
+
+    return balanceMap;
   }
 }

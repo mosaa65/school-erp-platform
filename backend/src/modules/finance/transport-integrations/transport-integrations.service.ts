@@ -11,13 +11,16 @@ import {
   InvoiceStatus,
   JournalEntryStatus,
   PaymentMethod,
+  PaymentTransactionStatus,
   Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogsService } from '../../audit-logs/audit-logs.service';
 import { DocumentSequencesService } from '../document-sequences/document-sequences.service';
+import { buildHybridBranchClause } from '../utils/hybrid-branch-scope';
 import { GenerateTransportInvoicesDto } from './dto/generate-transport-invoices.dto';
 import { TransportMaintenanceExpenseDto } from './dto/transport-maintenance-expense.dto';
+import { TransportRevenueReportQueryDto } from './dto/transport-revenue-report-query.dto';
 import { TransportSubscriptionFeeDto } from './dto/transport-subscription-fee.dto';
 
 const DEFAULT_TRANSPORT_REVENUE_ACCOUNT_CODE = '4003';
@@ -32,6 +35,89 @@ export class TransportIntegrationsService {
     private readonly auditLogsService: AuditLogsService,
     private readonly documentSequencesService: DocumentSequencesService,
   ) {}
+
+  async getRevenueReport(query: TransportRevenueReportQueryDto) {
+    if (query.dateFrom && query.dateTo) {
+      const from = new Date(`${query.dateFrom}T00:00:00.000Z`);
+      const to = new Date(`${query.dateTo}T23:59:59.999Z`);
+      if (from > to) {
+        throw new BadRequestException('dateFrom must be less than or equal to dateTo');
+      }
+    }
+
+    const invoiceWhere: Prisma.StudentInvoiceWhereInput = {
+      lines: {
+        some: {
+          feeType: FeeType.TRANSPORT,
+        },
+      },
+      ...(buildHybridBranchClause(query.branchId) ?? {}),
+      ...(query.dateFrom || query.dateTo
+        ? {
+            invoiceDate: {
+              ...(query.dateFrom
+                ? { gte: new Date(`${query.dateFrom}T00:00:00.000Z`) }
+                : {}),
+              ...(query.dateTo
+                ? { lte: new Date(`${query.dateTo}T23:59:59.999Z`) }
+                : {}),
+            },
+          }
+        : {}),
+    };
+
+    const invoices = await this.prisma.studentInvoice.findMany({
+      where: invoiceWhere,
+      select: {
+        id: true,
+        invoiceNumber: true,
+        branchId: true,
+        invoiceDate: true,
+        dueDate: true,
+        status: true,
+        totalAmount: true,
+        paidAmount: true,
+        balanceDue: true,
+      },
+      orderBy: [{ invoiceDate: 'desc' }, { invoiceNumber: 'desc' }],
+    });
+
+    const invoiceIds = invoices.map((invoice) => invoice.id);
+    const paymentTransactions = invoiceIds.length
+      ? await this.prisma.paymentTransaction.findMany({
+          where: {
+            invoiceId: { in: invoiceIds },
+            status: PaymentTransactionStatus.COMPLETED,
+          },
+          select: {
+            amount: true,
+          },
+        })
+      : [];
+
+    const summary = {
+      invoiceCount: invoices.length,
+      transactionCount: paymentTransactions.length,
+      totalRevenue: this.roundMoney(
+        invoices.reduce((total, invoice) => total + Number(invoice.totalAmount), 0),
+      ),
+      collectedRevenue: this.roundMoney(
+        paymentTransactions.reduce((total, transaction) => total + Number(transaction.amount), 0),
+      ),
+      outstandingRevenue: this.roundMoney(
+        invoices.reduce((total, invoice) => total + Number(invoice.balanceDue), 0),
+      ),
+    };
+
+    return {
+      filters: {
+        branchId: query.branchId ?? null,
+        dateFrom: query.dateFrom ?? null,
+        dateTo: query.dateTo ?? null,
+      },
+      summary,
+    };
+  }
 
   async generateInvoices(payload: GenerateTransportInvoicesDto, actorUserId: string) {
     const invoiceDate = payload.invoiceDate
@@ -163,7 +249,10 @@ export class TransportIntegrationsService {
       throw new NotFoundException('Invoice not found');
     }
 
-    if ([InvoiceStatus.CANCELLED, InvoiceStatus.CREDITED].includes(invoice.status)) {
+    if (
+      invoice.status === InvoiceStatus.CANCELLED ||
+      invoice.status === InvoiceStatus.CREDITED
+    ) {
       throw new BadRequestException('Cannot add fee to cancelled/credited invoice');
     }
 
@@ -438,8 +527,9 @@ export class TransportIntegrationsService {
     });
   }
 
-  private async findBaseCurrency(tx: Prisma.TransactionClient) {
-    return tx.currency.findFirst({
+  private async findBaseCurrency(tx?: Prisma.TransactionClient) {
+    const client = tx ?? this.prisma;
+    return client.currency.findFirst({
       where: {
         deletedAt: null,
         isActive: true,

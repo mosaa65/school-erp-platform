@@ -9,8 +9,6 @@
     "src/modules/annual-results/**/*",
     "src/modules/annual-statuses/**/*",
     "src/modules/data-scope/**/*",
-    "src/modules/employee-section-supervisions/**/*",
-    "src/modules/employee-teaching-assignments/**/*",
     "src/modules/exam-assessments/**/*",
     "src/modules/exam-periods/**/*",
     "src/modules/grading-outcome-rules/**/*",

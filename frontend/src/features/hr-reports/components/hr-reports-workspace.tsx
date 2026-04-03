@@ -53,6 +53,10 @@ function toDateEndIso(value: string): string | undefined {
   return `${value}T23:59:59.999Z`;
 }
 
+function formatPercent(value: number): string {
+  return `${value.toFixed(2)}%`;
+}
+
 export function HrReportsWorkspace() {
   const [filters, setFilters] = React.useState<FiltersState>(DEFAULT_FILTERS);
   const [appliedFilters, setAppliedFilters] = React.useState<FiltersState>(DEFAULT_FILTERS);
@@ -103,6 +107,7 @@ export function HrReportsWorkspace() {
           onClick={() => setIsFilterOpen((prev) => !prev)}
           className="h-10 rounded-2xl px-3 sm:px-4"
           aria-label="فتح فلاتر التقرير"
+          data-testid="hr-report-open-filters"
         >
           <BarChart3 className="h-4 w-4" />
           <span className="hidden sm:inline">فلاتر التقرير</span>
@@ -127,10 +132,16 @@ export function HrReportsWorkspace() {
               variant="outline"
               onClick={clearFilters}
               className="flex-1 gap-1.5"
+              data-testid="hr-report-filters-clear"
             >
               مسح
             </Button>
-            <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
+            <Button
+              type="button"
+              onClick={applyFilters}
+              className="flex-1 gap-1.5"
+              data-testid="hr-report-filters-submit"
+            >
               تطبيق
             </Button>
           </div>
@@ -258,7 +269,30 @@ export function HrReportsWorkspace() {
             </Card>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <Card
+              className="border-border/70 bg-card/80"
+              data-testid="hr-report-attendance-indicators-card"
+            >
+              <CardHeader className="space-y-1 pb-2">
+                <CardTitle className="text-sm">مؤشرات الحضور</CardTitle>
+                <CardDescription>نسب تشغيلية للالتزام والانضباط.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-1 text-sm">
+                <p>نسبة الحضور: {formatPercent(report.attendance.indicators.presentRate)}</p>
+                <p>نسبة الغياب: {formatPercent(report.attendance.indicators.absentRate)}</p>
+                <p>نسبة التأخر: {formatPercent(report.attendance.indicators.lateRate)}</p>
+                <p>
+                  نسبة الغياب بعذر:{" "}
+                  {formatPercent(report.attendance.indicators.excusedAbsenceRate)}
+                </p>
+                <p>
+                  نسبة الانصراف المبكر:{" "}
+                  {formatPercent(report.attendance.indicators.earlyLeaveRate)}
+                </p>
+              </CardContent>
+            </Card>
+
             <Card className="border-border/70 bg-card/80" data-testid="hr-report-workload-card">
               <CardHeader className="space-y-1 pb-2">
                 <CardTitle className="text-sm">عبء العمل</CardTitle>
@@ -285,6 +319,51 @@ export function HrReportsWorkspace() {
                     <Badge key={item.ratingLevel} variant="outline" className="mr-1 mb-1">
                       {translatePerformanceRatingLevel(item.ratingLevel)}: {item.count}
                     </Badge>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/70 bg-card/80" data-testid="hr-report-compliance-card">
+              <CardHeader className="space-y-1 pb-2">
+                <CardTitle className="text-sm">الامتثال والجودة</CardTitle>
+                <CardDescription>
+                  نافذة المتابعة: {report.compliance.thresholdDays} يوم
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-1 text-sm">
+                <p>ملفات موظفين ناقصة: {report.compliance.incompleteProfiles}</p>
+                <p>موظفون بدون مستندات: {report.compliance.employeesWithoutDocuments}</p>
+                <p>عقود قريبة من الانتهاء: {report.compliance.contractsExpiringSoon}</p>
+                <p>عقود منتهية: {report.compliance.contractsExpired}</p>
+                <p>مستندات قريبة من الانتهاء: {report.compliance.documentsExpiringSoon}</p>
+                <p>مستندات منتهية: {report.compliance.documentsExpired}</p>
+                <p>هويات قريبة من الانتهاء: {report.compliance.identitiesExpiringSoon}</p>
+                <p>هويات منتهية: {report.compliance.identitiesExpired}</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/70 bg-card/80" data-testid="hr-report-organization-card">
+              <CardHeader className="space-y-1 pb-2">
+                <CardTitle className="text-sm">التوزيع التنظيمي</CardTitle>
+                <CardDescription>توزيع الموظفين النشطين حسب الأقسام.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <p>غير مرتبطين بقسم: {report.organization.unassignedEmployees}</p>
+                {report.organization.departmentDistribution.length === 0 ? (
+                  <p className="text-muted-foreground">لا توجد بيانات أقسام.</p>
+                ) : (
+                  report.organization.departmentDistribution.map((item) => (
+                    <div
+                      key={item.departmentId}
+                      className="flex items-center justify-between rounded-md border border-dashed px-2 py-1"
+                    >
+                      <span>
+                        {item.departmentName}
+                        {item.departmentCode ? ` (${item.departmentCode})` : ""}
+                      </span>
+                      <Badge variant="outline">{item.employeeCount}</Badge>
+                    </div>
                   ))
                 )}
               </CardContent>

@@ -26,9 +26,16 @@ test.describe("HR Reports", () => {
 
     await expect(page.getByTestId("hr-report-employees-card")).toBeVisible();
     await expect(page.getByTestId("hr-report-attendance-card")).toBeVisible();
+    await expect(page.getByTestId("hr-report-attendance-indicators-card")).toBeVisible();
     await expect(page.getByTestId("hr-report-violations-card")).toBeVisible();
+    await expect(page.getByTestId("hr-report-organization-card")).toBeVisible();
+    await expect(page.getByTestId("hr-report-compliance-card")).toBeVisible();
     await expect(page.getByText(/(?:Total|الإجمالي):\s*10/)).toBeVisible();
+    await expect(page.getByText(/نسبة الحضور:\s*83\.33%/)).toBeVisible();
+    await expect(page.getByText(/غير مرتبطين بقسم:\s*2/)).toBeVisible();
+    await expect(page.getByText(/ملفات موظفين ناقصة:\s*2/)).toBeVisible();
 
+    await page.getByTestId("hr-report-open-filters").click();
     await page.getByTestId("hr-report-filter-employee").selectOption("emp-1");
     await page.getByTestId("hr-report-filter-from-date").fill("2026-01-01");
     await page.getByTestId("hr-report-filter-to-date").fill("2026-12-31");

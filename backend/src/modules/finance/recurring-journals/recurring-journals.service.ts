@@ -208,14 +208,24 @@ export class RecurringJournalsService {
     );
 
     const journalEntry = await this.prisma.$transaction(async (tx) => {
+      const entryDate = new Date();
+      const fiscalYear = await this.findFiscalYearForDate(tx, entryDate);
+      const fiscalPeriod = await this.findFiscalPeriodForDate(
+        tx,
+        fiscalYear.id,
+        entryDate,
+      );
+
       // Create the journal entry from template
       const je = await tx.journalEntry.create({
         data: {
           entryNumber,
-          entryDate: new Date(),
+          entryDate,
+          fiscalYearId: fiscalYear.id,
+          fiscalPeriodId: fiscalPeriod?.id ?? null,
           description: template.entryDescription,
           referenceType: template.referenceType,
-          referenceNumber: `RJ-${template.id}-${template.totalGenerated + 1}`,
+          referenceId: `RJ-${template.id}-${template.totalGenerated + 1}`,
           branchId: template.branchId,
           currencyId: template.currencyId ?? 1,
           exchangeRate: 1,
@@ -300,6 +310,41 @@ export class RecurringJournalsService {
     });
 
     return { success: true, id };
+  }
+
+  private async findFiscalYearForDate(tx: Prisma.TransactionClient, date: Date) {
+    const fiscalYear = await tx.fiscalYear.findFirst({
+      where: {
+        deletedAt: null,
+        isActive: true,
+        startDate: { lte: date },
+        endDate: { gte: date },
+      },
+      orderBy: { startDate: 'desc' },
+    });
+
+    if (!fiscalYear) {
+      throw new BadRequestException('No fiscal year configured for the entry date');
+    }
+
+    return fiscalYear;
+  }
+
+  private async findFiscalPeriodForDate(
+    tx: Prisma.TransactionClient,
+    fiscalYearId: number,
+    date: Date,
+  ) {
+    return tx.fiscalPeriod.findFirst({
+      where: {
+        fiscalYearId,
+        deletedAt: null,
+        isActive: true,
+        startDate: { lte: date },
+        endDate: { gte: date },
+      },
+      orderBy: { startDate: 'desc' },
+    });
   }
 
   private calculateNextRunDate(currentDate: Date, frequency: RecurringFrequency): Date {

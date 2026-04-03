@@ -77,6 +77,39 @@ const employeeInclude = {
       isActive: true,
     },
   },
+  department: {
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      isActive: true,
+    },
+  },
+  branch: {
+    select: {
+      id: true,
+      code: true,
+      nameAr: true,
+      isActive: true,
+    },
+  },
+  costCenter: {
+    select: {
+      id: true,
+      code: true,
+      nameAr: true,
+      isActive: true,
+    },
+  },
+  directManager: {
+    select: {
+      id: true,
+      fullName: true,
+      jobNumber: true,
+      jobTitle: true,
+      isActive: true,
+    },
+  },
   userAccount: {
     select: {
       id: true,
@@ -116,6 +149,21 @@ export class EmployeesService {
     if (payload.localityId !== undefined && payload.localityId !== null) {
       await this.ensureLocalityExists(payload.localityId);
     }
+    if (payload.departmentId !== undefined && payload.departmentId !== null) {
+      await this.ensureDepartmentExists(payload.departmentId);
+    }
+    if (payload.branchId !== undefined && payload.branchId !== null) {
+      await this.ensureBranchExists(payload.branchId);
+    }
+    if (
+      payload.directManagerEmployeeId !== undefined &&
+      payload.directManagerEmployeeId !== null
+    ) {
+      await this.ensureEmployeeExistsAndActive(payload.directManagerEmployeeId);
+    }
+    if (payload.costCenterId !== undefined && payload.costCenterId !== null) {
+      await this.ensureCostCenterExists(payload.costCenterId);
+    }
 
     const gender = await this.resolveGenderOnCreate(payload);
     const qualification = await this.resolveQualificationOnCreate(payload);
@@ -140,6 +188,15 @@ export class EmployeesService {
           idNumber: payload.idNumber,
           idTypeId: payload.idTypeId === null ? null : payload.idTypeId,
           localityId: payload.localityId === null ? null : payload.localityId,
+          departmentId:
+            payload.departmentId === null ? null : payload.departmentId,
+          branchId: payload.branchId === null ? null : payload.branchId,
+          directManagerEmployeeId:
+            payload.directManagerEmployeeId === null
+              ? null
+              : payload.directManagerEmployeeId,
+          costCenterId:
+            payload.costCenterId === null ? null : payload.costCenterId,
           idExpiryDate: payload.idExpiryDate,
           experienceYears: payload.experienceYears ?? 0,
           employmentType: payload.employmentType,
@@ -200,6 +257,10 @@ export class EmployeesService {
       employmentType: query.employmentType,
       idTypeId: query.idTypeId,
       localityId: query.localityId,
+      departmentId: query.departmentId,
+      branchId: query.branchId,
+      directManagerEmployeeId: query.directManagerEmployeeId,
+      costCenterId: query.costCenterId,
       qualificationId: query.qualificationId,
       jobRoleId: query.jobRoleId,
       isActive: query.isActive,
@@ -311,6 +372,71 @@ export class EmployeesService {
         total,
         totalPages: Math.ceil(total / limit),
       },
+    };
+  }
+
+  async getOrganizationOptions() {
+    const [departments, branches, costCenters, managers] = await Promise.all([
+      this.prisma.employeeDepartment.findMany({
+        where: {
+          deletedAt: null,
+          isActive: true,
+        },
+        orderBy: [{ name: 'asc' }],
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          isActive: true,
+        },
+      }),
+      this.prisma.branch.findMany({
+        where: {
+          deletedAt: null,
+          isActive: true,
+        },
+        orderBy: [{ nameAr: 'asc' }],
+        select: {
+          id: true,
+          code: true,
+          nameAr: true,
+          isActive: true,
+        },
+      }),
+      this.prisma.costCenter.findMany({
+        where: {
+          isActive: true,
+        },
+        orderBy: [{ nameAr: 'asc' }],
+        select: {
+          id: true,
+          code: true,
+          nameAr: true,
+          isActive: true,
+          branchId: true,
+        },
+      }),
+      this.prisma.employee.findMany({
+        where: {
+          deletedAt: null,
+          isActive: true,
+        },
+        orderBy: [{ fullName: 'asc' }],
+        select: {
+          id: true,
+          fullName: true,
+          jobNumber: true,
+          jobTitle: true,
+          isActive: true,
+        },
+      }),
+    ]);
+
+    return {
+      departments,
+      branches,
+      costCenters,
+      managers,
     };
   }
 
@@ -481,6 +607,27 @@ export class EmployeesService {
     if (payload.localityId !== undefined && payload.localityId !== null) {
       await this.ensureLocalityExists(payload.localityId);
     }
+    if (payload.departmentId !== undefined && payload.departmentId !== null) {
+      await this.ensureDepartmentExists(payload.departmentId);
+    }
+    if (payload.branchId !== undefined && payload.branchId !== null) {
+      await this.ensureBranchExists(payload.branchId);
+    }
+    if (
+      payload.directManagerEmployeeId !== undefined &&
+      payload.directManagerEmployeeId !== null
+    ) {
+      if (payload.directManagerEmployeeId === id) {
+        throw new BadRequestException(
+          'directManagerEmployeeId cannot reference the same employee',
+        );
+      }
+
+      await this.ensureEmployeeExistsAndActive(payload.directManagerEmployeeId);
+    }
+    if (payload.costCenterId !== undefined && payload.costCenterId !== null) {
+      await this.ensureCostCenterExists(payload.costCenterId);
+    }
 
     const gender = await this.resolveGenderOnUpdate(existing, payload);
     const qualification = await this.resolveQualificationOnUpdate(
@@ -511,6 +658,15 @@ export class EmployeesService {
           idNumber: payload.idNumber,
           idTypeId: payload.idTypeId === null ? null : payload.idTypeId,
           localityId: payload.localityId === null ? null : payload.localityId,
+          departmentId:
+            payload.departmentId === null ? null : payload.departmentId,
+          branchId: payload.branchId === null ? null : payload.branchId,
+          directManagerEmployeeId:
+            payload.directManagerEmployeeId === null
+              ? null
+              : payload.directManagerEmployeeId,
+          costCenterId:
+            payload.costCenterId === null ? null : payload.costCenterId,
           idExpiryDate: payload.idExpiryDate,
           experienceYears: payload.experienceYears,
           employmentType: payload.employmentType,
@@ -704,6 +860,68 @@ export class EmployeesService {
 
     if (!locality.isActive) {
       throw new BadRequestException('localityId is inactive');
+    }
+  }
+
+  private async ensureDepartmentExists(departmentId: string) {
+    const department = await this.prisma.employeeDepartment.findFirst({
+      where: {
+        id: departmentId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        isActive: true,
+      },
+    });
+
+    if (!department) {
+      throw new BadRequestException('departmentId is not valid');
+    }
+
+    if (!department.isActive) {
+      throw new BadRequestException('departmentId is inactive');
+    }
+  }
+
+  private async ensureBranchExists(branchId: number) {
+    const branch = await this.prisma.branch.findFirst({
+      where: {
+        id: branchId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        isActive: true,
+      },
+    });
+
+    if (!branch) {
+      throw new BadRequestException('branchId is not valid');
+    }
+
+    if (!branch.isActive) {
+      throw new BadRequestException('branchId is inactive');
+    }
+  }
+
+  private async ensureCostCenterExists(costCenterId: number) {
+    const costCenter = await this.prisma.costCenter.findFirst({
+      where: {
+        id: costCenterId,
+      },
+      select: {
+        id: true,
+        isActive: true,
+      },
+    });
+
+    if (!costCenter) {
+      throw new BadRequestException('costCenterId is not valid');
+    }
+
+    if (!costCenter.isActive) {
+      throw new BadRequestException('costCenterId is inactive');
     }
   }
 

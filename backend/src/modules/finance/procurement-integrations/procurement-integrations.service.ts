@@ -14,7 +14,16 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogsService } from '../../audit-logs/audit-logs.service';
 import { DocumentSequencesService } from '../document-sequences/document-sequences.service';
 import { DepreciationJournalDto } from './dto/depreciation-journal.dto';
+import {
+  InventoryAdjustmentJournalDto,
+  InventoryAdjustmentType,
+} from './dto/inventory-adjustment-journal.dto';
+import { InventoryAdjustmentJournalResponseDto } from './dto/inventory-adjustment-journal-response.dto';
 import { ProcurementPaymentJournalDto } from './dto/procurement-payment-journal.dto';
+import {
+  ProcurementVendorBalanceResponseDto,
+  type ProcurementVendorBalanceExpenseItemDto,
+} from './dto/procurement-vendor-balance.dto';
 import { PurchaseJournalDto } from './dto/purchase-journal.dto';
 
 const DEFAULT_PROCUREMENT_EXPENSE_ACCOUNT_CODE = '5004';
@@ -117,6 +126,74 @@ export class ProcurementIntegrationsService {
     };
   }
 
+  async createInventoryAdjustmentJournal(
+    payload: InventoryAdjustmentJournalDto,
+    actorUserId: string,
+  ): Promise<InventoryAdjustmentJournalResponseDto> {
+    const debitAccountCode =
+      payload.adjustmentType === InventoryAdjustmentType.INCREASE
+        ? DEFAULT_PROCUREMENT_EXPENSE_ACCOUNT_CODE
+        : DEFAULT_ACCOUNTS_PAYABLE_ACCOUNT_CODE;
+    const creditAccountCode =
+      payload.adjustmentType === InventoryAdjustmentType.INCREASE
+        ? DEFAULT_ACCOUNTS_PAYABLE_ACCOUNT_CODE
+        : DEFAULT_PROCUREMENT_EXPENSE_ACCOUNT_CODE;
+
+    const debitAccountId = await this.findPostingAccountByCode(debitAccountCode);
+    const creditAccountId = await this.findPostingAccountByCode(creditAccountCode);
+    const amount = this.roundMoney(payload.amount);
+    const adjustmentLabel =
+      payload.adjustmentType === InventoryAdjustmentType.INCREASE
+        ? 'زيادة مخزون'
+        : 'نقص مخزون';
+
+    const entry = await this.createPostedJournalEntry({
+      entryDate: new Date(),
+      description: payload.description?.trim() ?? 'قيد تسوية مخزون',
+      referenceType: 'INVENTORY_ADJUSTMENT',
+      branchId: payload.branchId,
+      actorUserId,
+      lines: [
+        {
+          accountId: debitAccountId,
+          debitAmount: amount,
+          creditAmount: 0,
+          description: adjustmentLabel,
+          branchId: payload.branchId,
+        },
+        {
+          accountId: creditAccountId,
+          debitAmount: 0,
+          creditAmount: amount,
+          description: adjustmentLabel,
+          branchId: payload.branchId,
+        },
+      ],
+    });
+
+    await this.auditLogsService.record({
+      actorUserId,
+      action: 'PROCUREMENT_INVENTORY_ADJUSTMENT_JOURNAL',
+      resource: 'finance-procurement',
+      resourceId: entry.id,
+      status: AuditStatus.SUCCESS,
+      details: {
+        entryNumber: entry.entryNumber,
+        amount,
+        adjustmentType: payload.adjustmentType,
+      },
+    });
+
+    return {
+      journalEntryId: entry.id,
+      entryNumber: entry.entryNumber,
+      amount,
+      adjustmentType: payload.adjustmentType,
+      debitAccountCode,
+      creditAccountCode,
+    };
+  }
+
   async createPaymentJournal(
     payload: ProcurementPaymentJournalDto,
     actorUserId: string,
@@ -169,6 +246,68 @@ export class ProcurementIntegrationsService {
       journalEntryId: entry.id,
       entryNumber: entry.entryNumber,
       amount: this.roundMoney(payload.amount),
+    };
+  }
+
+  async getVendorBalance(
+    vendorKey: string,
+  ): Promise<ProcurementVendorBalanceResponseDto> {
+    const normalizedVendorKey = vendorKey.trim();
+
+    if (!normalizedVendorKey) {
+      throw new BadRequestException('Vendor identifier is required');
+    }
+
+    const expenses = await this.prisma.expense.findMany({
+      where: {
+        vendorName: normalizedVendorKey,
+      },
+      orderBy: [{ expenseDate: 'desc' }, { id: 'desc' }],
+      select: {
+        id: true,
+        amount: true,
+        expenseDate: true,
+        isApproved: true,
+        journalEntryId: true,
+        invoiceNumber: true,
+        description: true,
+        vendorName: true,
+      },
+    });
+
+    if (expenses.length === 0) {
+      throw new NotFoundException(`Vendor ${normalizedVendorKey} was not found`);
+    }
+
+    const mappedExpenses = expenses.map((expense) =>
+      this.mapVendorBalanceExpenseItem(expense),
+    );
+    const approvedExpenseTotal = this.roundMoney(
+      expenses
+        .filter((expense) => expense.isApproved)
+        .reduce((sum, expense) => sum + Number(expense.amount), 0),
+    );
+    const pendingExpenseTotal = this.roundMoney(
+      expenses
+        .filter((expense) => !expense.isApproved)
+        .reduce((sum, expense) => sum + Number(expense.amount), 0),
+    );
+    const balanceDue = this.roundMoney(
+      approvedExpenseTotal + pendingExpenseTotal,
+    );
+
+    return {
+      vendorKey: normalizedVendorKey,
+      vendorName: expenses[0]?.vendorName?.trim() ?? normalizedVendorKey,
+      summary: {
+        expenseCount: expenses.length,
+        approvedExpenseCount: expenses.filter((expense) => expense.isApproved).length,
+        pendingExpenseCount: expenses.filter((expense) => !expense.isApproved).length,
+        approvedExpenseTotal,
+        pendingExpenseTotal,
+        balanceDue,
+      },
+      expenses: mappedExpenses,
     };
   }
 
@@ -390,6 +529,28 @@ export class ProcurementIntegrationsService {
     }
 
     return account.id;
+  }
+
+  private mapVendorBalanceExpenseItem(
+    expense: {
+      id: number;
+      amount: Prisma.Decimal | number | string;
+      expenseDate: Date;
+      isApproved: boolean;
+      journalEntryId: string | null;
+      invoiceNumber: string | null;
+      description: string | null;
+    },
+  ): ProcurementVendorBalanceExpenseItemDto {
+    return {
+      id: expense.id,
+      amount: this.roundMoney(Number(expense.amount)),
+      expenseDate: expense.expenseDate.toISOString().slice(0, 10),
+      isApproved: expense.isApproved,
+      journalEntryId: expense.journalEntryId,
+      invoiceNumber: expense.invoiceNumber,
+      description: expense.description,
+    };
   }
 
   private calculateTotals(lines: PostingLineInput[]) {

@@ -52,6 +52,7 @@ const TEACHER_READ_RESOURCES = new Set([
   'grading-outcome-rules',
   'grading-reports',
   'reminders-ticker',
+  'user-notifications',
   'lookup-blood-types',
   'lookup-id-types',
   'lookup-enrollment-statuses',
@@ -145,6 +146,13 @@ const EMPLOYEE_READ_RESOURCES = new Set([
   'employee-attendance',
   'employee-tasks',
   'employee-courses',
+  'employee-documents',
+  'employee-departments',
+  'employee-leave-balances',
+  'employee-leaves',
+  'employee-lifecycle-checklists',
+  'employee-contracts',
+  'user-notifications',
   'employee-talents',
   'hr-reports',
   'reminders-ticker',
@@ -170,6 +178,13 @@ function isReadPermission(code: string, action: string) {
 function canTeacherAccess(params: { code: string; resource: string; action: string }) {
   if (isReadPermission(params.code, params.action)) {
     return TEACHER_READ_RESOURCES.has(params.resource);
+  }
+
+  if (
+    params.code === 'user-notifications.update' ||
+    params.code === 'user-notifications.delete'
+  ) {
+    return true;
   }
 
   if (params.action === 'create' || params.action === 'update') {

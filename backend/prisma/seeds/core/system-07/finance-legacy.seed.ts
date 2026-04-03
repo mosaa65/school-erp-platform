@@ -143,23 +143,32 @@ export async function seedSystem07FinanceLegacy(prisma: PrismaClient) {
 
   for (const category of FINANCIAL_CATEGORIES) {
     const coaAccountId = accountsByCode.get(category.accountCode) ?? null;
-
-    await prisma.financialCategory.upsert({
+    const existingCategory = await prisma.financialCategory.findFirst({
       where: { code: category.code },
-      update: {
-        nameAr: category.nameAr,
-        categoryType: category.categoryType,
-        coaAccountId,
-        isActive: true,
-      },
-      create: {
-        nameAr: category.nameAr,
-        categoryType: category.categoryType,
-        code: category.code,
-        coaAccountId,
-        isActive: true,
-      },
+      select: { id: true },
     });
+
+    if (existingCategory) {
+      await prisma.financialCategory.update({
+        where: { id: existingCategory.id },
+        data: {
+          nameAr: category.nameAr,
+          categoryType: category.categoryType,
+          coaAccountId,
+          isActive: true,
+        },
+      });
+    } else {
+      await prisma.financialCategory.create({
+        data: {
+          nameAr: category.nameAr,
+          categoryType: category.categoryType,
+          code: category.code,
+          coaAccountId,
+          isActive: true,
+        },
+      });
+    }
   }
 
   for (const fund of FINANCIAL_FUNDS) {

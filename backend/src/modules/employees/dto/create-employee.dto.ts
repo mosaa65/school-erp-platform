@@ -114,6 +114,30 @@ export class CreateEmployeeDto {
   @Min(1)
   localityId?: number | null;
 
+  @ApiPropertyOptional({ example: 'cmf2f32b60000uvh95h7tk7q1' })
+  @IsOptional()
+  @IsString()
+  departmentId?: string | null;
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  branchId?: number | null;
+
+  @ApiPropertyOptional({ example: 'cmf2f32b60000uvh95h7tk7q2' })
+  @IsOptional()
+  @IsString()
+  directManagerEmployeeId?: string | null;
+
+  @ApiPropertyOptional({ example: 12 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  costCenterId?: number | null;
+
   @ApiPropertyOptional({ example: '2030-12-31T00:00:00.000Z' })
   @IsOptional()
   @IsDateString()

@@ -62,6 +62,22 @@ export class PaymentTransactionsController {
     return this.paymentTransactionsService.reconcile(id, user.userId);
   }
 
+  @Post(':id/complete-and-reconcile')
+  @RequirePermissions('payment-transactions.reconcile')
+  @ApiOperation({
+    summary:
+      'Complete payment transaction if needed, then reconcile it in one step',
+  })
+  completeAndReconcile(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.paymentTransactionsService.completeAndReconcile(
+      id,
+      user.userId,
+    );
+  }
+
   @Get()
   @RequirePermissions('payment-transactions.read')
   @ApiOperation({ summary: 'Get paginated payment transactions' })

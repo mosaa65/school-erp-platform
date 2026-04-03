@@ -93,7 +93,7 @@ CREATE TABLE IF NOT EXISTS `community_contributions` (
   `academic_year_id` VARCHAR(191) NOT NULL,
   `semester_id` VARCHAR(191) NOT NULL,
   `month_id` VARCHAR(191) NOT NULL,
-  `week_id` SMALLINT UNSIGNED NULL,
+  `week_id` INT NULL,
   `payment_date` DATE NOT NULL,
   `payment_date_hijri` VARCHAR(20) NULL,
   `required_amount_id` SMALLINT UNSIGNED NOT NULL,

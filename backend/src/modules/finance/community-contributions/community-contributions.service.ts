@@ -1,11 +1,21 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AuditStatus, Prisma } from '@prisma/client';
+import {
+  AuditStatus,
+  FeeType,
+  InvoiceStatus,
+  PaymentMethod,
+  PaymentTransactionStatus,
+  Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogsService } from '../../audit-logs/audit-logs.service';
+import { PaymentTransactionsService } from '../payment-transactions/payment-transactions.service';
+import { StudentInvoicesService } from '../student-invoices/student-invoices.service';
 import { CreateCommunityContributionDto } from './dto/create-community-contribution.dto';
 import { ListCommunityContributionsDto } from './dto/list-community-contributions.dto';
 import { UpdateCommunityContributionDto } from './dto/update-community-contribution.dto';
@@ -99,17 +109,37 @@ export class CommunityContributionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLogsService: AuditLogsService,
+    private readonly studentInvoicesService: StudentInvoicesService,
+    private readonly paymentTransactionsService: PaymentTransactionsService,
   ) {}
 
   async create(payload: CreateCommunityContributionDto, actorUserId: string) {
-    const invoiceId = this.parseOptionalBigInt(payload.invoiceId, 'invoiceId');
+    await this.ensureContributionUnique(payload.enrollmentId, payload.monthId);
+
+    if (payload.autoBridge && (payload.invoiceId || payload.journalEntryId)) {
+      throw new BadRequestException(
+        'autoBridge cannot be combined with manual invoiceId or journalEntryId',
+      );
+    }
+
+    let invoiceId = this.parseOptionalBigInt(payload.invoiceId, 'invoiceId');
+    let journalEntryId: string | null | undefined = payload.journalEntryId;
 
     if (invoiceId) {
       await this.ensureInvoiceExists(invoiceId);
     }
 
-    if (payload.journalEntryId) {
-      await this.ensureJournalEntryExists(payload.journalEntryId);
+    if (journalEntryId) {
+      await this.ensureJournalEntryExists(journalEntryId);
+    }
+
+    if (payload.autoBridge) {
+      const bridgeResult = await this.createAutoBridgeArtifacts(
+        payload,
+        actorUserId,
+      );
+      invoiceId = bridgeResult.invoiceId;
+      journalEntryId = bridgeResult.journalEntryId;
     }
 
     try {
@@ -134,7 +164,7 @@ export class CommunityContributionsService {
           notes: payload.notes?.trim(),
           createdByUserId: actorUserId,
           invoiceId: invoiceId ?? undefined,
-          journalEntryId: payload.journalEntryId,
+          journalEntryId: journalEntryId ?? undefined,
         },
         include: communityContributionInclude,
       });
@@ -320,6 +350,20 @@ export class CommunityContributionsService {
     }
   }
 
+  private async ensureContributionUnique(enrollmentId: string, monthId: string) {
+    const existing = await this.prisma.communityContribution.findFirst({
+      where: {
+        enrollmentId,
+        monthId,
+      },
+      select: { id: true },
+    });
+
+    if (existing) {
+      throw new ConflictException('Community contribution already exists');
+    }
+  }
+
   private async ensureInvoiceExists(id: bigint) {
     const invoice = await this.prisma.studentInvoice.findFirst({
       where: { id },
@@ -340,6 +384,193 @@ export class CommunityContributionsService {
     if (!entry) {
       throw new NotFoundException('Journal entry not found');
     }
+  }
+
+  private async createAutoBridgeArtifacts(
+    payload: CreateCommunityContributionDto,
+    actorUserId: string,
+  ) {
+    const bridgeContext = await this.resolveAutoBridgeContext(payload);
+
+    if (bridgeContext.collectibleAmount <= 0 && bridgeContext.receivedAmount > 0) {
+      throw new BadRequestException(
+        'Cannot auto-bridge a positive receivedAmount when net contribution due is zero',
+      );
+    }
+
+    if (bridgeContext.receivedAmount > bridgeContext.collectibleAmount) {
+      throw new BadRequestException(
+        'receivedAmount cannot exceed the net contribution amount when autoBridge is enabled',
+      );
+    }
+
+    if (bridgeContext.collectibleAmount <= 0) {
+      return {
+        invoiceId: null,
+        journalEntryId: null,
+      };
+    }
+
+    const invoice = await this.studentInvoicesService.create(
+      {
+        enrollmentId: payload.enrollmentId,
+        academicYearId: payload.academicYearId,
+        invoiceDate: payload.paymentDate,
+        dueDate: payload.paymentDate,
+        currencyId: bridgeContext.currencyId ?? undefined,
+        status: InvoiceStatus.ISSUED,
+        notes: payload.notes?.trim() ?? 'Auto-bridged from community contribution',
+        lines: [
+          {
+            feeType: FeeType.OTHER,
+            descriptionAr: bridgeContext.descriptionAr,
+            quantity: 1,
+            unitPrice: bridgeContext.requiredAmount,
+            discountAmount: bridgeContext.discountAmount,
+            accountId: bridgeContext.revenueAccountId,
+          },
+        ],
+        installments: [
+          {
+            installmentNumber: 1,
+            dueDate: payload.paymentDate,
+            amount: bridgeContext.collectibleAmount,
+            notes: 'Auto-generated installment for community contribution bridge',
+          },
+        ],
+      },
+      actorUserId,
+    );
+
+    let journalEntryId: string | null = null;
+
+    if (bridgeContext.receivedAmount > 0) {
+      const installment = invoice.installments[0];
+      const transaction = await this.paymentTransactionsService.create(
+        {
+          providerCode: 'CASH',
+          enrollmentId: payload.enrollmentId,
+          invoiceId: invoice.id.toString(),
+          installmentId: installment?.id?.toString(),
+          currencyId: bridgeContext.currencyId ?? undefined,
+          amount: bridgeContext.receivedAmount,
+          paymentMethod: PaymentMethod.CASH,
+          status: PaymentTransactionStatus.COMPLETED,
+          paidAt: new Date(payload.paymentDate).toISOString(),
+          receiptNumber: payload.receiptNumber?.trim(),
+          payerName: payload.payerName?.trim(),
+          notes:
+            payload.notes?.trim() ?? 'Auto-reconciled community contribution payment',
+        },
+        actorUserId,
+      );
+
+      const reconciled = await this.paymentTransactionsService.reconcile(
+        transaction.id.toString(),
+        actorUserId,
+      );
+      journalEntryId = reconciled.journalEntryId ?? null;
+    }
+
+    return {
+      invoiceId: invoice.id,
+      journalEntryId,
+    };
+  }
+
+  private async resolveAutoBridgeContext(
+    payload: CreateCommunityContributionDto,
+  ) {
+    const [requiredAmount, academicMonth, baseCurrency, categoryAccount] =
+      await Promise.all([
+        this.prisma.lookupContributionAmount.findFirst({
+          where: {
+            id: payload.requiredAmountId,
+            isActive: true,
+          },
+          select: {
+            id: true,
+            nameAr: true,
+            amountValue: true,
+          },
+        }),
+        this.prisma.academicMonth.findFirst({
+          where: {
+            id: payload.monthId,
+            academicYearId: payload.academicYearId,
+            academicTermId: payload.semesterId,
+            deletedAt: null,
+            isActive: true,
+          },
+          select: {
+            id: true,
+            name: true,
+          },
+        }),
+        this.prisma.currency.findFirst({
+          where: {
+            deletedAt: null,
+            isActive: true,
+            isBase: true,
+          },
+          select: {
+            id: true,
+          },
+          orderBy: { id: 'asc' },
+        }),
+        this.prisma.financialCategory.findFirst({
+          where: {
+            code: 'REV_COMMUNITY',
+            isActive: true,
+          },
+          select: {
+            coaAccountId: true,
+          },
+        }),
+      ]);
+
+    if (!requiredAmount) {
+      throw new NotFoundException('Contribution amount configuration not found');
+    }
+
+    if (!academicMonth) {
+      throw new NotFoundException('Academic month not found for the provided term/year');
+    }
+
+    const fallbackRevenueAccount = await this.prisma.chartOfAccount.findFirst({
+      where: {
+        accountCode: '4002',
+        deletedAt: null,
+        isActive: true,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    const revenueAccountId =
+      categoryAccount?.coaAccountId ?? fallbackRevenueAccount?.id ?? null;
+
+    if (!revenueAccountId) {
+      throw new NotFoundException(
+        'Community contribution revenue account is not configured',
+      );
+    }
+
+    const requiredValue = Number(requiredAmount.amountValue);
+    const discountAmount = Math.max(0, Number(payload.exemptionAmount ?? 0));
+    const collectibleAmount = Math.max(0, requiredValue - discountAmount);
+    const receivedAmount = Math.max(0, Number(payload.receivedAmount ?? 0));
+
+    return {
+      requiredAmount: requiredValue,
+      discountAmount,
+      collectibleAmount,
+      receivedAmount,
+      revenueAccountId,
+      currencyId: baseCurrency?.id ?? null,
+      descriptionAr: `المساهمة المجتمعية - ${academicMonth.name}`.slice(0, 200),
+    };
   }
 
   private parseOptionalBigInt(value?: string, fieldName = 'id'): bigint | null {

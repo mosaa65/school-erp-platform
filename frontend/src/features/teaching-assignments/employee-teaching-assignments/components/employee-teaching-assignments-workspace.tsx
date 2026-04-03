@@ -548,6 +548,7 @@ export function EmployeeTeachingAssignmentsWorkspace() {
             <div
               key={assignment.id}
               className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+              data-testid="employee-teaching-assignment-card"
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="space-y-1">
@@ -677,7 +678,11 @@ export function EmployeeTeachingAssignmentsWorkspace() {
             لا تملك الصلاحية المطلوبة: <code>employee-teaching-assignments.create</code>.
           </div>
         ) : (
-          <form className="space-y-3" onSubmit={handleSubmitForm}>
+          <form
+            className="space-y-3"
+            onSubmit={handleSubmitForm}
+            data-testid="employee-teaching-assignment-form"
+          >
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
                 الموظف *
@@ -692,6 +697,7 @@ export function EmployeeTeachingAssignmentsWorkspace() {
                   }))
                 }
                 disabled={!canReadEmployees}
+                data-testid="employee-teaching-assignment-form-employee"
               >
                 <option value="">اختر الموظف</option>
                 {(employeesQuery.data ?? []).map((employee) => (
@@ -729,6 +735,7 @@ export function EmployeeTeachingAssignmentsWorkspace() {
                   }))
                 }
                 disabled={!canReadSections}
+                data-testid="employee-teaching-assignment-form-section"
               >
                 <option value="">اختر الشعبة</option>
                 {(sectionsQuery.data ?? []).map((section) => (
@@ -753,6 +760,7 @@ export function EmployeeTeachingAssignmentsWorkspace() {
                   }))
                 }
                 disabled={!canReadSubjects}
+                data-testid="employee-teaching-assignment-form-subject"
               >
                 <option value="">اختر المادة</option>
                 {(subjectsQuery.data ?? []).map((subject) => (
@@ -777,6 +785,7 @@ export function EmployeeTeachingAssignmentsWorkspace() {
                   }))
                 }
                 disabled={!canReadAcademicYears}
+                data-testid="employee-teaching-assignment-form-academic-year"
               >
                 <option value="">اختر السنة الدراسية</option>
                 {(academicYearsQuery.data ?? []).map((year) => (
@@ -803,6 +812,7 @@ export function EmployeeTeachingAssignmentsWorkspace() {
                   }))
                 }
                 required
+                data-testid="employee-teaching-assignment-form-weekly-periods"
               />
             </div>
 
@@ -864,6 +874,7 @@ export function EmployeeTeachingAssignmentsWorkspace() {
                   (!canCreate && !isEditing) ||
                   !hasDependenciesReadPermissions
                 }
+                data-testid="employee-teaching-assignment-form-submit"
               >
                 {isFormSubmitting ? (
                   <LoaderCircle className="h-4 w-4 animate-spin" />

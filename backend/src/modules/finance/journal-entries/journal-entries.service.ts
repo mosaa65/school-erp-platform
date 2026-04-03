@@ -13,6 +13,10 @@ import {
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogsService } from '../../audit-logs/audit-logs.service';
 import { DocumentSequencesService } from '../document-sequences/document-sequences.service';
+import {
+  buildHybridBranchClause,
+  combineWhereClauses,
+} from '../utils/hybrid-branch-scope';
 import { CreateJournalEntryDto, JournalEntryLineInputDto } from './dto/create-journal-entry.dto';
 import { ListJournalEntriesDto } from './dto/list-journal-entries.dto';
 import { UpdateJournalEntryDto } from './dto/update-journal-entry.dto';
@@ -161,7 +165,7 @@ export class JournalEntriesService {
     const { totalDebit, totalCredit } = this.calculateTotals(lines);
     this.assertBalanced(totalDebit, totalCredit);
 
-    await this.ensureAccountsExist(lines);
+    await this.ensureAccountsExist(lines, payload.branchId ?? null);
 
     const status = payload.status ?? JournalEntryStatus.DRAFT;
 
@@ -212,7 +216,7 @@ export class JournalEntriesService {
           postedAt,
           isActive: payload.isActive ?? true,
           lines: {
-            create: this.buildLineCreates(lines, actorUserId),
+            create: this.buildLineCreates(lines, actorUserId, payload.branchId ?? null),
           },
         },
         include: journalEntryDetailInclude,
@@ -249,21 +253,25 @@ export class JournalEntriesService {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
 
-    const where: Prisma.JournalEntryWhereInput = {
+    const baseWhere: Prisma.JournalEntryWhereInput = {
       deletedAt: null,
       isActive: query.isActive,
       status: query.status,
       fiscalYearId: query.fiscalYearId,
       fiscalPeriodId: query.fiscalPeriodId,
-      branchId: query.branchId,
       entryDate: query.dateFrom || query.dateTo
         ? {
             gte: query.dateFrom ? new Date(query.dateFrom) : undefined,
             lte: query.dateTo ? new Date(query.dateTo) : undefined,
           }
         : undefined,
-      OR: query.search
-        ? [
+    };
+    const branchWhere = buildHybridBranchClause(query.branchId) as
+      | Prisma.JournalEntryWhereInput
+      | undefined;
+    const searchWhere: Prisma.JournalEntryWhereInput | undefined = query.search
+      ? {
+          OR: [
             {
               entryNumber: {
                 contains: query.search,
@@ -274,9 +282,14 @@ export class JournalEntriesService {
                 contains: query.search,
               },
             },
-          ]
-        : undefined,
-    };
+          ],
+        }
+      : undefined;
+    const where = combineWhereClauses<Prisma.JournalEntryWhereInput>(
+      baseWhere,
+      branchWhere,
+      searchWhere,
+    );
 
     const [total, items] = await this.prisma.$transaction([
       this.prisma.journalEntry.count({ where }),
@@ -352,9 +365,11 @@ export class JournalEntriesService {
       const lines = this.normalizeLines(payload.lines);
       const { totalDebit, totalCredit } = this.calculateTotals(lines);
       this.assertBalanced(totalDebit, totalCredit);
-      await this.ensureAccountsExist(lines);
+      const targetBranchId =
+        payload.branchId === undefined ? existing.branchId ?? null : payload.branchId;
+      await this.ensureAccountsExist(lines, targetBranchId ?? null);
       totals = { totalDebit, totalCredit };
-      lineCreates = this.buildLineCreates(lines, actorUserId);
+      lineCreates = this.buildLineCreates(lines, actorUserId, targetBranchId ?? null);
     }
 
     const status = payload.status;
@@ -757,6 +772,7 @@ export class JournalEntriesService {
       select: {
         id: true,
         fiscalYearId: true,
+        branchId: true,
       },
     });
 
@@ -821,7 +837,10 @@ export class JournalEntriesService {
     }
   }
 
-  private async ensureAccountsExist(lines: { accountId: number }[]) {
+  private async ensureAccountsExist(
+    lines: { accountId: number; branchId?: number | null }[],
+    entryBranchId: number | null,
+  ) {
     const accountIds = Array.from(new Set(lines.map((line) => line.accountId)));
 
     const accounts = await this.prisma.chartOfAccount.findMany({
@@ -833,6 +852,7 @@ export class JournalEntriesService {
       select: {
         id: true,
         isHeader: true,
+        branchId: true,
       },
     });
 
@@ -843,11 +863,53 @@ export class JournalEntriesService {
     if (accounts.some((account) => account.isHeader)) {
       throw new BadRequestException('Header accounts cannot be posted to');
     }
+
+    const accountMap = new Map(
+      accounts.map((account) => [account.id, account.branchId ?? null]),
+    );
+
+    for (const line of lines) {
+      const accountBranchId = accountMap.get(line.accountId);
+      const lineBranchId = line.branchId ?? entryBranchId ?? null;
+
+      if (entryBranchId == null && line.branchId != null) {
+        throw new BadRequestException(
+          'Line branchId cannot be set when journal entry branchId is null',
+        );
+      }
+
+      if (
+        entryBranchId != null &&
+        line.branchId != null &&
+        line.branchId !== entryBranchId
+      ) {
+        throw new BadRequestException(
+          'Line branchId must match the journal entry branchId',
+        );
+      }
+
+      if (accountBranchId == null) {
+        continue;
+      }
+
+      if (lineBranchId == null) {
+        throw new BadRequestException(
+          'Branch-specific accounts require a branch-scoped journal entry',
+        );
+      }
+
+      if (accountBranchId !== lineBranchId) {
+        throw new BadRequestException(
+          'Line account branchId must match the effective journal branchId',
+        );
+      }
+    }
   }
 
   private buildLineCreates(
     lines: JournalEntryLineInputDto[],
     actorUserId: string,
+    entryBranchId: number | null,
   ): Prisma.JournalEntryLineCreateManyJournalEntryInput[] {
     return lines.map((line, index) => ({
       lineNumber: index + 1,
@@ -858,7 +920,7 @@ export class JournalEntriesService {
       costCenter: line.costCenter?.trim(),
       studentId: line.studentId,
       employeeId: line.employeeId,
-      branchId: line.branchId,
+      branchId: line.branchId ?? entryBranchId ?? null,
       isActive: true,
       createdById: actorUserId,
       updatedById: actorUserId,

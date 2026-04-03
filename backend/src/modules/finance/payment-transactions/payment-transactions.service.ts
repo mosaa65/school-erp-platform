@@ -265,9 +265,8 @@ export class PaymentTransactionsService {
       : await this.findPostingAccount(
           this.resolveDebitAccountCode(transaction.paymentMethod),
         );
-    const creditAccount = await this.findPostingAccount(
-      DEFAULT_REVENUE_ACCOUNT_CODE,
-    );
+    const creditAccount =
+      await this.resolveCreditAccountForTransaction(transaction);
 
     const now = new Date();
     const description = `Payment ${transaction.transactionNumber}`;
@@ -699,6 +698,75 @@ export class PaymentTransactionsService {
     }
   }
 
+  async completeAndReconcile(id: string, actorUserId: string) {
+    const transactionId = this.parseRequiredBigInt(id, 'id');
+    const transaction = await this.prisma.paymentTransaction.findFirst({
+      where: {
+        id: transactionId,
+      },
+      include: paymentTransactionInclude,
+    });
+
+    if (!transaction) {
+      throw new NotFoundException('Payment transaction not found');
+    }
+
+    if (
+      transaction.status === PaymentTransactionStatus.CANCELLED ||
+      transaction.status === PaymentTransactionStatus.REFUNDED
+    ) {
+      throw new BadRequestException(
+        'Cancelled or refunded transactions cannot be completed and reconciled',
+      );
+    }
+
+    let preparedTransaction = transaction;
+
+    if (
+      transaction.status !== PaymentTransactionStatus.COMPLETED ||
+      !transaction.receiptNumber ||
+      !transaction.paidAt
+    ) {
+      const paidAt = transaction.paidAt ?? new Date();
+      const receiptNumber =
+        transaction.receiptNumber ??
+        (await this.documentSequencesService.reserveNextNumber(
+          DocumentType.RECEIPT,
+          {
+            date: paidAt,
+          },
+        ));
+
+      preparedTransaction = await this.prisma.paymentTransaction.update({
+        where: { id: transactionId },
+        data: {
+          status: PaymentTransactionStatus.COMPLETED,
+          paidAt,
+          receiptNumber,
+        },
+        include: paymentTransactionInclude,
+      });
+
+      await this.auditLogsService.record({
+        actorUserId,
+        action: 'PAYMENT_TRANSACTION_COMPLETE_FOR_RECONCILIATION',
+        resource: 'payment-transactions',
+        resourceId: transactionId.toString(),
+        details: {
+          transactionNumber: preparedTransaction.transactionNumber,
+          paidAt: preparedTransaction.paidAt,
+          receiptNumber: preparedTransaction.receiptNumber,
+        },
+      });
+    }
+
+    if (preparedTransaction.journalEntryId) {
+      return preparedTransaction;
+    }
+
+    return this.reconcile(id, actorUserId);
+  }
+
   async remove(id: string, actorUserId: string) {
     const transactionId = this.parseRequiredBigInt(id, 'id');
     await this.ensureTransactionExists(transactionId);
@@ -834,6 +902,28 @@ export class PaymentTransactionsService {
       },
       orderBy: { id: 'asc' },
     });
+  }
+
+  private async resolveCreditAccountForTransaction(
+    transaction: Pick<Prisma.PaymentTransactionGetPayload<{ include: typeof paymentTransactionInclude }>, 'invoiceId'>,
+  ) {
+    if (transaction.invoiceId) {
+      const groupedAccounts = await this.prisma.invoiceLineItem.groupBy({
+        by: ['accountId'],
+        where: {
+          invoiceId: transaction.invoiceId,
+          accountId: {
+            not: null,
+          },
+        },
+      });
+
+      if (groupedAccounts.length === 1 && groupedAccounts[0]?.accountId) {
+        return this.findPostingAccountById(groupedAccounts[0].accountId);
+      }
+    }
+
+    return this.findPostingAccount(DEFAULT_REVENUE_ACCOUNT_CODE);
   }
 
   private resolveDebitAccountCode(paymentMethod: PaymentMethod) {

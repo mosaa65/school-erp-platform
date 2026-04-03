@@ -10,6 +10,12 @@ import { AcademicTermsModule } from './modules/academic-terms/academic-terms.mod
 import { AcademicYearsModule } from './modules/academic-years/academic-years.module';
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 import { EmployeeAttendanceModule } from './modules/employee-attendance/employee-attendance.module';
+import { EmployeeDocumentsModule } from './modules/employee-documents/employee-documents.module';
+import { EmployeeDepartmentsModule } from './modules/employee-departments/employee-departments.module';
+import { EmployeeLeaveBalancesModule } from './modules/employee-leave-balances/employee-leave-balances.module';
+import { EmployeeLeavesModule } from './modules/employee-leaves/employee-leaves.module';
+import { EmployeeLifecycleChecklistsModule } from './modules/employee-lifecycle-checklists/employee-lifecycle-checklists.module';
+import { EmployeeContractsModule } from './modules/employee-contracts/employee-contracts.module';
 import { EmployeeCoursesModule } from './modules/employee-courses/employee-courses.module';
 import { EmployeePerformanceEvaluationsModule } from './modules/employee-performance-evaluations/employee-performance-evaluations.module';
 import { EmployeeTasksModule } from './modules/employee-tasks/employee-tasks.module';
@@ -56,6 +62,7 @@ import { UsersModule } from './modules/users/users.module';
 import { GuardiansModule } from './modules/guardians/guardians.module';
 import { ParentNotificationsModule } from './modules/parent-notifications/parent-notifications.module';
 import { SchoolProfilesModule } from './modules/school-profiles/school-profiles.module';
+import { UserNotificationsModule } from './modules/user-notifications/user-notifications.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PaymentGatewaysModule } from './modules/finance/payment-gateways/payment-gateways.module';
 import { PaymentTransactionsModule } from './modules/finance/payment-transactions/payment-transactions.module';
@@ -128,6 +135,12 @@ import { CommunityContributionsModule } from './modules/finance/community-contri
     EmployeeViolationsModule,
     TeachingAssignmentsModule,
     EmployeeAttendanceModule,
+    EmployeeDocumentsModule,
+    EmployeeDepartmentsModule,
+    EmployeeLeaveBalancesModule,
+    EmployeeLeavesModule,
+    EmployeeLifecycleChecklistsModule,
+    EmployeeContractsModule,
     EmployeePerformanceEvaluationsModule,
     TimetableEntriesModule,
     TermSubjectOfferingsModule,
@@ -150,6 +163,7 @@ import { CommunityContributionsModule } from './modules/finance/community-contri
     SystemSettingsModule,
     RemindersTickerModule,
     UserPermissionsModule,
+    UserNotificationsModule,
     SchoolProfilesModule,
     BranchesModule,
     CurrenciesModule,

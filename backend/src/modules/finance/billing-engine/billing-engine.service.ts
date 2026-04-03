@@ -32,6 +32,45 @@ export class BillingEngineService {
     private readonly documentSequencesService: DocumentSequencesService,
   ) {}
 
+  async getDefaults() {
+    const today = new Date();
+    const suggestedDueDate = new Date(today);
+    suggestedDueDate.setDate(suggestedDueDate.getDate() + 30);
+
+    const academicYear = await this.prisma.academicYear.findFirst({
+      where: {
+        isCurrent: true,
+      },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        status: true,
+        isCurrent: true,
+      },
+      orderBy: {
+        startDate: 'desc',
+      },
+    });
+
+    const baseCurrency = await this.findBaseCurrency();
+
+    return {
+      academicYear,
+      baseCurrency: baseCurrency
+        ? {
+            id: baseCurrency.id,
+            code: baseCurrency.code,
+            nameAr: baseCurrency.nameAr,
+          }
+        : null,
+      invoiceDate: this.toDateOnly(today),
+      dueDate: this.toDateOnly(suggestedDueDate),
+      installmentCount: 1,
+      applySiblingDiscount: false,
+    };
+  }
+
   // ═══════════════════════════════════════════════════════════════
   // 1. توليد فواتير جماعية — Bulk Invoice Generation
   // ═══════════════════════════════════════════════════════════════
@@ -1032,5 +1071,9 @@ export class BillingEngineService {
 
   private roundMoney(value: number) {
     return Number(value.toFixed(2));
+  }
+
+  private toDateOnly(value: Date) {
+    return value.toISOString().slice(0, 10);
   }
 }

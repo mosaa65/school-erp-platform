@@ -7,6 +7,10 @@ import {
 import { AuditStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogsService } from '../../audit-logs/audit-logs.service';
+import {
+  buildHybridBranchClause,
+  combineWhereClauses,
+} from '../utils/hybrid-branch-scope';
 import { CreateCostCenterDto } from './dto/create-cost-center.dto';
 import { ListCostCentersDto } from './dto/list-cost-centers.dto';
 import { UpdateCostCenterDto } from './dto/update-cost-center.dto';
@@ -19,7 +23,7 @@ const costCenterInclude: Prisma.CostCenterInclude = {
     select: { id: true, nameAr: true },
   },
   managerEmployee: {
-    select: { id: true, fullNameAr: true },
+    select: { id: true, fullName: true },
   },
   children: {
     select: { id: true, code: true, nameAr: true },
@@ -76,17 +80,26 @@ export class CostCentersService {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
 
-    const where: Prisma.CostCenterWhereInput = {
+    const baseWhere: Prisma.CostCenterWhereInput = {
       isActive: query.isActive,
-      branchId: query.branchId,
-      OR: query.search
-        ? [
+    };
+    const branchWhere = buildHybridBranchClause(query.branchId) as
+      | Prisma.CostCenterWhereInput
+      | undefined;
+    const searchWhere: Prisma.CostCenterWhereInput | undefined = query.search
+      ? {
+          OR: [
             { nameAr: { contains: query.search } },
             { nameEn: { contains: query.search } },
             { code: { contains: query.search } },
-          ]
-        : undefined,
-    };
+          ],
+        }
+      : undefined;
+    const where = combineWhereClauses<Prisma.CostCenterWhereInput>(
+      baseWhere,
+      branchWhere,
+      searchWhere,
+    );
 
     const [total, items] = await this.prisma.$transaction([
       this.prisma.costCenter.count({ where }),

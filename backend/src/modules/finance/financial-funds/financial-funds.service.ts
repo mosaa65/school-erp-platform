@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AuditStatus, Prisma } from '@prisma/client';
+import { AuditStatus, FinancialFundType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogsService } from '../../audit-logs/audit-logs.service';
 import { CreateFinancialFundDto } from './dto/create-financial-fund.dto';
@@ -45,7 +45,7 @@ export class FinancialFundsService {
         data: {
           nameAr,
           code,
-          fundType: payload.fundType,
+          fundType: payload.fundType ?? FinancialFundType.MAIN,
           coaAccountId: payload.coaAccountId,
           isActive: payload.isActive ?? true,
         },

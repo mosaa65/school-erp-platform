@@ -54,6 +54,10 @@ export class EmployeesController {
   @ApiQuery({ name: 'employmentType', required: false, enum: EmploymentType })
   @ApiQuery({ name: 'idTypeId', required: false, type: Number })
   @ApiQuery({ name: 'localityId', required: false, type: Number })
+  @ApiQuery({ name: 'departmentId', required: false, type: String })
+  @ApiQuery({ name: 'branchId', required: false, type: Number })
+  @ApiQuery({ name: 'directManagerEmployeeId', required: false, type: String })
+  @ApiQuery({ name: 'costCenterId', required: false, type: Number })
   @ApiQuery({ name: 'jobTitle', required: false, type: String })
   @ApiQuery({ name: 'qualificationId', required: false, type: Number })
   @ApiQuery({ name: 'jobRoleId', required: false, type: Number })
@@ -65,6 +69,13 @@ export class EmployeesController {
   })
   findAll(@Query() query: ListEmployeesDto) {
     return this.employeesService.findAll(query);
+  }
+
+  @Get('organization-options')
+  @RequirePermissions('employees.read')
+  @ApiOperation({ summary: 'Get employee organization options' })
+  getOrganizationOptions() {
+    return this.employeesService.getOrganizationOptions();
   }
 
   @Get(':id')

@@ -7,6 +7,7 @@ import {
 import {
   AuditStatus,
   BankReconciliationStatus,
+  PaymentTransactionStatus,
   Prisma,
   ReconciliationItemType,
 } from '@prisma/client';
@@ -330,6 +331,130 @@ export class BankReconciliationsService {
       });
 
     return item;
+  }
+
+  async autoMatchTransactions(id: string, actorUserId: string) {
+    const reconciliationId = this.parseRequiredBigInt(id, 'id');
+    const reconciliation = await this.prisma.bankReconciliation.findFirst({
+      where: {
+        id: reconciliationId,
+      },
+      include: bankReconciliationDetailInclude,
+    });
+
+    if (!reconciliation) {
+      throw new NotFoundException('Bank reconciliation not found');
+    }
+
+    if (reconciliation.status === BankReconciliationStatus.RECONCILED) {
+      throw new BadRequestException('Reconciliation is already closed');
+    }
+
+    const statementCutoff = new Date(reconciliation.statementDate);
+    statementCutoff.setHours(23, 59, 59, 999);
+
+    const candidates = await this.prisma.paymentTransaction.findMany({
+      where: {
+        status: PaymentTransactionStatus.COMPLETED,
+        journalEntryId: {
+          not: null,
+        },
+        gateway: {
+          settlementAccountId: reconciliation.bankAccountId,
+        },
+        reconciliationItems: {
+          none: {},
+        },
+        OR: [
+          {
+            paidAt: {
+              lte: statementCutoff,
+            },
+          },
+          {
+            paidAt: null,
+            createdAt: {
+              lte: statementCutoff,
+            },
+          },
+        ],
+      },
+      select: {
+        id: true,
+        amount: true,
+        transactionNumber: true,
+      },
+      orderBy: [
+        {
+          paidAt: 'asc',
+        },
+        {
+          createdAt: 'asc',
+        },
+      ],
+    });
+
+    if (candidates.length === 0) {
+      return {
+        matchedCount: 0,
+        totalMatchedAmount: 0,
+        reconciliation,
+      };
+    }
+
+    const matchedAt = new Date();
+    const totalMatchedAmount = candidates.reduce(
+      (sum, candidate) => sum + Number(candidate.amount),
+      0,
+    );
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.reconciliationItem.createMany({
+        data: candidates.map((candidate) => ({
+          reconciliationId,
+          transactionId: candidate.id,
+          amount: candidate.amount,
+          itemType: ReconciliationItemType.MATCHED,
+          matchedAt,
+        })),
+      });
+
+      if (reconciliation.status === BankReconciliationStatus.OPEN) {
+        await tx.bankReconciliation.update({
+          where: { id: reconciliationId },
+          data: {
+            status: BankReconciliationStatus.IN_PROGRESS,
+          },
+        });
+      }
+    });
+
+    const updatedReconciliation = await this.prisma.bankReconciliation.findFirst({
+      where: {
+        id: reconciliationId,
+      },
+      include: bankReconciliationDetailInclude,
+    });
+
+    await this.auditLogsService.record({
+      actorUserId,
+      action: 'BANK_RECONCILIATION_AUTO_MATCH_TRANSACTIONS',
+      resource: 'bank-reconciliations',
+      resourceId: reconciliationId.toString(),
+      details: {
+        matchedCount: candidates.length,
+        totalMatchedAmount,
+        transactionNumbers: candidates.map(
+          (candidate) => candidate.transactionNumber,
+        ),
+      },
+    });
+
+    return {
+      matchedCount: candidates.length,
+      totalMatchedAmount,
+      reconciliation: updatedReconciliation,
+    };
   }
 
   private async ensureBankReconciliationExists(id: bigint) {

@@ -11,7 +11,7 @@ type OpenModulePageOptions = {
 export async function openModulePage(options: OpenModulePageOptions) {
   await options.page.goto(options.path);
   await expect(
-    options.page.getByRole("heading", {
+    options.page.getByRole("main").getByRole("heading", {
       name: options.heading,
       level: options.headingLevel ?? 2,
       exact: options.headingExact,

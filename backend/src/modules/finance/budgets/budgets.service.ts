@@ -12,12 +12,16 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogsService } from '../../audit-logs/audit-logs.service';
+import {
+  buildHybridBranchClause,
+  combineWhereClauses,
+} from '../utils/hybrid-branch-scope';
 import { CreateBudgetDto } from './dto/create-budget.dto';
 import { ListBudgetsDto } from './dto/list-budgets.dto';
 import { UpdateBudgetDto } from './dto/update-budget.dto';
 
 const budgetInclude: Prisma.BudgetInclude = {
-  fiscalYear: { select: { id: true, yearName: true } },
+  fiscalYear: { select: { id: true, nameAr: true } },
   branch: { select: { id: true, nameAr: true } },
   approvedByUser: { select: { id: true, email: true } },
   createdByUser: { select: { id: true, email: true } },
@@ -30,7 +34,7 @@ const budgetInclude: Prisma.BudgetInclude = {
 };
 
 const budgetSummaryInclude: Prisma.BudgetInclude = {
-  fiscalYear: { select: { id: true, yearName: true } },
+  fiscalYear: { select: { id: true, nameAr: true } },
   branch: { select: { id: true, nameAr: true } },
   createdByUser: { select: { id: true, email: true } },
 };
@@ -106,15 +110,22 @@ export class BudgetsService {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
 
-    const where: Prisma.BudgetWhereInput = {
+    const baseWhere: Prisma.BudgetWhereInput = {
       status: query.status,
       budgetType: query.budgetType,
       fiscalYearId: query.fiscalYearId,
-      branchId: query.branchId,
-      OR: query.search
-        ? [{ nameAr: { contains: query.search } }]
-        : undefined,
     };
+    const branchWhere = buildHybridBranchClause(query.branchId) as
+      | Prisma.BudgetWhereInput
+      | undefined;
+    const searchWhere: Prisma.BudgetWhereInput | undefined = query.search
+      ? { OR: [{ nameAr: { contains: query.search } }] }
+      : undefined;
+    const where = combineWhereClauses<Prisma.BudgetWhereInput>(
+      baseWhere,
+      branchWhere,
+      searchWhere,
+    );
 
     const [total, items] = await this.prisma.$transaction([
       this.prisma.budget.count({ where }),
@@ -246,7 +257,7 @@ export class BudgetsService {
             gte: budget.startDate,
             lte: budget.endDate,
           },
-          ...(budget.branchId ? { branchId: budget.branchId } : {}),
+          ...(buildHybridBranchClause(budget.branchId) ?? {}),
         },
       },
       select: {

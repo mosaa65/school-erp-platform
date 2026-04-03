@@ -539,6 +539,7 @@ export function EmployeeAttendanceWorkspace() {
             <div
               key={record.id}
               className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+              data-testid="attendance-card"
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="space-y-1">
@@ -676,6 +677,7 @@ export function EmployeeAttendanceWorkspace() {
                   setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
                 }
                 disabled={!canReadEmployees}
+                data-testid="attendance-form-employee"
               >
                 <option value="">اختر الموظف</option>
                 {(employeesQuery.data ?? []).map((employee) => (
@@ -700,6 +702,7 @@ export function EmployeeAttendanceWorkspace() {
                   }))
                 }
                 required
+                data-testid="attendance-form-date"
               />
             </div>
 
@@ -714,6 +717,7 @@ export function EmployeeAttendanceWorkspace() {
                     status: event.target.value as EmployeeAttendanceStatus,
                   }))
                 }
+                data-testid="attendance-form-status"
               >
                 {STATUS_OPTIONS.map((status) => (
                   <option key={status} value={status}>
@@ -732,6 +736,7 @@ export function EmployeeAttendanceWorkspace() {
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, checkInAt: event.target.value }))
                   }
+                  data-testid="attendance-form-check-in"
                 />
               </div>
               <div className="space-y-1.5">
@@ -742,6 +747,7 @@ export function EmployeeAttendanceWorkspace() {
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, checkOutAt: event.target.value }))
                   }
+                  data-testid="attendance-form-check-out"
                 />
               </div>
             </div>
@@ -754,6 +760,7 @@ export function EmployeeAttendanceWorkspace() {
                   setFormState((prev) => ({ ...prev, notes: event.target.value }))
                 }
                 placeholder="تأخر 10 دقائق"
+                data-testid="attendance-form-notes"
               />
             </div>
 
@@ -791,6 +798,7 @@ export function EmployeeAttendanceWorkspace() {
                 type="submit"
                 className="flex-1 gap-2"
                 disabled={isFormSubmitting || (!canCreate && !isEditing) || !canReadEmployees}
+                data-testid="attendance-form-submit"
               >
                 {isFormSubmitting ? (
                   <LoaderCircle className="h-4 w-4 animate-spin" />

@@ -89,6 +89,34 @@ enum EmployeeAttendanceStatus {
   EARLY_LEAVE
 }
 
+enum EmployeeLeaveType {
+  ANNUAL
+  SICK
+  EMERGENCY
+  UNPAID
+  MATERNITY
+  OTHER
+}
+
+enum EmployeeLeaveRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum EmployeeLifecycleChecklistType {
+  ONBOARDING
+  OFFBOARDING
+}
+
+enum EmployeeLifecycleChecklistStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  WAIVED
+}
+
 enum PerformanceRatingLevel {
   EXCELLENT
   VERY_GOOD
@@ -359,6 +387,13 @@ enum ReminderTickerType {
   HADITH       @map("حديث")
 }
 
+enum UserNotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ACTION_REQUIRED
+}
+
 model User {
   id           String    @id @default(cuid()) @db.VarChar(191)
   email        String    @unique @db.VarChar(191)
@@ -513,6 +548,20 @@ model User {
   employeeTalentsUpdated              EmployeeTalent[]                @relation("employee_talent_updated_by")
   employeeCoursesCreated              EmployeeCourse[]                @relation("employee_course_created_by")
   employeeCoursesUpdated              EmployeeCourse[]                @relation("employee_course_updated_by")
+  employeeDepartmentsCreated          EmployeeDepartment[]            @relation("employee_department_created_by")
+  employeeDepartmentsUpdated          EmployeeDepartment[]            @relation("employee_department_updated_by")
+  employeeContractsCreated            EmployeeContract[]              @relation("employee_contract_created_by")
+  employeeContractsUpdated            EmployeeContract[]              @relation("employee_contract_updated_by")
+  employeeLeaveBalancesCreated        EmployeeLeaveBalance[]          @relation("employee_leave_balance_created_by")
+  employeeLeaveBalancesUpdated        EmployeeLeaveBalance[]          @relation("employee_leave_balance_updated_by")
+  employeeLifecycleChecklistsCreated  EmployeeLifecycleChecklist[]    @relation("employee_lifecycle_checklist_created_by")
+  employeeLifecycleChecklistsUpdated  EmployeeLifecycleChecklist[]    @relation("employee_lifecycle_checklist_updated_by")
+  employeeLeavesApproved              EmployeeLeaveRequest[]          @relation("employee_leave_approved_by")
+  employeeLeavesCreated               EmployeeLeaveRequest[]          @relation("employee_leave_created_by")
+  employeeLeavesUpdated               EmployeeLeaveRequest[]          @relation("employee_leave_updated_by")
+  userNotifications                   UserNotification[]              @relation("user_notification_recipient")
+  notificationPreference              UserNotificationPreference?
+  triggeredUserNotifications          UserNotification[]              @relation("user_notification_triggered_by")
   employeeViolationsCreated           EmployeeViolation[]             @relation("employee_violation_created_by")
   employeeViolationsUpdated           EmployeeViolation[]             @relation("employee_violation_updated_by")
   sectionsCreated                     Section[]                       @relation("section_created_by")
@@ -776,6 +825,52 @@ model UserSession {
   @@index([expiresAt], map: "session_expires_at_idx")
   @@index([deletedAt], map: "session_deleted_at_idx")
   @@map("sessions")
+}
+
+model UserNotification {
+  id                String               @id @default(cuid()) @db.VarChar(191)
+  userId            String               @map("user_id") @db.VarChar(191)
+  title             String               @db.VarChar(180)
+  message           String               @db.VarChar(1000)
+  notificationType  UserNotificationType @default(INFO) @map("notification_type")
+  resource          String?              @db.VarChar(120)
+  resourceId        String?              @map("resource_id") @db.VarChar(191)
+  actionUrl         String?              @map("action_url") @db.VarChar(255)
+  isRead            Boolean              @default(false) @map("is_read")
+  readAt            DateTime?            @map("read_at")
+  triggeredByUserId String?              @map("triggered_by_user_id") @db.VarChar(191)
+  createdAt         DateTime             @default(now()) @map("created_at")
+  updatedAt         DateTime             @updatedAt @map("updated_at")
+  deletedAt         DateTime?            @map("deleted_at")
+
+  user            User  @relation("user_notification_recipient", fields: [userId], references: [id], onDelete: Restrict)
+  triggeredByUser User? @relation("user_notification_triggered_by", fields: [triggeredByUserId], references: [id], onDelete: SetNull)
+
+  @@index([userId, isRead, deletedAt], map: "unt_user_read_del_idx")
+  @@index([notificationType, deletedAt], map: "unt_type_del_idx")
+  @@index([resource, resourceId, deletedAt], map: "unt_resource_del_idx")
+  @@index([triggeredByUserId, deletedAt], map: "unt_trigger_del_idx")
+  @@index([createdAt, deletedAt], map: "unt_created_del_idx")
+  @@index([deletedAt], map: "unt_deleted_at_idx")
+  @@map("user_notifications")
+}
+
+model UserNotificationPreference {
+  id                                  String   @id @default(cuid()) @db.VarChar(191)
+  userId                              String   @unique @map("user_id") @db.VarChar(191)
+  inAppEnabled                        Boolean  @default(true) @map("in_app_enabled")
+  actionRequiredOnly                  Boolean  @default(false) @map("action_required_only")
+  leaveNotificationsEnabled           Boolean  @default(true) @map("leave_notifications_enabled")
+  contractNotificationsEnabled        Boolean  @default(true) @map("contract_notifications_enabled")
+  documentNotificationsEnabled        Boolean  @default(true) @map("document_notifications_enabled")
+  lifecycleNotificationsEnabled       Boolean  @default(true) @map("lifecycle_notifications_enabled")
+  createdAt                           DateTime @default(now()) @map("created_at")
+  updatedAt                           DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([updatedAt], map: "unp_updated_at_idx")
+  @@map("user_notification_preferences")
 }
 
 model AuditLog {
@@ -1438,6 +1533,7 @@ model FileAttachment {
   fileSize     Int?      @map("file_size") @db.UnsignedInt
   fileCategory String?   @map("file_category") @db.VarChar(50)
   description  String?   @db.Text
+  expiresAt    DateTime? @map("expires_at")
   uploadedById String?   @map("uploaded_by") @db.VarChar(191)
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
@@ -1451,6 +1547,7 @@ model FileAttachment {
 
   @@index([entityType, entityId], map: "fat_entity_idx")
   @@index([fileCategory], map: "fat_category_idx")
+  @@index([expiresAt, deletedAt], map: "fat_expires_del_idx")
   @@index([deletedAt], map: "fat_deleted_at_idx")
   @@map("file_attachments")
 }
@@ -2072,6 +2169,10 @@ model Employee {
   idNumber           String?                    @map("id_number") @db.VarChar(30)
   idTypeId           Int?                       @map("id_type_id")
   localityId         Int?                       @map("locality_id")
+  departmentId       String?                    @map("department_id") @db.VarChar(191)
+  branchId           Int?                       @map("branch_id")
+  directManagerEmployeeId String?               @map("direct_manager_employee_id") @db.VarChar(191)
+  costCenterId       Int?                       @map("cost_center_id") @db.UnsignedInt
   idExpiryDate       DateTime?                  @map("id_expiry_date")
   experienceYears    Int                        @default(0) @map("experience_years")
   employmentType     EmploymentType?            @map("employment_type")
@@ -2096,14 +2197,24 @@ model Employee {
   jobRoleLookup       LookupJobRole?       @relation("employee_job_role_lookup", fields: [jobRoleId], references: [id], onDelete: SetNull)
   idType              LookupIdType?        @relation(fields: [idTypeId], references: [id], onDelete: SetNull)
   locality            Locality?            @relation(fields: [localityId], references: [id], onDelete: SetNull)
+  department          EmployeeDepartment?  @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  branch              Branch?              @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  directManager       Employee?            @relation("employee_direct_manager", fields: [directManagerEmployeeId], references: [id], onDelete: SetNull)
+  directReports       Employee[]           @relation("employee_direct_manager")
+  costCenter          CostCenter?          @relation("employee_cost_center", fields: [costCenterId], references: [id], onDelete: SetNull)
 
+  onboardingAssignments  EmployeeLifecycleChecklist[] @relation("employee_lifecycle_subject")
+  lifecycleAssignedTasks EmployeeLifecycleChecklist[] @relation("employee_lifecycle_assignee")
   tasks                  EmployeeTask[]
   healthVisits           StudentHealthVisit[] @relation("employee_health_visits")
   teachingAssignments    EmployeeTeachingAssignment[]
   sectionSupervisions    EmployeeSectionSupervision[]
   attendanceRecords      EmployeeAttendance[]
+  leaveBalances          EmployeeLeaveBalance[]
+  leaveRequests          EmployeeLeaveRequest[]
   talents                EmployeeTalent[]
   courses                EmployeeCourse[]
+  contracts              EmployeeContract[]
   violations             EmployeeViolation[]             @relation("employee_violation_employee")
   violationsReported     EmployeeViolation[]             @relation("employee_violation_reported_by")
   performanceEvaluations EmployeePerformanceEvaluation[] @relation("employee_performance_employee")
@@ -2119,11 +2230,38 @@ model Employee {
   @@index([qualificationId, deletedAt], map: "emp_qualification_id_del_idx")
   @@index([idTypeId, deletedAt], map: "emp_id_type_del_idx")
   @@index([localityId, deletedAt], map: "emp_locality_del_idx")
+  @@index([departmentId, deletedAt], map: "emp_department_del_idx")
+  @@index([branchId, deletedAt], map: "emp_branch_del_idx")
+  @@index([directManagerEmployeeId, deletedAt], map: "emp_manager_del_idx")
+  @@index([costCenterId, deletedAt], map: "emp_cost_center_del_idx")
   @@index([jobRoleId, deletedAt], map: "emp_job_role_id_del_idx")
   @@index([jobTitle, deletedAt], map: "emp_job_del_idx")
   @@index([isActive, deletedAt], map: "emp_active_del_idx")
   @@index([deletedAt], map: "emp_deleted_at_idx")
   @@map("employees")
+}
+
+model EmployeeDepartment {
+  id          String    @id @default(cuid()) @db.VarChar(191)
+  code        String    @unique @db.VarChar(40)
+  name        String    @db.VarChar(120)
+  description String?   @db.VarChar(255)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("employee_department_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("employee_department_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  employees Employee[]
+
+  @@index([name, deletedAt], map: "edp_name_del_idx")
+  @@index([isActive, deletedAt], map: "edp_active_del_idx")
+  @@index([deletedAt], map: "edp_deleted_at_idx")
+  @@map("employee_departments")
 }
 
 model EmployeeSectionSupervision {
@@ -2245,6 +2383,101 @@ model EmployeeAttendance {
   @@map("employee_attendance")
 }
 
+model EmployeeLeaveBalance {
+  id                   String            @id @default(cuid()) @db.VarChar(191)
+  employeeId           String            @map("employee_id") @db.VarChar(191)
+  leaveType            EmployeeLeaveType @map("leave_type")
+  balanceYear          Int               @map("balance_year")
+  allocatedDays        Int               @default(0) @map("allocated_days")
+  carriedForwardDays   Int               @default(0) @map("carried_forward_days")
+  manualAdjustmentDays Int               @default(0) @map("manual_adjustment_days")
+  notes                String?           @db.VarChar(1000)
+  isActive             Boolean           @default(true) @map("is_active")
+  createdAt            DateTime          @default(now()) @map("created_at")
+  updatedAt            DateTime          @updatedAt @map("updated_at")
+  deletedAt            DateTime?         @map("deleted_at")
+  createdById          String?           @map("created_by") @db.VarChar(191)
+  updatedById          String?           @map("updated_by") @db.VarChar(191)
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("employee_leave_balance_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("employee_leave_balance_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([employeeId, leaveType, balanceYear], map: "elb_employee_type_year_uq")
+  @@index([employeeId, balanceYear, deletedAt], map: "elb_employee_year_del_idx")
+  @@index([leaveType, deletedAt], map: "elb_type_del_idx")
+  @@index([isActive, deletedAt], map: "elb_active_del_idx")
+  @@index([deletedAt], map: "elb_deleted_at_idx")
+  @@map("employee_leave_balances")
+}
+
+model EmployeeLeaveRequest {
+  id               String                     @id @default(cuid()) @db.VarChar(191)
+  employeeId       String                     @map("employee_id") @db.VarChar(191)
+  leaveType        EmployeeLeaveType          @map("leave_type")
+  startDate        DateTime                   @map("start_date")
+  endDate          DateTime                   @map("end_date")
+  totalDays        Int                        @default(1) @map("total_days")
+  status           EmployeeLeaveRequestStatus @default(PENDING)
+  reason           String?                    @db.VarChar(1000)
+  notes            String?                    @db.VarChar(1000)
+  approvedByUserId String?                    @map("approved_by_user_id") @db.VarChar(191)
+  approvedAt       DateTime?                  @map("approved_at")
+  isActive         Boolean                    @default(true) @map("is_active")
+  createdAt        DateTime                   @default(now()) @map("created_at")
+  updatedAt        DateTime                   @updatedAt @map("updated_at")
+  deletedAt        DateTime?                  @map("deleted_at")
+  createdById      String?                    @map("created_by") @db.VarChar(191)
+  updatedById      String?                    @map("updated_by") @db.VarChar(191)
+
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  approvedBy User?    @relation("employee_leave_approved_by", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+
+  createdBy User? @relation("employee_leave_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("employee_leave_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([employeeId, startDate, deletedAt], map: "elr_employee_start_del_idx")
+  @@index([leaveType, deletedAt], map: "elr_type_del_idx")
+  @@index([status, deletedAt], map: "elr_status_del_idx")
+  @@index([approvedByUserId, deletedAt], map: "elr_approved_by_del_idx")
+  @@index([isActive, deletedAt], map: "elr_active_del_idx")
+  @@index([deletedAt], map: "elr_deleted_at_idx")
+  @@map("employee_leave_requests")
+}
+
+model EmployeeLifecycleChecklist {
+  id                   String                          @id @default(cuid()) @db.VarChar(191)
+  employeeId           String                          @map("employee_id") @db.VarChar(191)
+  checklistType        EmployeeLifecycleChecklistType  @map("checklist_type")
+  title                String                          @db.VarChar(180)
+  status               EmployeeLifecycleChecklistStatus @default(PENDING)
+  assignedToEmployeeId String?                         @map("assigned_to_employee_id") @db.VarChar(191)
+  dueDate              DateTime?                       @map("due_date")
+  completedAt          DateTime?                       @map("completed_at")
+  notes                String?                         @db.VarChar(1000)
+  isActive             Boolean                         @default(true) @map("is_active")
+  createdAt            DateTime                        @default(now()) @map("created_at")
+  updatedAt            DateTime                        @updatedAt @map("updated_at")
+  deletedAt            DateTime?                       @map("deleted_at")
+  createdById          String?                         @map("created_by") @db.VarChar(191)
+  updatedById          String?                         @map("updated_by") @db.VarChar(191)
+
+  employee   Employee  @relation("employee_lifecycle_subject", fields: [employeeId], references: [id], onDelete: Restrict)
+  assignedTo Employee? @relation("employee_lifecycle_assignee", fields: [assignedToEmployeeId], references: [id], onDelete: SetNull)
+
+  createdBy User? @relation("employee_lifecycle_checklist_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("employee_lifecycle_checklist_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([employeeId, checklistType, deletedAt], map: "elc_employee_type_del_idx")
+  @@index([assignedToEmployeeId, deletedAt], map: "elc_assignee_del_idx")
+  @@index([status, deletedAt], map: "elc_status_del_idx")
+  @@index([dueDate, deletedAt], map: "elc_due_date_del_idx")
+  @@index([isActive, deletedAt], map: "elc_active_del_idx")
+  @@index([deletedAt], map: "elc_deleted_at_idx")
+  @@map("employee_lifecycle_checklists")
+}
+
 model EmployeePerformanceEvaluation {
   id                  String                 @id @default(cuid()) @db.VarChar(191)
   employeeId          String                 @map("employee_id") @db.VarChar(191)
@@ -2354,6 +2587,36 @@ model EmployeeCourse {
   @@index([isActive, deletedAt], map: "emc_active_del_idx")
   @@index([deletedAt], map: "emc_deleted_at_idx")
   @@map("employee_courses")
+}
+
+model EmployeeContract {
+  id                String    @id @default(cuid()) @db.VarChar(191)
+  employeeId        String    @map("employee_id") @db.VarChar(191)
+  contractTitle     String    @map("contract_title") @db.VarChar(150)
+  contractNumber    String?   @map("contract_number") @db.VarChar(60)
+  contractStartDate DateTime  @map("contract_start_date")
+  contractEndDate   DateTime? @map("contract_end_date")
+  salaryAmount      Decimal?  @map("salary_amount") @db.Decimal(15, 2)
+  notes             String?   @db.VarChar(255)
+  isCurrent         Boolean   @default(true) @map("is_current")
+  isActive          Boolean   @default(true) @map("is_active")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  deletedAt         DateTime? @map("deleted_at")
+  createdById       String?   @map("created_by") @db.VarChar(191)
+  updatedById       String?   @map("updated_by") @db.VarChar(191)
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("employee_contract_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("employee_contract_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([employeeId, contractStartDate, deletedAt], map: "emct_employee_start_del_idx")
+  @@index([contractNumber, deletedAt], map: "emct_number_del_idx")
+  @@index([isCurrent, deletedAt], map: "emct_current_del_idx")
+  @@index([isActive, deletedAt], map: "emct_active_del_idx")
+  @@index([deletedAt], map: "emct_deleted_at_idx")
+  @@map("employee_contracts")
 }
 
 model EmployeeViolation {
@@ -3546,6 +3809,7 @@ model Branch {
   documentSequences DocumentSequence[]
   recurringJournalTemplates RecurringJournalTemplate[]
   costCenters       CostCenter[]
+  employees         Employee[]
 
   @@index([isActive, deletedAt], map: "br_active_del_idx")
   @@index([deletedAt], map: "br_deleted_at_idx")
@@ -4258,7 +4522,7 @@ model CommunityContribution {
   academicYearId       String   @map("academic_year_id") @db.VarChar(191)
   semesterId           String   @map("semester_id") @db.VarChar(191)
   monthId              String   @map("month_id") @db.VarChar(191)
-  weekId               Int?     @map("week_id") @db.UnsignedSmallInt
+  weekId               Int?     @map("week_id")
   paymentDate          DateTime @map("payment_date") @db.Date
   paymentDateHijri     String?  @map("payment_date_hijri") @db.VarChar(20)
   requiredAmountId     Int      @map("required_amount_id") @db.UnsignedSmallInt
@@ -4497,6 +4761,7 @@ model CostCenter {
   children CostCenter[] @relation("cost_center_parent")
   branch   Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
   managerEmployee Employee? @relation(fields: [managerEmployeeId], references: [id], onDelete: SetNull)
+  employees       Employee[] @relation("employee_cost_center")
   journalEntryLines      JournalEntryLine[]      @relation("journal_entry_line_cost_center")
   recurringTemplateLines RecurringTemplateLine[] @relation("recurring_template_cost_center")
 

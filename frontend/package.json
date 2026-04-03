@@ -12,6 +12,8 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit --incremental false",
     "e2e": "playwright test",
+    "e2e:finance-smoke": "playwright test tests/e2e/finance-smoke.spec.ts",
+    "e2e:finance": "playwright test tests/e2e/finance-smoke.spec.ts tests/e2e/finance-deep-flows.spec.ts tests/e2e/finance-hybrid-branch.spec.ts",
     "e2e:release": "playwright test tests/e2e/employee-courses.spec.ts tests/e2e/employee-talents.spec.ts tests/e2e/employee-performance-evaluations.spec.ts tests/e2e/employee-violations.spec.ts tests/e2e/talents.spec.ts tests/e2e/academic-months.spec.ts tests/e2e/grading-policies.spec.ts tests/e2e/grading-reports.spec.ts tests/e2e/hr-reports.spec.ts",
     "qa:release": "npm run lint && npm run typecheck && npm run build && npm run e2e:release",
     "e2e:ui": "playwright test --ui",
