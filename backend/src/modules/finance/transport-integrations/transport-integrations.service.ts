@@ -18,6 +18,10 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogsService } from '../../audit-logs/audit-logs.service';
 import { DocumentSequencesService } from '../document-sequences/document-sequences.service';
 import { buildHybridBranchClause } from '../utils/hybrid-branch-scope';
+import {
+  findActiveFiscalYearForDate,
+  findPostingFiscalPeriodForDate,
+} from '../utils/posting-fiscal-period';
 import { GenerateTransportInvoicesDto } from './dto/generate-transport-invoices.dto';
 import { TransportMaintenanceExpenseDto } from './dto/transport-maintenance-expense.dto';
 import { TransportRevenueReportQueryDto } from './dto/transport-revenue-report-query.dto';
@@ -493,21 +497,7 @@ export class TransportIntegrationsService {
   }
 
   private async findFiscalYearForDate(tx: Prisma.TransactionClient, date: Date) {
-    const fiscalYear = await tx.fiscalYear.findFirst({
-      where: {
-        deletedAt: null,
-        isActive: true,
-        startDate: { lte: date },
-        endDate: { gte: date },
-      },
-      orderBy: { startDate: 'desc' },
-    });
-
-    if (!fiscalYear) {
-      throw new BadRequestException('No fiscal year configured for the entry date');
-    }
-
-    return fiscalYear;
+    return findActiveFiscalYearForDate(tx, date, 'the entry date');
   }
 
   private async findFiscalPeriodForDate(
@@ -515,16 +505,12 @@ export class TransportIntegrationsService {
     fiscalYearId: number,
     date: Date,
   ) {
-    return tx.fiscalPeriod.findFirst({
-      where: {
-        fiscalYearId,
-        deletedAt: null,
-        isActive: true,
-        startDate: { lte: date },
-        endDate: { gte: date },
-      },
-      orderBy: { startDate: 'desc' },
-    });
+    return findPostingFiscalPeriodForDate(
+      tx,
+      fiscalYearId,
+      date,
+      'the entry date',
+    );
   }
 
   private async findBaseCurrency(tx?: Prisma.TransactionClient) {

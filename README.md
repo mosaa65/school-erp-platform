@@ -1,18 +1,48 @@
-# School ERP Platform (Local Setup Summary)
+# School ERP Platform
 
-## ما تم في هذه الجولة
-- أوقفت جميع عمليات `node` التي كانت تتسبب في قفل ملفات السجل للواجهة (`frontend-stdout.log` و `frontend-stderr.log`).
-- أضفت قواعد تجاهل في `.gitignore` لحفظ سجلات الواجهة من التتبع المستقبلي.
-- أنشأت هذا الملف لشرح الخطوات الأساسية لتشغيل المشروع محلياً.
+## Local Run
 
-## تشغيل المشروع محلياً
-1. تأكد من وجود Node.js و npm على جهازك.
-2. انتقل إلى مجلدي `backend` و `frontend` على التوالي، وشغل `npm install`.
-3. جهز قاعدة بيانات (مثل MySQL أو PostgreSQL) وركّب المتغيرات المناسبة في `backend/.env.example`.
-4. من `backend`، نفّذ `npx prisma migrate deploy` ثم `npm run prisma:seed` لإنشاء الجداول والبيانات التجريبية.
-5. شغل الخادم عبر `npm run start:dev` من داخل مجلد `backend`.
-6. من مجلد `frontend`، شغل `npm run dev` للوصول إلى واجهة المستخدم على `http://localhost:3000`.
+1. Install dependencies in both apps:
 
-## ملاحظات
-- إذا ظهرت ملفات سجلات جديدة، سيتم تجاهلها تلقائياً لأننا أضفناها إلى `.gitignore`.
-- يجب تحديث هذا الملف إذا تغير مسار أي سجل أو أضيفت خطوات تشغيل إضافية.
+```bash
+cd backend && npm install
+cd ../frontend && npm install
+```
+
+2. Copy env files and adjust values for your environment:
+
+```bash
+backend/.env.example -> backend/.env
+frontend/.env.example -> frontend/.env.local
+```
+
+3. In `backend`, generate Prisma client, apply migrations, and seed data:
+
+```bash
+npm run prisma:generate
+npm run prisma:migrate:deploy
+npm run prisma:seed:core
+```
+
+4. Start the backend:
+
+```bash
+npm run start:dev
+```
+
+The backend listens on `PORT` and defaults to `http://localhost:3000`.
+
+5. Start the frontend:
+
+```bash
+npm run dev
+```
+
+The frontend listens on `PORT` if provided, otherwise defaults locally to `http://localhost:3001`.
+
+## Deployment Notes
+
+- Backend production start honors `PORT`.
+- Frontend `dev` and `start` now honor `PORT` as well, with a local fallback to `3001`.
+- Set `BACKEND_API_URL` in the frontend environment to your deployed backend base URL.
+- Optional MySQL triggers for journal-period DB hardening live in `backend/prisma/optional/finance-journal-period-triggers.sql` and are no longer required for the main migration path.

@@ -16,4 +16,6 @@ _tmp_docker_diag/
 # local frontend logs
 frontend/frontend-stdout.log
 frontend/frontend-stderr.log
+*.out.log
+*.err.log
 

@@ -65,12 +65,17 @@ JWT_SECRET="change_me_with_very_strong_secret"
 JWT_EXPIRES_IN="1d"
 SWAGGER_PATH="api/docs"
 STRICT_EMPLOYEE_WORKFLOW=false
+PAYMENT_WEBHOOK_SECRET="change_me_webhook_secret"
+PAYMENT_WEBHOOK_IP_WHITELIST=""
+FINANCE_SYSTEM_USER_ID=""
+RECURRING_JOURNAL_INTERVAL_MS=900000
 SEED_ADMIN_EMAIL="admin@school.local"
 SEED_ADMIN_PASSWORD="ChangeMe123!"
 ```
 
 - `STRICT_EMPLOYEE_WORKFLOW=true` يفعّل التحقق الصارم قبل تفعيل إسناد التدريس/الإشراف (يتطلب: موظف نشط + حساب مستخدم نشط + دور فعّال).
 - `SEED_ADMIN_EMAIL` و `SEED_ADMIN_PASSWORD` (اختياري) لإنشاء حساب المدير في البذور الأساسية.
+- `FINANCE_SYSTEM_USER_ID` مطلوب فقط لبعض عمليات المالية المؤتمتة مثل webhooks والقيود الدورية. يمكن تركه فارغًا في التشغيل المحلي إذا كنت لا تستخدم هذه المسارات.
 
 ## Local Run
 
@@ -87,9 +92,18 @@ npm install
 npm run prisma:generate
 ```
 
+`npm run prisma:generate` أصبح يعيد المحاولة تلقائيًا على Windows إذا كان ملف Prisma engine مقفولًا مؤقتًا، وسيعطيك أسماء عمليات Node المحلية المحتمل أنها تمسك الملف.
+
 4. Apply migrations:
 
 ```bash
+npm run prisma:migrate:deploy
+```
+
+إذا كانت قاعدة البيانات لديك تحتوي على سجل فشل سابق للمهاجرة `20260321113000_add_finance_advanced_foundation` من نسخة أقدم كانت تتطلب امتيازات أعلى لـ MySQL triggers، أصلحه أولًا:
+
+```bash
+npx prisma migrate resolve --rolled-back 20260321113000_add_finance_advanced_foundation --schema=prisma/schema.prisma
 npm run prisma:migrate:deploy
 ```
 
@@ -138,6 +152,19 @@ npm run test:e2e
 ```
 
 E2E tests require running MySQL and applied migrations.
+
+## Deployment Notes
+
+- Backend startup honors `PORT`; لا حاجة لتثبيت منفذ ثابت في الاستضافة.
+- Frontend should set `BACKEND_API_URL` to the public backend base URL in production.
+- The core Prisma migration path no longer requires MySQL `SUPER`-style privileges for trigger creation.
+- Optional DB-level hardening for journal-period enforcement is available in:
+
+```text
+prisma/optional/finance-journal-period-triggers.sql
+```
+
+Apply that optional SQL only if your MySQL user is allowed to create triggers.
 
 ## Recent Changes (Operational Notes)
 

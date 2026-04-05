@@ -16,6 +16,10 @@ import {
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogsService } from '../../audit-logs/audit-logs.service';
 import { DocumentSequencesService } from '../document-sequences/document-sequences.service';
+import {
+  findActiveFiscalYearForDate,
+  findPostingFiscalPeriodForDate,
+} from '../utils/posting-fiscal-period';
 import { CreateCreditDebitNoteDto } from './dto/create-credit-debit-note.dto';
 import { ListCreditDebitNotesDto } from './dto/list-credit-debit-notes.dto';
 import { UpdateCreditDebitNoteDto } from './dto/update-credit-debit-note.dto';
@@ -525,23 +529,7 @@ export class CreditDebitNotesService {
     tx: Prisma.TransactionClient,
     date: Date,
   ) {
-    const fiscalYear = await tx.fiscalYear.findFirst({
-      where: {
-        deletedAt: null,
-        isActive: true,
-        startDate: { lte: date },
-        endDate: { gte: date },
-      },
-      orderBy: { startDate: 'desc' },
-    });
-
-    if (!fiscalYear) {
-      throw new BadRequestException(
-        'No fiscal year configured for the note date',
-      );
-    }
-
-    return fiscalYear;
+    return findActiveFiscalYearForDate(tx, date, 'the note date');
   }
 
   private async findFiscalPeriodForDate(
@@ -549,16 +537,12 @@ export class CreditDebitNotesService {
     fiscalYearId: number,
     date: Date,
   ) {
-    return tx.fiscalPeriod.findFirst({
-      where: {
-        fiscalYearId,
-        deletedAt: null,
-        isActive: true,
-        startDate: { lte: date },
-        endDate: { gte: date },
-      },
-      orderBy: { startDate: 'desc' },
-    });
+    return findPostingFiscalPeriodForDate(
+      tx,
+      fiscalYearId,
+      date,
+      'the note date',
+    );
   }
 
   private async findBaseCurrency(tx: Prisma.TransactionClient) {

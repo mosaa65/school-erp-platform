@@ -4,11 +4,11 @@
   "private": true,
   "scripts": {
     "predev": "node scripts/swc-workaround.cjs",
-    "dev": "next dev -p 3001",
+    "dev": "node scripts/run-next.cjs dev",
     "prebuild": "node scripts/swc-workaround.cjs",
     "build": "next build",
     "prestart": "node scripts/swc-workaround.cjs",
-    "start": "next start -p 3001",
+    "start": "node scripts/run-next.cjs start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit --incremental false",
     "e2e": "playwright test",

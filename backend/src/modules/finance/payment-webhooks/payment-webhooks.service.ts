@@ -25,6 +25,10 @@ import type { Request } from 'express';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogsService } from '../../audit-logs/audit-logs.service';
 import { DocumentSequencesService } from '../document-sequences/document-sequences.service';
+import {
+  findActiveFiscalYearForDate,
+  findPostingFiscalPeriodForDate,
+} from '../utils/posting-fiscal-period';
 import { PaymentWebhookFailureDto } from './dto/payment-webhook-failure.dto';
 import { PaymentWebhookRefundDto } from './dto/payment-webhook-refund.dto';
 import { PaymentWebhookSuccessDto } from './dto/payment-webhook-success.dto';
@@ -1325,23 +1329,7 @@ export class PaymentWebhooksService {
     tx: Prisma.TransactionClient,
     date: Date,
   ) {
-    const fiscalYear = await tx.fiscalYear.findFirst({
-      where: {
-        deletedAt: null,
-        isActive: true,
-        startDate: { lte: date },
-        endDate: { gte: date },
-      },
-      orderBy: { startDate: 'desc' },
-    });
-
-    if (!fiscalYear) {
-      throw new BadRequestException(
-        'No fiscal year configured for the payment date',
-      );
-    }
-
-    return fiscalYear;
+    return findActiveFiscalYearForDate(tx, date, 'the payment date');
   }
 
   private async findFiscalPeriodForDate(
@@ -1349,16 +1337,12 @@ export class PaymentWebhooksService {
     fiscalYearId: number,
     date: Date,
   ) {
-    return tx.fiscalPeriod.findFirst({
-      where: {
-        fiscalYearId,
-        deletedAt: null,
-        isActive: true,
-        startDate: { lte: date },
-        endDate: { gte: date },
-      },
-      orderBy: { startDate: 'desc' },
-    });
+    return findPostingFiscalPeriodForDate(
+      tx,
+      fiscalYearId,
+      date,
+      'the payment date',
+    );
   }
 
   private async findBaseCurrency(tx: Prisma.TransactionClient) {

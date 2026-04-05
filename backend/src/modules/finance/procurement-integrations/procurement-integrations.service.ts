@@ -13,6 +13,10 @@ import {
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogsService } from '../../audit-logs/audit-logs.service';
 import { DocumentSequencesService } from '../document-sequences/document-sequences.service';
+import {
+  findActiveFiscalYearForDate,
+  findPostingFiscalPeriodForDate,
+} from '../utils/posting-fiscal-period';
 import { DepreciationJournalDto } from './dto/depreciation-journal.dto';
 import {
   InventoryAdjustmentJournalDto,
@@ -463,21 +467,7 @@ export class ProcurementIntegrationsService {
   }
 
   private async findFiscalYearForDate(tx: Prisma.TransactionClient, date: Date) {
-    const fiscalYear = await tx.fiscalYear.findFirst({
-      where: {
-        deletedAt: null,
-        isActive: true,
-        startDate: { lte: date },
-        endDate: { gte: date },
-      },
-      orderBy: { startDate: 'desc' },
-    });
-
-    if (!fiscalYear) {
-      throw new BadRequestException('No fiscal year configured for the entry date');
-    }
-
-    return fiscalYear;
+    return findActiveFiscalYearForDate(tx, date, 'the entry date');
   }
 
   private async findFiscalPeriodForDate(
@@ -485,16 +475,12 @@ export class ProcurementIntegrationsService {
     fiscalYearId: number,
     date: Date,
   ) {
-    return tx.fiscalPeriod.findFirst({
-      where: {
-        fiscalYearId,
-        deletedAt: null,
-        isActive: true,
-        startDate: { lte: date },
-        endDate: { gte: date },
-      },
-      orderBy: { startDate: 'desc' },
-    });
+    return findPostingFiscalPeriodForDate(
+      tx,
+      fiscalYearId,
+      date,
+      'the entry date',
+    );
   }
 
   private async findBaseCurrency(tx: Prisma.TransactionClient) {

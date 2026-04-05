@@ -17,6 +17,10 @@ import {
   buildHybridBranchClause,
   combineWhereClauses,
 } from '../utils/hybrid-branch-scope';
+import {
+  ensurePostingFiscalPeriod,
+  findPostingFiscalPeriodForDate,
+} from '../utils/posting-fiscal-period';
 import { CreateJournalEntryDto, JournalEntryLineInputDto } from './dto/create-journal-entry.dto';
 import { ListJournalEntriesDto } from './dto/list-journal-entries.dto';
 import { UpdateJournalEntryDto } from './dto/update-journal-entry.dto';
@@ -173,6 +177,15 @@ export class JournalEntriesService {
       throw new BadRequestException('Cannot create a reversed entry');
     }
 
+    const resolvedFiscalPeriodId =
+      status === JournalEntryStatus.POSTED
+        ? await this.resolvePostingFiscalPeriodId(
+            payload.fiscalYearId,
+            entryDate,
+            payload.fiscalPeriodId,
+          )
+        : payload.fiscalPeriodId;
+
     const entryNumber = await this.documentSequencesService.reserveNextNumber(
       DocumentType.JOURNAL_ENTRY,
       {
@@ -198,7 +211,7 @@ export class JournalEntriesService {
           entryNumber,
           entryDate,
           fiscalYearId: payload.fiscalYearId,
-          fiscalPeriodId: payload.fiscalPeriodId,
+          fiscalPeriodId: resolvedFiscalPeriodId,
           branchId: payload.branchId,
           description,
           referenceType: payload.referenceType?.trim(),
@@ -373,6 +386,32 @@ export class JournalEntriesService {
     }
 
     const status = payload.status;
+    const targetStatus = payload.status ?? existing.status;
+    const postingContextChanged =
+      targetStatus === JournalEntryStatus.POSTED &&
+      (payload.status === JournalEntryStatus.POSTED ||
+        payload.entryDate !== undefined ||
+        payload.fiscalYearId !== undefined ||
+        payload.fiscalPeriodId !== undefined);
+
+    if (
+      existing.status === JournalEntryStatus.POSTED &&
+      targetStatus !== JournalEntryStatus.POSTED &&
+      targetStatus !== JournalEntryStatus.REVERSED
+    ) {
+      throw new BadRequestException(
+        'Cannot move a posted journal entry back to a non-posted status.',
+      );
+    }
+
+    const resolvedFiscalPeriodId = postingContextChanged
+      ? await this.resolvePostingFiscalPeriodId(
+          payload.fiscalYearId ?? existing.fiscalYearId,
+          entryDate ?? existing.entryDate,
+          payload.fiscalPeriodId ?? existing.fiscalPeriodId,
+        )
+      : payload.fiscalPeriodId;
+
     const approvedAt =
       status === undefined
         ? undefined
@@ -419,7 +458,7 @@ export class JournalEntriesService {
           data: {
             entryDate,
             fiscalYearId: payload.fiscalYearId,
-            fiscalPeriodId: payload.fiscalPeriodId,
+            fiscalPeriodId: resolvedFiscalPeriodId,
             branchId: payload.branchId,
             description,
             referenceType: payload.referenceType?.trim(),
@@ -535,6 +574,8 @@ export class JournalEntriesService {
         id: true,
         status: true,
         entryNumber: true,
+        entryDate: true,
+        fiscalYearId: true,
         fiscalPeriodId: true,
         lines: {
           select: {
@@ -556,19 +597,11 @@ export class JournalEntriesService {
       );
     }
 
-    // التحقق من أن الفترة المالية مفتوحة
-    if (entry.fiscalPeriodId) {
-      const period = await this.prisma.fiscalPeriod.findFirst({
-        where: { id: entry.fiscalPeriodId, deletedAt: null },
-        select: { id: true, status: true },
-      });
-
-      if (period && period.status !== 'OPEN' && period.status !== 'REOPENED') {
-        throw new BadRequestException(
-          'Cannot post to a closed fiscal period',
-        );
-      }
-    }
+    const resolvedFiscalPeriodId = await this.resolvePostingFiscalPeriodId(
+      entry.fiscalYearId,
+      entry.entryDate,
+      entry.fiscalPeriodId,
+    );
 
     // ترحيل القيد + تحديث أرصدة الحسابات
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -593,6 +626,7 @@ export class JournalEntriesService {
         where: { id },
         data: {
           status: JournalEntryStatus.POSTED,
+          fiscalPeriodId: resolvedFiscalPeriodId ?? null,
           postedById: actorUserId,
           postedAt: new Date(),
           updatedById: actorUserId,
@@ -662,6 +696,7 @@ export class JournalEntriesService {
     }
 
     const result = await this.prisma.$transaction(async (tx) => {
+      const reversalDate = new Date();
       const reversalEntryNumber =
         await this.documentSequencesService.reserveNextNumber(
           DocumentType.JOURNAL_ENTRY,
@@ -669,9 +704,16 @@ export class JournalEntriesService {
             tx,
             fiscalYearId: entry.fiscalYearId,
             branchId: entry.branchId ?? null,
-            date: new Date(),
+            date: reversalDate,
             prefixOverride: 'REV',
           },
+        );
+      const reversalFiscalPeriod =
+        await findPostingFiscalPeriodForDate(
+          tx,
+          entry.fiscalYearId,
+          reversalDate,
+          'this reversal entry',
         );
       // عكس أرصدة الحسابات
       for (const line of entry.lines) {
@@ -704,9 +746,9 @@ export class JournalEntriesService {
       const reversalEntry = await tx.journalEntry.create({
         data: {
           entryNumber: reversalEntryNumber,
-          entryDate: new Date(),
+          entryDate: reversalDate,
           fiscalYearId: entry.fiscalYearId,
-          fiscalPeriodId: entry.fiscalPeriodId,
+          fiscalPeriodId: reversalFiscalPeriod?.id,
           branchId: entry.branchId,
           description: `عكس قيد: ${entry.entryNumber} — ${reasonText}`,
           referenceType: 'REVERSAL',
@@ -721,9 +763,9 @@ export class JournalEntriesService {
           createdById: actorUserId,
           updatedById: actorUserId,
           approvedById: actorUserId,
-          approvedAt: new Date(),
+          approvedAt: reversalDate,
           postedById: actorUserId,
-          postedAt: new Date(),
+          postedAt: reversalDate,
           isActive: true,
           lines: {
             create: entry.lines.map((line, index) => ({
@@ -772,7 +814,10 @@ export class JournalEntriesService {
       select: {
         id: true,
         fiscalYearId: true,
+        fiscalPeriodId: true,
+        entryDate: true,
         branchId: true,
+        status: true,
       },
     });
 
@@ -781,6 +826,35 @@ export class JournalEntriesService {
     }
 
     return entry;
+  }
+
+  private async resolvePostingFiscalPeriodId(
+    fiscalYearId: number,
+    entryDate: Date,
+    fiscalPeriodId?: number | null,
+  ) {
+    if (fiscalPeriodId) {
+      const period = await ensurePostingFiscalPeriod(
+        this.prisma,
+        fiscalPeriodId,
+        'this journal entry',
+      );
+
+      if (period.fiscalYearId !== fiscalYearId) {
+        throw new BadRequestException('Fiscal period does not belong to fiscal year');
+      }
+
+      return period.id;
+    }
+
+    const period = await findPostingFiscalPeriodForDate(
+      this.prisma,
+      fiscalYearId,
+      entryDate,
+      'this journal entry',
+    );
+
+    return period?.id;
   }
 
   private normalizeRequiredText(value: string, fieldName: string): string {
