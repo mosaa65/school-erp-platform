@@ -152,6 +152,23 @@ export async function seedSystem01Settings(prisma: PrismaClient) {
       category: 'reports',
       description: 'نص تذييل التقارير الرسمي',
     },
+    // ─── إعدادات الفروع (النموذج الهجين) ───────────────────────────────
+    {
+      settingKey: 'multi_branch_mode',
+      settingValue: 'false',
+      settingType: SystemSettingType.BOOLEAN,
+      category: 'branches',
+      description:
+        'تفعيل وضع الفروع المتعددة (النموذج الهجين). عند التفعيل يمكن ربط الطلاب والفواتير بفروع منفصلة.',
+    },
+    {
+      settingKey: 'default_branch_id',
+      settingValue: null,
+      settingType: SystemSettingType.NUMBER,
+      category: 'branches',
+      description:
+        'معرّف الفرع الافتراضي المستخدم في وضع المدرسة الواحدة. يُحدَّث تلقائياً عند إنشاء الفرع الرئيسي.',
+    },
   ];
 
   for (const item of systemSettings) {

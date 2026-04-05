@@ -14,6 +14,7 @@ import {
   ApiBearerAuth,
   ApiOperation,
   ApiQuery,
+  ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { SystemSettingType } from '@prisma/client';
@@ -55,6 +56,27 @@ export class SystemSettingsController {
   @ApiQuery({ name: 'isEditable', required: false, type: Boolean })
   findAll(@Query() query: ListSystemSettingsDto) {
     return this.systemSettingsService.findAll(query);
+  }
+
+  @Get('branch-config')
+  @ApiOperation({
+    summary: 'Branch feature flag config',
+    description:
+      'يُعيد حالة ميزة الفروع المتعددة. ' +
+      'يُستخدَم من الفرونت أند عند التحميل لإخفاء/إظهار عناصر الفروع. ' +
+      'لا يتطلب صلاحية محددة — يكفي تسجيل الدخول.',
+  })
+  @ApiResponse({
+    status: 200,
+    schema: {
+      example: {
+        isMultiBranchEnabled: false,
+        defaultBranchId: 1,
+      },
+    },
+  })
+  getBranchConfig() {
+    return this.systemSettingsService.getBranchConfig();
   }
 
   @Get(':id')

@@ -10,6 +10,12 @@ import { AcademicTermsModule } from './modules/academic-terms/academic-terms.mod
 import { AcademicYearsModule } from './modules/academic-years/academic-years.module';
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 import { EmployeeAttendanceModule } from './modules/employee-attendance/employee-attendance.module';
+import { EmployeeDocumentsModule } from './modules/employee-documents/employee-documents.module';
+import { EmployeeDepartmentsModule } from './modules/employee-departments/employee-departments.module';
+import { EmployeeLeaveBalancesModule } from './modules/employee-leave-balances/employee-leave-balances.module';
+import { EmployeeLeavesModule } from './modules/employee-leaves/employee-leaves.module';
+import { EmployeeLifecycleChecklistsModule } from './modules/employee-lifecycle-checklists/employee-lifecycle-checklists.module';
+import { EmployeeContractsModule } from './modules/employee-contracts/employee-contracts.module';
 import { EmployeeCoursesModule } from './modules/employee-courses/employee-courses.module';
 import { EmployeePerformanceEvaluationsModule } from './modules/employee-performance-evaluations/employee-performance-evaluations.module';
 import { EmployeeTasksModule } from './modules/employee-tasks/employee-tasks.module';
@@ -56,7 +62,40 @@ import { UsersModule } from './modules/users/users.module';
 import { GuardiansModule } from './modules/guardians/guardians.module';
 import { ParentNotificationsModule } from './modules/parent-notifications/parent-notifications.module';
 import { SchoolProfilesModule } from './modules/school-profiles/school-profiles.module';
+import { UserNotificationsModule } from './modules/user-notifications/user-notifications.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { PaymentGatewaysModule } from './modules/finance/payment-gateways/payment-gateways.module';
+import { PaymentTransactionsModule } from './modules/finance/payment-transactions/payment-transactions.module';
+import { PaymentWebhooksModule } from './modules/finance/payment-webhooks/payment-webhooks.module';
+import { BankReconciliationsModule } from './modules/finance/bank-reconciliations/bank-reconciliations.module';
+import { BranchesModule } from './modules/finance/branches/branches.module';
+import { CurrenciesModule } from './modules/finance/currencies/currencies.module';
+import { CurrencyExchangeRatesModule } from './modules/finance/currency-exchange-rates/currency-exchange-rates.module';
+import { FiscalYearsModule } from './modules/finance/fiscal-years/fiscal-years.module';
+import { FiscalPeriodsModule } from './modules/finance/fiscal-periods/fiscal-periods.module';
+import { ChartOfAccountsModule } from './modules/finance/chart-of-accounts/chart-of-accounts.module';
+import { JournalEntriesModule } from './modules/finance/journal-entries/journal-entries.module';
+import { FinancialReportsModule } from './modules/finance/financial-reports/financial-reports.module';
+import { FeeStructuresModule } from './modules/finance/fee-structures/fee-structures.module';
+import { DiscountRulesModule } from './modules/finance/discount-rules/discount-rules.module';
+import { StudentInvoicesModule } from './modules/finance/student-invoices/student-invoices.module';
+import { InvoiceInstallmentsModule } from './modules/finance/invoice-installments/invoice-installments.module';
+import { TaxConfigurationsModule } from './modules/finance/tax-configurations/tax-configurations.module';
+import { DocumentSequencesModule } from './modules/finance/document-sequences/document-sequences.module';
+import { BillingEngineModule } from './modules/finance/billing-engine/billing-engine.module';
+import { CostCentersModule } from './modules/finance/cost-centers/cost-centers.module';
+import { BudgetsModule } from './modules/finance/budgets/budgets.module';
+import { CreditDebitNotesModule } from './modules/finance/credit-debit-notes/credit-debit-notes.module';
+import { RecurringJournalsModule } from './modules/finance/recurring-journals/recurring-journals.module';
+import { HrIntegrationsModule } from './modules/finance/hr-integrations/hr-integrations.module';
+import { ProcurementIntegrationsModule } from './modules/finance/procurement-integrations/procurement-integrations.module';
+import { TransportIntegrationsModule } from './modules/finance/transport-integrations/transport-integrations.module';
+import { AuditTrailModule } from './modules/finance/audit-trail/audit-trail.module';
+import { FinancialFundsModule } from './modules/finance/financial-funds/financial-funds.module';
+import { FinancialCategoriesModule } from './modules/finance/financial-categories/financial-categories.module';
+import { RevenuesModule } from './modules/finance/revenues/revenues.module';
+import { ExpensesModule } from './modules/finance/expenses/expenses.module';
+import { CommunityContributionsModule } from './modules/finance/community-contributions/community-contributions.module';
 
 @Module({
   imports: [
@@ -96,6 +135,12 @@ import { PrismaModule } from './prisma/prisma.module';
     EmployeeViolationsModule,
     TeachingAssignmentsModule,
     EmployeeAttendanceModule,
+    EmployeeDocumentsModule,
+    EmployeeDepartmentsModule,
+    EmployeeLeaveBalancesModule,
+    EmployeeLeavesModule,
+    EmployeeLifecycleChecklistsModule,
+    EmployeeContractsModule,
     EmployeePerformanceEvaluationsModule,
     TimetableEntriesModule,
     TermSubjectOfferingsModule,
@@ -118,7 +163,40 @@ import { PrismaModule } from './prisma/prisma.module';
     SystemSettingsModule,
     RemindersTickerModule,
     UserPermissionsModule,
+    UserNotificationsModule,
     SchoolProfilesModule,
+    BranchesModule,
+    CurrenciesModule,
+    CurrencyExchangeRatesModule,
+    FiscalYearsModule,
+    FiscalPeriodsModule,
+    ChartOfAccountsModule,
+    JournalEntriesModule,
+    PaymentGatewaysModule,
+    PaymentTransactionsModule,
+    PaymentWebhooksModule,
+    BankReconciliationsModule,
+    FinancialReportsModule,
+    FeeStructuresModule,
+    DiscountRulesModule,
+    DocumentSequencesModule,
+    StudentInvoicesModule,
+    InvoiceInstallmentsModule,
+    TaxConfigurationsModule,
+    BillingEngineModule,
+    CostCentersModule,
+    BudgetsModule,
+    CreditDebitNotesModule,
+    RecurringJournalsModule,
+    HrIntegrationsModule,
+    ProcurementIntegrationsModule,
+    TransportIntegrationsModule,
+    AuditTrailModule,
+    FinancialFundsModule,
+    FinancialCategoriesModule,
+    RevenuesModule,
+    ExpensesModule,
+    CommunityContributionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

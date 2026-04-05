@@ -11,9 +11,10 @@
 5. `backend/src/modules/employee-talents`
 6. `backend/src/modules/employee-violations`
 7. `backend/src/modules/employee-performance-evaluations`
-8. `backend/src/modules/employee-teaching-assignments`
-9. `backend/src/modules/hr-reports`
-10. `backend/src/modules/talents`
+8. `backend/src/modules/teaching-assignments/employee-teaching-assignments`
+9. `backend/src/modules/teaching-assignments/employee-section-supervisions`
+10. `backend/src/modules/hr-reports`
+11. `backend/src/modules/talents`
 
 ## Owned Frontend Areas
 1. `frontend/src/app/app/employees`

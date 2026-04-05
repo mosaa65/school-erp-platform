@@ -69,6 +69,30 @@ export class ListEmployeesDto {
   @Min(1)
   localityId?: number;
 
+  @ApiPropertyOptional({ example: 'cmf2f32b60000uvh95h7tk7q1' })
+  @IsOptional()
+  @IsString()
+  departmentId?: string;
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  branchId?: number;
+
+  @ApiPropertyOptional({ example: 'cmf2f32b60000uvh95h7tk7q2' })
+  @IsOptional()
+  @IsString()
+  directManagerEmployeeId?: string;
+
+  @ApiPropertyOptional({ example: 10 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  costCenterId?: number;
+
   @ApiPropertyOptional({ example: 'Teacher' })
   @IsOptional()
   @IsString()

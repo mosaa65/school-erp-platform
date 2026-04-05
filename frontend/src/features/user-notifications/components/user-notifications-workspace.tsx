@@ -1,0 +1,532 @@
+"use client";
+
+import * as React from "react";
+import Link from "next/link";
+import {
+  BellRing,
+  CheckCheck,
+  ExternalLink,
+  LoaderCircle,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { SelectField } from "@/components/ui/select-field";
+import { useRbac } from "@/features/auth/hooks/use-rbac";
+import {
+  useDeleteUserNotificationMutation,
+  useMarkAllUserNotificationsReadMutation,
+  useMarkUserNotificationReadMutation,
+  useUpdateUserNotificationPreferencesMutation,
+} from "@/features/user-notifications/hooks/use-user-notifications-mutations";
+import {
+  useUserNotificationPreferencesQuery,
+  useUserNotificationsQuery,
+  type UserNotificationPreferences,
+} from "@/features/user-notifications/hooks/use-user-notifications-query";
+import type { UserNotificationListItem, UserNotificationType } from "@/lib/api/client";
+
+const PAGE_SIZE = 12;
+
+const TYPE_LABELS: Record<UserNotificationType, string> = {
+  INFO: "معلومة",
+  SUCCESS: "نجاح",
+  WARNING: "تنبيه",
+  ACTION_REQUIRED: "إجراء مطلوب",
+};
+
+function formatDate(value: string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  return date.toLocaleString("ar-YE");
+}
+
+export function UserNotificationsWorkspace() {
+  const { hasPermission } = useRbac();
+  const canUpdate = hasPermission("user-notifications.update");
+  const canDelete = hasPermission("user-notifications.delete");
+
+  const [page, setPage] = React.useState(1);
+  const [searchInput, setSearchInput] = React.useState("");
+  const [search, setSearch] = React.useState("");
+  const [readFilter, setReadFilter] = React.useState<"all" | "read" | "unread">("all");
+  const [typeFilter, setTypeFilter] = React.useState<"all" | UserNotificationType>("all");
+
+  const notificationsQuery = useUserNotificationsQuery({
+    page,
+    limit: PAGE_SIZE,
+    search: search || undefined,
+    isRead:
+      readFilter === "all" ? undefined : readFilter === "read",
+    notificationType: typeFilter === "all" ? undefined : typeFilter,
+  });
+
+  const markReadMutation = useMarkUserNotificationReadMutation();
+  const markAllReadMutation = useMarkAllUserNotificationsReadMutation();
+  const deleteMutation = useDeleteUserNotificationMutation();
+  const preferencesQuery = useUserNotificationPreferencesQuery();
+  const updatePreferencesMutation = useUpdateUserNotificationPreferencesMutation();
+  const [preferencesDraft, setPreferencesDraft] =
+    React.useState<UserNotificationPreferences | null>(null);
+  const [preferencesMessage, setPreferencesMessage] = React.useState<string | null>(null);
+
+  const notifications = React.useMemo(
+    () => notificationsQuery.data?.data ?? [],
+    [notificationsQuery.data?.data],
+  );
+  const pagination = notificationsQuery.data?.pagination;
+  const unreadCount =
+    notificationsQuery.data?.unreadCount ??
+    notifications.filter((item) => !item.isRead).length;
+
+  const mutationError =
+    (markReadMutation.error as Error | null)?.message ??
+    (markAllReadMutation.error as Error | null)?.message ??
+    (deleteMutation.error as Error | null)?.message ??
+    null;
+  const preferencesError =
+    (preferencesQuery.error as Error | null)?.message ??
+    (updatePreferencesMutation.error as Error | null)?.message ??
+    null;
+
+  useDebounceEffect(() => {
+    setPage(1);
+    setSearch(searchInput.trim());
+  }, 400, [searchInput]);
+
+  React.useEffect(() => {
+    if (!preferencesQuery.data) {
+      return;
+    }
+
+    setPreferencesDraft(preferencesQuery.data);
+  }, [preferencesQuery.data]);
+
+  const handleMarkAsRead = (item: UserNotificationListItem) => {
+    if (!canUpdate || item.isRead) {
+      return;
+    }
+
+    markReadMutation.mutate(item.id);
+  };
+
+  const handleMarkAllRead = () => {
+    if (!canUpdate || unreadCount === 0) {
+      return;
+    }
+
+    markAllReadMutation.mutate();
+  };
+
+  const handleDelete = (item: UserNotificationListItem) => {
+    if (!canDelete) {
+      return;
+    }
+
+    const confirmed = window.confirm(`تأكيد حذف الإشعار: ${item.title}؟`);
+    if (!confirmed) {
+      return;
+    }
+
+    deleteMutation.mutate(item.id);
+  };
+
+  const handleTogglePreference = (
+    key:
+      | "inAppEnabled"
+      | "actionRequiredOnly"
+      | "leaveNotificationsEnabled"
+      | "contractNotificationsEnabled"
+      | "documentNotificationsEnabled"
+      | "lifecycleNotificationsEnabled",
+    checked: boolean,
+  ) => {
+    setPreferencesMessage(null);
+    setPreferencesDraft((prev) => (prev ? { ...prev, [key]: checked } : prev));
+  };
+
+  const handleSavePreferences = () => {
+    if (!preferencesDraft || !canUpdate) {
+      return;
+    }
+
+    setPreferencesMessage(null);
+    updatePreferencesMutation.mutate(
+      {
+        inAppEnabled: preferencesDraft.inAppEnabled,
+        actionRequiredOnly: preferencesDraft.actionRequiredOnly,
+        leaveNotificationsEnabled: preferencesDraft.leaveNotificationsEnabled,
+        contractNotificationsEnabled: preferencesDraft.contractNotificationsEnabled,
+        documentNotificationsEnabled: preferencesDraft.documentNotificationsEnabled,
+        lifecycleNotificationsEnabled: preferencesDraft.lifecycleNotificationsEnabled,
+      },
+      {
+        onSuccess: () => {
+          setPreferencesMessage("تم حفظ تفضيلات الإشعارات بنجاح.");
+        },
+      },
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+        <CardHeader className="space-y-2">
+          <CardTitle className="text-base">تفضيلات الإشعارات</CardTitle>
+          <CardDescription>
+            التحكم في أنواع إشعارات HR التي تظهر داخل التطبيق.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {preferencesQuery.isPending ? (
+            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+              جارٍ تحميل التفضيلات...
+            </div>
+          ) : null}
+
+          {preferencesError ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              {preferencesError}
+            </div>
+          ) : null}
+
+          {preferencesMessage ? (
+            <div
+              className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300"
+              data-testid="user-notification-preferences-message"
+            >
+              {preferencesMessage}
+            </div>
+          ) : null}
+
+          {preferencesDraft ? (
+            <>
+              <div className="grid gap-2 md:grid-cols-2">
+                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                  <span>تفعيل إشعارات داخل التطبيق</span>
+                  <input
+                    type="checkbox"
+                    checked={preferencesDraft.inAppEnabled}
+                    onChange={(event) =>
+                      handleTogglePreference("inAppEnabled", event.target.checked)
+                    }
+                    data-testid="pref-in-app-enabled"
+                  />
+                </label>
+                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                  <span>الإجراءات المطلوبة فقط</span>
+                  <input
+                    type="checkbox"
+                    checked={preferencesDraft.actionRequiredOnly}
+                    onChange={(event) =>
+                      handleTogglePreference("actionRequiredOnly", event.target.checked)
+                    }
+                    data-testid="pref-action-required-only"
+                  />
+                </label>
+                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                  <span>إشعارات الإجازات</span>
+                  <input
+                    type="checkbox"
+                    checked={preferencesDraft.leaveNotificationsEnabled}
+                    onChange={(event) =>
+                      handleTogglePreference("leaveNotificationsEnabled", event.target.checked)
+                    }
+                    data-testid="pref-leave-enabled"
+                  />
+                </label>
+                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                  <span>إشعارات العقود</span>
+                  <input
+                    type="checkbox"
+                    checked={preferencesDraft.contractNotificationsEnabled}
+                    onChange={(event) =>
+                      handleTogglePreference("contractNotificationsEnabled", event.target.checked)
+                    }
+                    data-testid="pref-contract-enabled"
+                  />
+                </label>
+                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                  <span>إشعارات المستندات</span>
+                  <input
+                    type="checkbox"
+                    checked={preferencesDraft.documentNotificationsEnabled}
+                    onChange={(event) =>
+                      handleTogglePreference("documentNotificationsEnabled", event.target.checked)
+                    }
+                    data-testid="pref-document-enabled"
+                  />
+                </label>
+                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                  <span>إشعارات دورة الحياة</span>
+                  <input
+                    type="checkbox"
+                    checked={preferencesDraft.lifecycleNotificationsEnabled}
+                    onChange={(event) =>
+                      handleTogglePreference("lifecycleNotificationsEnabled", event.target.checked)
+                    }
+                    data-testid="pref-lifecycle-enabled"
+                  />
+                </label>
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-2"
+                  onClick={handleSavePreferences}
+                  disabled={!canUpdate || updatePreferencesMutation.isPending}
+                  data-testid="user-notification-preferences-save"
+                >
+                  {updatePreferencesMutation.isPending ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : null}
+                  حفظ التفضيلات
+                </Button>
+              </div>
+              {!canUpdate ? (
+                <p className="text-xs text-muted-foreground">
+                  لا تملك الصلاحية المطلوبة: <code>user-notifications.update</code>.
+                </p>
+              ) : null}
+            </>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/70 bg-background/70 p-3">
+        <div className="space-y-1">
+          <h3 className="text-sm font-semibold">إشعاراتي</h3>
+          <p className="text-xs text-muted-foreground">
+            إشعارات داخلية مرتبطة بسير العمل والقرارات التشغيلية داخل النظام.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant={unreadCount > 0 ? "default" : "secondary"}>
+            غير المقروء: {unreadCount}
+          </Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={handleMarkAllRead}
+            disabled={!canUpdate || markAllReadMutation.isPending || unreadCount === 0}
+          >
+            {markAllReadMutation.isPending ? (
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+            ) : (
+              <CheckCheck className="h-4 w-4" />
+            )}
+            قراءة الكل
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_180px_auto]">
+        <Input
+          value={searchInput}
+          onChange={(event) => setSearchInput(event.target.value)}
+          placeholder="ابحث في العنوان أو الرسالة..."
+        />
+        <SelectField
+          value={readFilter}
+          onChange={(event) => {
+            setPage(1);
+            setReadFilter(event.target.value as "all" | "read" | "unread");
+          }}
+        >
+          <option value="all">كل الحالات</option>
+          <option value="unread">غير المقروءة</option>
+          <option value="read">المقروءة</option>
+        </SelectField>
+        <SelectField
+          value={typeFilter}
+          onChange={(event) => {
+            setPage(1);
+            setTypeFilter(event.target.value as "all" | UserNotificationType);
+          }}
+        >
+          <option value="all">كل الأنواع</option>
+          <option value="ACTION_REQUIRED">إجراء مطلوب</option>
+          <option value="WARNING">تنبيه</option>
+          <option value="SUCCESS">نجاح</option>
+          <option value="INFO">معلومة</option>
+        </SelectField>
+        <Button
+          variant="outline"
+          className="gap-2"
+          onClick={() => void notificationsQuery.refetch()}
+          disabled={notificationsQuery.isFetching}
+        >
+          <RefreshCw
+            className={`h-4 w-4 ${notificationsQuery.isFetching ? "animate-spin" : ""}`}
+          />
+          تحديث
+        </Button>
+      </div>
+
+      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+        <CardHeader className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle>قائمة الإشعارات</CardTitle>
+            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+          </div>
+          <CardDescription>
+            متابعة طلبات الاعتماد والقرارات والتنبيهات المرتبطة بحسابك.
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="space-y-3">
+          {notificationsQuery.isPending ? (
+            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+              جارٍ تحميل الإشعارات...
+            </div>
+          ) : null}
+
+          {notificationsQuery.error ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              {notificationsQuery.error instanceof Error
+                ? notificationsQuery.error.message
+                : "تعذّر تحميل الإشعارات."}
+            </div>
+          ) : null}
+
+          {mutationError ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              {mutationError}
+            </div>
+          ) : null}
+
+          {!notificationsQuery.isPending && notifications.length === 0 ? (
+            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+              لا توجد إشعارات مطابقة.
+            </div>
+          ) : null}
+
+          {notifications.map((item) => (
+            <div
+              key={item.id}
+              className={`space-y-3 rounded-lg border p-3 ${item.isRead ? "border-border/70 bg-background/60" : "border-sky-500/30 bg-sky-500/5"}`}
+              data-testid="user-notification-card"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium">{item.title}</p>
+                    <Badge variant={item.isRead ? "outline" : "default"}>
+                      {item.isRead ? "مقروء" : "جديد"}
+                    </Badge>
+                    <Badge variant="secondary">{TYPE_LABELS[item.notificationType]}</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{item.message}</p>
+                  <p className="text-xs text-muted-foreground">
+                    أُنشئ في: {formatDate(item.createdAt)}
+                  </p>
+                  {item.triggeredByUser ? (
+                    <p className="text-xs text-muted-foreground">
+                      بواسطة: {item.triggeredByUser.email}
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {!item.isRead ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() => handleMarkAsRead(item)}
+                      disabled={!canUpdate || markReadMutation.isPending}
+                      data-testid="user-notification-mark-read"
+                    >
+                      <CheckCheck className="h-3.5 w-3.5" />
+                      تم الاطلاع
+                    </Button>
+                  ) : null}
+                  {item.actionUrl ? (
+                    <Button variant="outline" size="sm" className="gap-1.5" asChild>
+                      <Link href={item.actionUrl}>
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        فتح
+                      </Link>
+                    </Button>
+                  ) : null}
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleDelete(item)}
+                    disabled={!canDelete || deleteMutation.isPending}
+                    data-testid="user-notification-delete"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    حذف
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
+            <p className="text-xs text-muted-foreground">
+              الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                disabled={!pagination || pagination.page <= 1 || notificationsQuery.isFetching}
+              >
+                السابق
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setPage((prev) =>
+                    pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
+                  )
+                }
+                disabled={
+                  !pagination ||
+                  pagination.page >= pagination.totalPages ||
+                  notificationsQuery.isFetching
+                }
+              >
+                التالي
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="rounded-lg border border-dashed border-border/70 bg-background/60 p-3 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <BellRing className="h-4 w-4" />
+          <span>
+            ستظهر هنا إشعارات طلبات الإجازات والقرارات المرتبطة بحسابك، ويمكن توسيع
+            هذه القناة لاحقًا للعقود والمستندات والمهام الإدارية.
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}

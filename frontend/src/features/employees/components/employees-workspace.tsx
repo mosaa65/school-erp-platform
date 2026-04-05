@@ -7,9 +7,12 @@ import {
   BadgeDollarSign,
   Briefcase,
   Calendar,
+  GitBranch,
   GraduationCap,
   Hash,
   LoaderCircle,
+  MapPinned,
+  Network,
   PencilLine,
   Plus,
   RefreshCw,
@@ -49,6 +52,7 @@ import {
 import { useGenderOptionsQuery } from "@/features/employees/hooks/use-gender-options-query";
 import { useIdTypeOptionsQuery } from "@/features/employees/hooks/use-id-type-options-query";
 import { useJobRoleOptionsQuery } from "@/features/employees/hooks/use-job-role-options-query";
+import { useEmployeeOrganizationOptionsQuery } from "@/features/employees/hooks/use-employee-organization-options-query";
 import { useEmployeesQuery } from "@/features/employees/hooks/use-employees-query";
 import { useQualificationOptionsQuery } from "@/features/employees/hooks/use-qualification-options-query";
 import {
@@ -78,6 +82,10 @@ type EmployeeFormState = {
   idNumber: string;
   idTypeId: string;
   localityId: string;
+  departmentId: string;
+  branchId: string;
+  directManagerEmployeeId: string;
+  costCenterId: string;
   idExpiryDate: string;
   experienceYears: string;
   employmentType: EmploymentType | "";
@@ -94,6 +102,8 @@ type EmployeeFilterDraft = {
   employmentType: EmploymentType | "all";
   idType: string;
   locality: string;
+  department: string;
+  branch: string;
   qualification: string;
   jobRole: string;
   active: "all" | "active" | "inactive";
@@ -117,6 +127,10 @@ const DEFAULT_FORM_STATE: EmployeeFormState = {
   idNumber: "",
   idTypeId: "",
   localityId: "",
+  departmentId: "",
+  branchId: "",
+  directManagerEmployeeId: "",
+  costCenterId: "",
   idExpiryDate: "",
   experienceYears: "0",
   employmentType: "",
@@ -133,6 +147,8 @@ const DEFAULT_FILTER_DRAFT: EmployeeFilterDraft = {
   employmentType: "all",
   idType: "all",
   locality: "all",
+  department: "all",
+  branch: "all",
   qualification: "all",
   jobRole: "all",
   active: "all",
@@ -225,6 +241,10 @@ function toFormState(employee: EmployeeListItem): EmployeeFormState {
     idNumber: employee.idNumber ?? "",
     idTypeId: employee.idTypeId ? String(employee.idTypeId) : "",
     localityId: employee.localityId ? String(employee.localityId) : "",
+    departmentId: employee.departmentId ?? "",
+    branchId: employee.branchId ? String(employee.branchId) : "",
+    directManagerEmployeeId: employee.directManagerEmployeeId ?? "",
+    costCenterId: employee.costCenterId ? String(employee.costCenterId) : "",
     idExpiryDate: toDateInput(employee.idExpiryDate),
     experienceYears: String(employee.experienceYears),
     employmentType: employee.employmentType ?? "",
@@ -255,6 +275,8 @@ export function EmployeesWorkspace() {
   >("all");
   const [idTypeFilter, setIdTypeFilter] = React.useState<string>("all");
   const [localityFilter, setLocalityFilter] = React.useState<string>("all");
+  const [departmentFilter, setDepartmentFilter] = React.useState<string>("all");
+  const [branchFilter, setBranchFilter] = React.useState<string>("all");
   const [qualificationFilter, setQualificationFilter] =
     React.useState<string>("all");
   const [jobRoleFilter, setJobRoleFilter] = React.useState<string>("all");
@@ -291,6 +313,8 @@ export function EmployeesWorkspace() {
       employmentTypeFilter === "all" ? undefined : employmentTypeFilter,
     idTypeId: idTypeFilter === "all" ? undefined : Number(idTypeFilter),
     localityId: localityFilter === "all" ? undefined : Number(localityFilter),
+    departmentId: departmentFilter === "all" ? undefined : departmentFilter,
+    branchId: branchFilter === "all" ? undefined : Number(branchFilter),
     qualificationId:
       qualificationFilter === "all" ? undefined : Number(qualificationFilter),
     jobRoleId: jobRoleFilter === "all" ? undefined : Number(jobRoleFilter),
@@ -303,6 +327,7 @@ export function EmployeesWorkspace() {
   useIdTypeOptionsQuery();
   const genderOptionsQuery = useGenderOptionsQuery();
   const geographyOptionsQuery = useGeographyOptionsQuery("employees");
+  const organizationOptionsQuery = useEmployeeOrganizationOptionsQuery();
   const qualificationOptionsQuery = useQualificationOptionsQuery();
   const jobRoleOptionsQuery = useJobRoleOptionsQuery();
 
@@ -339,6 +364,31 @@ export function EmployeesWorkspace() {
     () => geographyOptionsQuery.data?.localities ?? [],
     [geographyOptionsQuery.data?.localities],
   );
+  const departmentOptions = React.useMemo(
+    () => organizationOptionsQuery.data?.departments ?? [],
+    [organizationOptionsQuery.data?.departments],
+  );
+  const branchOptions = React.useMemo(
+    () => organizationOptionsQuery.data?.branches ?? [],
+    [organizationOptionsQuery.data?.branches],
+  );
+  const costCenterOptions = React.useMemo(
+    () => organizationOptionsQuery.data?.costCenters ?? [],
+    [organizationOptionsQuery.data?.costCenters],
+  );
+  const managerOptions = React.useMemo(
+    () => organizationOptionsQuery.data?.managers ?? [],
+    [organizationOptionsQuery.data?.managers],
+  );
+  const visibleCostCenterOptions = React.useMemo(() => {
+    if (!formState.branchId) {
+      return costCenterOptions;
+    }
+
+    return costCenterOptions.filter(
+      (option) => option.branchId === null || option.branchId === Number(formState.branchId),
+    );
+  }, [costCenterOptions, formState.branchId]);
   const geographyMaps = React.useMemo(
     () =>
       buildGeographyMaps({
@@ -386,6 +436,8 @@ export function EmployeesWorkspace() {
       employmentType: employmentTypeFilter,
       idType: idTypeFilter,
       locality: localityFilter,
+      department: departmentFilter,
+      branch: branchFilter,
       qualification: qualificationFilter,
       jobRole: jobRoleFilter,
       active: activeFilter,
@@ -399,6 +451,8 @@ export function EmployeesWorkspace() {
     isFilterOpen,
     jobRoleFilter,
     localityFilter,
+    branchFilter,
+    departmentFilter,
     operationalReadinessFilter,
     qualificationFilter,
   ]);
@@ -478,6 +532,20 @@ export function EmployeesWorkspace() {
     geographyMaps,
   ]);
 
+  React.useEffect(() => {
+    if (!formState.costCenterId) {
+      return;
+    }
+
+    const selectedExists = visibleCostCenterOptions.some(
+      (option) => String(option.id) === formState.costCenterId,
+    );
+
+    if (!selectedExists) {
+      setFormState((prev) => ({ ...prev, costCenterId: "" }));
+    }
+  }, [formState.costCenterId, visibleCostCenterOptions]);
+
   const resetForm = () => {
     setEditingEmployeeId(null);
     setFormState(DEFAULT_FORM_STATE);
@@ -511,6 +579,8 @@ export function EmployeesWorkspace() {
     setEmploymentTypeFilter("all");
     setIdTypeFilter("all");
     setLocalityFilter("all");
+    setDepartmentFilter("all");
+    setBranchFilter("all");
     setQualificationFilter("all");
     setJobRoleFilter("all");
     setActiveFilter("all");
@@ -524,6 +594,8 @@ export function EmployeesWorkspace() {
     setEmploymentTypeFilter(filterDraft.employmentType);
     setIdTypeFilter(filterDraft.idType);
     setLocalityFilter(filterDraft.locality);
+    setDepartmentFilter(filterDraft.department);
+    setBranchFilter(filterDraft.branch);
     setQualificationFilter(filterDraft.qualification);
     setJobRoleFilter(filterDraft.jobRole);
     setActiveFilter(filterDraft.active);
@@ -604,6 +676,10 @@ export function EmployeesWorkspace() {
       idNumber: toOptionalString(formState.idNumber),
       idTypeId: formState.idTypeId ? Number(formState.idTypeId) : null,
       localityId: formState.localityId ? Number(formState.localityId) : null,
+      departmentId: formState.departmentId || null,
+      branchId: formState.branchId ? Number(formState.branchId) : null,
+      directManagerEmployeeId: formState.directManagerEmployeeId || null,
+      costCenterId: formState.costCenterId ? Number(formState.costCenterId) : null,
       idExpiryDate: formState.idExpiryDate
         ? toDateIso(formState.idExpiryDate)
         : undefined,
@@ -722,6 +798,8 @@ export function EmployeesWorkspace() {
       employmentTypeFilter,
       idTypeFilter,
       localityFilter,
+      departmentFilter,
+      branchFilter,
       qualificationFilter,
       jobRoleFilter,
       activeFilter,
@@ -734,11 +812,18 @@ export function EmployeesWorkspace() {
     idTypeFilter,
     jobRoleFilter,
     localityFilter,
+    branchFilter,
+    departmentFilter,
     operationalReadinessFilter,
     qualificationFilter,
   ]);
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
+  const mutationError =
+    (createMutation.error as Error | null)?.message ??
+    (updateMutation.error as Error | null)?.message ??
+    (deleteMutation.error as Error | null)?.message ??
+    null;
 
   return (
     <>
@@ -810,6 +895,50 @@ export function EmployeesWorkspace() {
             </div>
 
             <div className="space-y-1">
+              <Label>القسم</Label>
+              <SelectField
+                value={filterDraft.department}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    department: event.target.value,
+                  }))
+                }
+                disabled={organizationOptionsQuery.isLoading}
+                icon={<Network className="h-4 w-4" />}
+              >
+                <option value="all">كل الأقسام</option>
+                {departmentOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
+
+            <div className="space-y-1">
+              <Label>الفرع</Label>
+              <SelectField
+                value={filterDraft.branch}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    branch: event.target.value,
+                  }))
+                }
+                disabled={organizationOptionsQuery.isLoading}
+                icon={<GitBranch className="h-4 w-4" />}
+              >
+                <option value="all">كل الفروع</option>
+                {branchOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.nameAr}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
+
+            <div className="space-y-1">
               <Label>الجاهزية التشغيلية</Label>
               <SelectField
                 value={filterDraft.operationalReadiness}
@@ -858,6 +987,24 @@ export function EmployeesWorkspace() {
           onFilterClick={() => setIsFilterOpen((prev) => !prev)}
         />
 
+        {actionSuccess ? (
+          <div
+            className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300"
+            data-testid="employee-success-banner"
+          >
+            {actionSuccess}
+          </div>
+        ) : null}
+
+        {mutationError ? (
+          <div
+            className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+            data-testid="employee-error-banner"
+          >
+            {mutationError}
+          </div>
+        ) : null}
+
         <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
           <CardHeader className="space-y-3 pb-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -881,6 +1028,7 @@ export function EmployeesWorkspace() {
                 <div
                   key={employee.id}
                   className="space-y-3 rounded-xl border border-border/70 bg-background/70 p-4 transition-all hover:bg-background/80"
+                  data-testid="employee-card"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="space-y-1.5 flex-1 min-w-[240px]">
@@ -906,6 +1054,22 @@ export function EmployeesWorkspace() {
                         <span className="flex items-center gap-1.5">
                           <GraduationCap className="h-3.5 w-3.5 opacity-70" />
                           {employee.qualificationLookup?.nameAr ?? "-"}
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <Network className="h-3.5 w-3.5 opacity-70" />
+                          القسم: {employee.department?.name ?? "-"}
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <GitBranch className="h-3.5 w-3.5 opacity-70" />
+                          الفرع: {employee.branch?.nameAr ?? "-"}
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <MapPinned className="h-3.5 w-3.5 opacity-70" />
+                          مركز التكلفة: {employee.costCenter?.nameAr ?? "-"}
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <User className="h-3.5 w-3.5 opacity-70" />
+                          المدير المباشر: {employee.directManager?.fullName ?? "-"}
                         </span>
                       </div>
                     </div>
@@ -1015,7 +1179,11 @@ export function EmployeesWorkspace() {
             لا تملك الصلاحية المطلوبة: <code>employees.create</code>.
           </div>
         ) : (
-          <form className="space-y-6" onSubmit={handleSubmitForm}>
+          <form
+            className="space-y-6"
+            onSubmit={handleSubmitForm}
+            data-testid="employee-form"
+          >
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-1">
                 <Label>الرقم الوظيفي</Label>
@@ -1024,6 +1192,7 @@ export function EmployeesWorkspace() {
                   onChange={(event) => setFormState((prev) => ({ ...prev, jobNumber: event.target.value }))}
                   placeholder="وظ-0012"
                   icon={<Hash className="h-4 w-4" />}
+                  data-testid="employee-form-job-number"
                 />
               </div>
               <div className="space-y-1">
@@ -1033,6 +1202,7 @@ export function EmployeesWorkspace() {
                   onChange={(event) => setFormState((prev) => ({ ...prev, financialNumber: event.target.value }))}
                   placeholder="مالي-88991"
                   icon={<BadgeDollarSign className="h-4 w-4" />}
+                  data-testid="employee-form-financial-number"
                 />
               </div>
             </div>
@@ -1045,6 +1215,7 @@ export function EmployeesWorkspace() {
                 placeholder="أحمد علي حسن"
                 icon={<User className="h-5 w-5" />}
                 required
+                data-testid="employee-form-full-name"
               />
             </div>
 
@@ -1056,6 +1227,7 @@ export function EmployeesWorkspace() {
                   onChange={(event) => setFormState((prev) => ({ ...prev, genderId: event.target.value }))}
                   disabled={!canReadGenders || genderOptionsQuery.isLoading}
                   icon={<User className="h-4 w-4" />}
+                  data-testid="employee-form-gender"
                 >
                   <option value="">اختر الجنس</option>
                   {genderOptions.map((option) => (
@@ -1072,6 +1244,7 @@ export function EmployeesWorkspace() {
                   value={formState.birthDate}
                   onChange={(event) => setFormState((prev) => ({ ...prev, birthDate: event.target.value }))}
                   icon={<Calendar className="h-4 w-4" />}
+                  data-testid="employee-form-birth-date"
                 />
               </div>
             </div>
@@ -1105,6 +1278,7 @@ export function EmployeesWorkspace() {
                   onChange={(event) => setFormState((prev) => ({ ...prev, qualificationId: event.target.value }))}
                   disabled={!canReadQualifications || qualificationOptionsQuery.isLoading}
                   icon={<GraduationCap className="h-4 w-4" />}
+                  data-testid="employee-form-qualification"
                 >
                   <option value="">غير محدد</option>
                   {qualificationOptions.map((option) => (
@@ -1121,6 +1295,7 @@ export function EmployeesWorkspace() {
                   onChange={(event) => setFormState((prev) => ({ ...prev, jobRoleId: event.target.value }))}
                   disabled={!canReadJobRoles || jobRoleOptionsQuery.isLoading}
                   icon={<Briefcase className="h-4 w-4" />}
+                  data-testid="employee-form-job-role"
                 >
                   <option value="">غير محدد</option>
                   {jobRoleOptions.map((option) => (
@@ -1132,11 +1307,110 @@ export function EmployeesWorkspace() {
               </div>
             </div>
 
+            <div className="grid gap-4 md:grid-cols-2 border-t pt-4 border-border/40">
+              <div className="space-y-1">
+                <Label>القسم</Label>
+                <SelectField
+                  value={formState.departmentId}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, departmentId: event.target.value }))
+                  }
+                  disabled={organizationOptionsQuery.isLoading}
+                  icon={<Network className="h-4 w-4" />}
+                  data-testid="employee-form-department"
+                >
+                  <option value="">غير محدد</option>
+                  {departmentOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.name}
+                    </option>
+                  ))}
+                </SelectField>
+              </div>
+
+              <div className="space-y-1">
+                <Label>الفرع</Label>
+                <SelectField
+                  value={formState.branchId}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, branchId: event.target.value }))
+                  }
+                  disabled={organizationOptionsQuery.isLoading}
+                  icon={<GitBranch className="h-4 w-4" />}
+                  data-testid="employee-form-branch"
+                >
+                  <option value="">غير محدد</option>
+                  {branchOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.nameAr}
+                    </option>
+                  ))}
+                </SelectField>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 border-t pt-4 border-border/40">
+              <div className="space-y-1">
+                <Label>المدير المباشر</Label>
+                <SelectField
+                  value={formState.directManagerEmployeeId}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      directManagerEmployeeId: event.target.value,
+                    }))
+                  }
+                  disabled={organizationOptionsQuery.isLoading}
+                  icon={<User className="h-4 w-4" />}
+                  data-testid="employee-form-manager"
+                >
+                  <option value="">غير محدد</option>
+                  {managerOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.fullName}
+                    </option>
+                  ))}
+                </SelectField>
+              </div>
+
+              <div className="space-y-1">
+                <Label>مركز التكلفة</Label>
+                <SelectField
+                  value={formState.costCenterId}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, costCenterId: event.target.value }))
+                  }
+                  disabled={organizationOptionsQuery.isLoading}
+                  icon={<MapPinned className="h-4 w-4" />}
+                  data-testid="employee-form-cost-center"
+                >
+                  <option value="">غير محدد</option>
+                  {visibleCostCenterOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.nameAr}
+                    </option>
+                  ))}
+                </SelectField>
+              </div>
+            </div>
+
             <div className="flex gap-2 pt-4">
+              {formError ? (
+                <div
+                  className="w-full rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive"
+                  data-testid="employee-form-error"
+                >
+                  {formError}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="flex gap-2">
               <button
                 type="submit"
                 className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/30 active:scale-[0.98] disabled:opacity-50"
                 disabled={isFormSubmitting}
+                data-testid="employee-form-submit"
               >
                 {isFormSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                 {isEditing ? "حفظ التعديلات" : "إضافة الموظف"}

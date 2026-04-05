@@ -1,0 +1,82 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import {
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+} from 'class-validator';
+import { PaymentMethod } from '@prisma/client';
+import { IsEnum } from 'class-validator';
+
+export class SimulatePaymentDto {
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  gatewayId?: number;
+
+  @ApiPropertyOptional({ example: 'ONLINE_GW' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  providerCode?: string;
+
+  @ApiPropertyOptional({ example: 'cmabc123enrollment' })
+  @IsOptional()
+  @IsString()
+  enrollmentId?: string;
+
+  @ApiPropertyOptional({ example: '123456' })
+  @IsOptional()
+  @IsString()
+  invoiceId?: string;
+
+  @ApiPropertyOptional({ example: '78910' })
+  @IsOptional()
+  @IsString()
+  installmentId?: string;
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  currencyId?: number;
+
+  @ApiProperty({ example: 1500 })
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0.01)
+  amount!: number;
+
+  @ApiPropertyOptional({ enum: PaymentMethod, example: PaymentMethod.CARD })
+  @IsOptional()
+  @IsEnum(PaymentMethod)
+  paymentMethod?: PaymentMethod;
+
+  @ApiPropertyOptional({ example: 'ولي أمر الطالب' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(150)
+  payerName?: string;
+
+  @ApiPropertyOptional({ example: '777777777' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  payerPhone?: string;
+
+  @ApiPropertyOptional({ example: 'gw_12345' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  gatewayTransactionId?: string;
+
+  @ApiPropertyOptional({ example: 'Internal test simulation' })
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}

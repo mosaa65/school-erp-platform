@@ -30,7 +30,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:e2e:finance": "jest --config ./test/jest-e2e.json --runInBand finance-journal-entries.e2e-spec.ts finance-payment-webhooks.e2e-spec.ts finance-billing-payments.e2e-spec.ts finance-bank-reconciliations.e2e-spec.ts finance-hr-integrations.e2e-spec.ts finance-procurement-integrations.e2e-spec.ts finance-transport-revenue-report.e2e-spec.ts finance-community-contributions.e2e-spec.ts finance-advanced-coverage.e2e-spec.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

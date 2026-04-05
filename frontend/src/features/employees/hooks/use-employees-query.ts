@@ -17,6 +17,10 @@ type UseEmployeesQueryOptions = {
   employmentType?: EmploymentType;
   idTypeId?: number;
   localityId?: number;
+  departmentId?: string;
+  branchId?: number;
+  directManagerEmployeeId?: string;
+  costCenterId?: number;
   qualificationId?: number;
   jobRoleId?: number;
   isActive?: boolean;
@@ -37,6 +41,10 @@ export function useEmployeesQuery(options: UseEmployeesQueryOptions = {}) {
       options.employmentType ?? "all",
       options.idTypeId ?? "all",
       options.localityId ?? "all",
+      options.departmentId ?? "all",
+      options.branchId ?? "all",
+      options.directManagerEmployeeId ?? "all",
+      options.costCenterId ?? "all",
       options.qualificationId ?? "all",
       options.jobRoleId ?? "all",
       options.isActive === undefined
@@ -57,6 +65,10 @@ export function useEmployeesQuery(options: UseEmployeesQueryOptions = {}) {
           employmentType: options.employmentType,
           idTypeId: options.idTypeId,
           localityId: options.localityId,
+          departmentId: options.departmentId,
+          branchId: options.branchId,
+          directManagerEmployeeId: options.directManagerEmployeeId,
+          costCenterId: options.costCenterId,
           qualificationId: options.qualificationId,
           jobRoleId: options.jobRoleId,
           isActive: options.isActive,

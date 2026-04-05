@@ -5,6 +5,11 @@ import { seedSystem01SchoolProfile } from './system-01/school-profile.seed';
 import { seedSystem01Settings } from './system-01/settings.seed';
 import { seedSystem02AcademicCore } from './system-02/academic-core.seed';
 import { seedSystem05Lookups } from './system-05/lookups.seed';
+import { seedSystem07FinanceAdvanced } from './system-07/finance-advanced.seed';
+import { seedSystem07FinanceCore } from './system-07/finance-core.seed';
+import { seedSystem07FinanceBilling } from './system-07/finance-billing.seed';
+import { seedSystem07FinanceLegacy } from './system-07/finance-legacy.seed';
+import { seedSystem07PaymentGateways } from './system-07/payment-gateways.seed';
 import { seedSuperAdmin } from './shared/admin.seed';
 
 export async function runCoreSeed(prisma: PrismaClient) {
@@ -16,6 +21,11 @@ export async function runCoreSeed(prisma: PrismaClient) {
   await seedSystem01SchoolProfile(prisma);
   await seedSystem02AcademicCore(prisma);
   await seedSystem05Lookups(prisma);
+  await seedSystem07FinanceCore(prisma);
+  await seedSystem07FinanceLegacy(prisma);
+  await seedSystem07FinanceAdvanced(prisma);
+  await seedSystem07PaymentGateways(prisma);
+  await seedSystem07FinanceBilling(prisma);
 
   return {
     adminCredentials,
