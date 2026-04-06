@@ -23,6 +23,7 @@
     "prisma:seed:core": "ts-node prisma/seed.ts",
     "prisma:seed:demo": "ts-node prisma/seed-demo.ts",
     "prisma:seed:all": "npm run prisma:seed:core && npm run prisma:seed:demo",
+    "verify:code-retirement": "node scripts/verify-code-retirement.cjs",
     "prisma:backfill:student-system-phase1": "ts-node scripts/backfill-student-system-phase1.ts",
     "migrate:monthly-grade-scores": "ts-node scripts/migrate-monthly-grade-scores.ts",
     "lint:check": "eslint \"{src,apps,libs,test}/**/*.ts\"",

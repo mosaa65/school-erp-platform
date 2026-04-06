@@ -70,6 +70,9 @@ jobs:
       - name: Apply Prisma migrations
         run: npm run prisma:migrate:deploy
 
+      - name: Verify retired finance code columns
+        run: npm run verify:code-retirement
+
       - name: Seed core data
         run: npm run prisma:seed:core
 
