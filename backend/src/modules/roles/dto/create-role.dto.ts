@@ -11,12 +11,13 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateRoleDto {
-  @ApiProperty({ example: 'school_admin' })
+  @ApiPropertyOptional({ example: 'school_admin' })
+  @IsOptional()
   @Transform(({ value }: { value: string }) => value?.trim().toLowerCase())
   @IsString()
   @Matches(/^[a-z0-9_.:-]+$/)
   @MaxLength(120)
-  code!: string;
+  code?: string;
 
   @ApiProperty({ example: 'School Administrator' })
   @Transform(({ value }: { value: string }) => value?.trim())

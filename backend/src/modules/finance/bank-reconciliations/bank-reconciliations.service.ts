@@ -43,7 +43,6 @@ const bankReconciliationSummaryInclude: Prisma.BankReconciliationInclude = {
   bankAccount: {
     select: {
       id: true,
-      accountCode: true,
       nameAr: true,
       nameEn: true,
       accountType: true,

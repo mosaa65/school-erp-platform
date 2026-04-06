@@ -24,14 +24,14 @@ import { UpdateRecurringJournalDto } from './dto/update-recurring-journal.dto';
 
 const templateInclude: Prisma.RecurringJournalTemplateInclude = {
   branch: { select: { id: true, nameAr: true } },
-  currency: { select: { id: true, code: true, nameAr: true } },
+  currency: { select: { id: true, nameAr: true } },
   createdByUser: { select: { id: true, email: true } },
   lastGeneratedJournalEntry: { select: { id: true, entryNumber: true } },
   lines: {
     orderBy: { lineNumber: 'asc' },
     include: {
-      account: { select: { id: true, accountCode: true, nameAr: true } },
-      costCenter: { select: { id: true, code: true, nameAr: true } },
+      account: { select: { id: true, nameAr: true } },
+      costCenter: { select: { id: true, nameAr: true } },
     },
   },
 };

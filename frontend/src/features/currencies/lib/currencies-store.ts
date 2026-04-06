@@ -4,7 +4,6 @@ import type { PaginatedResponse } from "@/lib/api/client";
 
 export type CurrencyListItem = {
   id: string;
-  code: string;
   name: string;
   symbol?: string;
   precision: number;
@@ -14,7 +13,6 @@ export type CurrencyListItem = {
 };
 
 export type CreateCurrencyPayload = {
-  code: string;
   name: string;
   symbol?: string;
   precision: number;
@@ -35,7 +33,6 @@ export type ListCurrenciesQuery = {
 const seedData: CurrencyListItem[] = [
   {
     id: "cur-usd",
-    code: "USD",
     name: "دولار أمريكي",
     symbol: "$",
     precision: 2,
@@ -45,7 +42,6 @@ const seedData: CurrencyListItem[] = [
   },
   {
     id: "cur-sar",
-    code: "SAR",
     name: "ريال سعودي",
     symbol: "ر.س",
     precision: 2,
@@ -55,7 +51,6 @@ const seedData: CurrencyListItem[] = [
   },
   {
     id: "cur-yer",
-    code: "YER",
     name: "ريال يمني",
     symbol: "ر.ي",
     precision: 2,
@@ -65,7 +60,6 @@ const seedData: CurrencyListItem[] = [
   },
   {
     id: "cur-eur",
-    code: "EUR",
     name: "يورو",
     symbol: "€",
     precision: 2,
@@ -91,7 +85,6 @@ function applySearch(items: CurrencyListItem[], search?: string) {
 
   return items.filter((item) => {
     return (
-      item.code.toLowerCase().includes(query) ||
       item.name.toLowerCase().includes(query) ||
       item.symbol?.toLowerCase().includes(query)
     );
@@ -138,7 +131,6 @@ export function listCurrencies(query: ListCurrenciesQuery = {}): PaginatedRespon
 export function createCurrency(payload: CreateCurrencyPayload): CurrencyListItem {
   const newRecord: CurrencyListItem = {
     id: createId(),
-    code: payload.code,
     name: payload.name,
     symbol: payload.symbol,
     precision: payload.precision,

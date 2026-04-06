@@ -8,10 +8,11 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateEmployeeDepartmentDto {
-  @ApiProperty({ example: 'HR-OPS' })
+  @ApiPropertyOptional({ example: 'HR-OPS' })
+  @IsOptional()
   @IsString()
   @MaxLength(40)
-  code!: string;
+  code?: string;
 
   @ApiProperty({ example: 'العمليات والموارد البشرية' })
   @IsString()

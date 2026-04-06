@@ -9,11 +9,12 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateTalentDto {
-  @ApiProperty({ example: 'HANDWRITING' })
+  @ApiPropertyOptional({ example: 'HANDWRITING' })
+  @IsOptional()
   @IsString()
   @MaxLength(40)
   @Matches(/^[A-Za-z0-9_\-.]+$/)
-  code!: string;
+  code?: string;
 
   @ApiProperty({ example: 'Handwriting' })
   @IsString()

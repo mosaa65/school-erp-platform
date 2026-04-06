@@ -9,14 +9,15 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreatePromotionDecisionDto {
-  @ApiProperty({ example: 'PROMOTED' })
+  @ApiPropertyOptional({ example: 'PROMOTED' })
+  @IsOptional()
   @IsString()
   @MaxLength(40)
   @Matches(/^[A-Z0-9_]+$/, {
     message:
       'code must contain only uppercase letters, numbers, or underscores',
   })
-  code!: string;
+  code?: string;
 
   @ApiProperty({ example: 'Promoted to next grade' })
   @IsString()

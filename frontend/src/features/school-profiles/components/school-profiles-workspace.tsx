@@ -190,20 +190,14 @@ export function SchoolProfilesWorkspace() {
   };
 
   const validateForm = (): boolean => {
-    const code = normalizeCode(formState.code);
     const nameAr = formState.nameAr.trim();
     const nameEn = formState.nameEn.trim();
     const phone = formState.phone.trim();
     const email = formState.email.trim();
     const addressText = formState.addressText.trim();
 
-    if (!code || !nameAr) {
-      setFormError("الحقول المطلوبة: الكود والاسم العربي.");
-      return false;
-    }
-
-    if (!/^[a-z0-9_-]+$/.test(code) || code.length > 40) {
-      setFormError("الكود يجب أن يحتوي أحرفًا صغيرة/أرقامًا/-/_ فقط وبحد أقصى 40.");
+    if (!nameAr) {
+      setFormError("الحقول المطلوبة: الاسم العربي.");
       return false;
     }
 
@@ -239,7 +233,6 @@ export function SchoolProfilesWorkspace() {
     }
 
     const payload = {
-      code: normalizeCode(formState.code),
       nameAr: formState.nameAr.trim(),
       nameEn: toOptionalString(formState.nameEn),
       ownershipTypeId: formState.ownershipTypeId ? Number(formState.ownershipTypeId) : undefined,
@@ -353,7 +346,7 @@ export function SchoolProfilesWorkspace() {
               containerClassName="flex-1"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="ابحث بالاسم/الكود..."
+              placeholder="ابحث بالاسم..."
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -588,17 +581,6 @@ export function SchoolProfilesWorkspace() {
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الكود *</label>
-                <Input
-                  value={formState.code}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, code: event.target.value }))
-                  }
-                  placeholder="SCH-001"
-                  required
-                />
-              </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">نوع الملكية</label>
                 <SelectField

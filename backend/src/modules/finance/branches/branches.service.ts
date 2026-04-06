@@ -34,7 +34,6 @@ export class BranchesService {
   ) {}
 
   async create(payload: CreateBranchDto, actorUserId: string) {
-    const code = this.normalizeCode(payload.code);
     const nameAr = this.normalizeRequiredText(payload.nameAr, 'nameAr');
     const nameEn =
       payload.nameEn === undefined
@@ -44,7 +43,6 @@ export class BranchesService {
     try {
       const branch = await this.prisma.branch.create({
         data: {
-          code,
           nameAr,
           nameEn,
           address: payload.address?.trim(),
@@ -63,7 +61,6 @@ export class BranchesService {
         resource: 'branches',
         resourceId: String(branch.id),
         details: {
-          code: branch.code,
           nameAr: branch.nameAr,
         },
       });
@@ -76,7 +73,6 @@ export class BranchesService {
         resource: 'branches',
         status: AuditStatus.FAILURE,
         details: {
-          code,
           reason: this.extractErrorMessage(error),
         },
       });
@@ -96,11 +92,6 @@ export class BranchesService {
       OR: query.search
         ? [
             {
-              code: {
-                contains: query.search,
-              },
-            },
-            {
               nameAr: {
                 contains: query.search,
               },
@@ -119,7 +110,7 @@ export class BranchesService {
       this.prisma.branch.findMany({
         where,
         include: branchInclude,
-        orderBy: [{ code: 'asc' }],
+        orderBy: [{ nameAr: 'asc' }, { id: 'asc' }],
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -155,8 +146,6 @@ export class BranchesService {
   async update(id: number, payload: UpdateBranchDto, actorUserId: string) {
     await this.ensureBranchExists(id);
 
-    const code =
-      payload.code === undefined ? undefined : this.normalizeCode(payload.code);
     const nameAr =
       payload.nameAr === undefined
         ? undefined
@@ -170,7 +159,6 @@ export class BranchesService {
       const updated = await this.prisma.branch.update({
         where: { id },
         data: {
-          code,
           nameAr,
           nameEn,
           address: payload.address?.trim(),
@@ -233,16 +221,6 @@ export class BranchesService {
     if (!branch) {
       throw new NotFoundException('Branch not found');
     }
-  }
-
-  private normalizeCode(code: string): string {
-    const normalized = code.trim().toUpperCase();
-
-    if (!normalized) {
-      throw new BadRequestException('code cannot be empty');
-    }
-
-    return normalized;
   }
 
   private normalizeRequiredText(value: string, fieldName: string): string {

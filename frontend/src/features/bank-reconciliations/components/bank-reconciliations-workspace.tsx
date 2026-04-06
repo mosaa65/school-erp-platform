@@ -201,7 +201,7 @@ export function BankReconciliationsWorkspace() {
                     {item.bankAccount?.nameAr ?? "حساب بنكي"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {item.bankAccount?.accountCode ?? "—"} • تاريخ الكشف: {item.statementDate}
+                    تاريخ الكشف: {item.statementDate}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     رصيد البنك: {Number(item.bankBalance).toLocaleString()} • رصيد الدفاتر:{" "}

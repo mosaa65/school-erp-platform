@@ -7,6 +7,7 @@ import {
 import { AuditStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { generateAutoCode } from '../../common/utils/auto-code';
 import { CreateLookupIdTypeDto } from './dto/create-lookup-id-type.dto';
 import { ListLookupIdTypesDto } from './dto/list-lookup-id-types.dto';
 import { UpdateLookupIdTypeDto } from './dto/update-lookup-id-type.dto';
@@ -34,7 +35,9 @@ export class LookupIdTypesService {
   ) {}
 
   async create(payload: CreateLookupIdTypeDto, actorUserId: string) {
-    const normalizedCode = this.normalizeCode(payload.code);
+    const normalizedCode = payload.code
+      ? this.normalizeCode(payload.code)
+      : generateAutoCode('IDT', 50);
     const normalizedNameAr = this.normalizeRequiredText(
       payload.nameAr,
       'nameAr',

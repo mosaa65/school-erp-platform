@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { generateAutoCode } from "@/lib/auto-code";
 import {
   LoaderCircle,
   PencilLine,
@@ -43,6 +44,13 @@ const DEFAULT_FORM_STATE: TalentFormState = {
   description: "",
   isActive: true,
 };
+
+function createNewTalentFormState(): TalentFormState {
+  return {
+    ...DEFAULT_FORM_STATE,
+    code: generateAutoCode("TALENT", 40),
+  };
+}
 
 function normalizeCode(value: string): string {
   return value.trim().toUpperCase();
@@ -121,21 +129,10 @@ export function TalentsWorkspace() {
   };
 
   const validateForm = (): boolean => {
-    const code = normalizeCode(formState.code);
     const name = formState.name.trim();
 
-    if (!code || !name) {
-      setFormError("الحقول الأساسية مطلوبة: الكود والاسم.");
-      return false;
-    }
-
-    if (!/^[A-Z0-9_.-]+$/.test(code)) {
-      setFormError("صيغة الكود غير صحيحة.");
-      return false;
-    }
-
-    if (code.length > 40) {
-      setFormError("الكود يجب ألا يتجاوز 40 حرفًا.");
+    if (!name) {
+      setFormError("الاسم مطلوب.");
       return false;
     }
 
@@ -161,7 +158,6 @@ export function TalentsWorkspace() {
     }
 
     const payload = {
-      code: normalizeCode(formState.code),
       name: formState.name.trim(),
       description: formState.description.trim() || undefined,
       isActive: formState.isActive,
@@ -255,19 +251,6 @@ export function TalentsWorkspace() {
               data-testid="talent-catalog-form"
             >
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الكود *</label>
-                <Input
-                  value={formState.code}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, code: event.target.value }))
-                  }
-                  placeholder="موهبة-الخط"
-                  required
-                  data-testid="talent-catalog-form-code"
-                />
-              </div>
-
-              <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
                 <Input
                   value={formState.name}
@@ -359,7 +342,7 @@ export function TalentsWorkspace() {
               <Input
                 value={searchInput}
                 onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث بالاسم أو الكود..."
+                placeholder="بحث بالاسم..."
                 className="pr-8"
                 data-testid="talent-catalog-filter-search"
               />

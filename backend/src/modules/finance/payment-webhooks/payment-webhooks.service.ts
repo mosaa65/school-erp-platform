@@ -42,21 +42,50 @@ interface WebhookContext {
   userAgent?: string;
 }
 
-const DEFAULT_CASH_ACCOUNT_CODE = '1101';
-const DEFAULT_GATEWAY_ACCOUNT_CODE = '1102';
-const DEFAULT_REVENUE_ACCOUNT_CODE = '4001';
-const DEFAULT_VAT_OUTPUT_ACCOUNT_CODE = '2104';
-const DEFAULT_DISCOUNT_ACCOUNT_CODE = '5007';
+const DEFAULT_CASH_ACCOUNT_NAME_EN = 'Cash and Banks';
+const DEFAULT_CASH_ACCOUNT_NAME_AR = 'النقدية والبنوك';
+const DEFAULT_GATEWAY_ACCOUNT_NAME_EN = 'Electronic Payment Gateways';
+const DEFAULT_GATEWAY_ACCOUNT_NAME_AR = 'بوابات الدفع الإلكتروني';
+const DEFAULT_REVENUE_ACCOUNT_NAME_EN = 'Tuition Revenue';
+const DEFAULT_REVENUE_ACCOUNT_NAME_AR = 'إيراد الرسوم الدراسية';
+const DEFAULT_VAT_OUTPUT_ACCOUNT_NAME_EN = 'VAT Payable';
+const DEFAULT_VAT_OUTPUT_ACCOUNT_NAME_AR = 'ضريبة القيمة المضافة المستحقة';
+const DEFAULT_DISCOUNT_ACCOUNT_NAME_EN = 'Discount Expense';
+const DEFAULT_DISCOUNT_ACCOUNT_NAME_AR = 'مصروف خصومات (إخوة/إعفاءات)';
 const PAYMENT_REFERENCE_TYPE = 'PAYMENT';
 
-const FEE_TYPE_REVENUE_ACCOUNT_CODE: Record<FeeType, string> = {
-  [FeeType.TUITION]: '4001',
-  [FeeType.TRANSPORT]: '4003',
-  [FeeType.UNIFORM]: '4004',
-  [FeeType.REGISTRATION]: '4005',
-  [FeeType.ACTIVITY]: '4006',
-  [FeeType.PENALTY]: '4007',
-  [FeeType.OTHER]: '4006',
+const FEE_TYPE_REVENUE_ACCOUNT_NAMES: Record<
+  FeeType,
+  { nameAr: string; nameEn: string }
+> = {
+  [FeeType.TUITION]: {
+    nameAr: 'إيراد الرسوم الدراسية',
+    nameEn: 'Tuition Revenue',
+  },
+  [FeeType.TRANSPORT]: {
+    nameAr: 'إيراد رسوم النقل',
+    nameEn: 'Transport Revenue',
+  },
+  [FeeType.UNIFORM]: {
+    nameAr: 'إيراد رسوم الزي المدرسي',
+    nameEn: 'Uniform Revenue',
+  },
+  [FeeType.REGISTRATION]: {
+    nameAr: 'إيراد رسوم التسجيل',
+    nameEn: 'Registration Revenue',
+  },
+  [FeeType.ACTIVITY]: {
+    nameAr: 'إيرادات أخرى / تبرعات',
+    nameEn: 'Other Revenue and Donations',
+  },
+  [FeeType.PENALTY]: {
+    nameAr: 'إيراد الغرامات والتأخير',
+    nameEn: 'Penalties Revenue',
+  },
+  [FeeType.OTHER]: {
+    nameAr: 'إيرادات أخرى / تبرعات',
+    nameEn: 'Other Revenue and Donations',
+  },
 };
 
 type InvoiceForPosting = Prisma.StudentInvoiceGetPayload<{
@@ -68,7 +97,7 @@ type InvoiceForPosting = Prisma.StudentInvoiceGetPayload<{
 
 type PaymentTransactionForPosting = Prisma.PaymentTransactionGetPayload<{
   include: {
-    gateway: { select: { id: true; providerCode: true; settlementAccountId: true } };
+    gateway: { select: { id: true; settlementAccountId: true } };
     enrollment: { select: { id: true; studentId: true } };
     invoice: {
       include: {
@@ -114,7 +143,6 @@ export class PaymentWebhooksService {
     this.verifyIp(context.ipAddress);
 
     const transaction = await this.findTransaction(payload.transactionId);
-    this.ensureProviderCodeMatches(transaction, payload.providerCode);
     this.assertAmountMatches(payload.amount, transaction.amount);
     this.assertGatewayTransactionId(transaction.gatewayTransactionId, payload.gatewayTransactionId);
 
@@ -181,7 +209,6 @@ export class PaymentWebhooksService {
     this.verifyIp(context.ipAddress);
 
     const transaction = await this.findTransaction(payload.transactionId);
-    this.ensureProviderCodeMatches(transaction, payload.providerCode);
     this.assertGatewayTransactionId(transaction.gatewayTransactionId, payload.gatewayTransactionId);
 
     const event = await this.createEvent({
@@ -249,7 +276,6 @@ export class PaymentWebhooksService {
     this.verifyIp(context.ipAddress);
 
     const transaction = await this.findTransaction(payload.transactionId);
-    this.ensureProviderCodeMatches(transaction, payload.providerCode);
     this.assertAmountMatches(payload.amount, transaction.amount);
     this.assertGatewayTransactionId(transaction.gatewayTransactionId, payload.gatewayTransactionId);
 
@@ -465,7 +491,6 @@ export class PaymentWebhooksService {
         gateway: {
           select: {
             id: true,
-            providerCode: true,
             settlementAccountId: true,
           },
         },
@@ -957,9 +982,10 @@ export class PaymentWebhooksService {
     ];
 
     if (!invoice || invoice.lines.length === 0) {
-      const revenueAccountId = await this.findPostingAccountByCode(
+      const revenueAccountId = await this.findPostingAccountByName(
         tx,
-        DEFAULT_REVENUE_ACCOUNT_CODE,
+        DEFAULT_REVENUE_ACCOUNT_NAME_EN,
+        DEFAULT_REVENUE_ACCOUNT_NAME_AR,
       );
       lines.push({
         accountId: revenueAccountId.id,
@@ -1207,13 +1233,19 @@ export class PaymentWebhooksService {
       return account.id;
     }
 
-    const accountCode =
+    const account =
       transaction.paymentMethod === PaymentMethod.CASH ||
       transaction.paymentMethod === PaymentMethod.CHEQUE
-        ? DEFAULT_CASH_ACCOUNT_CODE
-        : DEFAULT_GATEWAY_ACCOUNT_CODE;
-
-    const account = await this.findPostingAccountByCode(tx, accountCode);
+        ? await this.findPostingAccountByName(
+            tx,
+            DEFAULT_CASH_ACCOUNT_NAME_EN,
+            DEFAULT_CASH_ACCOUNT_NAME_AR,
+          )
+        : await this.findPostingAccountByName(
+            tx,
+            DEFAULT_GATEWAY_ACCOUNT_NAME_EN,
+            DEFAULT_GATEWAY_ACCOUNT_NAME_AR,
+          );
     return account.id;
   }
 
@@ -1226,9 +1258,16 @@ export class PaymentWebhooksService {
       return account.id;
     }
 
-    const accountCode =
-      FEE_TYPE_REVENUE_ACCOUNT_CODE[line.feeType] ?? DEFAULT_REVENUE_ACCOUNT_CODE;
-    const account = await this.findPostingAccountByCode(tx, accountCode);
+    const accountNames =
+      FEE_TYPE_REVENUE_ACCOUNT_NAMES[line.feeType] ?? {
+        nameAr: DEFAULT_REVENUE_ACCOUNT_NAME_AR,
+        nameEn: DEFAULT_REVENUE_ACCOUNT_NAME_EN,
+      };
+    const account = await this.findPostingAccountByName(
+      tx,
+      accountNames.nameEn,
+      accountNames.nameAr,
+    );
     return account.id;
   }
 
@@ -1244,9 +1283,10 @@ export class PaymentWebhooksService {
       return account.id;
     }
 
-    const account = await this.findPostingAccountByCode(
+    const account = await this.findPostingAccountByName(
       tx,
-      DEFAULT_VAT_OUTPUT_ACCOUNT_CODE,
+      DEFAULT_VAT_OUTPUT_ACCOUNT_NAME_EN,
+      DEFAULT_VAT_OUTPUT_ACCOUNT_NAME_AR,
     );
     return account.id;
   }
@@ -1260,22 +1300,27 @@ export class PaymentWebhooksService {
       return account.id;
     }
 
-    const account = await this.findPostingAccountByCode(
+    const account = await this.findPostingAccountByName(
       tx,
-      DEFAULT_DISCOUNT_ACCOUNT_CODE,
+      DEFAULT_DISCOUNT_ACCOUNT_NAME_EN,
+      DEFAULT_DISCOUNT_ACCOUNT_NAME_AR,
     );
     return account.id;
   }
 
-  private async findPostingAccountByCode(
+  private async findPostingAccountByName(
     tx: Prisma.TransactionClient,
-    accountCode: string,
+    accountNameEn: string,
+    accountNameAr: string,
   ) {
     const account = await tx.chartOfAccount.findFirst({
       where: {
-        accountCode,
         deletedAt: null,
         isActive: true,
+        OR: [
+          { nameEn: accountNameEn },
+          { nameAr: accountNameAr },
+        ],
       },
       select: {
         id: true,
@@ -1284,12 +1329,12 @@ export class PaymentWebhooksService {
     });
 
     if (!account) {
-      throw new NotFoundException(`Posting account ${accountCode} was not found`);
+      throw new NotFoundException(`Posting account ${accountNameEn} was not found`);
     }
 
     if (account.isHeader) {
       throw new BadRequestException(
-        `Posting account ${accountCode} cannot be a header account`,
+        `Posting account ${accountNameEn} cannot be a header account`,
       );
     }
 
@@ -1536,15 +1581,6 @@ export class PaymentWebhooksService {
       where: {
         OR: orFilters,
       },
-      include: {
-        gateway: {
-          select: {
-            id: true,
-            providerCode: true,
-            settlementAccountId: true,
-          },
-        },
-      },
     });
 
     if (!transaction) {
@@ -1552,19 +1588,6 @@ export class PaymentWebhooksService {
     }
 
     return transaction;
-  }
-
-  private ensureProviderCodeMatches(
-    transaction: { gateway?: { providerCode: string } | null },
-    providerCode?: string,
-  ) {
-    if (!providerCode || !transaction.gateway?.providerCode) {
-      return;
-    }
-
-    if (transaction.gateway.providerCode !== providerCode.trim().toUpperCase()) {
-      throw new BadRequestException('Payment gateway does not match the transaction');
-    }
   }
 
   private assertAmountMatches(expected: number, actual: Prisma.Decimal) {

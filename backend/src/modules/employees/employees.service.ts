@@ -398,7 +398,6 @@ export class EmployeesService {
         orderBy: [{ nameAr: 'asc' }],
         select: {
           id: true,
-          code: true,
           nameAr: true,
           isActive: true,
         },
@@ -410,7 +409,6 @@ export class EmployeesService {
         orderBy: [{ nameAr: 'asc' }],
         select: {
           id: true,
-          code: true,
           nameAr: true,
           isActive: true,
           branchId: true,

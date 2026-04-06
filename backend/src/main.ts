@@ -13,6 +13,69 @@ import { StructuredLogger } from './common/logger/structured-logger.service';
   return this.toString();
 };
 
+const AUTO_CODE_PATH_RULES: Array<{
+  prefixes: string[];
+  field: 'code';
+}> = [
+  {
+    prefixes: [
+      '/academic-years',
+      '/academic-terms',
+      '/academic-months',
+      '/grade-levels',
+      '/subjects',
+      '/sections',
+      '/classrooms',
+      '/school-profiles',
+      '/talents',
+      '/employee-departments',
+      '/lookup-id-types',
+      '/lookup-ownership-types',
+      '/lookup-periods',
+      '/lookup-activity-types',
+      '/lookup-ability-levels',
+      '/lookup-orphan-statuses',
+      '/lookup-enrollment-statuses',
+      '/promotion-decisions',
+      '/annual-statuses',
+      '/results-decisions/promotion-decisions',
+      '/results-decisions/annual-statuses',
+      '/assignments/homework-types',
+      '/homework-types',
+    ],
+    field: 'code',
+  },
+  {
+    prefixes: ['/roles'],
+    field: 'code',
+  },
+];
+
+function randomCodePart(): string {
+  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '');
+}
+
+function buildAutoCode(): string {
+  const seed = randomCodePart();
+  return `AUTO_${seed}`.slice(0, 40);
+}
+
+function buildRoleCode(): string {
+  return `role_${randomCodePart().toLowerCase()}`.replace(/[^a-z0-9_.:-]/g, '').slice(0, 120);
+}
+
+function resolveAutoCodeField(pathname: string) {
+  const normalized = pathname.startsWith('/') ? pathname : `/${pathname}`;
+  for (const rule of AUTO_CODE_PATH_RULES) {
+    if (rule.prefixes.some((prefix) => normalized.startsWith(prefix))) {
+      return rule.field;
+    }
+  }
+  return null;
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
@@ -56,6 +119,36 @@ async function bootstrap() {
       }
     }
 
+    next();
+  });
+
+  app.use((req: Request, _res: Response, next: NextFunction) => {
+    if (req.method !== 'POST' || !req.body || typeof req.body !== 'object') {
+      return next();
+    }
+
+    const body = req.body as Record<string, unknown>;
+    const field = resolveAutoCodeField(req.path);
+    if (!field) {
+      return next();
+    }
+
+    const rawValue = body[field];
+    const isMissing =
+      rawValue === undefined ||
+      rawValue === null ||
+      (typeof rawValue === 'string' && rawValue.trim() === '');
+
+    if (!isMissing) {
+      return next();
+    }
+
+    if (field === 'code' && req.path.startsWith('/roles')) {
+      body.code = buildRoleCode();
+      return next();
+    }
+
+    body[field] = buildAutoCode();
     next();
   });
 

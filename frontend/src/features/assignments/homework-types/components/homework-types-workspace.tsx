@@ -27,6 +27,7 @@ import {
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
+import { generateAutoCode } from "@/lib/auto-code";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateHomeworkTypeMutation,
@@ -53,6 +54,13 @@ const DEFAULT_FORM_STATE: HomeworkTypeFormState = {
   isSystem: false,
   isActive: true,
 };
+
+function createNewHomeworkTypeFormState(): HomeworkTypeFormState {
+  return {
+    ...DEFAULT_FORM_STATE,
+    code: generateAutoCode("HOMEWORK", 40),
+  };
+}
 
 function toOptionalString(value: string): string | undefined {
   const normalized = value.trim();
@@ -181,7 +189,7 @@ export function HomeworkTypesWorkspace() {
     setFormError(null);
     setActionSuccess(null);
     setEditingHomeworkTypeId(null);
-    setFormState(DEFAULT_FORM_STATE);
+    setFormState(createNewHomeworkTypeFormState());
     setIsFormOpen(true);
   };
 
@@ -203,16 +211,10 @@ export function HomeworkTypesWorkspace() {
   };
 
   const validateForm = (): boolean => {
-    const code = normalizeCode(formState.code);
     const name = formState.name.trim();
 
-    if (!code || !name) {
-      setFormError("الحقول المطلوبة: الكود والاسم.");
-      return false;
-    }
-
-    if (code.length > 40 || !/^[A-Z0-9_]+$/.test(code)) {
-      setFormError("الكود يجب أن يحتوي أحرفًا كبيرة وأرقامًا وشرطة سفلية (_) فقط، وبحد أقصى 40 حرفًا.");
+    if (!name) {
+      setFormError("الاسم مطلوب.");
       return false;
     }
 
@@ -239,7 +241,6 @@ export function HomeworkTypesWorkspace() {
     }
 
     const payload = {
-      code: normalizeCode(formState.code),
       name: formState.name.trim(),
       description: toOptionalString(formState.description),
       isSystem: formState.isSystem,
@@ -342,7 +343,7 @@ export function HomeworkTypesWorkspace() {
               containerClassName="flex-1"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="بحث بالاسم/الكود..."
+              placeholder="بحث بالاسم..."
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -564,18 +565,6 @@ export function HomeworkTypesWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الكود *</label>
-              <Input
-                value={formState.code}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, code: event.target.value }))
-                }
-                placeholder="HOMEWORK"
-                required
-              />
-            </div>
-
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
               <Input

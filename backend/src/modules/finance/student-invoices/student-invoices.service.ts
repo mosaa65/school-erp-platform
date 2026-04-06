@@ -55,7 +55,6 @@ const invoiceSummaryInclude: Prisma.StudentInvoiceInclude = {
   currency: {
     select: {
       id: true,
-      code: true,
       nameAr: true,
     },
   },
@@ -75,9 +74,9 @@ const invoiceDetailInclude: Prisma.StudentInvoiceInclude = {
       taxCode: {
         select: {
           id: true,
-          taxCode: true,
-          rate: true,
+          taxNameAr: true,
           taxType: true,
+          rate: true,
         },
       },
       discountRule: {
@@ -90,14 +89,12 @@ const invoiceDetailInclude: Prisma.StudentInvoiceInclude = {
       discountGlAccount: {
         select: {
           id: true,
-          accountCode: true,
           nameAr: true,
         },
       },
       account: {
         select: {
           id: true,
-          accountCode: true,
           nameAr: true,
         },
       },

@@ -111,7 +111,7 @@ export function PaymentGatewaysWorkspace() {
             containerClassName="flex-1"
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
-            placeholder="ابحث باسم البوابة أو الكود..."
+            placeholder="ابحث باسم البوابة..."
           />
         </div>
         <FilterTriggerButton
@@ -206,12 +206,12 @@ export function PaymentGatewaysWorkspace() {
                     <p className="text-xs text-muted-foreground">{gateway.nameEn}</p>
                   ) : null}
                   <p className="text-xs text-muted-foreground">
-                    الكود: {gateway.providerCode} • النوع: {GATEWAY_TYPE_LABELS[gateway.gatewayType]}
+                    النوع: {GATEWAY_TYPE_LABELS[gateway.gatewayType]}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     حساب التسوية:{" "}
                     {gateway.settlementAccount
-                      ? `${gateway.settlementAccount.accountCode} - ${gateway.settlementAccount.nameAr}`
+                      ? gateway.settlementAccount.nameAr
                       : "غير محدد"}
                   </p>
                 </div>

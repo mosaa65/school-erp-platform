@@ -10,11 +10,11 @@ const DEFAULT_DOCUMENT_SEQUENCES = [
 ];
 
 const DEFAULT_COST_CENTERS = [
-  { code: 'CC-ADMIN', nameAr: 'الإدارة العامة', nameEn: 'General Administration' },
-  { code: 'CC-ACAD', nameAr: 'الشؤون الأكاديمية', nameEn: 'Academic Affairs' },
-  { code: 'CC-TRANS', nameAr: 'النقل والمواصلات', nameEn: 'Transport' },
-  { code: 'CC-MAINT', nameAr: 'الصيانة والتشغيل', nameEn: 'Maintenance' },
-  { code: 'CC-IT', nameAr: 'تقنية المعلومات', nameEn: 'Information Technology' },
+  { nameAr: 'الإدارة العامة', nameEn: 'General Administration' },
+  { nameAr: 'الشؤون الأكاديمية', nameEn: 'Academic Affairs' },
+  { nameAr: 'النقل والمواصلات', nameEn: 'Transport' },
+  { nameAr: 'الصيانة والتشغيل', nameEn: 'Maintenance' },
+  { nameAr: 'تقنية المعلومات', nameEn: 'Information Technology' },
 ];
 
 export async function seedSystem07FinanceAdvanced(prisma: PrismaClient) {
@@ -51,15 +51,25 @@ export async function seedSystem07FinanceAdvanced(prisma: PrismaClient) {
   }
 
   for (const center of DEFAULT_COST_CENTERS) {
-    await prisma.costCenter.upsert({
-      where: { code: center.code },
-      update: {
-        nameAr: center.nameAr,
-        nameEn: center.nameEn,
-        isActive: true,
-      },
-      create: {
-        code: center.code,
+    const existing = await prisma.costCenter.findFirst({
+      where: { nameAr: center.nameAr },
+      select: { id: true },
+    });
+
+    if (existing) {
+      await prisma.costCenter.update({
+        where: { id: existing.id },
+        data: {
+          nameAr: center.nameAr,
+          nameEn: center.nameEn,
+          isActive: true,
+        },
+      });
+      continue;
+    }
+
+    await prisma.costCenter.create({
+      data: {
         nameAr: center.nameAr,
         nameEn: center.nameEn,
         isActive: true,

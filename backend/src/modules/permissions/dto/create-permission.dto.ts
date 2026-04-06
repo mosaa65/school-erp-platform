@@ -9,12 +9,13 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreatePermissionDto {
-  @ApiProperty({ example: 'users.create' })
+  @ApiPropertyOptional({ example: 'users.create' })
+  @IsOptional()
   @Transform(({ value }: { value: string }) => value?.trim().toLowerCase())
   @IsString()
   @Matches(/^[a-z0-9_.:-]+$/)
   @MaxLength(120)
-  code!: string;
+  code?: string;
 
   @ApiProperty({ example: 'users' })
   @Transform(({ value }: { value: string }) => value?.trim().toLowerCase())

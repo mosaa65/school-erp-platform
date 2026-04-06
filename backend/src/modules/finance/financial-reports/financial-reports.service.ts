@@ -14,7 +14,6 @@ import { buildHybridBranchClause } from '../utils/hybrid-branch-scope';
 
 export interface TrialBalanceEntry {
   accountId: number;
-  accountCode: string;
   nameAr: string;
   nameEn: string | null;
   accountType: AccountType;
@@ -35,7 +34,6 @@ export interface GeneralLedgerEntry {
   creditAmount: number;
   status: JournalEntryStatus;
   accountId: number;
-  accountCode: string;
   accountName: string;
 }
 
@@ -43,7 +41,6 @@ export interface GeneralLedgerEntry {
 
 export interface IncomeStatementLineItem {
   accountId: number;
-  accountCode: string;
   nameAr: string;
   nameEn: string | null;
   balance: number;
@@ -60,7 +57,6 @@ export interface IncomeStatementResult {
 
 export interface BalanceSheetLineItem {
   accountId: number;
-  accountCode: string;
   nameAr: string;
   nameEn: string | null;
   balance: number;
@@ -97,7 +93,6 @@ export interface StudentAccountStatementResult {
 
 export interface VatReportLineItem {
   taxCodeId: number;
-  taxCode: string;
   taxNameAr: string;
   taxType: TaxType;
   rate: number;
@@ -139,7 +134,6 @@ export interface AccountsReceivableAgingResult {
 
 type ReportAccount = {
   id: number;
-  accountCode: string;
   nameAr: string;
   nameEn: string | null;
   accountType: AccountType;
@@ -182,7 +176,6 @@ export class FinancialReportsService {
 
       return {
         accountId: account.id,
-        accountCode: account.accountCode,
         nameAr: account.nameAr,
         nameEn: account.nameEn,
         accountType: account.accountType,
@@ -268,7 +261,6 @@ export class FinancialReportsService {
           account: {
             select: {
               id: true,
-              accountCode: true,
               nameAr: true,
             },
           },
@@ -292,7 +284,6 @@ export class FinancialReportsService {
       creditAmount: Number(line.creditAmount),
       status: line.journalEntry.status,
       accountId: line.account.id,
-      accountCode: line.account.accountCode,
       accountName: line.account.nameAr,
     }));
 
@@ -415,7 +406,6 @@ export class FinancialReportsService {
       const netBalance = balanceMap.get(account.id) ?? 0;
       const item: IncomeStatementLineItem = {
         accountId: account.id,
-        accountCode: account.accountCode,
         nameAr: account.nameAr,
         nameEn: account.nameEn,
         balance: Math.abs(this.round(netBalance)),
@@ -475,7 +465,6 @@ export class FinancialReportsService {
       const balance = this.round(balanceMap.get(account.id) ?? 0);
       const item: BalanceSheetLineItem = {
         accountId: account.id,
-        accountCode: account.accountCode,
         nameAr: account.nameAr,
         nameEn: account.nameEn,
         balance: this.round(Math.abs(balance)),
@@ -696,7 +685,6 @@ export class FinancialReportsService {
         taxCode: {
           select: {
             id: true,
-            taxCode: true,
             taxNameAr: true,
             taxType: true,
             rate: true,
@@ -705,12 +693,11 @@ export class FinancialReportsService {
       },
     });
 
-    // Group by taxCode
+    // Group by tax code id
     const taxMap = new Map<
       number,
       {
         taxCodeId: number;
-        taxCode: string;
         taxNameAr: string;
         taxType: TaxType;
         rate: number;
@@ -736,7 +723,6 @@ export class FinancialReportsService {
       } else {
         taxMap.set(key, {
           taxCodeId: item.taxCode.id,
-          taxCode: item.taxCode.taxCode,
           taxNameAr: item.taxCode.taxNameAr,
           taxType: item.taxCode.taxType,
           rate: Number(item.taxCode.rate),
@@ -753,7 +739,6 @@ export class FinancialReportsService {
     for (const entry of taxMap.values()) {
       const lineItem: VatReportLineItem = {
         taxCodeId: entry.taxCodeId,
-        taxCode: entry.taxCode,
         taxNameAr: entry.taxNameAr,
         taxType: entry.taxType,
         rate: entry.rate,
@@ -955,14 +940,13 @@ export class FinancialReportsService {
       where,
       select: {
         id: true,
-        accountCode: true,
         nameAr: true,
         nameEn: true,
         accountType: true,
         hierarchyLevel: true,
         isHeader: true,
       },
-      orderBy: { accountCode: 'asc' },
+      orderBy: { nameAr: 'asc' },
     });
   }
 

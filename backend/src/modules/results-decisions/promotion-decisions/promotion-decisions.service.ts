@@ -7,6 +7,7 @@ import {
 import { AuditStatus, Prisma, PromotionDecisionLookup } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogsService } from '../../audit-logs/audit-logs.service';
+import { generateAutoCode } from '../../../common/utils/auto-code';
 import { CreatePromotionDecisionDto } from './dto/create-promotion-decision.dto';
 import { ListPromotionDecisionsDto } from './dto/list-promotion-decisions.dto';
 import { UpdatePromotionDecisionDto } from './dto/update-promotion-decision.dto';
@@ -41,7 +42,9 @@ export class PromotionDecisionsService {
   ) {}
 
   async create(payload: CreatePromotionDecisionDto, actorUserId: string) {
-    const normalizedCode = this.normalizeCode(payload.code);
+    const normalizedCode = payload.code
+      ? this.normalizeCode(payload.code)
+      : generateAutoCode('PRM', 40);
     const normalizedName = this.normalizeRequiredText(payload.name, 'name');
 
     try {

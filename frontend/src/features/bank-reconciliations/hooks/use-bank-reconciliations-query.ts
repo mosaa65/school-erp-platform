@@ -24,12 +24,10 @@ function matchesSearch(item: BankReconciliationListItem, search: string) {
 
   const bankName = item.bankAccount?.nameAr ?? "";
   const bankNameEn = item.bankAccount?.nameEn ?? "";
-  const accountCode = item.bankAccount?.accountCode ?? "";
 
   return (
     bankName.toLowerCase().includes(normalized) ||
-    bankNameEn.toLowerCase().includes(normalized) ||
-    accountCode.toLowerCase().includes(normalized)
+    bankNameEn.toLowerCase().includes(normalized)
   );
 }
 

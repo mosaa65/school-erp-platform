@@ -28,7 +28,7 @@ const budgetInclude: Prisma.BudgetInclude = {
   lines: {
     orderBy: { id: 'asc' },
     include: {
-      account: { select: { id: true, accountCode: true, nameAr: true } },
+      account: { select: { id: true, nameAr: true } },
     },
   },
 };
@@ -287,7 +287,6 @@ export class BudgetsService {
 
       return {
         accountId: budgetLine.accountId,
-        accountCode: budgetLine.account?.accountCode,
         accountName: budgetLine.account?.nameAr,
         lineDescription: budgetLine.lineDescription,
         budgetedAmount: Number(budgetedAmount.toFixed(2)),

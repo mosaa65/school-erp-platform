@@ -12,12 +12,13 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateClassroomDto {
-  @ApiProperty({ example: 'room-a1' })
+  @ApiPropertyOptional({ example: 'room-a1' })
+  @IsOptional()
   @Transform(({ value }: { value: string }) => value?.trim().toLowerCase())
   @IsString()
   @Matches(/^[a-z0-9_.:-]+$/)
   @MaxLength(40)
-  code!: string;
+  code?: string;
 
   @ApiProperty({ example: 'الفصل A1' })
   @Transform(({ value }: { value: string }) => value?.trim())

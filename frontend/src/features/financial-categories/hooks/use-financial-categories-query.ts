@@ -8,7 +8,6 @@ import { financeRequest } from "@/features/finance/shared/finance-request";
 type FinancialCategoryListItem = {
   id: number;
   nameAr?: string;
-  code?: string | null;
   categoryType?: string | null;
   isActive?: boolean;
   parentId?: number | null;

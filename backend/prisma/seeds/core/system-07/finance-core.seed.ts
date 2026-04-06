@@ -114,18 +114,28 @@ const FISCAL_YEAR_MONTHS = [
 export async function seedSystem07FinanceCore(prisma: PrismaClient) {
   // ─── 1. الفروع ───
   for (const branch of DEFAULT_BRANCHES) {
-    await prisma.branch.upsert({
-      where: { code: branch.code },
-      update: {
-        nameAr: branch.nameAr,
-        nameEn: branch.nameEn,
-        isHeadquarters: branch.isHeadquarters,
-        isActive: true,
-        deletedAt: null,
-        updatedById: null,
-      },
-      create: {
-        code: branch.code,
+    const existing = await prisma.branch.findFirst({
+      where: { nameAr: branch.nameAr },
+      select: { id: true },
+    });
+
+    if (existing) {
+      await prisma.branch.update({
+        where: { id: existing.id },
+        data: {
+          nameAr: branch.nameAr,
+          nameEn: branch.nameEn,
+          isHeadquarters: branch.isHeadquarters,
+          isActive: true,
+          deletedAt: null,
+          updatedById: null,
+        },
+      });
+      continue;
+    }
+
+    await prisma.branch.create({
+      data: {
         nameAr: branch.nameAr,
         nameEn: branch.nameEn,
         isHeadquarters: branch.isHeadquarters,
@@ -136,19 +146,29 @@ export async function seedSystem07FinanceCore(prisma: PrismaClient) {
 
   // ─── 2. العملات ───
   for (const currency of DEFAULT_CURRENCIES) {
-    await prisma.currency.upsert({
-      where: { code: currency.code },
-      update: {
-        nameAr: currency.nameAr,
-        symbol: currency.symbol,
-        decimalPlaces: currency.decimalPlaces,
-        isBase: currency.isBase,
-        isActive: true,
-        deletedAt: null,
-        updatedById: null,
-      },
-      create: {
-        code: currency.code,
+    const existing = await prisma.currency.findFirst({
+      where: { nameAr: currency.nameAr },
+      select: { id: true },
+    });
+
+    if (existing) {
+      await prisma.currency.update({
+        where: { id: existing.id },
+        data: {
+          nameAr: currency.nameAr,
+          symbol: currency.symbol,
+          decimalPlaces: currency.decimalPlaces,
+          isBase: currency.isBase,
+          isActive: true,
+          deletedAt: null,
+          updatedById: null,
+        },
+      });
+      continue;
+    }
+
+    await prisma.currency.create({
+      data: {
         nameAr: currency.nameAr,
         symbol: currency.symbol,
         decimalPlaces: currency.decimalPlaces,
@@ -176,111 +196,119 @@ export async function seedSystem07FinanceCore(prisma: PrismaClient) {
 
   // المرحلة 1: إنشاء حسابات المستوى الأول (بدون parent)
   for (const account of CHART_OF_ACCOUNTS.filter((a) => !a.parentCode)) {
-    const record = await prisma.chartOfAccount.upsert({
-      where: { accountCode: account.accountCode },
-      update: {
+    const existing = await prisma.chartOfAccount.findFirst({
+      where: {
         nameAr: account.nameAr,
-        nameEn: account.nameEn,
-        accountType: account.accountType,
-        normalBalance: account.normalBalance,
-        isHeader: account.isHeader,
-        isBankAccount: account.isBankAccount ?? false,
-        defaultCurrencyId: baseCurrency?.id ?? null,
-        isSystem: true,
-        isActive: true,
         deletedAt: null,
-        updatedById: null,
       },
-      create: {
-        accountCode: account.accountCode,
-        nameAr: account.nameAr,
-        nameEn: account.nameEn,
-        accountType: account.accountType,
-        normalBalance: account.normalBalance,
-        isHeader: account.isHeader,
-        isBankAccount: account.isBankAccount ?? false,
-        hierarchyLevel: account.hierarchyLevel,
-        defaultCurrencyId: baseCurrency?.id ?? null,
-        isSystem: true,
-        isActive: true,
-      },
+      select: { id: true },
     });
+
+    const data = {
+      nameAr: account.nameAr,
+      nameEn: account.nameEn,
+      accountType: account.accountType,
+      normalBalance: account.normalBalance,
+      isHeader: account.isHeader,
+      isBankAccount: account.isBankAccount ?? false,
+      hierarchyLevel: account.hierarchyLevel,
+      defaultCurrencyId: baseCurrency?.id ?? null,
+      isSystem: true,
+      isActive: true,
+    };
+
+    const record = existing
+      ? await prisma.chartOfAccount.update({
+          where: { id: existing.id },
+          data: {
+            ...data,
+            deletedAt: null,
+            updatedById: null,
+          },
+        })
+      : await prisma.chartOfAccount.create({
+          data,
+        });
     accountsByCode.set(account.accountCode, { id: record.id });
   }
 
   // المرحلة 2: إنشاء حسابات المستوى الثاني (لها parent level 1)
   for (const account of CHART_OF_ACCOUNTS.filter((a) => a.parentCode && a.hierarchyLevel === 2)) {
     const parent = accountsByCode.get(account.parentCode!);
-    const record = await prisma.chartOfAccount.upsert({
-      where: { accountCode: account.accountCode },
-      update: {
+    const existing = await prisma.chartOfAccount.findFirst({
+      where: {
         nameAr: account.nameAr,
-        nameEn: account.nameEn,
-        accountType: account.accountType,
-        normalBalance: account.normalBalance,
-        isHeader: account.isHeader,
-        isBankAccount: account.isBankAccount ?? false,
-        parentId: parent?.id ?? null,
-        hierarchyLevel: account.hierarchyLevel,
-        defaultCurrencyId: baseCurrency?.id ?? null,
-        isSystem: true,
-        isActive: true,
         deletedAt: null,
-        updatedById: null,
       },
-      create: {
-        accountCode: account.accountCode,
-        nameAr: account.nameAr,
-        nameEn: account.nameEn,
-        accountType: account.accountType,
-        normalBalance: account.normalBalance,
-        isHeader: account.isHeader,
-        isBankAccount: account.isBankAccount ?? false,
-        parentId: parent?.id ?? null,
-        hierarchyLevel: account.hierarchyLevel,
-        defaultCurrencyId: baseCurrency?.id ?? null,
-        isSystem: true,
-        isActive: true,
-      },
+      select: { id: true },
     });
+
+    const data = {
+      nameAr: account.nameAr,
+      nameEn: account.nameEn,
+      accountType: account.accountType,
+      normalBalance: account.normalBalance,
+      isHeader: account.isHeader,
+      isBankAccount: account.isBankAccount ?? false,
+      parentId: parent?.id ?? null,
+      hierarchyLevel: account.hierarchyLevel,
+      defaultCurrencyId: baseCurrency?.id ?? null,
+      isSystem: true,
+      isActive: true,
+    };
+
+    const record = existing
+      ? await prisma.chartOfAccount.update({
+          where: { id: existing.id },
+          data: {
+            ...data,
+            deletedAt: null,
+            updatedById: null,
+          },
+        })
+      : await prisma.chartOfAccount.create({
+          data,
+        });
     accountsByCode.set(account.accountCode, { id: record.id });
   }
 
   // المرحلة 3: إنشاء حسابات المستوى الثالث
   for (const account of CHART_OF_ACCOUNTS.filter((a) => a.parentCode && a.hierarchyLevel === 3)) {
     const parent = accountsByCode.get(account.parentCode!);
-    const record = await prisma.chartOfAccount.upsert({
-      where: { accountCode: account.accountCode },
-      update: {
+    const existing = await prisma.chartOfAccount.findFirst({
+      where: {
         nameAr: account.nameAr,
-        nameEn: account.nameEn,
-        accountType: account.accountType,
-        normalBalance: account.normalBalance,
-        isHeader: account.isHeader,
-        isBankAccount: account.isBankAccount ?? false,
-        parentId: parent?.id ?? null,
-        hierarchyLevel: account.hierarchyLevel,
-        defaultCurrencyId: baseCurrency?.id ?? null,
-        isSystem: true,
-        isActive: true,
         deletedAt: null,
-        updatedById: null,
       },
-      create: {
-        accountCode: account.accountCode,
-        nameAr: account.nameAr,
-        nameEn: account.nameEn,
-        accountType: account.accountType,
-        normalBalance: account.normalBalance,
-        isHeader: account.isHeader,
-        isBankAccount: account.isBankAccount ?? false,
-        parentId: parent?.id ?? null,
-        hierarchyLevel: account.hierarchyLevel,
-        defaultCurrencyId: baseCurrency?.id ?? null,
-        isSystem: true,
-        isActive: true,
-      },
+      select: { id: true },
     });
+
+    const data = {
+      nameAr: account.nameAr,
+      nameEn: account.nameEn,
+      accountType: account.accountType,
+      normalBalance: account.normalBalance,
+      isHeader: account.isHeader,
+      isBankAccount: account.isBankAccount ?? false,
+      parentId: parent?.id ?? null,
+      hierarchyLevel: account.hierarchyLevel,
+      defaultCurrencyId: baseCurrency?.id ?? null,
+      isSystem: true,
+      isActive: true,
+    };
+
+    const record = existing
+      ? await prisma.chartOfAccount.update({
+          where: { id: existing.id },
+          data: {
+            ...data,
+            deletedAt: null,
+            updatedById: null,
+          },
+        })
+      : await prisma.chartOfAccount.create({
+          data,
+        });
     accountsByCode.set(account.accountCode, { id: record.id });
   }
 

@@ -270,7 +270,8 @@ export function PaymentTransactionsWorkspace() {
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {PAYMENT_METHOD_LABELS[transaction.paymentMethod] ?? transaction.paymentMethod} •{" "}
-                    {transaction.gateway?.nameAr ?? transaction.gateway?.providerCode} •{" "}
+                    {transaction.gateway?.nameAr ??
+                      (transaction.gatewayId ? `بوابة #${transaction.gatewayId}` : "بوابة دفع")} •{" "}
                     {transaction.paidAt ?? transaction.createdAt}
                   </p>
                   {transaction.invoice?.invoiceNumber ? (

@@ -3325,7 +3325,7 @@ export type DeleteEntityResponse = {
 };
 
 export type CreateRolePayload = {
-  code: string;
+  code?: string;
   name: string;
   description?: string;
   isActive?: boolean;
@@ -3465,7 +3465,7 @@ export type UpdateLookupBloodTypePayload = {
 };
 
 export type CreateLookupIdTypePayload = {
-  code: string;
+  code?: string;
   nameAr: string;
   isActive?: boolean;
 };
@@ -3477,7 +3477,7 @@ export type UpdateLookupIdTypePayload = {
 };
 
 export type CreateLookupOwnershipTypePayload = {
-  code: string;
+  code?: string;
   nameAr: string;
   isActive?: boolean;
 };
@@ -3489,7 +3489,7 @@ export type UpdateLookupOwnershipTypePayload = {
 };
 
 export type CreateLookupPeriodPayload = {
-  code: string;
+  code?: string;
   nameAr: string;
   isActive?: boolean;
 };
@@ -3501,7 +3501,7 @@ export type UpdateLookupPeriodPayload = {
 };
 
 export type CreateLookupEnrollmentStatusPayload = {
-  code: string;
+  code?: string;
   nameAr: string;
   isActive?: boolean;
 };
@@ -3513,7 +3513,7 @@ export type UpdateLookupEnrollmentStatusPayload = {
 };
 
 export type CreateLookupOrphanStatusPayload = {
-  code: string;
+  code?: string;
   nameAr: string;
   isActive?: boolean;
 };
@@ -3525,7 +3525,7 @@ export type UpdateLookupOrphanStatusPayload = {
 };
 
 export type CreateLookupAbilityLevelPayload = {
-  code: string;
+  code?: string;
   nameAr: string;
   isActive?: boolean;
 };
@@ -3537,7 +3537,7 @@ export type UpdateLookupAbilityLevelPayload = {
 };
 
 export type CreateLookupActivityTypePayload = {
-  code: string;
+  code?: string;
   nameAr: string;
   isActive?: boolean;
 };
@@ -3593,7 +3593,7 @@ export type CreateLookupCatalogItemPayload = {
 export type UpdateLookupCatalogItemPayload = CreateLookupCatalogItemPayload;
 
 export type CreateSchoolProfilePayload = {
-  code: string;
+  code?: string;
   nameAr: string;
   nameEn?: string;
   ownershipTypeId?: number;
@@ -3615,7 +3615,7 @@ export type UpdateSchoolProfilePayload = {
 };
 
 export type CreateAcademicYearPayload = {
-  code: string;
+  code?: string;
   name: string;
   startDate: string;
   endDate: string;
@@ -3634,7 +3634,7 @@ export type UpdateAcademicYearPayload = {
 
 export type CreateAcademicTermPayload = {
   academicYearId: string;
-  code: string;
+  code?: string;
   name: string;
   termType?: AcademicTermType;
   sequence: number;
@@ -3657,7 +3657,7 @@ export type UpdateAcademicTermPayload = {
 export type CreateAcademicMonthPayload = {
   academicYearId: string;
   academicTermId: string;
-  code: string;
+  code?: string;
   name: string;
   sequence: number;
   startDate: string;
@@ -3681,7 +3681,7 @@ export type UpdateAcademicMonthPayload = {
 };
 
 export type CreateGradeLevelPayload = {
-  code: string;
+  code?: string;
   name: string;
   stage?: GradeStage;
   sequence: number;
@@ -3697,7 +3697,7 @@ export type UpdateGradeLevelPayload = {
 };
 
 export type CreateSubjectPayload = {
-  code: string;
+  code?: string;
   name: string;
   shortName?: string;
   category?: SubjectCategory;
@@ -3714,7 +3714,7 @@ export type UpdateSubjectPayload = {
 
 export type CreateSectionPayload = {
   gradeLevelId: string;
-  code: string;
+  code?: string;
   name: string;
   capacity?: number;
   buildingLookupId?: number;
@@ -3723,7 +3723,7 @@ export type CreateSectionPayload = {
 };
 
 export type CreateClassroomPayload = {
-  code: string;
+  code?: string;
   name: string;
   capacity?: number;
   notes?: string;
@@ -4121,7 +4121,7 @@ export type UpdateParentNotificationPayload = {
 };
 
 export type CreateHomeworkTypePayload = {
-  code: string;
+  code?: string;
   name: string;
   description?: string;
   isSystem?: boolean;
@@ -4387,7 +4387,7 @@ export type UpdateGradingPolicyPayload = {
 
 export type CreateGradingPolicyComponentPayload = {
   gradingPolicyId: string;
-  code: string;
+  code?: string;
   name: string;
   maxScore: number;
   calculationMode: GradingComponentCalculationMode;
@@ -4409,7 +4409,7 @@ export type UpdateGradingPolicyComponentPayload = {
 };
 
 export type CreateAnnualStatusPayload = {
-  code: string;
+  code?: string;
   name: string;
   description?: string;
   isSystem?: boolean;
@@ -4425,7 +4425,7 @@ export type UpdateAnnualStatusPayload = {
 };
 
 export type CreatePromotionDecisionPayload = {
-  code: string;
+  code?: string;
   name: string;
   description?: string;
   isSystem?: boolean;
@@ -4732,7 +4732,7 @@ export type UpdateEmployeeViolationPayload = {
 };
 
 export type CreateTalentPayload = {
-  code: string;
+  code?: string;
   name: string;
   description?: string;
   isActive?: boolean;
@@ -4780,7 +4780,7 @@ export type CreateEmployeeContractPayload = {
 };
 
 export type CreateEmployeeDepartmentPayload = {
-  code: string;
+  code?: string;
   name: string;
   description?: string;
   isActive?: boolean;
@@ -4962,7 +4962,7 @@ export type FinanceBranchListItem = {
 };
 
 export type CreateFinanceBranchPayload = {
-  code: string;
+  code?: string;
   nameAr: string;
   nameEn?: string;
   address?: string;
@@ -5002,7 +5002,7 @@ export type CurrencyListItem = {
 };
 
 export type CreateCurrencyPayload = {
-  code: string;
+  code?: string;
   nameAr: string;
   symbol: string;
   decimalPlaces?: number;
@@ -5173,7 +5173,7 @@ export type ChartOfAccountListItem = {
 };
 
 export type CreateChartOfAccountPayload = {
-  accountCode: string;
+  accountCode?: string;
   nameAr: string;
   nameEn?: string;
   accountType: string;
@@ -5289,7 +5289,7 @@ export type PaymentGatewayListItem = {
 export type CreatePaymentGatewayPayload = {
   nameAr: string;
   nameEn: string;
-  providerCode: string;
+  providerCode?: string;
   gatewayType: PaymentGatewayType;
   apiEndpoint?: string | null;
   merchantId?: string | null;
@@ -5655,7 +5655,7 @@ export type TaxConfigurationListItem = {
 };
 
 export type CreateTaxConfigurationPayload = {
-  taxCode: string;
+  taxCode?: string;
   taxNameAr: string;
   taxNameEn?: string;
   rate: number;

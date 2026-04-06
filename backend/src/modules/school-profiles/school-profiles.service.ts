@@ -7,6 +7,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { generateAutoCode } from '../../common/utils/auto-code';
 import { CreateSchoolProfileDto } from './dto/create-school-profile.dto';
 import { ListSchoolProfilesDto } from './dto/list-school-profiles.dto';
 import { UpdateSchoolProfileDto } from './dto/update-school-profile.dto';
@@ -42,7 +43,9 @@ export class SchoolProfilesService {
   ) {}
 
   async create(payload: CreateSchoolProfileDto, actorUserId: string) {
-    const normalizedCode = this.normalizeCode(payload.code);
+    const normalizedCode =
+      payload.code?.trim().toLowerCase() ||
+      generateAutoCode('SCHOOL').toLowerCase();
     const normalizedNameAr = this.normalizeRequiredText(
       payload.nameAr,
       'nameAr',

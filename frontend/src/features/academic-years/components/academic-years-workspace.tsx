@@ -213,16 +213,10 @@ export function AcademicYearsWorkspace() {
   };
 
   const validateForm = (): boolean => {
-    const code = normalizeCode(formState.code);
     const name = formState.name.trim();
 
-    if (!code || !name || !formState.startDate || !formState.endDate) {
+    if (!name || !formState.startDate || !formState.endDate) {
       setFormError("جميع الحقول الأساسية مطلوبة.");
-      return false;
-    }
-
-    if (!/^[a-z0-9_.:-]+$/.test(code)) {
-      setFormError("صيغة الكود غير صحيحة.");
       return false;
     }
 
@@ -251,7 +245,6 @@ export function AcademicYearsWorkspace() {
     }
 
     const payload = {
-      code: normalizeCode(formState.code),
       name: formState.name.trim(),
       startDate: toUtcStartIso(formState.startDate),
       endDate: toUtcEndIso(formState.endDate),
@@ -353,7 +346,7 @@ export function AcademicYearsWorkspace() {
         <ManagementToolbar
           searchValue={searchInput}
           onSearchChange={(event) => setSearchInput(event.target.value)}
-          searchPlaceholder="بحث بالاسم أو الكود..."
+          searchPlaceholder="بحث بالاسم..."
           filterCount={activeFiltersCount}
           onFilterClick={() => setIsFilterOpen((prev) => !prev)}
         />
@@ -561,19 +554,6 @@ export function AcademicYearsWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1">
-              <Label required>الكود</Label>
-              <Input
-                value={formState.code}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, code: event.target.value }))
-                }
-                placeholder="ay-2026-2027"
-                icon={<Plus className="h-4 w-4" />}
-                required
-              />
-            </div>
-
             <div className="space-y-1">
               <Label required>الاسم</Label>
               <Input

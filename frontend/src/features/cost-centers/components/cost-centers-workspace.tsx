@@ -86,7 +86,7 @@ export function CostCentersWorkspace() {
             containerClassName="flex-1"
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
-            placeholder="ابحث بالكود أو الاسم..."
+            placeholder="ابحث بالاسم..."
           />
         </div>
         <FilterTriggerButton count={activeFiltersCount} onClick={() => setIsFilterOpen((prev) => !prev)} />
@@ -156,7 +156,7 @@ export function CostCentersWorkspace() {
                   {center.nameEn ? (
                     <p className="text-xs text-muted-foreground">{center.nameEn}</p>
                   ) : null}
-                  <p className="text-xs text-muted-foreground">الكود: {center.code}</p>
+                  <p className="text-xs text-muted-foreground">المعرّف: {center.id}</p>
                   <p className="text-xs text-muted-foreground">
                     الفرع: {center.branch?.nameAr ?? "كافة الفروع"} • المدير:{" "}
                     {center.managerEmployee?.fullNameAr ?? "غير محدد"}
@@ -168,7 +168,7 @@ export function CostCentersWorkspace() {
                   </Badge>
                   {center.parent ? (
                     <p className="text-xs text-muted-foreground">
-                      يتبع: {center.parent.code} - {center.parent.nameAr}
+                      يتبع: {center.parent.nameAr}
                     </p>
                   ) : (
                     <p className="text-xs text-muted-foreground">مستوى رئيسي</p>

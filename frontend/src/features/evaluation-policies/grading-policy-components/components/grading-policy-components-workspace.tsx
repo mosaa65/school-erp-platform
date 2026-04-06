@@ -200,8 +200,8 @@ export function GradingPolicyComponentsWorkspace() {
   };
 
   const validateForm = (): boolean => {
-    if (!formState.gradingPolicyId || !formState.code.trim() || !formState.name.trim()) {
-      setFormError("السياسة والرمز والاسم مطلوبة.");
+    if (!formState.gradingPolicyId || !formState.name.trim()) {
+      setFormError("السياسة والاسم مطلوبان.");
       return false;
     }
 
@@ -235,7 +235,6 @@ export function GradingPolicyComponentsWorkspace() {
 
     const payload = {
       gradingPolicyId: formState.gradingPolicyId,
-      code: formState.code.trim(),
       name: formState.name.trim(),
       maxScore: Number(formState.maxScore),
       calculationMode: formState.calculationMode,
@@ -528,16 +527,6 @@ export function GradingPolicyComponentsWorkspace() {
                     </option>
                   ))}
                 </select>
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium">الرمز *</label>
-                <Input
-                  value={formState.code}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, code: event.target.value }))
-                  }
-                  placeholder="ATTENDANCE"
-                />
               </div>
               <div>
                 <label className="mb-2 block text-sm font-medium">الاسم *</label>

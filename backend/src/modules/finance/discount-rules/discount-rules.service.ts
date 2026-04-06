@@ -21,14 +21,12 @@ const discountRuleInclude: Prisma.DiscountRuleInclude = {
   discountGlAccount: {
     select: {
       id: true,
-      accountCode: true,
       nameAr: true,
     },
   },
   contraGlAccount: {
     select: {
       id: true,
-      accountCode: true,
       nameAr: true,
     },
   },

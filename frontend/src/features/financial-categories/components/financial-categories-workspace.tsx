@@ -123,7 +123,7 @@ export function FinancialCategoriesWorkspace() {
       >
         <div className="grid gap-3 sm:grid-cols-2">
           <Input
-            placeholder="بحث بالاسم أو الكود"
+            placeholder="بحث بالاسم"
             value={draftFilters.search}
             onChange={(event) =>
               setDraftFilters((prev) => ({ ...prev, search: event.target.value }))
@@ -203,7 +203,7 @@ export function FinancialCategoriesWorkspace() {
                   <p className="font-medium">
                     {category.nameAr ?? "فئة غير مسماة"}
                   </p>
-                  <p className="text-xs text-muted-foreground">الكود: {category.code ?? "-"}</p>
+                  <p className="text-xs text-muted-foreground">المعرّف: {category.id}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="outline">

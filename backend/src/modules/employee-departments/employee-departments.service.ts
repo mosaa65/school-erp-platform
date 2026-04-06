@@ -6,6 +6,7 @@ import {
 import { AuditStatus, EmployeeDepartment, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { generateAutoCode } from '../../common/utils/auto-code';
 import { CreateEmployeeDepartmentDto } from './dto/create-employee-department.dto';
 import { ListEmployeeDepartmentsDto } from './dto/list-employee-departments.dto';
 import { UpdateEmployeeDepartmentDto } from './dto/update-employee-department.dto';
@@ -38,10 +39,12 @@ export class EmployeeDepartmentsService {
   ) {}
 
   async create(payload: CreateEmployeeDepartmentDto, actorUserId: string) {
+    const code = payload.code?.trim() || generateAutoCode('DEPT');
+
     try {
       const department = await this.prisma.employeeDepartment.create({
         data: {
-          code: payload.code,
+          code,
           name: payload.name,
           description: payload.description,
           isActive: payload.isActive ?? true,
@@ -70,7 +73,7 @@ export class EmployeeDepartmentsService {
         resource: 'employee-departments',
         status: AuditStatus.FAILURE,
         details: {
-          code: payload.code,
+          code,
           reason: this.extractErrorMessage(error),
         },
       });

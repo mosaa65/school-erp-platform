@@ -3,6 +3,7 @@
 import * as React from "react";
 import { LoaderCircle, PencilLine, Plus, RefreshCw, Shapes, Trash2, Users } from "lucide-react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
+import { generateAutoCode } from "@/lib/auto-code";
 import { Badge } from "@/components/ui/badge";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,13 @@ const DEFAULT_FORM_STATE: EmployeeDepartmentFormState = {
   description: "",
   isActive: true,
 };
+
+function createNewDepartmentFormState(): EmployeeDepartmentFormState {
+  return {
+    ...DEFAULT_FORM_STATE,
+    code: generateAutoCode("DEPT", 40),
+  };
+}
 
 function toOptionalString(value: string): string | undefined {
   const normalized = value.trim();
@@ -148,17 +156,12 @@ export function EmployeeDepartmentsWorkspace() {
     }
 
     setEditingDepartmentId(null);
-    setFormState(DEFAULT_FORM_STATE);
+    setFormState(createNewDepartmentFormState());
     setFormError(null);
     setIsFormOpen(true);
   };
 
   const validateForm = (): boolean => {
-    if (!formState.code.trim()) {
-      setFormError("رمز القسم مطلوب.");
-      return false;
-    }
-
     if (!formState.name.trim()) {
       setFormError("اسم القسم مطلوب.");
       return false;
@@ -176,7 +179,6 @@ export function EmployeeDepartmentsWorkspace() {
     }
 
     const payload = {
-      code: formState.code.trim(),
       name: formState.name.trim(),
       description: toOptionalString(formState.description),
       isActive: formState.isActive,
@@ -437,18 +439,6 @@ export function EmployeeDepartmentsWorkspace() {
         showFooter={false}
       >
         <form className="space-y-6" onSubmit={handleSubmitForm} data-testid="department-form">
-          <div className="space-y-1">
-            <Label required>رمز القسم</Label>
-            <Input
-              value={formState.code}
-              onChange={(event) =>
-                setFormState((prev) => ({ ...prev, code: event.target.value }))
-              }
-              placeholder="HR-OPS"
-              data-testid="department-form-code"
-            />
-          </div>
-
           <div className="space-y-1">
             <Label required>اسم القسم</Label>
             <Input

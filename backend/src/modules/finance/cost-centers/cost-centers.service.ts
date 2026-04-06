@@ -17,7 +17,7 @@ import { UpdateCostCenterDto } from './dto/update-cost-center.dto';
 
 const costCenterInclude: Prisma.CostCenterInclude = {
   parent: {
-    select: { id: true, code: true, nameAr: true },
+    select: { id: true, nameAr: true },
   },
   branch: {
     select: { id: true, nameAr: true },
@@ -26,7 +26,7 @@ const costCenterInclude: Prisma.CostCenterInclude = {
     select: { id: true, fullName: true },
   },
   children: {
-    select: { id: true, code: true, nameAr: true },
+    select: { id: true, nameAr: true },
   },
 };
 
@@ -38,13 +38,11 @@ export class CostCentersService {
   ) {}
 
   async create(payload: CreateCostCenterDto, actorUserId: string) {
-    const code = this.normalizeRequiredText(payload.code, 'code');
     const nameAr = this.normalizeRequiredText(payload.nameAr, 'nameAr');
 
     try {
       const costCenter = await this.prisma.costCenter.create({
         data: {
-          code,
           nameAr,
           nameEn: payload.nameEn?.trim(),
           parentId: payload.parentId,
@@ -60,7 +58,7 @@ export class CostCentersService {
         action: 'COST_CENTER_CREATE',
         resource: 'cost-centers',
         resourceId: String(costCenter.id),
-        details: { code: costCenter.code, nameAr: costCenter.nameAr },
+        details: { nameAr: costCenter.nameAr },
       });
 
       return costCenter;
@@ -91,7 +89,6 @@ export class CostCentersService {
           OR: [
             { nameAr: { contains: query.search } },
             { nameEn: { contains: query.search } },
-            { code: { contains: query.search } },
           ],
         }
       : undefined;
@@ -106,7 +103,7 @@ export class CostCentersService {
       this.prisma.costCenter.findMany({
         where,
         include: costCenterInclude,
-        orderBy: [{ code: 'asc' }],
+        orderBy: [{ nameAr: 'asc' }, { id: 'asc' }],
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -133,7 +130,6 @@ export class CostCentersService {
       const updated = await this.prisma.costCenter.update({
         where: { id },
         data: {
-          code: payload.code?.trim(),
           nameAr: payload.nameAr?.trim(),
           nameEn: payload.nameEn?.trim(),
           parentId: payload.parentId,
@@ -187,7 +183,7 @@ export class CostCentersService {
 
   private throwKnownDatabaseErrors(error: unknown): never {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      throw new ConflictException('Cost center with this code already exists');
+      throw new ConflictException('Cost center already exists');
     }
     throw error;
   }

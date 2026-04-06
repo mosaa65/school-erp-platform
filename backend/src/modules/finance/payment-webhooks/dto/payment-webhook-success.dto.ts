@@ -27,12 +27,6 @@ export class PaymentWebhookSuccessDto {
   @MaxLength(100)
   gatewayTransactionId?: string;
 
-  @ApiPropertyOptional({ example: 'ONLINE_GW' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(20)
-  providerCode?: string;
-
   @ApiPropertyOptional({ example: '2026-03-16T06:00:00.000Z' })
   @IsOptional()
   @IsDateString()

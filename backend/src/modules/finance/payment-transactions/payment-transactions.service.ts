@@ -8,6 +8,7 @@ import {
   AuditStatus,
   DocumentType,
   JournalEntryStatus,
+  PaymentGatewayType,
   PaymentMethod,
   PaymentTransactionStatus,
   Prisma,
@@ -25,7 +26,15 @@ import { SimulatePaymentDto } from './dto/simulate-payment.dto';
 import { UpdatePaymentTransactionDto } from './dto/update-payment-transaction.dto';
 
 const paymentTransactionInclude: Prisma.PaymentTransactionInclude = {
-  gateway: true,
+  gateway: {
+    select: {
+      id: true,
+      nameAr: true,
+      nameEn: true,
+      gatewayType: true,
+      settlementAccountId: true,
+    },
+  },
   enrollment: {
     select: {
       id: true,
@@ -64,9 +73,12 @@ const paymentTransactionInclude: Prisma.PaymentTransactionInclude = {
   },
 };
 
-const DEFAULT_CASH_ACCOUNT_CODE = '1101';
-const DEFAULT_GATEWAY_ACCOUNT_CODE = '1102';
-const DEFAULT_REVENUE_ACCOUNT_CODE = '4001';
+const DEFAULT_CASH_ACCOUNT_NAME_EN = 'Cash and Banks';
+const DEFAULT_CASH_ACCOUNT_NAME_AR = 'النقدية والبنوك';
+const DEFAULT_GATEWAY_ACCOUNT_NAME_EN = 'Electronic Payment Gateways';
+const DEFAULT_GATEWAY_ACCOUNT_NAME_AR = 'بوابات الدفع الإلكتروني';
+const DEFAULT_REVENUE_ACCOUNT_NAME_EN = 'Tuition Revenue';
+const DEFAULT_REVENUE_ACCOUNT_NAME_AR = 'إيراد الرسوم الدراسية';
 const PAYMENT_REFERENCE_TYPE = 'PAYMENT_TRANSACTION';
 
 @Injectable()
@@ -78,7 +90,7 @@ export class PaymentTransactionsService {
   ) {}
 
   async create(payload: CreatePaymentTransactionDto, actorUserId: string) {
-    const gateway = await this.resolveGateway(payload.gatewayId, payload.providerCode);
+    const gateway = await this.resolveGateway(payload.gatewayId);
     const invoiceId = this.parseOptionalBigInt(payload.invoiceId, 'invoiceId');
     const installmentId = this.parseOptionalBigInt(payload.installmentId, 'installmentId');
 
@@ -162,7 +174,7 @@ export class PaymentTransactionsService {
   }
 
   async simulate(payload: SimulatePaymentDto, actorUserId: string) {
-    const gateway = await this.resolveGateway(payload.gatewayId, payload.providerCode);
+    const gateway = await this.resolveGateway(payload.gatewayId);
     const invoiceId = this.parseOptionalBigInt(payload.invoiceId, 'invoiceId');
     const installmentId = this.parseOptionalBigInt(payload.installmentId, 'installmentId');
 
@@ -266,9 +278,7 @@ export class PaymentTransactionsService {
       ? await this.findPostingAccountById(
           transaction.gateway.settlementAccountId,
         )
-      : await this.findPostingAccount(
-          this.resolveDebitAccountCode(transaction.paymentMethod),
-        );
+      : await this.resolveDebitAccount(transaction.paymentMethod);
     const creditAccount =
       await this.resolveCreditAccountForTransaction(transaction);
 
@@ -536,15 +546,14 @@ export class PaymentTransactionsService {
       gateway: {
         select: {
           id: true,
-          providerCode: true,
           nameAr: true,
           nameEn: true,
+          gatewayType: true,
         },
       },
       currency: {
         select: {
           id: true,
-          code: true,
           nameAr: true,
           symbol: true,
           decimalPlaces: true,
@@ -648,10 +657,9 @@ export class PaymentTransactionsService {
     const transactionId = this.parseRequiredBigInt(id, 'id');
     await this.ensureTransactionExists(transactionId);
 
-    const gateway =
-      payload.gatewayId || payload.providerCode
-        ? await this.resolveGateway(payload.gatewayId, payload.providerCode)
-        : null;
+    const gateway = payload.gatewayId !== undefined
+      ? await this.resolveGateway(payload.gatewayId)
+      : null;
 
     const status = payload.status;
     const paidAt =
@@ -808,34 +816,6 @@ export class PaymentTransactionsService {
     }
   }
 
-  private async findPostingAccount(accountCode: string) {
-    const account = await this.prisma.chartOfAccount.findFirst({
-      where: {
-        accountCode,
-        deletedAt: null,
-        isActive: true,
-      },
-      select: {
-        id: true,
-        isHeader: true,
-      },
-    });
-
-    if (!account) {
-      throw new NotFoundException(
-        `Posting account ${accountCode} was not found`,
-      );
-    }
-
-    if (account.isHeader) {
-      throw new BadRequestException(
-        `Posting account ${accountCode} cannot be a header account`,
-      );
-    }
-
-    return account;
-  }
-
   private async findPostingAccountById(accountId: number) {
     const account = await this.prisma.chartOfAccount.findFirst({
       where: {
@@ -907,41 +887,93 @@ export class PaymentTransactionsService {
       }
     }
 
-    return this.findPostingAccount(DEFAULT_REVENUE_ACCOUNT_CODE);
+    return this.findPostingAccountByName(
+      DEFAULT_REVENUE_ACCOUNT_NAME_EN,
+      DEFAULT_REVENUE_ACCOUNT_NAME_AR,
+    );
   }
 
-  private resolveDebitAccountCode(paymentMethod: PaymentMethod) {
+  private async resolveDebitAccount(paymentMethod: PaymentMethod) {
     switch (paymentMethod) {
       case PaymentMethod.CASH:
       case PaymentMethod.CHEQUE:
-        return DEFAULT_CASH_ACCOUNT_CODE;
+        return this.findPostingAccountByName(
+          DEFAULT_CASH_ACCOUNT_NAME_EN,
+          DEFAULT_CASH_ACCOUNT_NAME_AR,
+        );
       case PaymentMethod.CARD:
       case PaymentMethod.BANK_TRANSFER:
       case PaymentMethod.MOBILE_WALLET:
-        return DEFAULT_GATEWAY_ACCOUNT_CODE;
+        return this.findPostingAccountByName(
+          DEFAULT_GATEWAY_ACCOUNT_NAME_EN,
+          DEFAULT_GATEWAY_ACCOUNT_NAME_AR,
+        );
       default:
-        return DEFAULT_CASH_ACCOUNT_CODE;
+        return this.findPostingAccountByName(
+          DEFAULT_CASH_ACCOUNT_NAME_EN,
+          DEFAULT_CASH_ACCOUNT_NAME_AR,
+        );
     }
   }
 
-  private async resolveGateway(gatewayId?: number, providerCode?: string) {
-    if (!gatewayId && !providerCode) {
-      providerCode = 'ONLINE_GW';
-    }
-
-    const gateway = await this.prisma.paymentGateway.findFirst({
-      where: {
-        id: gatewayId,
-        providerCode: providerCode ? this.normalizeCode(providerCode) : undefined,
-        isActive: true,
-      },
-    });
+  private async resolveGateway(gatewayId?: number) {
+    const gateway = gatewayId !== undefined
+      ? await this.prisma.paymentGateway.findFirst({
+          where: {
+            id: gatewayId,
+            isActive: true,
+          },
+        })
+      : await this.prisma.paymentGateway.findFirst({
+          where: {
+            isActive: true,
+            gatewayType: PaymentGatewayType.ONLINE,
+          },
+          orderBy: {
+            id: 'asc',
+          },
+        });
 
     if (!gateway) {
-      throw new BadRequestException('Payment gateway not found');
+      throw new BadRequestException(
+        gatewayId
+          ? `Payment gateway ${gatewayId} not found`
+          : 'Default online payment gateway is not configured',
+      );
     }
 
     return gateway;
+  }
+
+  private async findPostingAccountByName(accountNameEn: string, accountNameAr: string) {
+    const account = await this.prisma.chartOfAccount.findFirst({
+      where: {
+        deletedAt: null,
+        isActive: true,
+        OR: [
+          { nameEn: accountNameEn },
+          { nameAr: accountNameAr },
+        ],
+      },
+      select: {
+        id: true,
+        isHeader: true,
+      },
+    });
+
+    if (!account) {
+      throw new NotFoundException(
+        `Posting account ${accountNameEn} was not found`,
+      );
+    }
+
+    if (account.isHeader) {
+      throw new BadRequestException(
+        `Posting account ${accountNameEn} cannot be a header account`,
+      );
+    }
+
+    return account;
   }
 
   private parseOptionalBigInt(value?: string, fieldName = 'id'): bigint | null {
@@ -968,16 +1000,6 @@ export class PaymentTransactionsService {
     }
 
     return parsed;
-  }
-
-  private normalizeCode(code: string): string {
-    const normalized = code.trim().toUpperCase();
-
-    if (!normalized) {
-      throw new BadRequestException('providerCode cannot be empty');
-    }
-
-    return normalized;
   }
 
   private throwKnownDatabaseErrors(error: unknown): never {

@@ -2,21 +2,18 @@ import { PaymentGatewayType, type PrismaClient } from '@prisma/client';
 
 const DEFAULT_PAYMENT_GATEWAYS = [
   {
-    providerCode: 'CASH',
     nameAr: 'نقدي',
     nameEn: 'Cash',
     gatewayType: PaymentGatewayType.OFFLINE,
     settlementAccountCode: '1101',
   },
   {
-    providerCode: 'BANK_TRANSFER',
     nameAr: 'تحويل بنكي',
     nameEn: 'Bank Transfer',
     gatewayType: PaymentGatewayType.OFFLINE,
     settlementAccountCode: '1101',
   },
   {
-    providerCode: 'ONLINE_GW',
     nameAr: 'بوابة إلكترونية',
     nameEn: 'Online Gateway',
     gatewayType: PaymentGatewayType.ONLINE,
@@ -24,43 +21,59 @@ const DEFAULT_PAYMENT_GATEWAYS = [
   },
 ];
 
+const ACCOUNT_NAME_BY_CODE: Record<string, string> = {
+  '1101': 'Cash and Banks',
+  '1102': 'Electronic Payment Gateways',
+};
+
 export async function seedSystem07PaymentGateways(prisma: PrismaClient) {
   const accounts = await prisma.chartOfAccount.findMany({
     where: {
-      accountCode: {
-        in: ['1101', '1102'],
+      nameEn: {
+        in: Object.values(ACCOUNT_NAME_BY_CODE),
       },
     },
     select: {
       id: true,
-      accountCode: true,
+      nameEn: true,
     },
   });
 
-  const accountsByCode = new Map(accounts.map((account) => [account.accountCode, account.id]));
+  const accountsByCode = new Map<string, number>();
+  for (const [code, nameEn] of Object.entries(ACCOUNT_NAME_BY_CODE)) {
+    const account = accounts.find((item) => item.nameEn === nameEn);
+    if (account) {
+      accountsByCode.set(code, account.id);
+    }
+  }
 
   for (const gateway of DEFAULT_PAYMENT_GATEWAYS) {
-    await prisma.paymentGateway.upsert({
+    const existing = await prisma.paymentGateway.findFirst({
       where: {
-        providerCode: gateway.providerCode,
-      },
-      update: {
         nameAr: gateway.nameAr,
-        nameEn: gateway.nameEn,
         gatewayType: gateway.gatewayType,
-        apiEndpoint: null,
-        merchantId: null,
-        settlementAccountId: accountsByCode.get(gateway.settlementAccountCode) ?? null,
-        isActive: true,
       },
-      create: {
-        providerCode: gateway.providerCode,
-        nameAr: gateway.nameAr,
-        nameEn: gateway.nameEn,
-        gatewayType: gateway.gatewayType,
-        settlementAccountId: accountsByCode.get(gateway.settlementAccountCode) ?? null,
-        isActive: true,
-      },
+      select: { id: true },
     });
+
+    const data = {
+      nameAr: gateway.nameAr,
+      nameEn: gateway.nameEn,
+      gatewayType: gateway.gatewayType,
+      apiEndpoint: null,
+      merchantId: null,
+      settlementAccountId: accountsByCode.get(gateway.settlementAccountCode) ?? null,
+      isActive: true,
+    };
+
+    if (existing) {
+      await prisma.paymentGateway.update({
+        where: { id: existing.id },
+        data,
+      });
+      continue;
+    }
+
+    await prisma.paymentGateway.create({ data });
   }
 }

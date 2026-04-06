@@ -7,6 +7,7 @@ import {
 import { AuditStatus, HomeworkType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogsService } from '../../audit-logs/audit-logs.service';
+import { generateAutoCode } from '../../../common/utils/auto-code';
 import { CreateHomeworkTypeDto } from './dto/create-homework-type.dto';
 import { ListHomeworkTypesDto } from './dto/list-homework-types.dto';
 import { UpdateHomeworkTypeDto } from './dto/update-homework-type.dto';
@@ -39,7 +40,9 @@ export class HomeworkTypesService {
   ) {}
 
   async create(payload: CreateHomeworkTypeDto, actorUserId: string) {
-    const normalizedCode = this.normalizeCode(payload.code);
+    const normalizedCode = payload.code
+      ? this.normalizeCode(payload.code)
+      : generateAutoCode('HWT', 40);
     const normalizedName = this.normalizeRequiredText(payload.name, 'name');
 
     try {

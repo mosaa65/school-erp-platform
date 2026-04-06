@@ -6,6 +6,7 @@ import {
 import { AuditStatus, Prisma, Talent } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { generateAutoCode } from '../../common/utils/auto-code';
 import { CreateTalentDto } from './dto/create-talent.dto';
 import { ListTalentsDto } from './dto/list-talents.dto';
 import { UpdateTalentDto } from './dto/update-talent.dto';
@@ -33,10 +34,12 @@ export class TalentsService {
   ) {}
 
   async create(payload: CreateTalentDto, actorUserId: string) {
+    const code = payload.code?.trim() || generateAutoCode('TLT', 40);
+
     try {
       const talent = await this.prisma.talent.create({
         data: {
-          code: payload.code,
+          code,
           name: payload.name,
           description: payload.description,
           isActive: payload.isActive ?? true,
@@ -65,7 +68,7 @@ export class TalentsService {
         resource: 'talents',
         status: AuditStatus.FAILURE,
         details: {
-          code: payload.code,
+          code,
           reason: this.extractErrorMessage(error),
         },
       });

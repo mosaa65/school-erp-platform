@@ -7,6 +7,7 @@ import {
 import { AuditStatus, Classroom, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { generateAutoCode } from '../../common/utils/auto-code';
 import { CreateClassroomDto } from './dto/create-classroom.dto';
 import { ListClassroomsDto } from './dto/list-classrooms.dto';
 import { UpdateClassroomDto } from './dto/update-classroom.dto';
@@ -50,7 +51,8 @@ export class ClassroomsService {
   ) {}
 
   async create(payload: CreateClassroomDto, actorUserId: string) {
-    const code = payload.code.trim().toLowerCase();
+    const code =
+      payload.code?.trim().toLowerCase() || generateAutoCode('CLS').toLowerCase();
     const name = payload.name.trim();
     const notes = this.normalizeNotes(payload.notes);
 

@@ -6,7 +6,6 @@ import {
   IsInt,
   IsOptional,
   IsString,
-  Matches,
   MaxLength,
   Min,
 } from 'class-validator';
@@ -22,15 +21,6 @@ export class CreatePaymentGatewayDto {
   @IsString()
   @MaxLength(50)
   nameEn!: string;
-
-  @ApiProperty({ example: 'ONLINE_GW' })
-  @IsString()
-  @MaxLength(20)
-  @Matches(/^[A-Z0-9_]+$/, {
-    message:
-      'providerCode must contain only uppercase letters, numbers, or underscores',
-  })
-  providerCode!: string;
 
   @ApiProperty({ enum: PaymentGatewayType, example: PaymentGatewayType.ONLINE })
   @IsEnum(PaymentGatewayType)

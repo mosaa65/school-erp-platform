@@ -121,7 +121,7 @@ export function FinancialFundsWorkspace() {
       >
         <div className="grid gap-3 sm:grid-cols-2">
           <Input
-            placeholder="بحث بالاسم أو الكود"
+            placeholder="بحث بالاسم"
             value={draftFilters.search}
             onChange={(event) =>
               setDraftFilters((prev) => ({ ...prev, search: event.target.value }))
@@ -201,7 +201,7 @@ export function FinancialFundsWorkspace() {
                   <p className="font-medium">
                     {fund.nameAr ?? "صندوق بدون اسم"}
                   </p>
-                  <p className="text-xs text-muted-foreground">الكود: {fund.code ?? "-"}</p>
+                  <p className="text-xs text-muted-foreground">المعرّف: {fund.id}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="outline">

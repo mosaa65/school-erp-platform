@@ -186,18 +186,11 @@ export function PromotionDecisionsWorkspace() {
   };
 
   const validateForm = (): boolean => {
-    const code = normalizeCode(form.code);
     const name = form.name.trim();
     const description = form.description.trim();
 
-    if (!code || !name) {
-      setFormError("الحقول المطلوبة: الكود والاسم.");
-      return false;
-    }
-    if (code.length > 40 || !/^[A-Z0-9_]+$/.test(code)) {
-      setFormError(
-        "يجب أن يكون الكود بالإنجليزية فقط مع الأرقام والشرطة السفلية (_) وبحد أقصى 40 حرفًا.",
-      );
+    if (!name) {
+      setFormError("الاسم مطلوب.");
       return false;
     }
     if (name.length > 120) {
@@ -222,7 +215,6 @@ export function PromotionDecisionsWorkspace() {
     }
 
     const payload = {
-      code: normalizeCode(form.code),
       name: form.name.trim(),
       description: toOptionalString(form.description),
       isSystem: form.isSystem,
@@ -298,7 +290,7 @@ export function PromotionDecisionsWorkspace() {
               containerClassName="min-w-0"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="ابحث بالاسم أو الكود..."
+              placeholder="ابحث بالاسم..."
             />
           </div>
           <div className="flex items-center gap-2 md:justify-end">
@@ -535,12 +527,6 @@ export function PromotionDecisionsWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <Input
-              value={form.code}
-              onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
-              placeholder="الكود *"
-              required
-            />
             <Input
               value={form.name}
               onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}

@@ -10,11 +10,6 @@ import {
 } from 'class-validator';
 
 export class CreateCostCenterDto {
-  @ApiProperty({ example: 'CC-001' })
-  @IsString()
-  @MaxLength(20)
-  code!: string;
-
   @ApiProperty({ example: 'مركز تكلفة — الإدارة' })
   @IsString()
   @MaxLength(100)

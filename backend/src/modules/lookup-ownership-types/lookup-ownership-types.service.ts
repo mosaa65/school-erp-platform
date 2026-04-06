@@ -7,6 +7,7 @@ import {
 import { AuditStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { generateAutoCode } from '../../common/utils/auto-code';
 import { CreateLookupOwnershipTypeDto } from './dto/create-lookup-ownership-type.dto';
 import { ListLookupOwnershipTypesDto } from './dto/list-lookup-ownership-types.dto';
 import { UpdateLookupOwnershipTypeDto } from './dto/update-lookup-ownership-type.dto';
@@ -39,7 +40,9 @@ export class LookupOwnershipTypesService {
   ) {}
 
   async create(payload: CreateLookupOwnershipTypeDto, actorUserId: string) {
-    const normalizedCode = this.normalizeCode(payload.code);
+    const normalizedCode = payload.code
+      ? this.normalizeCode(payload.code)
+      : generateAutoCode('OWN', 50);
     const normalizedNameAr = this.normalizeRequiredText(
       payload.nameAr,
       'nameAr',

@@ -7,6 +7,7 @@ import {
 import { AnnualStatusLookup, AuditStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { generateAutoCode } from '../../common/utils/auto-code';
 import { CreateAnnualStatusDto } from './dto/create-annual-status.dto';
 import { ListAnnualStatusesDto } from './dto/list-annual-statuses.dto';
 import { UpdateAnnualStatusDto } from './dto/update-annual-status.dto';
@@ -39,7 +40,9 @@ export class AnnualStatusesService {
   ) {}
 
   async create(payload: CreateAnnualStatusDto, actorUserId: string) {
-    const normalizedCode = this.normalizeCode(payload.code);
+    const normalizedCode = payload.code
+      ? this.normalizeCode(payload.code)
+      : generateAutoCode('ANN', 40);
     const normalizedName = this.normalizeRequiredText(payload.name, 'name');
 
     try {

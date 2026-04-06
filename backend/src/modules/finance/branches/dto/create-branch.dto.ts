@@ -3,11 +3,6 @@ import { Type } from 'class-transformer';
 import { IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreateBranchDto {
-  @ApiProperty({ example: 'MAIN' })
-  @IsString()
-  @MaxLength(10)
-  code!: string;
-
   @ApiProperty({ example: 'Main Branch' })
   @IsString()
   @MaxLength(100)

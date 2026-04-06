@@ -7,6 +7,7 @@ import {
 import { AuditStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { generateAutoCode } from '../../common/utils/auto-code';
 import { CreateLookupAbilityLevelDto } from './dto/create-lookup-ability-level.dto';
 import { ListLookupAbilityLevelsDto } from './dto/list-lookup-ability-levels.dto';
 import { UpdateLookupAbilityLevelDto } from './dto/update-lookup-ability-level.dto';
@@ -34,7 +35,9 @@ export class LookupAbilityLevelsService {
   ) {}
 
   async create(payload: CreateLookupAbilityLevelDto, actorUserId: string) {
-    const normalizedCode = this.normalizeCode(payload.code);
+    const normalizedCode = payload.code
+      ? this.normalizeCode(payload.code)
+      : generateAutoCode('ABL', 50);
     const normalizedNameAr = this.normalizeRequiredText(
       payload.nameAr,
       'nameAr',

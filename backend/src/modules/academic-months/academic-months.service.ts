@@ -12,6 +12,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { generateAutoCode } from '../../common/utils/auto-code';
 import { CreateAcademicMonthDto } from './dto/create-academic-month.dto';
 import { ListAcademicMonthsDto } from './dto/list-academic-months.dto';
 import { UpdateAcademicMonthDto } from './dto/update-academic-month.dto';
@@ -87,12 +88,8 @@ export class AcademicMonthsService {
       undefined,
     );
 
-    const code = payload.code.trim().toUpperCase();
+    const code = payload.code?.trim().toUpperCase() || generateAutoCode('AM');
     const name = payload.name.trim();
-
-    if (!code) {
-      throw new BadRequestException('code cannot be empty');
-    }
 
     if (!name) {
       throw new BadRequestException('name cannot be empty');
@@ -156,7 +153,7 @@ export class AcademicMonthsService {
         details: {
           academicYearId: payload.academicYearId,
           academicTermId: payload.academicTermId,
-          code: payload.code,
+          code,
           reason: this.extractErrorMessage(error),
         },
       });

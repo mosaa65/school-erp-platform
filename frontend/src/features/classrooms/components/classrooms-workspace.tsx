@@ -181,16 +181,10 @@ export function ClassroomsWorkspace() {
   };
 
   const validateForm = (): boolean => {
-    const code = normalizeCode(formState.code);
     const name = formState.name.trim();
 
-    if (!code || !name) {
-      setFormError("الكود والاسم حقول مطلوبة.");
-      return false;
-    }
-
-    if (!/^[a-z0-9_.:-]+$/.test(code)) {
-      setFormError("صيغة الكود غير صحيحة.");
+    if (!name) {
+      setFormError("الاسم حقل مطلوب.");
       return false;
     }
 
@@ -220,7 +214,6 @@ export function ClassroomsWorkspace() {
     }
 
     const commonPayload = {
-      code: normalizeCode(formState.code),
       name: formState.name.trim(),
       capacity: formState.capacity.trim() ? Number(formState.capacity) : undefined,
       notes: formState.notes.trim() || undefined,
@@ -428,7 +421,7 @@ export function ClassroomsWorkspace() {
         <ManagementToolbar
           searchValue={searchInput}
           onSearchChange={(event) => setSearchInput(event.target.value)}
-          searchPlaceholder="ابحث بالاسم، الكود، أو المبنى..."
+          searchPlaceholder="ابحث بالاسم أو المبنى..."
           filterCount={activeFiltersCount}
           onFilterClick={() => setIsFilterOpen((prev) => !prev)}
         />
@@ -658,21 +651,6 @@ export function ClassroomsWorkspace() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-1">
-                <Label required>الكود</Label>
-                <Input
-                  value={formState.code}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      code: event.target.value,
-                    }))
-                  }
-                  placeholder="مثال: room-a1"
-                  icon={<Plus className="h-4 w-4" />}
-                  required
-                />
-              </div>
               <div className="space-y-1">
                 <Label required>الاسم</Label>
                 <Input

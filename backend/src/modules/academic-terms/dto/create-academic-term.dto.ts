@@ -19,12 +19,13 @@ export class CreateAcademicTermDto {
   @IsString()
   academicYearId!: string;
 
-  @ApiProperty({ example: 'term-1' })
+  @ApiPropertyOptional({ example: 'term-1' })
+  @IsOptional()
   @Transform(({ value }: { value: string }) => value?.trim().toLowerCase())
   @IsString()
   @Matches(/^[a-z0-9_.:-]+$/)
   @MaxLength(40)
-  code!: string;
+  code?: string;
 
   @ApiProperty({ example: 'Term 1' })
   @Transform(({ value }: { value: string }) => value?.trim())

@@ -270,15 +270,6 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
       }
     }
 
-    const code = normalizeCode(formState.code);
-    const codeField = definition.fields.find((field) => field.key === "code");
-    if (codeField && code.length > 0) {
-      if (!/^[A-Z0-9_]+$/.test(code) || code.length > 50) {
-        setFormError("الكود يجب أن يحتوي أحرف كبيرة/أرقام/underscore فقط وبحد أقصى 50.");
-        return false;
-      }
-    }
-
     if (formState.colorCode && !/^#[0-9A-Fa-f]{6}$/.test(formState.colorCode.trim())) {
       setFormError("لون العرض يجب أن يكون بصيغة HEX مثل #28A745.");
       return false;
@@ -294,6 +285,10 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
     };
 
     for (const field of definition.fields) {
+      if (field.key === "code") {
+        continue;
+      }
+
       const value = (formState as Record<string, unknown>)[field.key];
 
       if (field.type === "checkbox") {
@@ -316,7 +311,7 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
       }
 
       if (typeof value === "string") {
-        const normalized = field.key === "code" ? normalizeCode(value) : value.trim();
+        const normalized = value.trim();
         if (normalized) {
           payload[field.key] = normalized as never;
         }
@@ -639,6 +634,10 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="lookup-catalog-form">
             {definition.fields.map((field) => {
+              if (field.key === "code") {
+                return null;
+              }
+
               if (field.type === "checkbox") {
                 return (
                   <label

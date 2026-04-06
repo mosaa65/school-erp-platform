@@ -15,7 +15,6 @@ const financialFundInclude: Prisma.FinancialFundInclude = {
   coaAccount: {
     select: {
       id: true,
-      accountCode: true,
       nameAr: true,
     },
   },
@@ -30,11 +29,6 @@ export class FinancialFundsService {
 
   async create(payload: CreateFinancialFundDto, actorUserId: string) {
     const nameAr = this.normalizeRequiredText(payload.nameAr, 'nameAr');
-    const code = payload.code?.trim();
-
-    if (code !== undefined && !code) {
-      throw new BadRequestException('code cannot be empty');
-    }
 
     if (payload.coaAccountId) {
       await this.findPostingAccountById(payload.coaAccountId);
@@ -44,7 +38,6 @@ export class FinancialFundsService {
       const fund = await this.prisma.financialFund.create({
         data: {
           nameAr,
-          code,
           fundType: payload.fundType ?? FinancialFundType.MAIN,
           coaAccountId: payload.coaAccountId,
           isActive: payload.isActive ?? true,
@@ -84,7 +77,6 @@ export class FinancialFundsService {
       OR: query.search
         ? [
             { nameAr: { contains: query.search } },
-            { code: { contains: query.search } },
           ]
         : undefined,
     };
@@ -132,11 +124,6 @@ export class FinancialFundsService {
         ? undefined
         : this.normalizeRequiredText(payload.nameAr, 'nameAr');
 
-    const code = payload.code?.trim();
-    if (payload.code !== undefined && !code) {
-      throw new BadRequestException('code cannot be empty');
-    }
-
     if (payload.coaAccountId) {
       await this.findPostingAccountById(payload.coaAccountId);
     }
@@ -146,7 +133,6 @@ export class FinancialFundsService {
         where: { id },
         data: {
           nameAr,
-          code,
           fundType: payload.fundType,
           coaAccountId: payload.coaAccountId,
           isActive: payload.isActive,

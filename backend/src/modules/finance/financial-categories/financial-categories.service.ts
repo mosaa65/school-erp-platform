@@ -16,7 +16,6 @@ const financialCategoryInclude: Prisma.FinancialCategoryInclude = {
     select: {
       id: true,
       nameAr: true,
-      code: true,
       categoryType: true,
     },
   },
@@ -24,14 +23,12 @@ const financialCategoryInclude: Prisma.FinancialCategoryInclude = {
     select: {
       id: true,
       nameAr: true,
-      code: true,
       categoryType: true,
     },
   },
   coaAccount: {
     select: {
       id: true,
-      accountCode: true,
       nameAr: true,
     },
   },
@@ -46,11 +43,6 @@ export class FinancialCategoriesService {
 
   async create(payload: CreateFinancialCategoryDto, actorUserId: string) {
     const nameAr = this.normalizeRequiredText(payload.nameAr, 'nameAr');
-    const code = payload.code?.trim();
-
-    if (code !== undefined && !code) {
-      throw new BadRequestException('code cannot be empty');
-    }
 
     if (payload.parentId) {
       const parent = await this.ensureCategoryExists(payload.parentId);
@@ -68,7 +60,6 @@ export class FinancialCategoriesService {
         data: {
           nameAr,
           categoryType: payload.categoryType,
-          code,
           parentId: payload.parentId,
           isActive: payload.isActive ?? true,
           coaAccountId: payload.coaAccountId,
@@ -109,7 +100,6 @@ export class FinancialCategoriesService {
       OR: query.search
         ? [
             { nameAr: { contains: query.search } },
-            { code: { contains: query.search } },
           ]
         : undefined,
     };
@@ -171,11 +161,6 @@ export class FinancialCategoriesService {
         ? undefined
         : this.normalizeRequiredText(payload.nameAr, 'nameAr');
 
-    const code = payload.code?.trim();
-    if (payload.code !== undefined && !code) {
-      throw new BadRequestException('code cannot be empty');
-    }
-
     if (payload.coaAccountId) {
       await this.findPostingAccountById(payload.coaAccountId);
     }
@@ -186,7 +171,6 @@ export class FinancialCategoriesService {
         data: {
           nameAr,
           categoryType: payload.categoryType,
-          code,
           parentId: payload.parentId,
           isActive: payload.isActive,
           coaAccountId: payload.coaAccountId,

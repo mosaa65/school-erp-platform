@@ -222,16 +222,10 @@ export function SubjectsWorkspace() {
   };
 
   const validateForm = (): boolean => {
-    const code = normalizeCode(formState.code);
     const name = formState.name.trim();
 
-    if (!code || !name) {
-      setFormError("الحقول الأساسية مطلوبة: الكود والاسم.");
-      return false;
-    }
-
-    if (!/^[a-z0-9_.:-]+$/.test(code)) {
-      setFormError("صيغة الكود غير صحيحة.");
+    if (!name) {
+      setFormError("الحقول الأساسية مطلوبة: الاسم.");
       return false;
     }
 
@@ -258,7 +252,6 @@ export function SubjectsWorkspace() {
     }
 
     const payload = {
-      code: normalizeCode(formState.code),
       name: formState.name.trim(),
       shortName: formState.shortName.trim() || undefined,
       category: formState.category,
@@ -366,7 +359,7 @@ export function SubjectsWorkspace() {
               containerClassName="flex-1"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="بحث بالاسم أو الكود أو الاختصار..."
+              placeholder="بحث بالاسم أو الاختصار..."
             />
           </div>
 
@@ -591,18 +584,6 @@ export function SubjectsWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الكود *</label>
-              <Input
-                value={formState.code}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, code: event.target.value }))
-                }
-                placeholder="math-101"
-                required
-              />
-            </div>
-
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
               <Input

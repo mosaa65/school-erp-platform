@@ -7,6 +7,7 @@ import {
 import { AuditStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { generateAutoCode } from '../../common/utils/auto-code';
 import { CreateLookupPeriodDto } from './dto/create-lookup-period.dto';
 import { ListLookupPeriodsDto } from './dto/list-lookup-periods.dto';
 import { UpdateLookupPeriodDto } from './dto/update-lookup-period.dto';
@@ -39,7 +40,9 @@ export class LookupPeriodsService {
   ) {}
 
   async create(payload: CreateLookupPeriodDto, actorUserId: string) {
-    const normalizedCode = this.normalizeCode(payload.code);
+    const normalizedCode = payload.code
+      ? this.normalizeCode(payload.code)
+      : generateAutoCode('PRD', 50);
     const normalizedNameAr = this.normalizeRequiredText(
       payload.nameAr,
       'nameAr',

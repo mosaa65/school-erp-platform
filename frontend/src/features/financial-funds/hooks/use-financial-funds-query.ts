@@ -8,7 +8,6 @@ import { financeRequest } from "@/features/finance/shared/finance-request";
 type FinancialFundListItem = {
   id: number;
   nameAr?: string;
-  code?: string | null;
   fundType?: string | null;
   currentBalance?: number | null;
   isActive?: boolean;

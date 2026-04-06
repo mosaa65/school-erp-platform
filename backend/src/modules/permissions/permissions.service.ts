@@ -6,6 +6,7 @@ import {
 import { AuditStatus, Prisma, type Permission } from '@prisma/client';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { generateAutoCode } from '../../common/utils/auto-code';
 import { CreatePermissionDto } from './dto/create-permission.dto';
 import { ListPermissionsDto } from './dto/list-permissions.dto';
 import { UpdatePermissionDto } from './dto/update-permission.dto';
@@ -18,10 +19,14 @@ export class PermissionsService {
   ) {}
 
   async create(createPermissionDto: CreatePermissionDto, actorUserId: string) {
+    const code =
+      createPermissionDto.code?.trim().toLowerCase() ||
+      generateAutoCode('PERM').toLowerCase();
+
     try {
       const permission = await this.prisma.permission.create({
         data: {
-          code: createPermissionDto.code,
+          code,
           resource: createPermissionDto.resource,
           action: createPermissionDto.action,
           description: createPermissionDto.description,
@@ -51,7 +56,7 @@ export class PermissionsService {
         resource: 'permissions',
         status: AuditStatus.FAILURE,
         details: {
-          code: createPermissionDto.code,
+          code,
           reason: this.extractErrorMessage(error),
         },
       });

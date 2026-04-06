@@ -9,7 +9,6 @@ import {
 
 const DEFAULT_TAX_CODES = [
   {
-    taxCode: 'VAT15',
     taxNameAr: 'ضريبة القيمة المضافة 15%',
     taxNameEn: 'VAT 15%',
     rate: 15,
@@ -17,7 +16,6 @@ const DEFAULT_TAX_CODES = [
     outputAccountCode: '2104',
   },
   {
-    taxCode: 'VAT5',
     taxNameAr: 'ضريبة القيمة المضافة 5%',
     taxNameEn: 'VAT 5%',
     rate: 5,
@@ -25,27 +23,30 @@ const DEFAULT_TAX_CODES = [
     outputAccountCode: '2104',
   },
   {
-    taxCode: 'VAT0',
     taxNameAr: 'نسبة صفرية',
     taxNameEn: 'Zero Rated',
     rate: 0,
     taxType: TaxType.ZERO_RATED,
   },
   {
-    taxCode: 'EXEMPT',
     taxNameAr: 'معفى من الضريبة',
     taxNameEn: 'Exempt',
     rate: 0,
     taxType: TaxType.EXEMPT,
   },
   {
-    taxCode: 'VAT_IN15',
     taxNameAr: 'ضريبة مدخلات 15%',
     taxNameEn: 'Input VAT 15%',
     rate: 15,
     taxType: TaxType.INPUT,
   },
 ];
+
+const ACCOUNT_NAME_BY_CODE: Record<string, string> = {
+  '2104': 'VAT Payable',
+  '5007': 'Discount Expense',
+  '4001': 'Tuition Revenue',
+};
 
 const DEFAULT_DISCOUNT_RULES = [
   {
@@ -73,48 +74,60 @@ const DEFAULT_DISCOUNT_RULES = [
 export async function seedSystem07FinanceBilling(prisma: PrismaClient) {
   const accounts = await prisma.chartOfAccount.findMany({
     where: {
-      accountCode: {
-        in: ['2104', '5007', '4001'],
+      nameEn: {
+        in: Object.values(ACCOUNT_NAME_BY_CODE),
       },
     },
     select: {
       id: true,
-      accountCode: true,
+      nameEn: true,
     },
   });
 
-  const accountsByCode = new Map(accounts.map((account) => [account.accountCode, account.id]));
+  const accountsByCode = new Map<string, number>();
+  for (const [code, nameEn] of Object.entries(ACCOUNT_NAME_BY_CODE)) {
+    const account = accounts.find((item) => item.nameEn === nameEn);
+    if (account) {
+      accountsByCode.set(code, account.id);
+    }
+  }
 
   for (const taxCode of DEFAULT_TAX_CODES) {
-    await prisma.taxCode.upsert({
-      where: { taxCode: taxCode.taxCode },
-      update: {
+    const existing = await prisma.taxCode.findFirst({
+      where: {
         taxNameAr: taxCode.taxNameAr,
-        taxNameEn: taxCode.taxNameEn,
-        rate: taxCode.rate,
         taxType: taxCode.taxType,
-        isInclusive: false,
-        outputGlAccountId: taxCode.outputAccountCode
-          ? accountsByCode.get(taxCode.outputAccountCode) ?? null
-          : null,
-        inputGlAccountId: null,
-        effectiveFrom: new Date('2026-01-01'),
-        effectiveTo: null,
-        isActive: true,
       },
-      create: {
-        taxCode: taxCode.taxCode,
-        taxNameAr: taxCode.taxNameAr,
-        taxNameEn: taxCode.taxNameEn,
-        rate: taxCode.rate,
-        taxType: taxCode.taxType,
-        isInclusive: false,
-        outputGlAccountId: taxCode.outputAccountCode
-          ? accountsByCode.get(taxCode.outputAccountCode) ?? null
-          : null,
-        inputGlAccountId: null,
-        effectiveFrom: new Date('2026-01-01'),
-        isActive: true,
+      select: { id: true },
+    });
+
+    const data = {
+      taxNameAr: taxCode.taxNameAr,
+      taxNameEn: taxCode.taxNameEn,
+      rate: taxCode.rate,
+      taxType: taxCode.taxType,
+      isInclusive: false,
+      outputGlAccountId: taxCode.outputAccountCode
+        ? accountsByCode.get(taxCode.outputAccountCode) ?? null
+        : null,
+      inputGlAccountId: null,
+      effectiveFrom: new Date('2026-01-01'),
+      effectiveTo: null,
+      isActive: true,
+    };
+
+    if (existing) {
+      await prisma.taxCode.update({
+        where: { id: existing.id },
+        data,
+      });
+      continue;
+    }
+
+    await prisma.taxCode.create({
+      data: {
+        ...data,
+        effectiveTo: undefined,
       },
     });
   }

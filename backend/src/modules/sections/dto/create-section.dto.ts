@@ -16,12 +16,13 @@ export class CreateSectionDto {
   @IsString()
   gradeLevelId!: string;
 
-  @ApiProperty({ example: 'section-a' })
+  @ApiPropertyOptional({ example: 'section-a' })
+  @IsOptional()
   @Transform(({ value }: { value: string }) => value?.trim().toLowerCase())
   @IsString()
   @Matches(/^[a-z0-9_.:-]+$/)
   @MaxLength(40)
-  code!: string;
+  code?: string;
 
   @ApiProperty({ example: 'Section A' })
   @Transform(({ value }: { value: string }) => value?.trim())

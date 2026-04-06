@@ -45,7 +45,6 @@ const journalEntrySummaryInclude: Prisma.JournalEntryInclude = {
   branch: {
     select: {
       id: true,
-      code: true,
       nameAr: true,
       nameEn: true,
     },
@@ -53,7 +52,6 @@ const journalEntrySummaryInclude: Prisma.JournalEntryInclude = {
   currency: {
     select: {
       id: true,
-      code: true,
       nameAr: true,
       symbol: true,
     },
@@ -106,7 +104,6 @@ const journalEntryDetailInclude: Prisma.JournalEntryInclude = {
       account: {
         select: {
           id: true,
-          accountCode: true,
           nameAr: true,
           nameEn: true,
           accountType: true,
@@ -127,7 +124,6 @@ const journalEntryDetailInclude: Prisma.JournalEntryInclude = {
       branch: {
         select: {
           id: true,
-          code: true,
           nameAr: true,
           nameEn: true,
         },

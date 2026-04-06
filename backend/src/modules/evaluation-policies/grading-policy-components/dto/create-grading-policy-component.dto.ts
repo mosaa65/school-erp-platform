@@ -17,10 +17,11 @@ export class CreateGradingPolicyComponentDto {
   @IsString()
   gradingPolicyId!: string;
 
-  @ApiProperty({ example: 'ATTENDANCE' })
+  @ApiPropertyOptional({ example: 'ATTENDANCE' })
+  @IsOptional()
   @IsString()
   @MaxLength(50)
-  code!: string;
+  code?: string;
 
   @ApiProperty({ example: 'الحضور' })
   @IsString()

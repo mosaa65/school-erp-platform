@@ -4,7 +4,6 @@ import type { PaginatedResponse } from "@/lib/api/client";
 
 export type BranchListItem = {
   id: string;
-  code: string;
   name: string;
   city: string;
   address?: string;
@@ -14,7 +13,6 @@ export type BranchListItem = {
 };
 
 export type CreateBranchPayload = {
-  code: string;
   name: string;
   city: string;
   address?: string;
@@ -35,7 +33,6 @@ export type ListBranchesQuery = {
 const seedData: BranchListItem[] = [
   {
     id: "br-001",
-    code: "MAIN",
     name: "الفرع الرئيسي",
     city: "صنعاء",
     address: "شارع الزبيري - مقابل البريد المركزي",
@@ -45,7 +42,6 @@ const seedData: BranchListItem[] = [
   },
   {
     id: "br-002",
-    code: "NORTH",
     name: "فرع الشمال",
     city: "عمران",
     address: "حي الجامعة - جوار المجمع التعليمي",
@@ -55,7 +51,6 @@ const seedData: BranchListItem[] = [
   },
   {
     id: "br-003",
-    code: "SOUTH",
     name: "فرع الجنوب",
     city: "عدن",
     address: "مديرية المنصورة - شارع التسعين",
@@ -81,7 +76,6 @@ function applySearch(items: BranchListItem[], search?: string) {
 
   return items.filter((item) => {
     return (
-      item.code.toLowerCase().includes(query) ||
       item.name.toLowerCase().includes(query) ||
       item.city.toLowerCase().includes(query) ||
       item.address?.toLowerCase().includes(query)
@@ -129,7 +123,6 @@ export function listBranches(query: ListBranchesQuery = {}): PaginatedResponse<B
 export function createBranch(payload: CreateBranchPayload): BranchListItem {
   const newRecord: BranchListItem = {
     id: createId(),
-    code: payload.code,
     name: payload.name,
     city: payload.city,
     address: payload.address,

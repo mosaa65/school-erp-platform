@@ -12,14 +12,15 @@ import {
 } from 'class-validator';
 
 export class CreateSchoolProfileDto {
-  @ApiProperty({ example: 'default_school' })
+  @ApiPropertyOptional({ example: 'default_school' })
+  @IsOptional()
   @IsString()
   @MaxLength(40)
   @Matches(/^[a-z0-9_-]+$/, {
     message:
       'code must contain only lowercase letters, numbers, underscores, or hyphens',
   })
-  code!: string;
+  code?: string;
 
   @ApiProperty({ example: 'مدرسة النجاح' })
   @IsString()

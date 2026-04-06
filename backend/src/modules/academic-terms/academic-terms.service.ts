@@ -7,6 +7,7 @@ import {
 import { AcademicTerm, AuditStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { generateAutoCode } from '../../common/utils/auto-code';
 import { CreateAcademicTermDto } from './dto/create-academic-term.dto';
 import { ListAcademicTermsDto } from './dto/list-academic-terms.dto';
 import { UpdateAcademicTermDto } from './dto/update-academic-term.dto';
@@ -19,7 +20,8 @@ export class AcademicTermsService {
   ) {}
 
   async create(payload: CreateAcademicTermDto, actorUserId: string) {
-    const code = payload.code.trim().toLowerCase();
+    const code =
+      payload.code?.trim().toLowerCase() || generateAutoCode('AT').toLowerCase();
     const name = payload.name.trim();
     const startDate = new Date(payload.startDate);
     const endDate = new Date(payload.endDate);

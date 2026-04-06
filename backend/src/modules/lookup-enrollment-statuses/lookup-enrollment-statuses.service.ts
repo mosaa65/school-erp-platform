@@ -7,6 +7,7 @@ import {
 import { AuditStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { generateAutoCode } from '../../common/utils/auto-code';
 import { CreateLookupEnrollmentStatusDto } from './dto/create-lookup-enrollment-status.dto';
 import { ListLookupEnrollmentStatusesDto } from './dto/list-lookup-enrollment-statuses.dto';
 import { UpdateLookupEnrollmentStatusDto } from './dto/update-lookup-enrollment-status.dto';
@@ -34,7 +35,9 @@ export class LookupEnrollmentStatusesService {
   ) {}
 
   async create(payload: CreateLookupEnrollmentStatusDto, actorUserId: string) {
-    const normalizedCode = this.normalizeCode(payload.code);
+    const normalizedCode = payload.code
+      ? this.normalizeCode(payload.code)
+      : generateAutoCode('ENR', 50);
     const normalizedNameAr = this.normalizeRequiredText(
       payload.nameAr,
       'nameAr',

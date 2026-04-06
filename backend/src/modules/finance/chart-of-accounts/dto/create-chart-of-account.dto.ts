@@ -12,11 +12,6 @@ import {
 import { AccountType, NormalBalance } from '@prisma/client';
 
 export class CreateChartOfAccountDto {
-  @ApiProperty({ example: '1100' })
-  @IsString()
-  @MaxLength(20)
-  accountCode!: string;
-
   @ApiProperty({ example: 'Cash' })
   @IsString()
   @MaxLength(150)

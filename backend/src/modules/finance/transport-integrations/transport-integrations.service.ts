@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  AccountType,
   AuditStatus,
   DocumentType,
   FeeType,
@@ -27,10 +28,14 @@ import { TransportMaintenanceExpenseDto } from './dto/transport-maintenance-expe
 import { TransportRevenueReportQueryDto } from './dto/transport-revenue-report-query.dto';
 import { TransportSubscriptionFeeDto } from './dto/transport-subscription-fee.dto';
 
-const DEFAULT_TRANSPORT_REVENUE_ACCOUNT_CODE = '4003';
-const DEFAULT_TRANSPORT_EXPENSE_ACCOUNT_CODE = '5003';
-const DEFAULT_CASH_ACCOUNT_CODE = '1101';
-const DEFAULT_GATEWAY_ACCOUNT_CODE = '1102';
+const DEFAULT_TRANSPORT_REVENUE_ACCOUNT_NAME_EN = 'Transport Revenue';
+const DEFAULT_TRANSPORT_REVENUE_ACCOUNT_NAME_AR = 'إيراد رسوم النقل';
+const DEFAULT_TRANSPORT_EXPENSE_ACCOUNT_NAME_EN = 'Transport Expenses';
+const DEFAULT_TRANSPORT_EXPENSE_ACCOUNT_NAME_AR = 'مصروفات النقل';
+const DEFAULT_CASH_ACCOUNT_NAME_EN = 'Cash and Banks';
+const DEFAULT_CASH_ACCOUNT_NAME_AR = 'النقدية والبنوك';
+const DEFAULT_GATEWAY_ACCOUNT_NAME_EN = 'Electronic Payment Gateways';
+const DEFAULT_GATEWAY_ACCOUNT_NAME_AR = 'بوابات الدفع الإلكتروني';
 
 @Injectable()
 export class TransportIntegrationsService {
@@ -133,7 +138,9 @@ export class TransportIntegrationsService {
 
     const baseCurrency = await this.findBaseCurrency();
     const revenueAccountId = await this.findPostingAccountByCode(
-      DEFAULT_TRANSPORT_REVENUE_ACCOUNT_CODE,
+      DEFAULT_TRANSPORT_REVENUE_ACCOUNT_NAME_EN,
+      DEFAULT_TRANSPORT_REVENUE_ACCOUNT_NAME_AR,
+      AccountType.REVENUE,
     );
 
     const results: Array<{ enrollmentId: string; invoiceNumber: string; totalAmount: number }> = [];
@@ -266,7 +273,9 @@ export class TransportIntegrationsService {
     const lineTotal = this.roundMoney(subtotal + vatAmount);
 
     const revenueAccountId = await this.findPostingAccountByCode(
-      DEFAULT_TRANSPORT_REVENUE_ACCOUNT_CODE,
+      DEFAULT_TRANSPORT_REVENUE_ACCOUNT_NAME_EN,
+      DEFAULT_TRANSPORT_REVENUE_ACCOUNT_NAME_AR,
+      AccountType.REVENUE,
     );
 
     await this.prisma.$transaction(async (tx) => {
@@ -344,10 +353,15 @@ export class TransportIntegrationsService {
     actorUserId: string,
   ) {
     const expenseAccountId = await this.findPostingAccountByCode(
-      DEFAULT_TRANSPORT_EXPENSE_ACCOUNT_CODE,
+      DEFAULT_TRANSPORT_EXPENSE_ACCOUNT_NAME_EN,
+      DEFAULT_TRANSPORT_EXPENSE_ACCOUNT_NAME_AR,
+      AccountType.EXPENSE,
     );
+    const creditAccount = this.resolveCreditAccountCode(payload.paymentMethod);
     const creditAccountId = await this.findPostingAccountByCode(
-      this.resolveCreditAccountCode(payload.paymentMethod),
+      creditAccount.nameEn,
+      creditAccount.nameAr,
+      AccountType.ASSET,
     );
 
     const lines = [
@@ -395,13 +409,24 @@ export class TransportIntegrationsService {
   }
 
   private resolveCreditAccountCode(paymentMethod?: PaymentMethod) {
-    if (!paymentMethod) return DEFAULT_CASH_ACCOUNT_CODE;
-
-    if (paymentMethod === PaymentMethod.CARD || paymentMethod === PaymentMethod.MOBILE_WALLET) {
-      return DEFAULT_GATEWAY_ACCOUNT_CODE;
+    if (!paymentMethod) {
+      return {
+        nameEn: DEFAULT_CASH_ACCOUNT_NAME_EN,
+        nameAr: DEFAULT_CASH_ACCOUNT_NAME_AR,
+      };
     }
 
-    return DEFAULT_CASH_ACCOUNT_CODE;
+    if (paymentMethod === PaymentMethod.CARD || paymentMethod === PaymentMethod.MOBILE_WALLET) {
+      return {
+        nameEn: DEFAULT_GATEWAY_ACCOUNT_NAME_EN,
+        nameAr: DEFAULT_GATEWAY_ACCOUNT_NAME_AR,
+      };
+    }
+
+    return {
+      nameEn: DEFAULT_CASH_ACCOUNT_NAME_EN,
+      nameAr: DEFAULT_CASH_ACCOUNT_NAME_AR,
+    };
   }
 
   private async createPostedJournalEntry(input: {
@@ -525,23 +550,42 @@ export class TransportIntegrationsService {
     });
   }
 
-  private async findPostingAccountByCode(accountCode: string) {
-    const account = await this.prisma.chartOfAccount.findFirst({
+  private async findPostingAccountByCode(
+    accountNameEn: string,
+    accountNameAr: string,
+    fallbackType?: AccountType,
+  ) {
+    const namedAccount = await this.prisma.chartOfAccount.findFirst({
       where: {
-        accountCode,
+        OR: [{ nameEn: accountNameEn }, { nameAr: accountNameAr }],
         deletedAt: null,
         isActive: true,
       },
       select: { id: true, isHeader: true },
     });
 
+    const account =
+      namedAccount ??
+      (fallbackType
+        ? await this.prisma.chartOfAccount.findFirst({
+            where: {
+              accountType: fallbackType,
+              deletedAt: null,
+              isActive: true,
+              isHeader: false,
+            },
+            select: { id: true, isHeader: true },
+            orderBy: { id: 'asc' },
+          })
+        : null);
+
     if (!account) {
-      throw new NotFoundException(`Posting account ${accountCode} was not found`);
+      throw new NotFoundException(`Posting account ${accountNameEn} was not found`);
     }
 
     if (account.isHeader) {
       throw new BadRequestException(
-        `Posting account ${accountCode} cannot be a header account`,
+        `Posting account ${accountNameEn} cannot be a header account`,
       );
     }
 

@@ -15,7 +15,6 @@ const paymentGatewayInclude: Prisma.PaymentGatewayInclude = {
   settlementAccount: {
     select: {
       id: true,
-      accountCode: true,
       nameAr: true,
     },
   },
@@ -29,7 +28,6 @@ export class PaymentGatewaysService {
   ) {}
 
   async create(payload: CreatePaymentGatewayDto, actorUserId: string) {
-    const providerCode = this.normalizeCode(payload.providerCode);
     const nameAr = this.normalizeRequiredText(payload.nameAr, 'nameAr');
     const nameEn = this.normalizeRequiredText(payload.nameEn, 'nameEn');
     const apiEndpoint =
@@ -46,13 +44,12 @@ export class PaymentGatewaysService {
         data: {
           nameAr,
           nameEn,
-          providerCode,
           gatewayType: payload.gatewayType,
           apiEndpoint,
           merchantId,
           settlementAccountId: payload.settlementAccountId,
           isActive: payload.isActive ?? true,
-        },
+        } as Prisma.PaymentGatewayUncheckedCreateInput,
         include: paymentGatewayInclude,
       });
 
@@ -62,7 +59,7 @@ export class PaymentGatewaysService {
         resource: 'payment-gateways',
         resourceId: String(gateway.id),
         details: {
-          providerCode: gateway.providerCode,
+          nameAr: gateway.nameAr,
           gatewayType: gateway.gatewayType,
         },
       });
@@ -75,7 +72,6 @@ export class PaymentGatewaysService {
         resource: 'payment-gateways',
         status: AuditStatus.FAILURE,
         details: {
-          providerCode,
           reason: this.extractErrorMessage(error),
         },
       });
@@ -93,11 +89,6 @@ export class PaymentGatewaysService {
       gatewayType: query.gatewayType,
       OR: query.search
         ? [
-            {
-              providerCode: {
-                contains: query.search,
-              },
-            },
             {
               nameAr: {
                 contains: query.search,
@@ -117,7 +108,7 @@ export class PaymentGatewaysService {
       this.prisma.paymentGateway.findMany({
         where,
         include: paymentGatewayInclude,
-        orderBy: [{ providerCode: 'asc' }],
+        orderBy: [{ nameAr: 'asc' }, { id: 'asc' }],
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -155,11 +146,6 @@ export class PaymentGatewaysService {
     actorUserId: string,
   ) {
     await this.ensureGatewayExists(id);
-
-    const providerCode =
-      payload.providerCode === undefined
-        ? undefined
-        : this.normalizeCode(payload.providerCode);
     const nameAr =
       payload.nameAr === undefined
         ? undefined
@@ -183,7 +169,6 @@ export class PaymentGatewaysService {
         data: {
           nameAr,
           nameEn,
-          providerCode,
           gatewayType: payload.gatewayType,
           apiEndpoint,
           merchantId,
@@ -241,16 +226,6 @@ export class PaymentGatewaysService {
     if (!gateway) {
       throw new NotFoundException('Payment gateway not found');
     }
-  }
-
-  private normalizeCode(code: string): string {
-    const normalized = code.trim().toUpperCase();
-
-    if (!normalized) {
-      throw new BadRequestException('providerCode cannot be empty');
-    }
-
-    return normalized;
   }
 
   private normalizeRequiredText(value: string, fieldName: string): string {

@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  AccountType,
   AuditStatus,
   CreditDebitNoteStatus,
   CreditDebitNoteType,
@@ -45,10 +46,14 @@ const noteInclude: Prisma.CreditDebitNoteInclude = {
   approvedByUser: { select: { id: true, email: true } },
 };
 
-const DEFAULT_REVENUE_ACCOUNT_CODE = '4001';
-const DEFAULT_RECEIVABLE_ACCOUNT_CODE = '1103';
-const DEFAULT_REFUND_PAYABLE_ACCOUNT_CODE = '2103';
-const DEFAULT_VAT_OUTPUT_ACCOUNT_CODE = '2104';
+const DEFAULT_REVENUE_ACCOUNT_NAME_EN = 'Tuition Revenue';
+const DEFAULT_REVENUE_ACCOUNT_NAME_AR = 'إيراد الرسوم الدراسية';
+const DEFAULT_RECEIVABLE_ACCOUNT_NAME_EN = 'Student Receivables';
+const DEFAULT_RECEIVABLE_ACCOUNT_NAME_AR = 'ذمم الطلاب';
+const DEFAULT_REFUND_PAYABLE_ACCOUNT_NAME_EN = 'Refunds Payable';
+const DEFAULT_REFUND_PAYABLE_ACCOUNT_NAME_AR = 'مبالغ مستحقة الرد';
+const DEFAULT_VAT_OUTPUT_ACCOUNT_NAME_EN = 'VAT Payable';
+const DEFAULT_VAT_OUTPUT_ACCOUNT_NAME_AR = 'ضريبة القيمة المضافة المستحقة';
 
 type PostingLineInput = {
   accountId: number;
@@ -271,21 +276,29 @@ export class CreditDebitNotesService {
 
       const revenueAccountId = await this.findPostingAccountByCode(
         tx,
-        DEFAULT_REVENUE_ACCOUNT_CODE,
+        DEFAULT_REVENUE_ACCOUNT_NAME_EN,
+        DEFAULT_REVENUE_ACCOUNT_NAME_AR,
+        AccountType.REVENUE,
       );
       const receivableAccountId = await this.findPostingAccountByCode(
         tx,
-        DEFAULT_RECEIVABLE_ACCOUNT_CODE,
+        DEFAULT_RECEIVABLE_ACCOUNT_NAME_EN,
+        DEFAULT_RECEIVABLE_ACCOUNT_NAME_AR,
+        AccountType.ASSET,
       );
       const refundAccountId = await this.findPostingAccountByCode(
         tx,
-        DEFAULT_REFUND_PAYABLE_ACCOUNT_CODE,
+        DEFAULT_REFUND_PAYABLE_ACCOUNT_NAME_EN,
+        DEFAULT_REFUND_PAYABLE_ACCOUNT_NAME_AR,
+        AccountType.LIABILITY,
       );
       const vatAccountId =
         vatAmount > 0
           ? await this.findPostingAccountByCode(
               tx,
-              DEFAULT_VAT_OUTPUT_ACCOUNT_CODE,
+              DEFAULT_VAT_OUTPUT_ACCOUNT_NAME_EN,
+              DEFAULT_VAT_OUTPUT_ACCOUNT_NAME_AR,
+              AccountType.LIABILITY,
             )
           : null;
 
@@ -558,11 +571,13 @@ export class CreditDebitNotesService {
 
   private async findPostingAccountByCode(
     tx: Prisma.TransactionClient,
-    accountCode: string,
+    accountNameEn: string,
+    accountNameAr: string,
+    fallbackType?: AccountType,
   ) {
-    const account = await tx.chartOfAccount.findFirst({
+    const namedAccount = await tx.chartOfAccount.findFirst({
       where: {
-        accountCode,
+        OR: [{ nameEn: accountNameEn }, { nameAr: accountNameAr }],
         deletedAt: null,
         isActive: true,
       },
@@ -572,13 +587,31 @@ export class CreditDebitNotesService {
       },
     });
 
+    const account =
+      namedAccount ??
+      (fallbackType
+        ? await tx.chartOfAccount.findFirst({
+            where: {
+              accountType: fallbackType,
+              deletedAt: null,
+              isActive: true,
+              isHeader: false,
+            },
+            select: {
+              id: true,
+              isHeader: true,
+            },
+            orderBy: { id: 'asc' },
+          })
+        : null);
+
     if (!account) {
-      throw new NotFoundException(`Posting account ${accountCode} was not found`);
+      throw new NotFoundException(`Posting account ${accountNameEn} was not found`);
     }
 
     if (account.isHeader) {
       throw new BadRequestException(
-        `Posting account ${accountCode} cannot be a header account`,
+        `Posting account ${accountNameEn} cannot be a header account`,
       );
     }
 

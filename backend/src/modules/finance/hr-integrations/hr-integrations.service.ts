@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  AccountType,
   AuditStatus,
   DocumentType,
   EmployeeLeaveRequestStatus,
@@ -22,9 +23,12 @@ import { DeductionJournalDto } from './dto/deduction-journal.dto';
 import { PayrollPreviewQueryDto } from './dto/payroll-preview-query.dto';
 import { PayrollJournalDto } from './dto/payroll-journal.dto';
 
-const DEFAULT_SALARY_EXPENSE_ACCOUNT_CODE = '5001';
-const DEFAULT_SALARY_PAYABLE_ACCOUNT_CODE = '2102';
-const DEFAULT_EMPLOYEE_RECEIVABLE_ACCOUNT_CODE = '1104';
+const DEFAULT_SALARY_EXPENSE_ACCOUNT_NAME_EN = 'Salaries Expense';
+const DEFAULT_SALARY_EXPENSE_ACCOUNT_NAME_AR = 'مصروف الرواتب';
+const DEFAULT_SALARY_PAYABLE_ACCOUNT_NAME_EN = 'Salaries Payable';
+const DEFAULT_SALARY_PAYABLE_ACCOUNT_NAME_AR = 'رواتب مستحقة';
+const DEFAULT_EMPLOYEE_RECEIVABLE_ACCOUNT_NAME_EN = 'Employee Receivables';
+const DEFAULT_EMPLOYEE_RECEIVABLE_ACCOUNT_NAME_AR = 'ذمم الموظفين';
 
 type PostingLineInput = {
   accountId: number;
@@ -36,7 +40,7 @@ type PostingLineInput = {
 };
 
 type PayrollSummaryBreakdownItem = {
-  accountCode: string;
+  accountId: number;
   accountName: string;
   amount: number;
   entryCount: number;
@@ -46,7 +50,7 @@ type EmployeeBalanceBreakdownItem = {
   entryNumber: string;
   entryDate: string;
   referenceType: string | null;
-  accountCode: string;
+  accountId: number;
   accountName: string;
   debitAmount: number;
   creditAmount: number;
@@ -82,13 +86,19 @@ export class HrIntegrationsService {
     const entryDate = new Date(payload.year, payload.month - 1, 1);
 
     const salaryExpenseAccountId = await this.findPostingAccountByCode(
-      DEFAULT_SALARY_EXPENSE_ACCOUNT_CODE,
+      DEFAULT_SALARY_EXPENSE_ACCOUNT_NAME_EN,
+      DEFAULT_SALARY_EXPENSE_ACCOUNT_NAME_AR,
+      AccountType.EXPENSE,
     );
     const salaryPayableAccountId = await this.findPostingAccountByCode(
-      DEFAULT_SALARY_PAYABLE_ACCOUNT_CODE,
+      DEFAULT_SALARY_PAYABLE_ACCOUNT_NAME_EN,
+      DEFAULT_SALARY_PAYABLE_ACCOUNT_NAME_AR,
+      AccountType.LIABILITY,
     );
     const employeeReceivableAccountId = await this.findPostingAccountByCode(
-      DEFAULT_EMPLOYEE_RECEIVABLE_ACCOUNT_CODE,
+      DEFAULT_EMPLOYEE_RECEIVABLE_ACCOUNT_NAME_EN,
+      DEFAULT_EMPLOYEE_RECEIVABLE_ACCOUNT_NAME_AR,
+      AccountType.ASSET,
     );
 
     const lines: PostingLineInput[] = [
@@ -160,10 +170,14 @@ export class HrIntegrationsService {
     const entryDate = new Date();
 
     const salaryPayableAccountId = await this.findPostingAccountByCode(
-      DEFAULT_SALARY_PAYABLE_ACCOUNT_CODE,
+      DEFAULT_SALARY_PAYABLE_ACCOUNT_NAME_EN,
+      DEFAULT_SALARY_PAYABLE_ACCOUNT_NAME_AR,
+      AccountType.LIABILITY,
     );
     const employeeReceivableAccountId = await this.findPostingAccountByCode(
-      DEFAULT_EMPLOYEE_RECEIVABLE_ACCOUNT_CODE,
+      DEFAULT_EMPLOYEE_RECEIVABLE_ACCOUNT_NAME_EN,
+      DEFAULT_EMPLOYEE_RECEIVABLE_ACCOUNT_NAME_AR,
+      AccountType.ASSET,
     );
 
     const lines: PostingLineInput[] = [
@@ -241,7 +255,7 @@ export class HrIntegrationsService {
             creditAmount: true,
             account: {
               select: {
-                accountCode: true,
+                id: true,
                 nameAr: true,
                 accountType: true,
               },
@@ -252,6 +266,11 @@ export class HrIntegrationsService {
       orderBy: [{ entryNumber: 'asc' }],
     });
 
+    const employeeReceivableAccountId = await this.findPostingAccountByCode(
+      DEFAULT_EMPLOYEE_RECEIVABLE_ACCOUNT_NAME_EN,
+      DEFAULT_EMPLOYEE_RECEIVABLE_ACCOUNT_NAME_AR,
+      AccountType.ASSET,
+    );
     const breakdown = new Map<string, PayrollSummaryBreakdownItem>();
     let gross = 0;
     let deductions = 0;
@@ -260,7 +279,7 @@ export class HrIntegrationsService {
       gross += Number(entry.totalDebit);
 
       for (const line of entry.lines) {
-        if (line.account.accountCode !== DEFAULT_EMPLOYEE_RECEIVABLE_ACCOUNT_CODE) {
+        if (line.account.id !== employeeReceivableAccountId) {
           continue;
         }
 
@@ -271,15 +290,15 @@ export class HrIntegrationsService {
 
         deductions += lineAmount;
 
-        const existing = breakdown.get(line.account.accountCode);
+        const existing = breakdown.get(String(line.account.id));
         if (existing) {
           existing.amount = this.roundMoney(existing.amount + lineAmount);
           existing.entryCount += 1;
           continue;
         }
 
-        breakdown.set(line.account.accountCode, {
-          accountCode: line.account.accountCode,
+        breakdown.set(String(line.account.id), {
+          accountId: line.account.id,
           accountName: line.account.nameAr,
           amount: lineAmount,
           entryCount: 1,
@@ -548,7 +567,7 @@ export class HrIntegrationsService {
         creditAmount: true,
         account: {
           select: {
-            accountCode: true,
+            id: true,
             nameAr: true,
             accountType: true,
           },
@@ -568,8 +587,14 @@ export class HrIntegrationsService {
     let advances = 0;
     let deductions = 0;
 
+    const employeeReceivableAccountId = await this.findPostingAccountByCode(
+      DEFAULT_EMPLOYEE_RECEIVABLE_ACCOUNT_NAME_EN,
+      DEFAULT_EMPLOYEE_RECEIVABLE_ACCOUNT_NAME_AR,
+      AccountType.ASSET,
+    );
+
     for (const line of lines) {
-      if (line.account.accountCode !== DEFAULT_EMPLOYEE_RECEIVABLE_ACCOUNT_CODE) {
+      if (line.account.id !== employeeReceivableAccountId) {
         continue;
       }
 
@@ -589,7 +614,7 @@ export class HrIntegrationsService {
           entryNumber: line.journalEntry.entryNumber,
           entryDate: line.journalEntry.entryDate.toISOString().slice(0, 10),
           referenceType: line.journalEntry.referenceType,
-          accountCode: line.account.accountCode,
+          accountId: line.account.id,
           accountName: line.account.nameAr,
           debitAmount,
           creditAmount,
@@ -727,23 +752,42 @@ export class HrIntegrationsService {
     });
   }
 
-  private async findPostingAccountByCode(accountCode: string) {
-    const account = await this.prisma.chartOfAccount.findFirst({
+  private async findPostingAccountByCode(
+    accountNameEn: string,
+    accountNameAr: string,
+    fallbackType?: AccountType,
+  ) {
+    const namedAccount = await this.prisma.chartOfAccount.findFirst({
       where: {
-        accountCode,
+        OR: [{ nameEn: accountNameEn }, { nameAr: accountNameAr }],
         deletedAt: null,
         isActive: true,
       },
       select: { id: true, isHeader: true },
     });
 
+    const account =
+      namedAccount ??
+      (fallbackType
+        ? await this.prisma.chartOfAccount.findFirst({
+            where: {
+              accountType: fallbackType,
+              deletedAt: null,
+              isActive: true,
+              isHeader: false,
+            },
+            select: { id: true, isHeader: true },
+            orderBy: { id: 'asc' },
+          })
+        : null);
+
     if (!account) {
-      throw new NotFoundException(`Posting account ${accountCode} was not found`);
+      throw new NotFoundException(`Posting account ${accountNameEn} was not found`);
     }
 
     if (account.isHeader) {
       throw new BadRequestException(
-        `Posting account ${accountCode} cannot be a header account`,
+        `Posting account ${accountNameEn} cannot be a header account`,
       );
     }
 

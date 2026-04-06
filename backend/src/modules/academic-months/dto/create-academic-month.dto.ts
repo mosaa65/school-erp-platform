@@ -21,10 +21,11 @@ export class CreateAcademicMonthDto {
   @IsString()
   academicTermId!: string;
 
-  @ApiProperty({ example: 'M1' })
+  @ApiPropertyOptional({ example: 'M1' })
+  @IsOptional()
   @IsString()
   @MaxLength(40)
-  code!: string;
+  code?: string;
 
   @ApiProperty({ example: 'Month 1 - September' })
   @IsString()

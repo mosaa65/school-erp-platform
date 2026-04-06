@@ -44,7 +44,6 @@ import { useCurrenciesQuery } from "@/features/currencies/hooks/use-currencies-q
 import type { CreateCurrencyPayload, CurrencyListItem } from "@/lib/api/client";
 
 type FormState = {
-  code: string;
   nameAr: string;
   symbol: string;
   decimalPlaces: number;
@@ -55,7 +54,6 @@ type FormState = {
 const PAGE_SIZE = 12;
 
 const DEFAULT_FORM: FormState = {
-  code: "",
   nameAr: "",
   symbol: "",
   decimalPlaces: 2,
@@ -63,13 +61,8 @@ const DEFAULT_FORM: FormState = {
   isActive: true,
 };
 
-function normalizeCode(value: string): string {
-  return value.trim().toUpperCase();
-}
-
 function toFormState(item: CurrencyListItem): FormState {
   return {
-    code: item.code,
     nameAr: item.nameAr,
     symbol: item.symbol ?? "",
     decimalPlaces: item.decimalPlaces ?? 2,
@@ -195,17 +188,11 @@ export function CurrenciesWorkspace() {
   };
 
   const validateForm = (): boolean => {
-    const code = normalizeCode(form.code);
     const nameAr = form.nameAr.trim();
     const symbol = form.symbol?.trim() ?? "";
 
-    if (!code || !nameAr || !symbol) {
-      setFormError("الرجاء تعبئة الحقول المطلوبة: الكود والاسم والرمز.");
-      return false;
-    }
-
-    if (!/^[A-Z]{3}$/.test(code)) {
-      setFormError("الكود يجب أن يكون من 3 أحرف لاتينية (مثل USD).");
+    if (!nameAr || !symbol) {
+      setFormError("الرجاء تعبئة الحقول المطلوبة: الاسم والرمز.");
       return false;
     }
 
@@ -236,7 +223,6 @@ export function CurrenciesWorkspace() {
     }
 
     const payload: CreateCurrencyPayload = {
-      code: normalizeCode(form.code),
       nameAr: form.nameAr.trim(),
       symbol: form.symbol?.trim() || "",
       decimalPlaces: Number.isFinite(form.decimalPlaces) ? form.decimalPlaces : 2,
@@ -307,7 +293,7 @@ export function CurrenciesWorkspace() {
               containerClassName="flex-1"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="بحث بالكود أو الاسم..."
+              placeholder="بحث بالاسم..."
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -405,7 +391,7 @@ export function CurrenciesWorkspace() {
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="space-y-1">
                     <p className="font-medium">
-                      {item.nameAr} ({item.code})
+                      {item.nameAr}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       الرمز: {item.symbol || "-"} · الدقة: {item.decimalPlaces}
@@ -448,7 +434,7 @@ export function CurrenciesWorkspace() {
                       if (!canDelete) {
                         return;
                       }
-                      if (!confirmFinanceAction(`تأكيد حذف العملة ${item.code}?`)) {
+                      if (!confirmFinanceAction(`تأكيد حذف العملة ${item.nameAr}?`)) {
                         return;
                       }
                       deleteMutation.mutate(item.id, {
@@ -539,15 +525,6 @@ export function CurrenciesWorkspace() {
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الكود *</label>
-                <Input
-                  value={form.code}
-                  onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
-                  placeholder="SAR"
-                  required
-                />
-              </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
                 <Input

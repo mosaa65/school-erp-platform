@@ -236,14 +236,8 @@ export function AcademicTermsWorkspace() {
   };
 
   const validateForm = (): boolean => {
-    if (!formState.academicYearId || !formState.code || !formState.name) {
-      setFormError("الحقول الأساسية مطلوبة: السنة الأكاديمية والكود والاسم.");
-      return false;
-    }
-
-    const normalizedCode = normalizeCode(formState.code);
-    if (!/^[a-z0-9_.:-]+$/.test(normalizedCode)) {
-      setFormError("صيغة الكود غير صحيحة.");
+    if (!formState.academicYearId || !formState.name) {
+      setFormError("الحقول الأساسية مطلوبة: السنة الأكاديمية والاسم.");
       return false;
     }
 
@@ -289,7 +283,6 @@ export function AcademicTermsWorkspace() {
 
     const payload = {
       academicYearId: formState.academicYearId,
-      code: normalizeCode(formState.code),
       name: formState.name.trim(),
       termType: formState.termType,
       sequence: Number(formState.sequence),
@@ -398,7 +391,7 @@ export function AcademicTermsWorkspace() {
               containerClassName="flex-1"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="بحث بالاسم أو الكود..."
+              placeholder="بحث بالاسم..."
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -669,18 +662,6 @@ export function AcademicTermsWorkspace() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-1">
-                <Label required>الكود</Label>
-                <Input
-                  value={formState.code}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, code: event.target.value }))
-                  }
-                  placeholder="term-1"
-                  icon={<Type className="h-4 w-4" />}
-                  required
-                />
-              </div>
               <div className="space-y-1">
                 <Label required>الترتيب</Label>
                 <Input

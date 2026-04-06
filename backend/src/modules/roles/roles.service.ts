@@ -7,6 +7,7 @@ import {
 import { AuditStatus, Prisma, type Role } from '@prisma/client';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { generateAutoCode } from '../../common/utils/auto-code';
 import { AssignRolePermissionsDto } from './dto/assign-role-permissions.dto';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { ListRolesDto } from './dto/list-roles.dto';
@@ -21,10 +22,14 @@ export class RolesService {
 
   async create(createRoleDto: CreateRoleDto, actorUserId: string) {
     try {
+      const code =
+        createRoleDto.code?.trim().toLowerCase() ||
+        generateAutoCode('ROLE').toLowerCase();
+
       const role = await this.prisma.$transaction(async (tx) => {
         const createdRole = await tx.role.create({
           data: {
-            code: createRoleDto.code,
+            code,
             name: createRoleDto.name,
             description: createRoleDto.description,
             isActive: createRoleDto.isActive ?? true,

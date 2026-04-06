@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  AccountType,
   AuditStatus,
   DocumentType,
   FinancialCategoryType,
@@ -23,15 +24,16 @@ import { CreateRevenueDto } from './dto/create-revenue.dto';
 import { ListRevenuesDto } from './dto/list-revenues.dto';
 import { UpdateRevenueDto } from './dto/update-revenue.dto';
 
-const DEFAULT_CASH_ACCOUNT_CODE = '1101';
-const DEFAULT_REVENUE_ACCOUNT_CODE = '4001';
+const DEFAULT_CASH_ACCOUNT_NAME_EN = 'Cash and Banks';
+const DEFAULT_CASH_ACCOUNT_NAME_AR = 'النقدية والبنوك';
+const DEFAULT_REVENUE_ACCOUNT_NAME_EN = 'Tuition Revenue';
+const DEFAULT_REVENUE_ACCOUNT_NAME_AR = 'إيراد الرسوم الدراسية';
 
 const revenueInclude: Prisma.RevenueInclude = {
   fund: {
     select: {
       id: true,
       nameAr: true,
-      code: true,
       fundType: true,
       coaAccountId: true,
     },
@@ -40,7 +42,6 @@ const revenueInclude: Prisma.RevenueInclude = {
     select: {
       id: true,
       nameAr: true,
-      code: true,
       categoryType: true,
       coaAccountId: true,
     },
@@ -90,10 +91,20 @@ export class RevenuesService {
 
         const debitAccount = fund.coaAccountId
           ? await this.findPostingAccountById(tx, fund.coaAccountId)
-          : await this.findPostingAccountByCode(tx, DEFAULT_CASH_ACCOUNT_CODE);
+          : await this.findPostingAccountByName(
+              tx,
+              DEFAULT_CASH_ACCOUNT_NAME_EN,
+              DEFAULT_CASH_ACCOUNT_NAME_AR,
+              AccountType.ASSET,
+            );
         const creditAccount = category.coaAccountId
           ? await this.findPostingAccountById(tx, category.coaAccountId)
-          : await this.findPostingAccountByCode(tx, DEFAULT_REVENUE_ACCOUNT_CODE);
+          : await this.findPostingAccountByName(
+              tx,
+              DEFAULT_REVENUE_ACCOUNT_NAME_EN,
+              DEFAULT_REVENUE_ACCOUNT_NAME_AR,
+              AccountType.REVENUE,
+            );
 
         const revenue = await tx.revenue.create({
           data: {
@@ -452,13 +463,15 @@ export class RevenuesService {
     });
   }
 
-  private async findPostingAccountByCode(
+  private async findPostingAccountByName(
     tx: Prisma.TransactionClient,
-    accountCode: string,
+    accountNameEn: string,
+    accountNameAr: string,
+    fallbackType?: AccountType,
   ) {
-    const account = await tx.chartOfAccount.findFirst({
+    const namedAccount = await tx.chartOfAccount.findFirst({
       where: {
-        accountCode,
+        OR: [{ nameEn: accountNameEn }, { nameAr: accountNameAr }],
         deletedAt: null,
         isActive: true,
       },
@@ -468,13 +481,31 @@ export class RevenuesService {
       },
     });
 
+    const account =
+      namedAccount ??
+      (fallbackType
+        ? await tx.chartOfAccount.findFirst({
+            where: {
+              accountType: fallbackType,
+              deletedAt: null,
+              isActive: true,
+              isHeader: false,
+            },
+            select: {
+              id: true,
+              isHeader: true,
+            },
+            orderBy: { id: 'asc' },
+          })
+        : null);
+
     if (!account) {
-      throw new NotFoundException(`Posting account ${accountCode} was not found`);
+      throw new NotFoundException(`Posting account ${accountNameEn} was not found`);
     }
 
     if (account.isHeader) {
       throw new BadRequestException(
-        `Posting account ${accountCode} cannot be a header account`,
+        `Posting account ${accountNameEn} cannot be a header account`,
       );
     }
 

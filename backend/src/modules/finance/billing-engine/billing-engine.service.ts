@@ -60,8 +60,8 @@ export class BillingEngineService {
       baseCurrency: baseCurrency
         ? {
             id: baseCurrency.id,
-            code: baseCurrency.code,
             nameAr: baseCurrency.nameAr,
+            symbol: baseCurrency.symbol,
           }
         : null,
       invoiceDate: this.toDateOnly(today),

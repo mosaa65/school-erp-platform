@@ -10,12 +10,6 @@ export class UpdateFinancialFundDto {
   @MaxLength(100)
   nameAr?: string;
 
-  @ApiPropertyOptional({ example: 'MAIN_FUND' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(30)
-  code?: string;
-
   @ApiPropertyOptional({ enum: FinancialFundType })
   @IsOptional()
   @IsEnum(FinancialFundType)

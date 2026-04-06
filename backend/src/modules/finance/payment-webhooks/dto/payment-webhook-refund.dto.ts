@@ -38,12 +38,6 @@ export class PaymentWebhookRefundDto {
   @MaxLength(100)
   gatewayTransactionId?: string;
 
-  @ApiPropertyOptional({ example: 'ONLINE_GW' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(20)
-  providerCode?: string;
-
   @ApiPropertyOptional({ example: 'evt_125' })
   @IsOptional()
   @IsString()

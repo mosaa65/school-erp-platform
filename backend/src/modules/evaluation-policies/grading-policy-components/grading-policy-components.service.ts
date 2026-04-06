@@ -7,6 +7,7 @@ import {
 import { AuditStatus, GradingComponentCalculationMode, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogsService } from '../../audit-logs/audit-logs.service';
+import { generateAutoCode } from '../../../common/utils/auto-code';
 import { CreateGradingPolicyComponentDto } from './dto/create-grading-policy-component.dto';
 import { ListGradingPolicyComponentsDto } from './dto/list-grading-policy-components.dto';
 import { UpdateGradingPolicyComponentDto } from './dto/update-grading-policy-component.dto';
@@ -52,7 +53,8 @@ export class GradingPolicyComponentsService {
       payload.calculationMode,
     );
 
-    const code = payload.code.trim().toUpperCase();
+    const code =
+      payload.code?.trim().toUpperCase() || generateAutoCode('GPC', 50);
     const name = payload.name.trim();
 
     try {

@@ -9,14 +9,15 @@ import {
 } from 'class-validator';
 
 export class CreateLookupPeriodDto {
-  @ApiProperty({ example: 'MORNING' })
+  @ApiPropertyOptional({ example: 'MORNING' })
+  @IsOptional()
   @IsString()
   @MaxLength(50)
   @Matches(/^[A-Z0-9_]+$/, {
     message:
       'code must contain only uppercase letters, numbers, or underscores',
   })
-  code!: string;
+  code?: string;
 
   @ApiProperty({ example: 'صباحية' })
   @IsString()

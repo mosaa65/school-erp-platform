@@ -13,12 +13,6 @@ export class CreateFinancialCategoryDto {
   @IsEnum(FinancialCategoryType)
   categoryType!: FinancialCategoryType;
 
-  @ApiPropertyOptional({ example: 'REV_TUITION' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(30)
-  code?: string;
-
   @ApiPropertyOptional({ example: 1 })
   @IsOptional()
   @Type(() => Number)

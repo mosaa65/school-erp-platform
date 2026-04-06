@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import {
   AuditStatus,
+  FinancialCategoryType,
   FeeType,
   InvoiceStatus,
   PaymentMethod,
@@ -103,6 +104,11 @@ const communityContributionInclude: Prisma.CommunityContributionInclude = {
     },
   },
 };
+
+const CASH_GATEWAY_NAME_EN = 'Cash';
+const CASH_GATEWAY_NAME_AR = 'نقدي';
+const COMMUNITY_REVENUE_ACCOUNT_NAME_EN = 'Community Contribution Revenue';
+const COMMUNITY_REVENUE_ACCOUNT_NAME_AR = 'إيراد المساهمة المجتمعية';
 
 @Injectable()
 export class CommunityContributionsService {
@@ -446,9 +452,10 @@ export class CommunityContributionsService {
 
     if (bridgeContext.receivedAmount > 0) {
       const installment = invoice.installments[0];
+      const cashGatewayId = await this.resolveCashGatewayId();
       const transaction = await this.paymentTransactionsService.create(
         {
-          providerCode: 'CASH',
+          gatewayId: cashGatewayId,
           enrollmentId: payload.enrollmentId,
           invoiceId: invoice.id.toString(),
           installmentId: installment?.id?.toString(),
@@ -520,7 +527,10 @@ export class CommunityContributionsService {
         }),
         this.prisma.financialCategory.findFirst({
           where: {
-            code: 'REV_COMMUNITY',
+            categoryType: FinancialCategoryType.REVENUE,
+            nameAr: {
+              contains: 'المساهمة المجتمعية',
+            },
             isActive: true,
           },
           select: {
@@ -539,9 +549,12 @@ export class CommunityContributionsService {
 
     const fallbackRevenueAccount = await this.prisma.chartOfAccount.findFirst({
       where: {
-        accountCode: '4002',
         deletedAt: null,
         isActive: true,
+        OR: [
+          { nameEn: COMMUNITY_REVENUE_ACCOUNT_NAME_EN },
+          { nameAr: COMMUNITY_REVENUE_ACCOUNT_NAME_AR },
+        ],
       },
       select: {
         id: true,
@@ -571,6 +584,30 @@ export class CommunityContributionsService {
       currencyId: baseCurrency?.id ?? null,
       descriptionAr: `المساهمة المجتمعية - ${academicMonth.name}`.slice(0, 200),
     };
+  }
+
+  private async resolveCashGatewayId() {
+    const gateway = await this.prisma.paymentGateway.findFirst({
+      where: {
+        isActive: true,
+        OR: [
+          { nameEn: CASH_GATEWAY_NAME_EN },
+          { nameAr: CASH_GATEWAY_NAME_AR },
+        ],
+      },
+      select: {
+        id: true,
+      },
+      orderBy: {
+        id: 'asc',
+      },
+    });
+
+    if (!gateway) {
+      throw new NotFoundException('Cash payment gateway is not configured');
+    }
+
+    return gateway.id;
   }
 
   private parseOptionalBigInt(value?: string, fieldName = 'id'): bigint | null {

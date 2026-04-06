@@ -15,7 +15,6 @@ const exchangeRateInclude: Prisma.CurrencyExchangeRateInclude = {
   fromCurrency: {
     select: {
       id: true,
-      code: true,
       nameAr: true,
       symbol: true,
     },
@@ -23,7 +22,6 @@ const exchangeRateInclude: Prisma.CurrencyExchangeRateInclude = {
   toCurrency: {
     select: {
       id: true,
-      code: true,
       nameAr: true,
       symbol: true,
     },

@@ -3665,7 +3665,6 @@ model PaymentGateway {
   id                  Int                @id @default(autoincrement()) @db.UnsignedSmallInt
   nameAr              String             @map("name_ar") @db.VarChar(50)
   nameEn              String             @map("name_en") @db.VarChar(50)
-  providerCode        String             @unique @map("provider_code") @db.VarChar(20)
   gatewayType         PaymentGatewayType @map("gateway_type")
   apiEndpoint         String?            @map("api_endpoint") @db.VarChar(255)
   merchantId          String?            @map("merchant_id") @db.VarChar(100)
@@ -3785,7 +3784,6 @@ model ReconciliationItem {
 
 model Branch {
   id             Int       @id @default(autoincrement())
-  code           String    @unique @db.VarChar(10)
   nameAr         String    @map("name_ar") @db.VarChar(100)
   nameEn         String?   @map("name_en") @db.VarChar(100)
   address        String?   @db.Text
@@ -3818,7 +3816,6 @@ model Branch {
 
 model Currency {
   id            Int       @id @default(autoincrement())
-  code          String    @unique @db.VarChar(3)
   nameAr        String    @map("name_ar") @db.VarChar(50)
   symbol        String    @db.VarChar(5)
   decimalPlaces Int       @default(2) @map("decimal_places")
@@ -3947,7 +3944,6 @@ model FiscalPeriod {
 
 model ChartOfAccount {
   id                Int           @id @default(autoincrement())
-  accountCode       String        @unique @map("account_code") @db.VarChar(20)
   nameAr            String        @map("name_ar") @db.VarChar(150)
   nameEn            String?       @map("name_en") @db.VarChar(150)
   accountType       AccountType   @map("account_type")
@@ -3990,7 +3986,6 @@ model ChartOfAccount {
 
   @@index([parentId], map: "coa_parent_idx")
   @@index([accountType], map: "coa_type_idx")
-  @@index([accountCode], map: "coa_code_idx")
   @@index([isActive, deletedAt], map: "coa_active_del_idx")
   @@index([deletedAt], map: "coa_deleted_at_idx")
   @@map("chart_of_accounts")
@@ -4240,7 +4235,6 @@ enum TaxType {
 
 model TaxCode {
   id               Int       @id @default(autoincrement()) @db.UnsignedSmallInt
-  taxCode          String    @unique @map("tax_code") @db.VarChar(10)
   taxNameAr        String    @map("tax_name_ar") @db.VarChar(80)
   taxNameEn        String?   @map("tax_name_en") @db.VarChar(80)
   rate             Decimal   @db.Decimal(5, 2)
@@ -4437,7 +4431,6 @@ model FinancialCategory {
   id           Int                   @id @default(autoincrement()) @db.UnsignedInt
   nameAr       String                @map("name_ar") @db.VarChar(100)
   categoryType FinancialCategoryType @map("category_type")
-  code         String?               @db.VarChar(30)
   parentId     Int?                  @map("parent_id") @db.UnsignedInt
   isActive     Boolean               @default(true) @map("is_active")
   coaAccountId Int?                  @map("coa_account_id")
@@ -4455,7 +4448,6 @@ model FinancialCategory {
 model FinancialFund {
   id             Int               @id @default(autoincrement()) @db.UnsignedInt
   nameAr         String            @map("name_ar") @db.VarChar(100)
-  code           String?           @unique @db.VarChar(30)
   fundType       FinancialFundType @map("fund_type")
   currentBalance Decimal           @default(0.00) @map("current_balance") @db.Decimal(15, 2)
   isActive       Boolean           @default(true) @map("is_active")
@@ -4748,7 +4740,6 @@ model RecurringTemplateLine {
 
 model CostCenter {
   id                Int      @id @default(autoincrement()) @db.UnsignedInt
-  code              String   @unique @db.VarChar(20)
   nameAr            String   @map("name_ar") @db.VarChar(100)
   nameEn            String?  @map("name_en") @db.VarChar(100)
   parentId          Int?     @map("parent_id") @db.UnsignedInt
@@ -4765,7 +4756,17 @@ model CostCenter {
   journalEntryLines      JournalEntryLine[]      @relation("journal_entry_line_cost_center")
   recurringTemplateLines RecurringTemplateLine[] @relation("recurring_template_cost_center")
 
-  @@index([code], map: "idx_code")
   @@index([parentId], map: "idx_parent")
   @@map("cost_centers")
+}
+
+model RetiredCodeArchive {
+  tableName  String   @map("table_name") @db.VarChar(80)
+  rowId      String   @map("row_id") @db.VarChar(191)
+  fieldName  String   @map("field_name") @db.VarChar(80)
+  codeValue  String   @map("code_value") @db.VarChar(255)
+  migratedAt DateTime @map("migrated_at") @default(now())
+
+  @@id([tableName, rowId, fieldName])
+  @@map("retired_code_archive")
 }

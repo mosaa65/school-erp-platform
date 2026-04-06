@@ -15,14 +15,12 @@ const taxCodeInclude: Prisma.TaxCodeInclude = {
   outputGlAccount: {
     select: {
       id: true,
-      accountCode: true,
       nameAr: true,
     },
   },
   inputGlAccount: {
     select: {
       id: true,
-      accountCode: true,
       nameAr: true,
     },
   },
@@ -36,7 +34,6 @@ export class TaxConfigurationsService {
   ) {}
 
   async create(payload: CreateTaxConfigurationDto, actorUserId: string) {
-    const taxCodeValue = this.normalizeCode(payload.taxCode);
     const taxNameAr = this.normalizeRequiredText(payload.taxNameAr, 'taxNameAr');
 
     this.assertRate(payload.rate);
@@ -44,7 +41,6 @@ export class TaxConfigurationsService {
     try {
       const taxCode = await this.prisma.taxCode.create({
         data: {
-          taxCode: taxCodeValue,
           taxNameAr,
           taxNameEn: payload.taxNameEn?.trim(),
           rate: payload.rate,
@@ -55,7 +51,7 @@ export class TaxConfigurationsService {
           effectiveFrom: new Date(payload.effectiveFrom),
           effectiveTo: payload.effectiveTo ? new Date(payload.effectiveTo) : undefined,
           isActive: payload.isActive ?? true,
-        },
+        } as Prisma.TaxCodeUncheckedCreateInput,
         include: taxCodeInclude,
       });
 
@@ -65,7 +61,7 @@ export class TaxConfigurationsService {
         resource: 'tax-configurations',
         resourceId: String(taxCode.id),
         details: {
-          code: taxCode.taxCode,
+          nameAr: taxCode.taxNameAr,
           rate: taxCode.rate,
         },
       });
@@ -96,11 +92,6 @@ export class TaxConfigurationsService {
       OR: query.search
         ? [
             {
-              taxCode: {
-                contains: query.search,
-              },
-            },
-            {
               taxNameAr: {
                 contains: query.search,
               },
@@ -114,7 +105,7 @@ export class TaxConfigurationsService {
       this.prisma.taxCode.findMany({
         where,
         include: taxCodeInclude,
-        orderBy: [{ taxCode: 'asc' }],
+        orderBy: [{ taxNameAr: 'asc' }, { id: 'asc' }],
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -153,8 +144,6 @@ export class TaxConfigurationsService {
   ) {
     await this.ensureTaxCodeExists(id);
 
-    const code =
-      payload.taxCode === undefined ? undefined : this.normalizeCode(payload.taxCode);
     const taxNameAr =
       payload.taxNameAr === undefined
         ? undefined
@@ -168,7 +157,6 @@ export class TaxConfigurationsService {
       const updated = await this.prisma.taxCode.update({
         where: { id },
         data: {
-          taxCode: code,
           taxNameAr,
           taxNameEn: payload.taxNameEn?.trim(),
           rate: payload.rate,
@@ -231,16 +219,6 @@ export class TaxConfigurationsService {
     if (!taxCode) {
       throw new NotFoundException('Tax code not found');
     }
-  }
-
-  private normalizeCode(value: string): string {
-    const normalized = value.trim().toUpperCase();
-
-    if (!normalized) {
-      throw new BadRequestException('value cannot be empty');
-    }
-
-    return normalized;
   }
 
   private normalizeRequiredText(value: string, fieldName: string): string {

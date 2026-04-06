@@ -14,12 +14,13 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { GradeStage } from '@prisma/client';
 
 export class CreateGradeLevelDto {
-  @ApiProperty({ example: 'grade-01' })
+  @ApiPropertyOptional({ example: 'grade-01' })
+  @IsOptional()
   @Transform(({ value }: { value: string }) => value?.trim().toLowerCase())
   @IsString()
   @Matches(/^[a-z0-9_.:-]+$/)
   @MaxLength(40)
-  code!: string;
+  code?: string;
 
   @ApiProperty({ example: 'Grade 1' })
   @Transform(({ value }: { value: string }) => value?.trim())

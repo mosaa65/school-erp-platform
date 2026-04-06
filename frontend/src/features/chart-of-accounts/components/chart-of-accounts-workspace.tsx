@@ -50,7 +50,6 @@ const PAGE_SIZE = 12;
 type FormState = CreateChartOfAccountPayload;
 
 const DEFAULT_FORM: FormState = {
-  accountCode: "",
   nameAr: "",
   nameEn: "",
   accountType: "ASSET",
@@ -60,13 +59,8 @@ const DEFAULT_FORM: FormState = {
   isActive: true,
 };
 
-function normalizeCode(value: string): string {
-  return value.trim();
-}
-
 function toFormState(item: ChartOfAccountListItem): FormState {
   return {
-    accountCode: item.accountCode,
     nameAr: item.nameAr,
     nameEn: item.nameEn ?? "",
     accountType: item.accountType as AccountType,
@@ -219,17 +213,11 @@ export function ChartOfAccountsWorkspace() {
   };
 
   const validateForm = (): boolean => {
-    const code = normalizeCode(form.accountCode);
     const nameAr = form.nameAr.trim();
     const nameEn = form.nameEn?.trim() ?? "";
 
-    if (!code || !nameAr) {
-      setFormError("الرجاء تعبئة الحقول المطلوبة: الكود والاسم العربي.");
-      return false;
-    }
-
-    if (code.length > 20) {
-      setFormError("يجب ألا يتجاوز الكود 20 حرفًا.");
+    if (!nameAr) {
+      setFormError("الرجاء تعبئة الحقل المطلوب: الاسم العربي.");
       return false;
     }
 
@@ -260,7 +248,6 @@ export function ChartOfAccountsWorkspace() {
     }
 
     const payload: CreateChartOfAccountPayload = {
-      accountCode: normalizeCode(form.accountCode),
       nameAr: form.nameAr.trim(),
       nameEn: form.nameEn?.trim() || undefined,
       accountType: form.accountType,
@@ -305,7 +292,7 @@ export function ChartOfAccountsWorkspace() {
       return;
     }
 
-    const confirmed = confirmFinanceAction(`تأكيد حذف الحساب ${item.accountCode}؟`);
+    const confirmed = confirmFinanceAction(`تأكيد حذف الحساب ${item.nameAr}؟`);
     if (!confirmed) {
       return;
     }
@@ -352,7 +339,7 @@ export function ChartOfAccountsWorkspace() {
               containerClassName="flex-1"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="بحث بالكود أو الاسم..."
+              placeholder="بحث بالاسم..."
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -457,11 +444,11 @@ export function ChartOfAccountsWorkspace() {
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="space-y-1">
                       <p className="font-medium">
-                        {item.nameAr} ({item.accountCode})
+                        {item.nameAr}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         النوع: {typeLabel(item.accountType as AccountType)}
-                        {parent ? ` · الأب: ${parent.accountCode}` : ""}
+                        {parent ? ` · الأب: ${parent.nameAr}` : ""}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         النطاق: {branchScopeLabel}
@@ -582,17 +569,6 @@ export function ChartOfAccountsWorkspace() {
           <form className="space-y-3" onSubmit={handleSubmitForm}>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الكود *</label>
-                <Input
-                  value={form.accountCode}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, accountCode: event.target.value }))
-                  }
-                  placeholder="1100"
-                  required
-                />
-              </div>
-              <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">الاسم العربي *</label>
                 <Input
                   value={form.nameAr}
@@ -653,7 +629,7 @@ export function ChartOfAccountsWorkspace() {
                   .filter((account) => account.id !== editingId)
                   .map((account) => (
                     <option key={account.id} value={account.id}>
-                      {account.accountCode} - {account.nameAr}
+                      {account.nameAr}
                     </option>
                   ))}
               </SelectField>

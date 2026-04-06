@@ -9,14 +9,15 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateAnnualStatusDto {
-  @ApiProperty({ example: 'PASS' })
+  @ApiPropertyOptional({ example: 'PASS' })
+  @IsOptional()
   @IsString()
   @MaxLength(40)
   @Matches(/^[A-Z0-9_]+$/, {
     message:
       'code must contain only uppercase letters, numbers, or underscores',
   })
-  code!: string;
+  code?: string;
 
   @ApiProperty({ example: 'Passed' })
   @IsString()

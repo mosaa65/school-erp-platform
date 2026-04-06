@@ -256,16 +256,10 @@ export function AcademicMonthsWorkspace() {
   };
 
   const validateForm = (): boolean => {
-    const code = normalizeCode(formState.code);
     const name = formState.name.trim();
 
-    if (!formState.academicYearId || !formState.academicTermId || !code || !name) {
+    if (!formState.academicYearId || !formState.academicTermId || !name) {
       setFormError("الحقول الأساسية مطلوبة.");
-      return false;
-    }
-
-    if (code.length > 40) {
-      setFormError("الكود يجب ألا يتجاوز 40 حرفًا.");
       return false;
     }
 
@@ -316,7 +310,6 @@ export function AcademicMonthsWorkspace() {
     const payload = {
       academicYearId: formState.academicYearId,
       academicTermId: formState.academicTermId,
-      code: normalizeCode(formState.code),
       name: formState.name.trim(),
       sequence: Number(formState.sequence),
       startDate: toUtcStartIso(formState.startDate),
@@ -775,18 +768,6 @@ export function AcademicMonthsWorkspace() {
             </div>
 
             <div className="grid gap-3 md:grid-cols-[1fr_110px]">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الكود *</label>
-                <Input
-                  value={formState.code}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, code: event.target.value }))
-                  }
-                  placeholder="M1"
-                  required
-                  data-testid="academic-month-form-code"
-                />
-              </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">الترتيب *</label>
                 <Input

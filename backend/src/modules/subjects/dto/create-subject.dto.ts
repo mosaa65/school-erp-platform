@@ -11,12 +11,13 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { SubjectCategory } from '@prisma/client';
 
 export class CreateSubjectDto {
-  @ApiProperty({ example: 'math-101' })
+  @ApiPropertyOptional({ example: 'math-101' })
+  @IsOptional()
   @Transform(({ value }: { value: string }) => value?.trim().toLowerCase())
   @IsString()
   @Matches(/^[a-z0-9_.:-]+$/)
   @MaxLength(40)
-  code!: string;
+  code?: string;
 
   @ApiProperty({ example: 'Mathematics' })
   @Transform(({ value }: { value: string }) => value?.trim())

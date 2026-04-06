@@ -19,12 +19,6 @@ export class PaymentWebhookFailureDto {
   @MaxLength(100)
   gatewayTransactionId?: string;
 
-  @ApiPropertyOptional({ example: 'ONLINE_GW' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(20)
-  providerCode?: string;
-
   @ApiPropertyOptional({ example: 'evt_124' })
   @IsOptional()
   @IsString()

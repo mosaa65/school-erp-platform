@@ -4,7 +4,6 @@ import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   AlignLeft,
-  Fingerprint,
   LoaderCircle,
   PencilLine,
   RefreshCw,
@@ -39,6 +38,7 @@ import { usePermissionsOptionsQuery } from "@/features/roles/hooks/use-permissio
 import { PermissionsSelector } from "@/components/ui/permissions-selector";
 import { ApiError, type RoleListItem } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
+import { generateRoleCode } from "@/lib/auto-code";
 
 
 type RoleFormState = {
@@ -58,6 +58,13 @@ const DEFAULT_FORM_STATE: RoleFormState = {
   isActive: true,
   permissionIds: [],
 };
+
+function createNewRoleFormState(): RoleFormState {
+  return {
+    ...DEFAULT_FORM_STATE,
+    code: generateRoleCode(),
+  };
+}
 
 function toFormState(role: RoleListItem): RoleFormState {
   return {
@@ -186,7 +193,7 @@ export function RolesManagementWorkspace() {
     setActionSuccess(null);
     setEditingRoleId(null);
     setOriginalRoleFormState(null);
-    setFormState(DEFAULT_FORM_STATE);
+    setFormState(createNewRoleFormState());
     setIsFormOpen(true);
   };
 
@@ -201,16 +208,10 @@ export function RolesManagementWorkspace() {
   };
 
   const validateForm = (): boolean => {
-    const code = normalizeRoleCode(formState.code);
     const name = formState.name.trim();
 
-    if (!code || !name) {
-      setFormError("الرجاء تعبئة الحقول الإلزامية: الكود والاسم.");
-      return false;
-    }
-
-    if (!/^[a-z0-9_.:-]+$/.test(code)) {
-      setFormError("صيغة الكود غير صحيحة. استخدم أحرفًا صغيرة وأرقامًا و . _ : - فقط.");
+    if (!name) {
+      setFormError("الرجاء تعبئة الحقل الإلزامي: الاسم.");
       return false;
     }
 
@@ -227,7 +228,6 @@ export function RolesManagementWorkspace() {
     }
 
     const normalizedPayload = {
-      code: normalizeRoleCode(formState.code),
       name: formState.name.trim(),
       description: toOptionalString(formState.description),
       isActive: formState.isActive,
@@ -263,7 +263,6 @@ export function RolesManagementWorkspace() {
     }
 
     const baseFieldsChanged =
-      normalizedPayload.code !== normalizeRoleCode(originalRoleFormState.code) ||
       normalizedPayload.name !== originalRoleFormState.name.trim() ||
       (normalizedPayload.description ?? "") !==
         (toOptionalString(originalRoleFormState.description) ?? "") ||
@@ -388,7 +387,7 @@ export function RolesManagementWorkspace() {
               containerClassName="flex-1"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="ابحث بالاسم أو الكود..."
+              placeholder="ابحث بالاسم..."
             />
           </div>
         </div>
@@ -553,19 +552,6 @@ export function RolesManagementWorkspace() {
         ) : (
           <form className="space-y-6 pt-2" onSubmit={handleSubmitForm}>
             <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500">
-              <div className="space-y-1">
-                <Label htmlFor="role-code" required>الكود</Label>
-                <Input
-                  id="role-code"
-                  icon={<Fingerprint className="h-4 w-4" />}
-                  placeholder="أدخل كود الدور (مثلاً: admin, moderator)"
-                  value={formState.code}
-                  onChange={(e) => setFormState({ ...formState, code: e.target.value })}
-                  disabled={isFormSubmitting}
-                  className="font-medium"
-                />
-              </div>
-
               <div className="space-y-1">
                 <Label htmlFor="role-name" required>الاسم بالعربي</Label>
                 <Input

@@ -11,11 +11,6 @@ import {
 } from 'class-validator';
 
 export class CreateCurrencyDto {
-  @ApiProperty({ example: 'SAR' })
-  @IsString()
-  @MaxLength(3)
-  code!: string;
-
   @ApiProperty({ example: 'Saudi Riyal' })
   @IsString()
   @MaxLength(50)

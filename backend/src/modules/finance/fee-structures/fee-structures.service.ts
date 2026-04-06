@@ -27,7 +27,6 @@ const feeStructureInclude: Prisma.FeeStructureInclude = {
   currency: {
     select: {
       id: true,
-      code: true,
       nameAr: true,
     },
   },

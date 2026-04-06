@@ -6,6 +6,7 @@ import {
 import { AuditStatus, Prisma, Subject } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { generateAutoCode } from '../../common/utils/auto-code';
 import { CreateSubjectDto } from './dto/create-subject.dto';
 import { ListSubjectsDto } from './dto/list-subjects.dto';
 import { UpdateSubjectDto } from './dto/update-subject.dto';
@@ -18,7 +19,8 @@ export class SubjectsService {
   ) {}
 
   async create(payload: CreateSubjectDto, actorUserId: string) {
-    const code = payload.code.trim().toLowerCase();
+    const code =
+      payload.code?.trim().toLowerCase() || generateAutoCode('SUB').toLowerCase();
     const name = payload.name.trim();
 
     try {

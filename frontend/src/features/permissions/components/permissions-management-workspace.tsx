@@ -48,7 +48,7 @@ export function PermissionsManagementWorkspace() {
             containerClassName="flex-1"
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
-            placeholder="ابحث بالكود/المورد/الإجراء..."
+            placeholder="ابحث بالمورد/الإجراء..."
           />
         </div>
       </div>

@@ -6,6 +6,7 @@ import {
 import { AuditStatus, GradeLevel, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { generateAutoCode } from '../../common/utils/auto-code';
 import { CreateGradeLevelDto } from './dto/create-grade-level.dto';
 import { ListGradeLevelsDto } from './dto/list-grade-levels.dto';
 import { UpdateGradeLevelDto } from './dto/update-grade-level.dto';
@@ -18,7 +19,8 @@ export class GradeLevelsService {
   ) {}
 
   async create(payload: CreateGradeLevelDto, actorUserId: string) {
-    const code = payload.code.trim().toLowerCase();
+    const code =
+      payload.code?.trim().toLowerCase() || generateAutoCode('GL').toLowerCase();
     const name = payload.name.trim();
 
     try {

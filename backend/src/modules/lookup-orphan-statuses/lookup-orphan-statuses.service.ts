@@ -7,6 +7,7 @@ import {
 import { AuditStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { generateAutoCode } from '../../common/utils/auto-code';
 import { CreateLookupOrphanStatusDto } from './dto/create-lookup-orphan-status.dto';
 import { ListLookupOrphanStatusesDto } from './dto/list-lookup-orphan-statuses.dto';
 import { UpdateLookupOrphanStatusDto } from './dto/update-lookup-orphan-status.dto';
@@ -34,7 +35,9 @@ export class LookupOrphanStatusesService {
   ) {}
 
   async create(payload: CreateLookupOrphanStatusDto, actorUserId: string) {
-    const normalizedCode = this.normalizeCode(payload.code);
+    const normalizedCode = payload.code
+      ? this.normalizeCode(payload.code)
+      : generateAutoCode('ORP', 50);
     const normalizedNameAr = this.normalizeRequiredText(
       payload.nameAr,
       'nameAr',

@@ -52,7 +52,6 @@ type FormState = CreateFinanceBranchPayload;
 const PAGE_SIZE = 12;
 
 const DEFAULT_FORM: FormState = {
-  code: "",
   nameAr: "",
   nameEn: "",
   address: "",
@@ -61,13 +60,8 @@ const DEFAULT_FORM: FormState = {
   isActive: true,
 };
 
-function normalizeCode(value: string): string {
-  return value.trim().toUpperCase();
-}
-
 function toFormState(item: FinanceBranchListItem): FormState {
   return {
-    code: item.code,
     nameAr: item.nameAr,
     nameEn: item.nameEn ?? "",
     address: item.address ?? "",
@@ -192,19 +186,13 @@ export function BranchesWorkspace() {
   };
 
   const validateForm = (): boolean => {
-    const code = normalizeCode(form.code);
     const nameAr = form.nameAr.trim();
     const nameEn = form.nameEn?.trim() ?? "";
     const address = form.address?.trim() ?? "";
     const phone = form.phone?.trim() ?? "";
 
-    if (!code || !nameAr) {
-      setFormError("الرجاء تعبئة الحقول المطلوبة: الكود والاسم العربي.");
-      return false;
-    }
-
-    if (!/^[A-Z0-9_-]+$/.test(code)) {
-      setFormError("الكود يجب أن يحتوي على أحرف كبيرة أو أرقام أو شرطة/شرطة سفلية.");
+    if (!nameAr) {
+      setFormError("الرجاء تعبئة الحقول المطلوبة: الاسم العربي.");
       return false;
     }
 
@@ -240,7 +228,6 @@ export function BranchesWorkspace() {
     }
 
     const payload: CreateFinanceBranchPayload = {
-      code: normalizeCode(form.code),
       nameAr: form.nameAr.trim(),
       nameEn: form.nameEn?.trim() || undefined,
       address: form.address?.trim() || undefined,
@@ -312,7 +299,7 @@ export function BranchesWorkspace() {
               containerClassName="flex-1"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="بحث بالاسم أو الكود..."
+              placeholder="بحث بالاسم..."
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -413,9 +400,6 @@ export function BranchesWorkspace() {
                     {item.nameEn ? (
                       <p className="text-xs text-muted-foreground">{item.nameEn}</p>
                     ) : null}
-                    <p className="text-xs text-muted-foreground">
-                      <code>{item.code}</code>
-                    </p>
                     <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                       {item.address ? (
                         <span className="flex items-center gap-1">
@@ -553,16 +537,6 @@ export function BranchesWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الكود *</label>
-              <Input
-                value={form.code}
-                onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
-                placeholder="MAIN"
-                required
-              />
-            </div>
-
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">

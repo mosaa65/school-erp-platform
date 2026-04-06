@@ -12,12 +12,13 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { AcademicYearStatus } from '@prisma/client';
 
 export class CreateAcademicYearDto {
-  @ApiProperty({ example: 'ay-2026-2027' })
+  @ApiPropertyOptional({ example: 'ay-2026-2027' })
+  @IsOptional()
   @Transform(({ value }: { value: string }) => value?.trim().toLowerCase())
   @IsString()
   @Matches(/^[a-z0-9_.:-]+$/)
   @MaxLength(40)
-  code!: string;
+  code?: string;
 
   @ApiProperty({ example: 'Academic Year 2026/2027' })
   @Transform(({ value }: { value: string }) => value?.trim())

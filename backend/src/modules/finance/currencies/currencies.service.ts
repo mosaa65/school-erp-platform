@@ -34,7 +34,6 @@ export class CurrenciesService {
   ) {}
 
   async create(payload: CreateCurrencyDto, actorUserId: string) {
-    const code = this.normalizeCode(payload.code);
     const nameAr = this.normalizeRequiredText(payload.nameAr, 'nameAr');
     const symbol = this.normalizeRequiredText(payload.symbol, 'symbol');
 
@@ -52,7 +51,6 @@ export class CurrenciesService {
           : []),
         this.prisma.currency.create({
           data: {
-            code,
             nameAr,
             symbol,
             decimalPlaces: payload.decimalPlaces ?? 2,
@@ -74,7 +72,7 @@ export class CurrenciesService {
         resource: 'currencies',
         resourceId: String(currency.id),
         details: {
-          code: currency.code,
+          nameAr: currency.nameAr,
           isBase: currency.isBase,
         },
       });
@@ -87,7 +85,6 @@ export class CurrenciesService {
         resource: 'currencies',
         status: AuditStatus.FAILURE,
         details: {
-          code,
           reason: this.extractErrorMessage(error),
         },
       });
@@ -107,11 +104,6 @@ export class CurrenciesService {
       OR: query.search
         ? [
             {
-              code: {
-                contains: query.search,
-              },
-            },
-            {
               nameAr: {
                 contains: query.search,
               },
@@ -125,7 +117,7 @@ export class CurrenciesService {
       this.prisma.currency.findMany({
         where,
         include: currencyInclude,
-        orderBy: [{ code: 'asc' }],
+        orderBy: [{ nameAr: 'asc' }, { id: 'asc' }],
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -161,8 +153,6 @@ export class CurrenciesService {
   async update(id: number, payload: UpdateCurrencyDto, actorUserId: string) {
     await this.ensureCurrencyExists(id);
 
-    const code =
-      payload.code === undefined ? undefined : this.normalizeCode(payload.code);
     const nameAr =
       payload.nameAr === undefined
         ? undefined
@@ -183,11 +173,10 @@ export class CurrenciesService {
             ]
           : []),
         this.prisma.currency.update({
-          where: { id },
-          data: {
-            code,
-            nameAr,
-            symbol,
+        where: { id },
+        data: {
+          nameAr,
+          symbol,
             decimalPlaces: payload.decimalPlaces,
             isBase: payload.isBase,
             isActive: payload.isActive,
@@ -251,16 +240,6 @@ export class CurrenciesService {
     if (!currency) {
       throw new NotFoundException('Currency not found');
     }
-  }
-
-  private normalizeCode(code: string): string {
-    const normalized = code.trim().toUpperCase();
-
-    if (!normalized) {
-      throw new BadRequestException('code cannot be empty');
-    }
-
-    return normalized;
   }
 
   private normalizeRequiredText(value: string, fieldName: string): string {

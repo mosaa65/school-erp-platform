@@ -7,6 +7,7 @@ import {
 import { AuditStatus, Prisma, Section } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { generateAutoCode } from '../../common/utils/auto-code';
 import { CreateSectionDto } from './dto/create-section.dto';
 import { ListSectionsDto } from './dto/list-sections.dto';
 import { UpdateSectionDto } from './dto/update-section.dto';
@@ -19,7 +20,8 @@ export class SectionsService {
   ) {}
 
   async create(payload: CreateSectionDto, actorUserId: string) {
-    const code = payload.code.trim().toLowerCase();
+    const code =
+      payload.code?.trim().toLowerCase() || generateAutoCode('SEC').toLowerCase();
     const name = payload.name.trim();
     const roomLabel = payload.roomLabel?.trim() || null;
 

@@ -210,16 +210,10 @@ export function SectionsWorkspace() {
   };
 
   const validateForm = (): boolean => {
-    const code = normalizeCode(formState.code);
     const name = formState.name.trim();
 
-    if (!formState.gradeLevelId || !code || !name) {
-      setFormError("الحقول الأساسية مطلوبة: المرحلة الدراسية والكود والاسم.");
-      return false;
-    }
-
-    if (!/^[a-z0-9_.:-]+$/.test(code)) {
-      setFormError("صيغة الكود غير صحيحة.");
+    if (!formState.gradeLevelId || !name) {
+      setFormError("الحقول الأساسية مطلوبة: المرحلة الدراسية والاسم.");
       return false;
     }
 
@@ -246,7 +240,6 @@ export function SectionsWorkspace() {
     const payload = {
       gradeLevelId: formState.gradeLevelId,
       buildingLookupId: formState.buildingLookupId ? Number(formState.buildingLookupId) : undefined,
-      code: normalizeCode(formState.code),
       name: formState.name.trim(),
       capacity: formState.capacity.trim() ? Number(formState.capacity) : undefined,
       roomLabel: formState.roomLabel.trim() || undefined,
@@ -618,18 +611,6 @@ export function SectionsWorkspace() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-1">
-                <Label required>الكود</Label>
-                <Input
-                  value={formState.code}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, code: event.target.value }))
-                  }
-                  placeholder="مثال: g1-a"
-                  icon={<LayoutGrid className="h-4 w-4" />}
-                  required
-                />
-              </div>
               <div className="space-y-1">
                 <Label>السعة</Label>
                 <Input

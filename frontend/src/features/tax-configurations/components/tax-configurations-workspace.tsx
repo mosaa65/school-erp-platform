@@ -93,7 +93,7 @@ export function TaxConfigurationsWorkspace() {
             containerClassName="flex-1"
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
-            placeholder="ابحث بالكود أو الاسم..."
+            placeholder="ابحث بالاسم..."
           />
         </div>
         <FilterTriggerButton count={activeFiltersCount} onClick={() => setIsFilterOpen((prev) => !prev)} />
@@ -159,7 +159,7 @@ export function TaxConfigurationsWorkspace() {
                 <div className="space-y-1">
                   <p className="font-medium">{item.taxNameAr}</p>
                   <p className="text-xs text-muted-foreground">
-                    {item.taxCode} • {TAX_TYPE_LABELS[item.taxType]} • سريان: {item.effectiveFrom}
+                    {TAX_TYPE_LABELS[item.taxType]} • سريان: {item.effectiveFrom}
                     {item.effectiveTo ? ` → ${item.effectiveTo}` : ""}
                   </p>
                 </div>

@@ -60,7 +60,11 @@ export function BillingEngineWorkspace() {
                   الاستحقاق المقترح: {defaults.dueDate}
                 </span>
                 <span>
-                  العملة الأساسية: {defaults.baseCurrency?.code ?? "غير محددة"}
+                  العملة الأساسية:{" "}
+                  {(defaults.baseCurrency as { symbol?: string } | null)?.symbol ??
+                    defaults.baseCurrency?.nameAr ??
+                    defaults.baseCurrency?.code ??
+                    "غير محددة"}
                 </span>
               </div>
             ) : null}

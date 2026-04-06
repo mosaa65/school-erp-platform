@@ -9,14 +9,15 @@ import {
 } from 'class-validator';
 
 export class CreateLookupOwnershipTypeDto {
-  @ApiProperty({ example: 'PRIVATE' })
+  @ApiPropertyOptional({ example: 'PRIVATE' })
+  @IsOptional()
   @IsString()
   @MaxLength(50)
   @Matches(/^[A-Z0-9_]+$/, {
     message:
       'code must contain only uppercase letters, numbers, or underscores',
   })
-  code!: string;
+  code?: string;
 
   @ApiProperty({ example: 'خاصة' })
   @IsString()

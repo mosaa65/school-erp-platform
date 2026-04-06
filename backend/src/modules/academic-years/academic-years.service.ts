@@ -12,6 +12,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { generateAutoCode } from '../../common/utils/auto-code';
 import { CreateAcademicYearDto } from './dto/create-academic-year.dto';
 import { ListAcademicYearsDto } from './dto/list-academic-years.dto';
 import { UpdateAcademicYearDto } from './dto/update-academic-year.dto';
@@ -24,7 +25,8 @@ export class AcademicYearsService {
   ) {}
 
   async create(payload: CreateAcademicYearDto, actorUserId: string) {
-    const code = payload.code.trim().toLowerCase();
+    const code =
+      payload.code?.trim().toLowerCase() || generateAutoCode('AY').toLowerCase();
     const name = payload.name.trim();
     const startDate = new Date(payload.startDate);
     const endDate = new Date(payload.endDate);

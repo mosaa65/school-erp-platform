@@ -14,11 +14,6 @@ import {
 import { TaxType } from '@prisma/client';
 
 export class CreateTaxConfigurationDto {
-  @ApiProperty({ example: 'VAT15' })
-  @IsString()
-  @MaxLength(10)
-  taxCode!: string;
-
   @ApiProperty({ example: 'ضريبة مخرجات 15%' })
   @IsString()
   @MaxLength(80)

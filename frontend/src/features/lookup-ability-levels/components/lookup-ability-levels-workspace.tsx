@@ -163,16 +163,10 @@ export function LookupAbilityLevelsWorkspace() {
   };
 
   const validateForm = (): boolean => {
-    const code = normalizeCode(formState.code);
     const nameAr = formState.nameAr.trim();
 
-    if (!code || !nameAr) {
-      setFormError("الحقول المطلوبة: الكود والاسم بالعربية.");
-      return false;
-    }
-
-    if (!/^[A-Z0-9_]+$/.test(code) || code.length > 50) {
-      setFormError("الكود يجب أن يحتوي أحرفًا كبيرة/أرقامًا/underscore فقط وبحد أقصى 50.");
+    if (!nameAr) {
+      setFormError("الاسم بالعربية مطلوب.");
       return false;
     }
 
@@ -193,7 +187,6 @@ export function LookupAbilityLevelsWorkspace() {
     }
 
     const payload = {
-      code: normalizeCode(formState.code),
       nameAr: formState.nameAr.trim(),
       isActive: formState.isActive,
     };
@@ -490,19 +483,6 @@ export function LookupAbilityLevelsWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="ability-level-form">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الكود *</label>
-              <Input
-                value={formState.code}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, code: event.target.value }))
-                }
-                placeholder="LEVEL_1"
-                required
-                data-testid="ability-level-form-code"
-              />
-            </div>
-
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">الاسم بالعربية *</label>
               <Input

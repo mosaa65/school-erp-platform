@@ -6,7 +6,6 @@ export type AccountType = "ASSET" | "LIABILITY" | "EQUITY" | "REVENUE" | "EXPENS
 
 export type ChartOfAccountListItem = {
   id: string;
-  code: string;
   name: string;
   type: AccountType;
   parentAccountId?: string;
@@ -16,7 +15,6 @@ export type ChartOfAccountListItem = {
 };
 
 export type CreateChartOfAccountPayload = {
-  code: string;
   name: string;
   type: AccountType;
   parentAccountId?: string;
@@ -37,7 +35,6 @@ export type ListChartOfAccountsQuery = {
 const seedData: ChartOfAccountListItem[] = [
   {
     id: "coa-1000",
-    code: "1000",
     name: "الأصول المتداولة",
     type: "ASSET",
     isControl: true,
@@ -46,7 +43,6 @@ const seedData: ChartOfAccountListItem[] = [
   },
   {
     id: "coa-1100",
-    code: "1100",
     name: "الصندوق",
     type: "ASSET",
     parentAccountId: "coa-1000",
@@ -56,7 +52,6 @@ const seedData: ChartOfAccountListItem[] = [
   },
   {
     id: "coa-2000",
-    code: "2000",
     name: "الالتزامات المتداولة",
     type: "LIABILITY",
     isControl: true,
@@ -65,7 +60,6 @@ const seedData: ChartOfAccountListItem[] = [
   },
   {
     id: "coa-4000",
-    code: "4000",
     name: "الإيرادات التشغيلية",
     type: "REVENUE",
     isControl: true,
@@ -89,9 +83,7 @@ function applySearch(items: ChartOfAccountListItem[], search?: string) {
   }
 
   return items.filter((item) => {
-    return (
-      item.code.toLowerCase().includes(query) || item.name.toLowerCase().includes(query)
-    );
+    return item.name.toLowerCase().includes(query);
   });
 }
 
@@ -119,7 +111,7 @@ export function listChartOfAccounts(
   const page = query.page ?? 1;
   const limit = query.limit ?? 12;
 
-  let results = [...chartOfAccountsStore].sort((a, b) => a.code.localeCompare(b.code));
+  let results = [...chartOfAccountsStore].sort((a, b) => a.name.localeCompare(b.name));
 
   results = applySearch(results, query.search);
 
@@ -139,7 +131,6 @@ export function createChartOfAccount(
 ): ChartOfAccountListItem {
   const newRecord: ChartOfAccountListItem = {
     id: createId(),
-    code: payload.code,
     name: payload.name,
     type: payload.type,
     parentAccountId: payload.parentAccountId,

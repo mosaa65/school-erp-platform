@@ -20,12 +20,6 @@ export class CreatePaymentTransactionDto {
   @Min(1)
   gatewayId?: number;
 
-  @ApiPropertyOptional({ example: 'ONLINE_GW' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(20)
-  providerCode?: string;
-
   @ApiPropertyOptional({ example: 'cmabc123enrollment' })
   @IsOptional()
   @IsString()

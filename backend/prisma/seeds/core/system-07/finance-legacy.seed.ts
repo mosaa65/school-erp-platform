@@ -69,6 +69,22 @@ const FINANCIAL_FUNDS = [
   { nameAr: 'صندوق الطوارئ والاحتياطي', code: 'EMERGENCY_FUND', fundType: FinancialFundType.SUB },
 ];
 
+const ACCOUNT_NAME_BY_CODE: Record<string, string> = {
+  '4001': 'Tuition Revenue',
+  '4002': 'Community Contribution Revenue',
+  '4003': 'Transport Revenue',
+  '4004': 'Uniform Revenue',
+  '4005': 'Registration Revenue',
+  '4006': 'Other Revenue and Donations',
+  '4007': 'Penalties Revenue',
+  '5001': 'Salaries and Wages Expense',
+  '5002': 'Maintenance Expense',
+  '5003': 'Fuel and Transport Expense',
+  '5004': 'Procurement and Inventory Expense',
+  '5005': 'Depreciation Expense',
+  '5006': 'General Administrative Expense',
+};
+
 export async function seedSystem07FinanceLegacy(prisma: PrismaClient) {
   for (const reason of EXEMPTION_REASONS) {
     await prisma.lookupExemptionReason.upsert({
@@ -135,16 +151,35 @@ export async function seedSystem07FinanceLegacy(prisma: PrismaClient) {
   );
 
   const accounts = await prisma.chartOfAccount.findMany({
-    where: { accountCode: { in: accountCodes } },
-    select: { id: true, accountCode: true },
+    where: {
+      nameEn: {
+        in: accountCodes
+          .map((code) => ACCOUNT_NAME_BY_CODE[code])
+          .filter((name): name is string => Boolean(name)),
+      },
+    },
+    select: { id: true, nameEn: true },
   });
 
-  const accountsByCode = new Map(accounts.map((account) => [account.accountCode, account.id]));
+  const accountsByCode = new Map<string, number>();
+  for (const code of accountCodes) {
+    const mappedName = ACCOUNT_NAME_BY_CODE[code];
+    if (!mappedName) {
+      continue;
+    }
+    const account = accounts.find((item) => item.nameEn === mappedName);
+    if (account) {
+      accountsByCode.set(code, account.id);
+    }
+  }
 
   for (const category of FINANCIAL_CATEGORIES) {
     const coaAccountId = accountsByCode.get(category.accountCode) ?? null;
     const existingCategory = await prisma.financialCategory.findFirst({
-      where: { code: category.code },
+      where: {
+        nameAr: category.nameAr,
+        categoryType: category.categoryType,
+      },
       select: { id: true },
     });
 
@@ -163,7 +198,6 @@ export async function seedSystem07FinanceLegacy(prisma: PrismaClient) {
         data: {
           nameAr: category.nameAr,
           categoryType: category.categoryType,
-          code: category.code,
           coaAccountId,
           isActive: true,
         },
@@ -172,16 +206,26 @@ export async function seedSystem07FinanceLegacy(prisma: PrismaClient) {
   }
 
   for (const fund of FINANCIAL_FUNDS) {
-    await prisma.financialFund.upsert({
-      where: { code: fund.code },
-      update: {
+    const existing = await prisma.financialFund.findFirst({
+      where: { nameAr: fund.nameAr },
+      select: { id: true },
+    });
+
+    if (existing) {
+      await prisma.financialFund.update({
+        where: { id: existing.id },
+        data: {
+          nameAr: fund.nameAr,
+          fundType: fund.fundType,
+          isActive: true,
+        },
+      });
+      continue;
+    }
+
+    await prisma.financialFund.create({
+      data: {
         nameAr: fund.nameAr,
-        fundType: fund.fundType,
-        isActive: true,
-      },
-      create: {
-        nameAr: fund.nameAr,
-        code: fund.code,
         fundType: fund.fundType,
         isActive: true,
       },

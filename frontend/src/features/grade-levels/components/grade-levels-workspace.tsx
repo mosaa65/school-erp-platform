@@ -206,17 +206,11 @@ export function GradeLevelsWorkspace() {
   };
 
   const validateForm = (): boolean => {
-    const code = normalizeCode(formState.code);
     const name = formState.name.trim();
     const sequence = Number(formState.sequence);
 
-    if (!code || !name) {
-      setFormError("الحقول الأساسية مطلوبة: الكود والاسم.");
-      return false;
-    }
-
-    if (!/^[a-z0-9_.:-]+$/.test(code)) {
-      setFormError("صيغة الكود غير صحيحة.");
+    if (!name) {
+      setFormError("الحقول الأساسية مطلوبة: الاسم.");
       return false;
     }
 
@@ -237,7 +231,6 @@ export function GradeLevelsWorkspace() {
     }
 
     const payload = {
-      code: normalizeCode(formState.code),
       name: formState.name.trim(),
       stage: formState.stage,
       sequence: Number(formState.sequence),
@@ -342,7 +335,7 @@ export function GradeLevelsWorkspace() {
               containerClassName="flex-1"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="بحث بالاسم أو الكود..."
+              placeholder="بحث بالاسم..."
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -593,19 +586,6 @@ export function GradeLevelsWorkspace() {
           </div>
         ) : (
           <form className="space-y-4" onSubmit={handleSubmitForm}>
-            <div className="space-y-1">
-              <Label required>الكود</Label>
-              <Input
-                value={formState.code}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, code: event.target.value }))
-                }
-                placeholder="grade-01"
-                icon={<Hash className="h-4 w-4" />}
-                required
-              />
-            </div>
-
             <div className="space-y-1">
               <Label required>الاسم</Label>
               <Input

@@ -19,14 +19,12 @@ const chartOfAccountInclude: Prisma.ChartOfAccountInclude = {
   parent: {
     select: {
       id: true,
-      accountCode: true,
       nameAr: true,
     },
   },
   branch: {
     select: {
       id: true,
-      code: true,
       nameAr: true,
       nameEn: true,
     },
@@ -34,7 +32,6 @@ const chartOfAccountInclude: Prisma.ChartOfAccountInclude = {
   defaultCurrency: {
     select: {
       id: true,
-      code: true,
       nameAr: true,
       symbol: true,
     },
@@ -61,7 +58,6 @@ export class ChartOfAccountsService {
   ) {}
 
   async create(payload: CreateChartOfAccountDto, actorUserId: string) {
-    const accountCode = this.normalizeCode(payload.accountCode);
     const nameAr = this.normalizeRequiredText(payload.nameAr, 'nameAr');
     const nameEn =
       payload.nameEn === undefined
@@ -79,7 +75,6 @@ export class ChartOfAccountsService {
     try {
       const account = await this.prisma.chartOfAccount.create({
         data: {
-          accountCode,
           nameAr,
           nameEn,
           accountType: payload.accountType,
@@ -93,7 +88,7 @@ export class ChartOfAccountsService {
           isActive: payload.isActive ?? true,
           createdById: actorUserId,
           updatedById: actorUserId,
-        },
+        } as Prisma.ChartOfAccountUncheckedCreateInput,
         include: chartOfAccountInclude,
       });
 
@@ -103,7 +98,6 @@ export class ChartOfAccountsService {
         resource: 'chart-of-accounts',
         resourceId: String(account.id),
         details: {
-          accountCode: account.accountCode,
           accountType: account.accountType,
         },
       });
@@ -116,7 +110,6 @@ export class ChartOfAccountsService {
         resource: 'chart-of-accounts',
         status: AuditStatus.FAILURE,
         details: {
-          accountCode,
           reason: this.extractErrorMessage(error),
         },
       });
@@ -143,11 +136,6 @@ export class ChartOfAccountsService {
       ? {
           OR: [
             {
-              accountCode: {
-                contains: query.search,
-              },
-            },
-            {
               nameAr: {
                 contains: query.search,
               },
@@ -171,7 +159,7 @@ export class ChartOfAccountsService {
       this.prisma.chartOfAccount.findMany({
         where,
         include: chartOfAccountInclude,
-        orderBy: [{ accountCode: 'asc' }],
+        orderBy: [{ nameAr: 'asc' }, { id: 'asc' }],
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -220,10 +208,6 @@ export class ChartOfAccountsService {
     const hierarchyLevel =
       payload.parentId === undefined ? undefined : parent ? parent.hierarchyLevel + 1 : 1;
 
-    const accountCode =
-      payload.accountCode === undefined
-        ? undefined
-        : this.normalizeCode(payload.accountCode);
     const nameAr =
       payload.nameAr === undefined
         ? undefined
@@ -243,7 +227,6 @@ export class ChartOfAccountsService {
       const updated = await this.prisma.chartOfAccount.update({
         where: { id },
         data: {
-          accountCode,
           nameAr,
           nameEn,
           accountType: payload.accountType,
@@ -316,16 +299,6 @@ export class ChartOfAccountsService {
     }
 
     return account;
-  }
-
-  private normalizeCode(code: string): string {
-    const normalized = code.trim().toUpperCase();
-
-    if (!normalized) {
-      throw new BadRequestException('accountCode cannot be empty');
-    }
-
-    return normalized;
   }
 
   private normalizeRequiredText(value: string, fieldName: string): string {

@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  AccountType,
   AuditStatus,
   DocumentType,
   JournalEntryStatus,
@@ -30,13 +31,20 @@ import {
 } from './dto/procurement-vendor-balance.dto';
 import { PurchaseJournalDto } from './dto/purchase-journal.dto';
 
-const DEFAULT_PROCUREMENT_EXPENSE_ACCOUNT_CODE = '5004';
-const DEFAULT_ACCOUNTS_PAYABLE_ACCOUNT_CODE = '2101';
-const DEFAULT_VAT_ACCOUNT_CODE = '2104';
-const DEFAULT_CASH_ACCOUNT_CODE = '1101';
-const DEFAULT_GATEWAY_ACCOUNT_CODE = '1102';
-const DEFAULT_DEPRECIATION_EXPENSE_ACCOUNT_CODE = '5005';
-const DEFAULT_ACCUMULATED_DEPRECIATION_ACCOUNT_CODE = '1203';
+const DEFAULT_PROCUREMENT_EXPENSE_ACCOUNT_NAME_EN = 'Procurement Expenses';
+const DEFAULT_PROCUREMENT_EXPENSE_ACCOUNT_NAME_AR = 'مصروفات المشتريات';
+const DEFAULT_ACCOUNTS_PAYABLE_ACCOUNT_NAME_EN = 'Accounts Payable';
+const DEFAULT_ACCOUNTS_PAYABLE_ACCOUNT_NAME_AR = 'ذمم دائنة';
+const DEFAULT_VAT_ACCOUNT_NAME_EN = 'VAT Payable';
+const DEFAULT_VAT_ACCOUNT_NAME_AR = 'ضريبة القيمة المضافة المستحقة';
+const DEFAULT_CASH_ACCOUNT_NAME_EN = 'Cash and Banks';
+const DEFAULT_CASH_ACCOUNT_NAME_AR = 'النقدية والبنوك';
+const DEFAULT_GATEWAY_ACCOUNT_NAME_EN = 'Electronic Payment Gateways';
+const DEFAULT_GATEWAY_ACCOUNT_NAME_AR = 'بوابات الدفع الإلكتروني';
+const DEFAULT_DEPRECIATION_EXPENSE_ACCOUNT_NAME_EN = 'Depreciation Expense';
+const DEFAULT_DEPRECIATION_EXPENSE_ACCOUNT_NAME_AR = 'مصروف الإهلاك';
+const DEFAULT_ACCUMULATED_DEPRECIATION_ACCOUNT_NAME_EN = 'Accumulated Depreciation';
+const DEFAULT_ACCUMULATED_DEPRECIATION_ACCOUNT_NAME_AR = 'مجمع الإهلاك';
 
 type PostingLineInput = {
   accountId: number;
@@ -63,14 +71,22 @@ export class ProcurementIntegrationsService {
     }
 
     const expenseAccountId = await this.findPostingAccountByCode(
-      DEFAULT_PROCUREMENT_EXPENSE_ACCOUNT_CODE,
+      DEFAULT_PROCUREMENT_EXPENSE_ACCOUNT_NAME_EN,
+      DEFAULT_PROCUREMENT_EXPENSE_ACCOUNT_NAME_AR,
+      AccountType.EXPENSE,
     );
     const payableAccountId = await this.findPostingAccountByCode(
-      DEFAULT_ACCOUNTS_PAYABLE_ACCOUNT_CODE,
+      DEFAULT_ACCOUNTS_PAYABLE_ACCOUNT_NAME_EN,
+      DEFAULT_ACCOUNTS_PAYABLE_ACCOUNT_NAME_AR,
+      AccountType.LIABILITY,
     );
     const vatAccountId =
       vatAmount > 0
-        ? await this.findPostingAccountByCode(DEFAULT_VAT_ACCOUNT_CODE)
+        ? await this.findPostingAccountByCode(
+            DEFAULT_VAT_ACCOUNT_NAME_EN,
+            DEFAULT_VAT_ACCOUNT_NAME_AR,
+            AccountType.LIABILITY,
+          )
         : null;
 
     const lines: PostingLineInput[] = [
@@ -136,15 +152,35 @@ export class ProcurementIntegrationsService {
   ): Promise<InventoryAdjustmentJournalResponseDto> {
     const debitAccountCode =
       payload.adjustmentType === InventoryAdjustmentType.INCREASE
-        ? DEFAULT_PROCUREMENT_EXPENSE_ACCOUNT_CODE
-        : DEFAULT_ACCOUNTS_PAYABLE_ACCOUNT_CODE;
+        ? DEFAULT_PROCUREMENT_EXPENSE_ACCOUNT_NAME_EN
+        : DEFAULT_ACCOUNTS_PAYABLE_ACCOUNT_NAME_EN;
+    const debitAccountNameAr =
+      payload.adjustmentType === InventoryAdjustmentType.INCREASE
+        ? DEFAULT_PROCUREMENT_EXPENSE_ACCOUNT_NAME_AR
+        : DEFAULT_ACCOUNTS_PAYABLE_ACCOUNT_NAME_AR;
     const creditAccountCode =
       payload.adjustmentType === InventoryAdjustmentType.INCREASE
-        ? DEFAULT_ACCOUNTS_PAYABLE_ACCOUNT_CODE
-        : DEFAULT_PROCUREMENT_EXPENSE_ACCOUNT_CODE;
+        ? DEFAULT_ACCOUNTS_PAYABLE_ACCOUNT_NAME_EN
+        : DEFAULT_PROCUREMENT_EXPENSE_ACCOUNT_NAME_EN;
+    const creditAccountNameAr =
+      payload.adjustmentType === InventoryAdjustmentType.INCREASE
+        ? DEFAULT_ACCOUNTS_PAYABLE_ACCOUNT_NAME_AR
+        : DEFAULT_PROCUREMENT_EXPENSE_ACCOUNT_NAME_AR;
 
-    const debitAccountId = await this.findPostingAccountByCode(debitAccountCode);
-    const creditAccountId = await this.findPostingAccountByCode(creditAccountCode);
+    const debitAccountId = await this.findPostingAccountByCode(
+      debitAccountCode,
+      debitAccountNameAr,
+      payload.adjustmentType === InventoryAdjustmentType.INCREASE
+        ? AccountType.EXPENSE
+        : AccountType.LIABILITY,
+    );
+    const creditAccountId = await this.findPostingAccountByCode(
+      creditAccountCode,
+      creditAccountNameAr,
+      payload.adjustmentType === InventoryAdjustmentType.INCREASE
+        ? AccountType.LIABILITY
+        : AccountType.EXPENSE,
+    );
     const amount = this.roundMoney(payload.amount);
     const adjustmentLabel =
       payload.adjustmentType === InventoryAdjustmentType.INCREASE
@@ -203,10 +239,16 @@ export class ProcurementIntegrationsService {
     actorUserId: string,
   ) {
     const payableAccountId = await this.findPostingAccountByCode(
-      DEFAULT_ACCOUNTS_PAYABLE_ACCOUNT_CODE,
+      DEFAULT_ACCOUNTS_PAYABLE_ACCOUNT_NAME_EN,
+      DEFAULT_ACCOUNTS_PAYABLE_ACCOUNT_NAME_AR,
+      AccountType.LIABILITY,
     );
     const creditAccountCode = this.resolveCreditAccountCode(payload.paymentMethod);
-    const creditAccountId = await this.findPostingAccountByCode(creditAccountCode);
+    const creditAccountId = await this.findPostingAccountByCode(
+      creditAccountCode.nameEn,
+      creditAccountCode.nameAr,
+      AccountType.ASSET,
+    );
 
     const lines: PostingLineInput[] = [
       {
@@ -320,10 +362,14 @@ export class ProcurementIntegrationsService {
     actorUserId: string,
   ) {
     const expenseAccountId = await this.findPostingAccountByCode(
-      DEFAULT_DEPRECIATION_EXPENSE_ACCOUNT_CODE,
+      DEFAULT_DEPRECIATION_EXPENSE_ACCOUNT_NAME_EN,
+      DEFAULT_DEPRECIATION_EXPENSE_ACCOUNT_NAME_AR,
+      AccountType.EXPENSE,
     );
     const accumulatedAccountId = await this.findPostingAccountByCode(
-      DEFAULT_ACCUMULATED_DEPRECIATION_ACCOUNT_CODE,
+      DEFAULT_ACCUMULATED_DEPRECIATION_ACCOUNT_NAME_EN,
+      DEFAULT_ACCUMULATED_DEPRECIATION_ACCOUNT_NAME_AR,
+      AccountType.ASSET,
     );
 
     const lines: PostingLineInput[] = [
@@ -371,13 +417,24 @@ export class ProcurementIntegrationsService {
   }
 
   private resolveCreditAccountCode(paymentMethod?: PaymentMethod) {
-    if (!paymentMethod) return DEFAULT_CASH_ACCOUNT_CODE;
-
-    if (paymentMethod === PaymentMethod.CARD || paymentMethod === PaymentMethod.MOBILE_WALLET) {
-      return DEFAULT_GATEWAY_ACCOUNT_CODE;
+    if (!paymentMethod) {
+      return {
+        nameEn: DEFAULT_CASH_ACCOUNT_NAME_EN,
+        nameAr: DEFAULT_CASH_ACCOUNT_NAME_AR,
+      };
     }
 
-    return DEFAULT_CASH_ACCOUNT_CODE;
+    if (paymentMethod === PaymentMethod.CARD || paymentMethod === PaymentMethod.MOBILE_WALLET) {
+      return {
+        nameEn: DEFAULT_GATEWAY_ACCOUNT_NAME_EN,
+        nameAr: DEFAULT_GATEWAY_ACCOUNT_NAME_AR,
+      };
+    }
+
+    return {
+      nameEn: DEFAULT_CASH_ACCOUNT_NAME_EN,
+      nameAr: DEFAULT_CASH_ACCOUNT_NAME_AR,
+    };
   }
 
   private async createPostedJournalEntry(input: {
@@ -494,23 +551,42 @@ export class ProcurementIntegrationsService {
     });
   }
 
-  private async findPostingAccountByCode(accountCode: string) {
-    const account = await this.prisma.chartOfAccount.findFirst({
+  private async findPostingAccountByCode(
+    accountNameEn: string,
+    accountNameAr: string,
+    fallbackType?: AccountType,
+  ) {
+    const namedAccount = await this.prisma.chartOfAccount.findFirst({
       where: {
-        accountCode,
+        OR: [{ nameEn: accountNameEn }, { nameAr: accountNameAr }],
         deletedAt: null,
         isActive: true,
       },
       select: { id: true, isHeader: true },
     });
 
+    const account =
+      namedAccount ??
+      (fallbackType
+        ? await this.prisma.chartOfAccount.findFirst({
+            where: {
+              accountType: fallbackType,
+              deletedAt: null,
+              isActive: true,
+              isHeader: false,
+            },
+            select: { id: true, isHeader: true },
+            orderBy: { id: 'asc' },
+          })
+        : null);
+
     if (!account) {
-      throw new NotFoundException(`Posting account ${accountCode} was not found`);
+      throw new NotFoundException(`Posting account ${accountNameEn} was not found`);
     }
 
     if (account.isHeader) {
       throw new BadRequestException(
-        `Posting account ${accountCode} cannot be a header account`,
+        `Posting account ${accountNameEn} cannot be a header account`,
       );
     }
 
