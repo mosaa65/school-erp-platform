@@ -10,8 +10,15 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-cairo)", "ui-sans-serif", "system-ui", "sans-serif"],
+        sans: [
+          "var(--appearance-font-family)",
+          "var(--font-cairo)",
+          "ui-sans-serif",
+          "system-ui",
+          "sans-serif",
+        ],
         mono: [
+          "var(--appearance-mono-font-family)",
           "var(--font-jetbrains-mono)",
           "ui-monospace",
           "SFMono-Regular",

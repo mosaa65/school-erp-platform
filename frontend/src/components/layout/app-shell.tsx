@@ -6,24 +6,34 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   BellRing,
   ChevronDown,
+  Compass,
   GraduationCap,
-  LogOut,
   Menu,
   PanelRightClose,
   UserCircle2,
   X,
 } from "lucide-react";
+import { AppFooterDock } from "@/components/layout/app-footer-dock";
+import {
+  NavigationFilterControl,
+  type NavigationFilterValue,
+} from "@/components/layout/navigation-filter-control";
 import { APP_NAV_GROUPS, type AppNavItem } from "@/components/layout/app-navigation";
-import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { NavigationDrawer } from "@/components/layout/navigation-drawer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SearchField } from "@/components/ui/search-field";
+import { useAppearance } from "@/hooks/use-appearance";
+import { useNavigationPreferences } from "@/hooks/use-navigation-preferences";
 import { matchesPermissionRequirement } from "@/features/auth/lib";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 import { useUserNotificationsUnreadCountQuery } from "@/features/user-notifications/hooks/use-user-notifications-query";
 import { translateRoleCode } from "@/lib/i18n/ar";
 import { cn } from "@/lib/utils";
+import type { ColorPresetId, ColorScheme } from "@/theme/appearance-types";
+import { resolveAppearanceThemeTokens } from "@/theme/color-presets";
+import type { NavigationDensity } from "@/navigation/navigation-preferences";
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -38,13 +48,13 @@ type VisibleNavGroup = {
   items: AppNavItem[];
 };
 
-type GroupTheme = {
-  panelClassName: string;
-  activeGlowClassName: string;
-  headerClassName: string;
-  headerIconClassName: string;
-  headerBadgeClassName: string;
-  accentVars: React.CSSProperties;
+type GroupTheme = ReturnType<typeof resolveAppearanceThemeTokens>;
+
+type StandalonePageMeta = {
+  label: string;
+  badgeLabel: string;
+  icon: AppNavItem["icon"];
+  themeGroupId: string;
 };
 
 const NAV_SCROLL_STORAGE_KEY = "app-shell.nav-scroll-top";
@@ -61,134 +71,12 @@ function normalizeText(value: string): string {
   return value.trim().toLowerCase();
 }
 
-function resolveGroupTheme(groupId?: string): GroupTheme {
-  switch (groupId) {
-    case "system-01-shared":
-      return {
-        panelClassName: "border-violet-500/20 bg-background/55",
-        activeGlowClassName: "from-violet-500/18 via-violet-500/7 to-transparent",
-        headerClassName:
-          "border-violet-500/25 bg-gradient-to-l from-violet-500/20 via-background/92 to-background/78 shadow-[0_22px_55px_-34px_rgba(139,92,246,0.55)]",
-        headerIconClassName:
-          "border-violet-500/20 bg-violet-500/10 text-violet-700 dark:text-violet-300",
-        headerBadgeClassName:
-          "border-violet-500/20 bg-violet-500/10 text-violet-700 dark:text-violet-300",
-        accentVars: {
-          "--app-accent-color": "rgb(139 92 246)",
-          "--app-accent-soft": "rgba(139, 92, 246, 0.12)",
-          "--app-accent-strong": "rgba(139, 92, 246, 0.22)",
-          "--app-accent-ring": "rgba(139, 92, 246, 0.32)",
-        } as React.CSSProperties,
-      };
-    case "system-02-academic-core":
-      return {
-        panelClassName: "border-emerald-500/20 bg-background/55",
-        activeGlowClassName: "from-emerald-500/18 via-emerald-500/7 to-transparent",
-        headerClassName:
-          "border-emerald-500/25 bg-gradient-to-l from-emerald-500/20 via-background/92 to-background/78 shadow-[0_22px_55px_-34px_rgba(16,185,129,0.52)]",
-        headerIconClassName:
-          "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-        headerBadgeClassName:
-          "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-        accentVars: {
-          "--app-accent-color": "rgb(16 185 129)",
-          "--app-accent-soft": "rgba(16, 185, 129, 0.12)",
-          "--app-accent-strong": "rgba(16, 185, 129, 0.22)",
-          "--app-accent-ring": "rgba(16, 185, 129, 0.3)",
-        } as React.CSSProperties,
-      };
-    case "system-03-hr":
-      return {
-        panelClassName: "border-sky-500/20 bg-background/55",
-        activeGlowClassName: "from-sky-500/18 via-sky-500/7 to-transparent",
-        headerClassName:
-          "border-sky-500/25 bg-gradient-to-l from-sky-500/20 via-background/92 to-background/78 shadow-[0_22px_55px_-34px_rgba(14,165,233,0.52)]",
-        headerIconClassName:
-          "border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-300",
-        headerBadgeClassName:
-          "border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-300",
-        accentVars: {
-          "--app-accent-color": "rgb(14 165 233)",
-          "--app-accent-soft": "rgba(14, 165, 233, 0.12)",
-          "--app-accent-strong": "rgba(14, 165, 233, 0.22)",
-          "--app-accent-ring": "rgba(14, 165, 233, 0.3)",
-        } as React.CSSProperties,
-      };
-    case "system-04-students":
-      return {
-        panelClassName: "border-indigo-500/20 bg-background/55",
-        activeGlowClassName: "from-indigo-500/18 via-indigo-500/7 to-transparent",
-        headerClassName:
-          "border-indigo-500/25 bg-gradient-to-l from-indigo-500/20 via-background/92 to-background/78 shadow-[0_22px_55px_-34px_rgba(99,102,241,0.52)]",
-        headerIconClassName:
-          "border-indigo-500/20 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300",
-        headerBadgeClassName:
-          "border-indigo-500/20 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300",
-        accentVars: {
-          "--app-accent-color": "rgb(99 102 241)",
-          "--app-accent-soft": "rgba(99, 102, 241, 0.12)",
-          "--app-accent-strong": "rgba(99, 102, 241, 0.22)",
-          "--app-accent-ring": "rgba(99, 102, 241, 0.32)",
-        } as React.CSSProperties,
-      };
-    case "system-05-grades-config":
-    case "system-05-grades-policies":
-    case "system-05-grades-homeworks":
-    case "system-05-grades-exams":
-    case "system-05-grades-student-work":
-    case "system-05-grades-aggregation":
-    case "system-05-grades-reports":
-      return {
-        panelClassName: "border-fuchsia-500/20 bg-background/55",
-        activeGlowClassName: "from-fuchsia-500/18 via-fuchsia-500/7 to-transparent",
-        headerClassName:
-          "border-fuchsia-500/25 bg-gradient-to-l from-fuchsia-500/20 via-background/92 to-background/78 shadow-[0_22px_55px_-34px_rgba(217,70,239,0.52)]",
-        headerIconClassName:
-          "border-fuchsia-500/20 bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-300",
-        headerBadgeClassName:
-          "border-fuchsia-500/20 bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-300",
-        accentVars: {
-          "--app-accent-color": "rgb(217 70 239)",
-          "--app-accent-soft": "rgba(217, 70, 239, 0.12)",
-          "--app-accent-strong": "rgba(217, 70, 239, 0.22)",
-          "--app-accent-ring": "rgba(217, 70, 239, 0.32)",
-        } as React.CSSProperties,
-      };
-    case "system-07-finance":
-      return {
-        panelClassName: "border-emerald-500/20 bg-background/55",
-        activeGlowClassName: "from-emerald-500/18 via-emerald-500/7 to-transparent",
-        headerClassName:
-          "border-emerald-500/25 bg-gradient-to-l from-emerald-500/20 via-background/92 to-background/78 shadow-[0_22px_55px_-34px_rgba(16,185,129,0.52)]",
-        headerIconClassName:
-          "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-        headerBadgeClassName:
-          "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-        accentVars: {
-          "--app-accent-color": "rgb(16 185 129)",
-          "--app-accent-soft": "rgba(16, 185, 129, 0.12)",
-          "--app-accent-strong": "rgba(16, 185, 129, 0.22)",
-          "--app-accent-ring": "rgba(16, 185, 129, 0.3)",
-        } as React.CSSProperties,
-      };
-    default:
-      return {
-        panelClassName: "border-slate-500/20 bg-background/55",
-        activeGlowClassName: "from-slate-500/16 via-slate-500/6 to-transparent",
-        headerClassName:
-          "border-slate-500/25 bg-gradient-to-l from-slate-500/16 via-background/92 to-background/78 shadow-[0_22px_55px_-34px_rgba(100,116,139,0.42)]",
-        headerIconClassName:
-          "border-slate-500/20 bg-slate-500/10 text-slate-700 dark:text-slate-300",
-        headerBadgeClassName:
-          "border-slate-500/20 bg-slate-500/10 text-slate-700 dark:text-slate-300",
-        accentVars: {
-          "--app-accent-color": "rgb(100 116 139)",
-          "--app-accent-soft": "rgba(100, 116, 139, 0.12)",
-          "--app-accent-strong": "rgba(100, 116, 139, 0.22)",
-          "--app-accent-ring": "rgba(100, 116, 139, 0.3)",
-        } as React.CSSProperties,
-      };
-  }
+function resolveGroupTheme(
+  groupId: string | undefined,
+  presetId: ColorPresetId,
+  scheme: ColorScheme,
+): GroupTheme {
+  return resolveAppearanceThemeTokens(presetId, scheme, groupId);
 }
 
 function resolveNavItemIconClassName(
@@ -285,22 +173,87 @@ function resolveNavItemIconClassName(
   return groupIconClassName ?? "border-primary/20 bg-primary/10 text-primary";
 }
 
+function resolveNavDensityClasses(density: NavigationDensity) {
+  if (density === "compact") {
+    return {
+      searchClassName: "h-10",
+      groupSectionClassName: "p-2",
+      groupHeaderClassName: "px-2 py-1.5",
+      itemClassName: "gap-2.5 px-2.5 py-2",
+      railGroupClassName: "p-1.5",
+      railButtonClassName: "h-10 w-10",
+      railItemClassName: "h-9 w-9",
+      railGapClassName: "gap-1.5",
+    };
+  }
+
+  return {
+    searchClassName: "h-11",
+    groupSectionClassName: "p-2.5",
+    groupHeaderClassName: "px-2 py-2",
+    itemClassName: "gap-3 px-3 py-2.5",
+    railGroupClassName: "p-2",
+    railButtonClassName: "h-11 w-11",
+    railItemClassName: "h-10 w-10",
+    railGapClassName: "gap-2",
+  };
+}
+
 export function AppShell({ children }: AppShellProps) {
   const auth = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const { hasAnyPermission, hasPermission } = useRbac();
+  const appearance = useAppearance();
+  const navigationPreferences = useNavigationPreferences();
   const canReadUserNotifications = hasPermission("user-notifications.read");
+  const showFooterNotifications = false;
   const navScrollContainerRef = React.useRef<HTMLDivElement | null>(null);
   const navScrollTopRef = React.useRef(0);
   const restoreFrameIdsRef = React.useRef<number[]>([]);
   const restoreTimeoutIdsRef = React.useRef<number[]>([]);
   const [isSidebarOpen, setSidebarOpen] = React.useState(false);
+  const [isNavigationDrawerOpen, setNavigationDrawerOpen] = React.useState(false);
   const [expandedGroupIds, setExpandedGroupIds] = React.useState<string[]>([]);
   const [navSearch, setNavSearch] = React.useState("");
+  const [navFilter, setNavFilter] = React.useState<NavigationFilterValue>({
+    currentGroupOnly: false,
+    selectedGroupIds: [],
+  });
+  const isHubMode = navigationPreferences.layoutMode === "hub";
+  const isRailMode = navigationPreferences.layoutMode === "rail";
+  const isNavigationHubPage = pathname === "/app/navigation";
+  const isNavigationHubLanding =
+    pathname === "/app" &&
+    (isHubMode || navigationPreferences.landingPage === "navigation-hub");
+  const navDensityClasses = React.useMemo(
+    () => resolveNavDensityClasses(navigationPreferences.density),
+    [navigationPreferences.density],
+  );
   const unreadNotificationsQuery = useUserNotificationsUnreadCountQuery({
     enabled: canReadUserNotifications,
   });
+  const standalonePage = React.useMemo<StandalonePageMeta | null>(() => {
+    if (isNavigationHubPage || isNavigationHubLanding) {
+      return {
+        label: "واجهة التنقل",
+        badgeLabel: "التنقل",
+        icon: Compass,
+        themeGroupId: "overview",
+      };
+    }
+
+    if (pathname.startsWith("/app/profile")) {
+      return {
+        label: "الملف الشخصي",
+        badgeLabel: "الحساب",
+        icon: UserCircle2,
+        themeGroupId: "system-01-shared",
+      };
+    }
+
+    return null;
+  }, [isNavigationHubLanding, isNavigationHubPage, pathname]);
 
   const persistNavScrollPosition = React.useCallback((nextScrollTop?: number) => {
     const resolvedScrollTop =
@@ -398,6 +351,7 @@ export function AppShell({ children }: AppShellProps) {
   React.useEffect(() => {
     persistNavScrollPosition();
     setSidebarOpen(false);
+    setNavigationDrawerOpen(false);
     setNavSearch("");
   }, [pathname, persistNavScrollPosition]);
 
@@ -420,12 +374,24 @@ export function AppShell({ children }: AppShellProps) {
 
   const filteredNavGroups = React.useMemo(() => {
     const query = normalizeText(navSearch);
+    const pathActiveGroupId = visibleNavGroups.find((group) =>
+      group.items.some((item) => isNavItemActive(pathname, item.href)),
+    )?.id;
+    const effectiveGroupIds = navFilter.currentGroupOnly
+      ? pathActiveGroupId
+        ? [pathActiveGroupId]
+        : []
+      : navFilter.selectedGroupIds;
+    const groups = visibleNavGroups.filter(
+      (group) =>
+        effectiveGroupIds.length === 0 || effectiveGroupIds.includes(group.id),
+    );
 
     if (!query) {
-      return visibleNavGroups;
+      return groups;
     }
 
-    return visibleNavGroups
+    return groups
       .map((group) => {
         const groupMatches = normalizeText(group.label).includes(query);
         if (groupMatches) {
@@ -441,7 +407,30 @@ export function AppShell({ children }: AppShellProps) {
         };
       })
       .filter((group) => group.items.length > 0);
-  }, [navSearch, visibleNavGroups]);
+  }, [
+    navFilter.currentGroupOnly,
+    navFilter.selectedGroupIds,
+    navSearch,
+    pathname,
+    visibleNavGroups,
+  ]);
+
+  const filterGroups = React.useMemo(
+    () =>
+      visibleNavGroups.map((group) => ({
+        id: group.id,
+        label: group.label,
+      })),
+    [visibleNavGroups],
+  );
+
+  const pathActiveGroupId = React.useMemo(
+    () =>
+      visibleNavGroups.find((group) =>
+        group.items.some((item) => isNavItemActive(pathname, item.href)),
+      )?.id,
+    [pathname, visibleNavGroups],
+  );
 
   const visibleNavItems = React.useMemo(
     () => visibleNavGroups.flatMap((group) => group.items),
@@ -450,7 +439,7 @@ export function AppShell({ children }: AppShellProps) {
 
   const activeNavItem =
     visibleNavItems.find((item) => isNavItemActive(pathname, item.href)) ??
-    visibleNavItems[0];
+    (standalonePage ? undefined : visibleNavItems[0]);
 
   const activeGroupId = React.useMemo(() => {
     if (!activeNavItem) {
@@ -466,11 +455,27 @@ export function AppShell({ children }: AppShellProps) {
     () => visibleNavGroups.find((group) => group.id === activeGroupId),
     [activeGroupId, visibleNavGroups],
   );
+  const activePageLabel = standalonePage?.label ?? activeNavItem?.label ?? "School ERP";
+  const activePageBadgeLabel = standalonePage?.badgeLabel ?? activeGroup?.label;
+  const ActivePageIcon = standalonePage?.icon ?? activeGroup?.icon;
+  const activeThemeGroupId = standalonePage?.themeGroupId ?? activeGroupId;
   const activeGroupTheme = React.useMemo(
-    () => resolveGroupTheme(activeGroupId),
-    [activeGroupId],
+    () =>
+      resolveGroupTheme(
+        activeThemeGroupId,
+        appearance.preset,
+        appearance.resolvedSurfaceMode,
+      ),
+    [activeThemeGroupId, appearance.preset, appearance.resolvedSurfaceMode],
   );
   const unreadNotificationsCount = unreadNotificationsQuery.data?.unreadCount ?? 0;
+  const navigateTo = React.useCallback(
+    (href: string) => {
+      persistNavScrollPosition();
+      router.push(href);
+    },
+    [persistNavScrollPosition, router],
+  );
 
   React.useEffect(() => {
     setExpandedGroupIds((previous) => {
@@ -480,8 +485,15 @@ export function AppShell({ children }: AppShellProps) {
       const next = new Set(validIds);
 
       if (next.size === 0) {
-        for (const group of visibleNavGroups) {
-          next.add(group.id);
+        if (isRailMode) {
+          const initialGroupId = activeGroupId ?? visibleNavGroups[0]?.id;
+          if (initialGroupId) {
+            next.add(initialGroupId);
+          }
+        } else {
+          for (const group of visibleNavGroups) {
+            next.add(group.id);
+          }
         }
       }
 
@@ -496,7 +508,7 @@ export function AppShell({ children }: AppShellProps) {
 
       return isSame ? previous : nextIds;
     });
-  }, [activeGroupId, visibleNavGroups]);
+  }, [activeGroupId, isRailMode, visibleNavGroups]);
 
   React.useLayoutEffect(() => {
     if (typeof window === "undefined") {
@@ -510,7 +522,7 @@ export function AppShell({ children }: AppShellProps) {
   }, [
     clearScheduledNavRestore,
     expandedGroupIds,
-    filteredNavGroups.length,
+    isRailMode ? visibleNavGroups.length : filteredNavGroups.length,
     isSidebarOpen,
     pathname,
     scheduleNavScrollRestore,
@@ -524,13 +536,12 @@ export function AppShell({ children }: AppShellProps) {
     );
   }
 
-  const handleLogout = () => {
-    auth.signOut();
-    router.replace("/auth/login");
-  };
-
   const toggleGroup = (groupId: string) => {
     setExpandedGroupIds((previous) => {
+      if (isRailMode) {
+        return previous.includes(groupId) ? [] : [groupId];
+      }
+
       const set = new Set(previous);
       if (set.has(groupId)) {
         set.delete(groupId);
@@ -541,23 +552,47 @@ export function AppShell({ children }: AppShellProps) {
     });
   };
 
+  const footerActiveItem = isNavigationDrawerOpen
+    ? "navigator"
+    : pathname === "/app"
+      ? "home"
+      : pathname.startsWith("/app/navigation")
+        ? isHubMode
+          ? "home"
+          : "navigator"
+      : pathname.startsWith("/app/profile")
+        ? "profile"
+        : showFooterNotifications && pathname.startsWith("/app/user-notifications")
+          ? "notifications"
+          : null;
+
   return (
     <div
-      className="relative min-h-screen md:grid md:grid-cols-[300px_1fr]"
+      className={cn(
+        "relative min-h-screen",
+        !isHubMode ? "md:grid" : "",
+        !isHubMode
+          ? isRailMode
+            ? "md:grid-cols-[104px_1fr]"
+            : "md:grid-cols-[300px_1fr]"
+          : "",
+      )}
       style={activeGroupTheme.accentVars}
     >
-      <aside
-        className={cn(
-          "fixed inset-y-0 right-0 z-40 flex w-80 flex-col overflow-hidden border-l border-border/70 bg-card/95 p-4 shadow-lg backdrop-blur-sm transition-transform duration-200 md:static md:w-auto md:translate-x-0 md:border-l-0 md:border-r",
-          isSidebarOpen ? "translate-x-0" : "translate-x-full",
-        )}
-      >
+      {!isHubMode ? (
+        <aside
+          className={cn(
+            "fixed inset-y-0 right-0 z-40 flex w-80 flex-col overflow-hidden border-l border-border/70 bg-card/95 p-4 shadow-lg backdrop-blur-sm transition-transform duration-200 md:static md:translate-x-0 md:border-l-0 md:border-r",
+            isRailMode ? "md:w-[104px] md:px-3 md:py-4" : "md:w-auto",
+            isSidebarOpen ? "translate-x-0" : "translate-x-full",
+          )}
+        >
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="rounded-md bg-primary/10 p-2 text-primary">
               <GraduationCap className="h-5 w-5" />
             </div>
-            <div>
+            <div className={cn(isRailMode ? "md:hidden" : "")}>
               <p className="text-sm font-semibold">School ERP</p>
               <p className="text-xs text-muted-foreground">لوحة تحكم الويب</p>
             </div>
@@ -573,17 +608,37 @@ export function AppShell({ children }: AppShellProps) {
           </Button>
         </div>
 
-        <div className="mb-5 rounded-lg border border-border/70 bg-background/60 p-3">
-          <div className="mb-2 flex items-center gap-2 text-sm">
-            <UserCircle2 className="h-4 w-4 text-primary" />
-            <span className="font-medium">
+        <button
+          type="button"
+          className={cn(
+            "mb-5 w-full rounded-[1.4rem] border border-border/70 bg-background/60 p-3 text-right transition hover:border-[color:var(--app-accent-strong)] hover:bg-[color:var(--app-accent-soft)]/35",
+            isRailMode ? "md:flex md:flex-col md:items-center md:rounded-[1.6rem] md:px-2 md:py-3 md:text-center" : "",
+          )}
+          onClick={() => {
+            setSidebarOpen(false);
+            navigateTo("/app/profile");
+          }}
+        >
+          <div
+            className={cn(
+              "mb-2 flex items-center gap-2 text-sm",
+              isRailMode ? "md:mb-0 md:flex-col md:gap-1" : "",
+            )}
+          >
+            <UserCircle2 className="h-4 w-4 text-[color:var(--app-accent-color)] md:h-5 md:w-5" />
+            <span className={cn("font-medium", isRailMode ? "md:hidden" : "")}>
               {auth.session.user.firstName} {auth.session.user.lastName}
             </span>
+            {isRailMode ? (
+              <span className="hidden text-[10px] font-medium text-muted-foreground md:block">
+                الحساب
+              </span>
+            ) : null}
           </div>
-          <p className="truncate text-xs text-muted-foreground">
+          <p className={cn("truncate text-xs text-muted-foreground", isRailMode ? "md:hidden" : "")}>
             {auth.session.user.email}
           </p>
-          <div className="mt-2 flex flex-wrap gap-1">
+          <div className={cn("mt-2 flex flex-wrap gap-1", isRailMode ? "md:hidden" : "")}>
             {auth.session.user.roleCodes.slice(0, 2).map((roleCode) => (
               <Badge key={roleCode} variant="secondary">
                 {translateRoleCode(roleCode)}
@@ -593,14 +648,17 @@ export function AppShell({ children }: AppShellProps) {
               <Badge variant="outline">+{auth.session.user.roleCodes.length - 2}</Badge>
             ) : null}
           </div>
-        </div>
+        </button>
 
-        <div className="relative mb-4">
+        <div className={cn("relative mb-4", isRailMode ? "md:hidden" : "")}>
           <SearchField
             value={navSearch}
             onChange={(event) => setNavSearch(event.target.value)}
             placeholder="ابحث عن صفحة أو نظام..."
-            className="h-11 rounded-2xl border-border/70 bg-background/70 pr-9 pl-10"
+            className={cn(
+              navDensityClasses.searchClassName,
+              "rounded-2xl border-border/70 bg-background/70 pr-9 pl-10",
+            )}
           />
           {navSearch ? (
             <button
@@ -611,16 +669,25 @@ export function AppShell({ children }: AppShellProps) {
             >
               <X className="h-4 w-4" />
             </button>
-          ) : (
-            null
-          )}
+          ) : null}
+          <div className="mt-2 flex justify-end">
+            <NavigationFilterControl
+              groups={filterGroups}
+              value={navFilter}
+              onChange={setNavFilter}
+              activeGroupId={pathActiveGroupId}
+              className="h-9 rounded-xl px-2.5 text-[11px]"
+            />
+          </div>
         </div>
 
         <div
-          ref={navScrollContainerRef}
-          className="min-h-0 flex-1 overflow-y-auto pe-1"
+          ref={isRailMode ? null : navScrollContainerRef}
+          className={cn("min-h-0 flex-1 overflow-y-auto pe-1", isRailMode ? "md:hidden" : "")}
           onScroll={(event) => {
-            persistNavScrollPosition(event.currentTarget.scrollTop);
+            if (!isRailMode) {
+              persistNavScrollPosition(event.currentTarget.scrollTop);
+            }
           }}
         >
           <nav className="space-y-2">
@@ -635,13 +702,18 @@ export function AppShell({ children }: AppShellProps) {
               const hasActiveItem = group.items.some((item) =>
                 isNavItemActive(pathname, item.href),
               );
-              const groupTheme = resolveGroupTheme(group.id);
+              const groupTheme = resolveGroupTheme(
+                group.id,
+                appearance.preset,
+                appearance.resolvedSurfaceMode,
+              );
 
               return (
                 <section
                   key={group.id}
                   className={cn(
-                    "relative overflow-hidden rounded-2xl border p-2.5 transition-colors",
+                    "relative overflow-hidden rounded-2xl border transition-colors",
+                    navDensityClasses.groupSectionClassName,
                     hasActiveItem
                       ? `${groupTheme.panelClassName} shadow-sm ring-1 ring-border/40`
                       : "border-border/60 bg-background/50",
@@ -659,7 +731,10 @@ export function AppShell({ children }: AppShellProps) {
                   <div className="relative z-10">
                     <button
                       type="button"
-                      className="flex w-full items-center justify-between rounded-xl px-2 py-2 text-right hover:bg-background/60"
+                      className={cn(
+                        "flex w-full items-center justify-between rounded-xl text-right hover:bg-background/60",
+                        navDensityClasses.groupHeaderClassName,
+                      )}
                       onClick={() => {
                         if (!navSearch) {
                           toggleGroup(group.id);
@@ -674,7 +749,7 @@ export function AppShell({ children }: AppShellProps) {
                               "border-primary/20 bg-primary/10 text-primary",
                           )}
                         >
-                          <group.icon className="h-4.5 w-4.5" />
+                          <group.icon className="h-4 w-4" />
                         </span>
                         <span className="flex flex-col items-start leading-tight">
                           <span className="text-sm font-semibold">{group.label}</span>
@@ -707,7 +782,8 @@ export function AppShell({ children }: AppShellProps) {
                                 persistNavScrollPosition();
                               }}
                               className={cn(
-                                "flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm transition-colors",
+                                "flex items-center rounded-xl border text-sm transition-colors",
+                                navDensityClasses.itemClassName,
                                 active
                                   ? "border-primary/40 bg-primary/10 text-primary"
                                   : "border-transparent text-muted-foreground hover:border-border hover:bg-muted/60 hover:text-foreground",
@@ -736,9 +812,105 @@ export function AppShell({ children }: AppShellProps) {
             })}
           </nav>
         </div>
-      </aside>
 
-      {isSidebarOpen ? (
+        {isRailMode ? (
+          <div
+            ref={navScrollContainerRef}
+            className="hidden min-h-0 flex-1 overflow-y-auto md:block"
+            onScroll={(event) => {
+              persistNavScrollPosition(event.currentTarget.scrollTop);
+            }}
+          >
+            <nav className={cn("flex flex-col items-center", navDensityClasses.railGapClassName)}>
+              {visibleNavGroups.map((group) => {
+                const isExpanded = expandedGroupIds.includes(group.id);
+                const hasActiveItem = group.items.some((item) =>
+                  isNavItemActive(pathname, item.href),
+                );
+                const groupTheme = resolveGroupTheme(
+                  group.id,
+                  appearance.preset,
+                  appearance.resolvedSurfaceMode,
+                );
+
+                return (
+                  <section
+                    key={group.id}
+                    className={cn(
+                      "w-full overflow-hidden rounded-[1.6rem] border transition-all",
+                      navDensityClasses.railGroupClassName,
+                      hasActiveItem
+                        ? `${groupTheme.panelClassName} shadow-sm ring-1 ring-border/40`
+                        : "border-border/60 bg-background/55",
+                    )}
+                  >
+                    <button
+                      type="button"
+                      title={group.label}
+                      className={cn(
+                        "mx-auto flex items-center justify-center rounded-[1rem] border shadow-sm transition-all hover:scale-[1.02]",
+                        navDensityClasses.railButtonClassName,
+                        group.iconClassName ?? "border-primary/20 bg-primary/10 text-primary",
+                        hasActiveItem ? "ring-2 ring-[color:var(--app-accent-ring)]" : "",
+                      )}
+                      onClick={() => toggleGroup(group.id)}
+                    >
+                      <group.icon className="h-4 w-4" />
+                    </button>
+
+                    {isExpanded ? (
+                      <div
+                        className={cn(
+                          "mt-2 flex flex-col items-center",
+                          navDensityClasses.railGapClassName,
+                        )}
+                      >
+                        {group.items.map((item) => {
+                          const active = isNavItemActive(pathname, item.href);
+                          const itemIconClassName = resolveNavItemIconClassName(
+                            item,
+                            group.iconClassName,
+                          );
+
+                          return (
+                            <Link
+                              key={item.href}
+                              href={item.href}
+                              title={item.label}
+                              onClick={() => {
+                                persistNavScrollPosition();
+                              }}
+                              className={cn(
+                                "relative flex items-center justify-center rounded-[1rem] border shadow-sm transition-all hover:scale-[1.02]",
+                                navDensityClasses.railItemClassName,
+                                active
+                                  ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
+                                  : cn(
+                                      "border-border/70 bg-background/78 text-muted-foreground hover:border-[color:var(--app-accent-strong)] hover:bg-[color:var(--app-accent-soft)]/35 hover:text-foreground",
+                                      itemIconClassName,
+                                    ),
+                              )}
+                            >
+                              <item.icon className="h-4 w-4" />
+                              <span className="sr-only">{item.label}</span>
+                              {active ? (
+                                <span className="absolute -bottom-1 h-1.5 w-1.5 rounded-full bg-current" />
+                              ) : null}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </section>
+                );
+              })}
+            </nav>
+          </div>
+        ) : null}
+        </aside>
+      ) : null}
+
+      {!isHubMode && isSidebarOpen ? (
         <button
           type="button"
           className="fixed inset-0 z-30 bg-black/35 md:hidden"
@@ -758,28 +930,37 @@ export function AppShell({ children }: AppShellProps) {
             <div className="pointer-events-none absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-[color:var(--app-accent-strong)] via-[color:var(--app-accent-soft)] to-transparent opacity-90 sm:w-40" />
             <div className="relative flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-2 md:gap-3">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="md:hidden rounded-2xl border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)] shadow-sm hover:bg-[color:var(--app-accent-strong)] hover:text-[color:var(--app-accent-color)]"
-                  onClick={() => setSidebarOpen(true)}
-                  aria-label="فتح الشريط الجانبي"
-                >
-                  <Menu className="h-5 w-5" />
-                </Button>
-                {activeGroup ? (
+                {navigationPreferences.showHeaderMenuButton ? (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="md:hidden rounded-2xl border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)] shadow-sm hover:bg-[color:var(--app-accent-strong)] hover:text-[color:var(--app-accent-color)]"
+                    onClick={() => {
+                      if (isHubMode) {
+                        setNavigationDrawerOpen(true);
+                        return;
+                      }
+
+                      setSidebarOpen(true);
+                    }}
+                    aria-label={isHubMode ? "فتح التنقل" : "فتح الشريط الجانبي"}
+                  >
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                ) : null}
+                {ActivePageIcon ? (
                   <div
                     className={cn(
                       "flex h-11 w-11 shrink-0 items-center justify-center rounded-[20px] border shadow-sm md:h-12 md:w-12",
                       activeGroupTheme.headerIconClassName,
                     )}
                   >
-                    <activeGroup.icon className="h-5 w-5" />
+                    <ActivePageIcon className="h-5 w-5" />
                   </div>
                 ) : null}
                 <div className="min-w-0">
                   <div className="mb-1 flex flex-wrap items-center gap-2">
-                    {activeGroup ? (
+                    {activePageBadgeLabel ? (
                       <Badge
                         variant="outline"
                         className={cn(
@@ -787,7 +968,7 @@ export function AppShell({ children }: AppShellProps) {
                           activeGroupTheme.headerBadgeClassName,
                         )}
                       >
-                        {activeGroup.label}
+                        {activePageBadgeLabel}
                       </Badge>
                     ) : null}
                     <span className="text-[11px] text-muted-foreground md:text-xs">
@@ -795,7 +976,7 @@ export function AppShell({ children }: AppShellProps) {
                     </span>
                   </div>
                   <h1 className="truncate text-base font-semibold tracking-tight md:text-xl">
-                    {activeNavItem?.label ?? "School ERP"}
+                    {activePageLabel}
                   </h1>
                 </div>
               </div>
@@ -829,28 +1010,50 @@ export function AppShell({ children }: AppShellProps) {
                     </Link>
                   </Button>
                 ) : null}
-                <ThemeToggle
-                  label="المظهر"
-                  className="border-0 bg-transparent shadow-none hover:bg-white/70 dark:hover:bg-white/10"
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-11 gap-2 rounded-2xl border-white/40 bg-white/70 px-3.5 text-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:bg-white/90 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
-                  onClick={handleLogout}
-                >
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]">
-                    <LogOut className="h-4 w-4" />
-                  </span>
-                  <span className="hidden text-sm font-medium sm:inline">تسجيل الخروج</span>
-                </Button>
               </div>
             </div>
           </div>
         </header>
 
-        <main className="flex-1 px-4 py-5 md:px-6 md:py-6">{children}</main>
+        <main className="flex-1 px-4 py-5 pb-32 md:px-6 md:py-6 md:pb-36">{children}</main>
       </div>
+
+      <NavigationDrawer
+        open={isNavigationDrawerOpen}
+        onClose={() => setNavigationDrawerOpen(false)}
+        navGroups={visibleNavGroups}
+        activePath={pathname}
+        onNavigate={navigateTo}
+        navSearch={navSearch}
+        onNavSearchChange={setNavSearch}
+        title={isHubMode ? "مركز التنقل" : "التنقل السريع"}
+        subtitle={
+          isHubMode
+            ? "تنقل بين الأنظمة والصفحات من لوحة موحدة بدون قائمة جانبية ثابتة."
+            : "تصفح الأنظمة والصفحات المسموح بها من مكان واحد."
+        }
+        presentation={navigationPreferences.mobilePresentation}
+        density={navigationPreferences.density}
+      />
+
+      <AppFooterDock
+        activeItem={footerActiveItem}
+        navigatorOpen={isNavigationDrawerOpen}
+        unreadCount={unreadNotificationsCount}
+        canReadNotifications={showFooterNotifications && canReadUserNotifications}
+        onHomeClick={() => navigateTo("/app")}
+        onNavigatorClick={() => {
+          setSidebarOpen(false);
+          setNavigationDrawerOpen((previous) => !previous);
+        }}
+        onNotificationsClick={
+          showFooterNotifications ? () => navigateTo("/app/user-notifications") : undefined
+        }
+        onProfileClick={() => {
+          setNavigationDrawerOpen(false);
+          navigateTo("/app/profile");
+        }}
+      />
     </div>
   );
 }

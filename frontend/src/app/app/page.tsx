@@ -9,16 +9,26 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { NavigationHubWorkspace } from "@/features/navigation-hub/components/navigation-hub-workspace";
 import { useAuth } from "@/features/auth/providers/auth-provider";
+import { useNavigationPreferences } from "@/hooks/use-navigation-preferences";
 import { UsersPreviewCard } from "@/features/users/components/users-preview-card";
 import { BackendHealthCard } from "@/features/system-foundation/components/backend-health-card";
 import { translatePermissionCode, translateRoleCode } from "@/lib/i18n/ar";
 
 export default function AppDashboardPage() {
   const auth = useAuth();
+  const navigationPreferences = useNavigationPreferences();
 
   if (!auth.session) {
     return null;
+  }
+
+  if (
+    navigationPreferences.layoutMode === "hub" ||
+    navigationPreferences.landingPage === "navigation-hub"
+  ) {
+    return <NavigationHubWorkspace />;
   }
 
   return (
