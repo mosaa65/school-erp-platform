@@ -57,9 +57,6 @@ function toFormState(item: LookupPeriodListItem): LookupPeriodFormState {
   };
 }
 
-function normalizeCode(value: string): string {
-  return value.trim().toUpperCase();
-}
 
 export function LookupPeriodsWorkspace() {
   const { hasPermission } = useRbac();

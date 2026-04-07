@@ -57,9 +57,6 @@ function toFormState(item: LookupEnrollmentStatusListItem): LookupEnrollmentStat
   };
 }
 
-function normalizeCode(value: string): string {
-  return value.trim().toUpperCase();
-}
 
 export function LookupEnrollmentStatusesWorkspace() {
   const { hasPermission } = useRbac();

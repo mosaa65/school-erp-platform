@@ -57,9 +57,6 @@ function toFormState(item: LookupOwnershipTypeListItem): LookupOwnershipTypeForm
   };
 }
 
-function normalizeCode(value: string): string {
-  return value.trim().toUpperCase();
-}
 
 export function LookupOwnershipTypesWorkspace() {
   const { hasPermission } = useRbac();

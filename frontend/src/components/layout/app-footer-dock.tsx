@@ -4,9 +4,9 @@ import * as React from "react";
 import {
   Bell,
   House,
-  LayoutGrid,
   UserRound,
   X,
+  LayoutGrid,
   type LucideIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";

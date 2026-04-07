@@ -57,9 +57,6 @@ const DEFAULT_FORM_STATE: AcademicYearFormState = {
   isCurrent: false,
 };
 
-function normalizeCode(value: string): string {
-  return value.trim().toLowerCase();
-}
 
 function formatDateInput(isoDate: string): string {
   const date = new Date(isoDate);

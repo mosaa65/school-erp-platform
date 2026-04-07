@@ -81,9 +81,7 @@ function toOptionalString(value: string): string | undefined {
   return normalized.length > 0 ? normalized : undefined;
 }
 
-function normalizeRoleCode(code: string): string {
-  return code.trim().toLowerCase();
-}
+
 
 function areIdSetsEqual(left: string[], right: string[]): boolean {
   if (left.length !== right.length) {

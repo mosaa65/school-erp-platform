@@ -73,9 +73,6 @@ const DEFAULT_FORM_STATE: AcademicMonthFormState = {
   isActive: true,
 };
 
-function normalizeCode(value: string): string {
-  return value.trim().toUpperCase();
-}
 
 function formatDateInput(isoDate: string): string {
   const date = new Date(isoDate);

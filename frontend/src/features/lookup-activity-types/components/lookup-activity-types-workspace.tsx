@@ -57,9 +57,6 @@ function toFormState(item: LookupActivityTypeListItem): LookupActivityTypeFormSt
   };
 }
 
-function normalizeCode(value: string): string {
-  return value.trim().toUpperCase();
-}
 
 export function LookupActivityTypesWorkspace() {
   const { hasPermission } = useRbac();

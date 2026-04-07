@@ -57,9 +57,6 @@ function toFormState(item: LookupIdTypeListItem): LookupIdTypeFormState {
   };
 }
 
-function normalizeCode(value: string): string {
-  return value.trim().toUpperCase();
-}
 
 export function LookupIdTypesWorkspace() {
   const { hasPermission } = useRbac();

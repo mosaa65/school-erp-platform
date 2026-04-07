@@ -65,9 +65,6 @@ function toOptionalString(value: string): string | undefined {
   return normalized.length > 0 ? normalized : undefined;
 }
 
-function normalizeCode(value: string): string {
-  return value.trim().toLowerCase();
-}
 
 function toFormState(item: SchoolProfileListItem): SchoolProfileFormState {
   return {

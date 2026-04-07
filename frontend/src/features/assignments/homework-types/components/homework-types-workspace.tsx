@@ -77,9 +77,6 @@ function toFormState(item: HomeworkTypeListItem): HomeworkTypeFormState {
   };
 }
 
-function normalizeCode(value: string): string {
-  return value.trim().toUpperCase();
-}
 
 export function HomeworkTypesWorkspace() {
   const { hasPermission } = useRbac();

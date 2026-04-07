@@ -9,7 +9,6 @@ import {
   DoorOpen,
   GraduationCap,
   Layers2,
-  LayoutGrid,
   LoaderCircle,
   PencilLine,
   Plus,
@@ -69,9 +68,6 @@ const DEFAULT_FORM_STATE: SectionFormState = {
   isActive: true,
 };
 
-function normalizeCode(value: string): string {
-  return value.trim().toLowerCase();
-}
 
 function toFormState(section: SectionListItem): SectionFormState {
   return {

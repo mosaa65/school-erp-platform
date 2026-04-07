@@ -12,9 +12,9 @@ import {
   CalendarDays,
   Hash,
   Type,
-  LayoutGrid,
   Activity,
   Calendar,
+  LayoutGrid,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -67,9 +67,6 @@ const DEFAULT_FORM_STATE: AcademicTermFormState = {
   isActive: true,
 };
 
-function normalizeCode(value: string): string {
-  return value.trim().toLowerCase();
-}
 
 function formatDateInput(isoDate: string): string {
   const date = new Date(isoDate);

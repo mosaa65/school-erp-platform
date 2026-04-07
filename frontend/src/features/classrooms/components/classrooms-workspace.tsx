@@ -58,9 +58,6 @@ const DEFAULT_FORM_STATE: ClassroomFormState = {
   isActive: true,
 };
 
-function normalizeCode(value: string): string {
-  return value.trim().toLowerCase();
-}
 
 function toFormState(classroom: ClassroomListItem): ClassroomFormState {
   return {

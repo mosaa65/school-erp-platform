@@ -57,9 +57,6 @@ function toFormState(item: LookupOrphanStatusListItem): LookupOrphanStatusFormSt
   };
 }
 
-function normalizeCode(value: string): string {
-  return value.trim().toUpperCase();
-}
 
 export function LookupOrphanStatusesWorkspace() {
   const { hasPermission } = useRbac();

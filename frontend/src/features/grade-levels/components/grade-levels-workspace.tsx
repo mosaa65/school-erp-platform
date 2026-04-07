@@ -74,9 +74,6 @@ const STAGE_LABELS: Record<GradeStage, string> = {
   OTHER: "أخرى",
 };
 
-function normalizeCode(value: string): string {
-  return value.trim().toLowerCase();
-}
 
 function toFormState(gradeLevel: GradeLevelListItem): GradeLevelFormState {
   return {

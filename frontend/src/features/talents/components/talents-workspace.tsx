@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { generateAutoCode } from "@/lib/auto-code";
+
 import {
   LoaderCircle,
   PencilLine,
@@ -45,16 +45,8 @@ const DEFAULT_FORM_STATE: TalentFormState = {
   isActive: true,
 };
 
-function createNewTalentFormState(): TalentFormState {
-  return {
-    ...DEFAULT_FORM_STATE,
-    code: generateAutoCode("TALENT", 40),
-  };
-}
 
-function normalizeCode(value: string): string {
-  return value.trim().toUpperCase();
-}
+
 
 function toFormState(talent: TalentListItem): TalentFormState {
   return {

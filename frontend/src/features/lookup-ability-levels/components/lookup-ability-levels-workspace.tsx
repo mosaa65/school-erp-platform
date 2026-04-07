@@ -57,9 +57,6 @@ function toFormState(item: LookupAbilityLevelListItem): LookupAbilityLevelFormSt
   };
 }
 
-function normalizeCode(value: string): string {
-  return value.trim().toUpperCase();
-}
 
 export function LookupAbilityLevelsWorkspace() {
   const { hasPermission } = useRbac();

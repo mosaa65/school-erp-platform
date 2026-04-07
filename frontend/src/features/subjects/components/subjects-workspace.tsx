@@ -66,9 +66,6 @@ const DEFAULT_FORM_STATE: SubjectFormState = {
   isActive: true,
 };
 
-function normalizeCode(value: string): string {
-  return value.trim().toLowerCase();
-}
 
 function toFormState(subject: SubjectListItem): SubjectFormState {
   return {

@@ -85,9 +85,6 @@ const DEFAULT_FORM_STATE: LookupCatalogFormState = {
   isActive: true,
 };
 
-function normalizeCode(value: string): string {
-  return value.trim().toUpperCase();
-}
 
 function toFormState(item: LookupCatalogListItem): LookupCatalogFormState {
   return {

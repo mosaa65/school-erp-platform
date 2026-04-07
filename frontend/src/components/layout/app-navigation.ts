@@ -1,4 +1,4 @@
-﻿import {
+import {
   AlertTriangle,
   BellRing,
   BookOpenText,
@@ -15,7 +15,6 @@
   Gauge,
   GraduationCap,
   KeyRound,
-  LayoutGrid,
   Layers3,
   Medal,
   Shuffle,
@@ -176,7 +175,7 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
       {
         href: "/app/sections",
         label: "الشعب الدراسية",
-        icon: LayoutGrid,
+        icon: Layers3,
         requiredPermission: "sections.read",
       },
       {

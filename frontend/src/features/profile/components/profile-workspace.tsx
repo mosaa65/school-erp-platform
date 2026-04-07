@@ -5,7 +5,6 @@ import {
   BadgeCheck,
   ChevronDown,
   KeyRound,
-  LayoutGrid,
   Layers3,
   LogOut,
   Mail,
@@ -15,6 +14,7 @@ import {
   ShieldCheck,
   Sparkles,
   UserCircle2,
+  LayoutGrid,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ProfileAppearanceSection } from "@/components/layout/profile-appearance-section";

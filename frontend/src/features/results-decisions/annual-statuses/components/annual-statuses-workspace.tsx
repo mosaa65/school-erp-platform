@@ -54,9 +54,6 @@ const DEFAULT_FORM: FormState = {
   isActive: true,
 };
 
-function normalizeCode(value: string): string {
-  return value.trim().toUpperCase();
-}
 
 function toOptionalString(value: string): string | undefined {
   const normalized = value.trim();
