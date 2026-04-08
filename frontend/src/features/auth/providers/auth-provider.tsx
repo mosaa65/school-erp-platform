@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import type { AuthSession } from "@/features/auth/types/auth-session";
+import { apiClient } from "@/lib/api/client";
 import {
   clearAuthSession,
   loadAuthSession,
@@ -37,6 +38,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const signOut = React.useCallback(() => {
+    void apiClient.logout().catch(() => undefined);
     clearAuthSession();
     setSession(null);
   }, []);

@@ -1,0 +1,752 @@
+{"timestamp":"2026-04-08T22:19:51.381Z","level":"info","context":"NestFactory","message":"Starting Nest application..."}
+{"timestamp":"2026-04-08T22:19:51.384Z","level":"info","context":"InstanceLoader","message":"PrismaModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.386Z","level":"info","context":"InstanceLoader","message":"PassportModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.387Z","level":"info","context":"InstanceLoader","message":"ExamsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.388Z","level":"info","context":"InstanceLoader","message":"AssignmentsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.389Z","level":"info","context":"InstanceLoader","message":"TeachingAssignmentsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.390Z","level":"info","context":"InstanceLoader","message":"ConfigHostModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.390Z","level":"info","context":"InstanceLoader","message":"JwtModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.391Z","level":"info","context":"InstanceLoader","message":"DocumentSequencesModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.391Z","level":"info","context":"InstanceLoader","message":"DataScopeModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.392Z","level":"info","context":"InstanceLoader","message":"BranchModeModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.392Z","level":"info","context":"InstanceLoader","message":"AppModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.392Z","level":"info","context":"InstanceLoader","message":"ConfigModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.392Z","level":"info","context":"InstanceLoader","message":"ConfigModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.392Z","level":"info","context":"InstanceLoader","message":"PaymentWebhooksModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.393Z","level":"info","context":"InstanceLoader","message":"FinancialReportsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.393Z","level":"info","context":"InstanceLoader","message":"AuditLogsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.393Z","level":"info","context":"InstanceLoader","message":"HrReportsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.393Z","level":"info","context":"InstanceLoader","message":"UserNotificationsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.393Z","level":"info","context":"InstanceLoader","message":"AcademicYearsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.393Z","level":"info","context":"InstanceLoader","message":"AcademicTermsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.393Z","level":"info","context":"InstanceLoader","message":"AcademicMonthsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.394Z","level":"info","context":"InstanceLoader","message":"GradeLevelSubjectsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.394Z","level":"info","context":"InstanceLoader","message":"GradeLevelsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.394Z","level":"info","context":"InstanceLoader","message":"ClassroomsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.394Z","level":"info","context":"InstanceLoader","message":"SectionsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.394Z","level":"info","context":"InstanceLoader","message":"SubjectsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.395Z","level":"info","context":"InstanceLoader","message":"GuardiansModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.395Z","level":"info","context":"InstanceLoader","message":"TalentsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.395Z","level":"info","context":"InstanceLoader","message":"EmployeesModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.395Z","level":"info","context":"InstanceLoader","message":"ExamPeriodsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.396Z","level":"info","context":"InstanceLoader","message":"ExamAssessmentsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.396Z","level":"info","context":"InstanceLoader","message":"HomeworkTypesModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.396Z","level":"info","context":"InstanceLoader","message":"EmployeeDepartmentsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.396Z","level":"info","context":"InstanceLoader","message":"TimetableEntriesModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.396Z","level":"info","context":"InstanceLoader","message":"TermSubjectOfferingsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.396Z","level":"info","context":"InstanceLoader","message":"RolesModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.397Z","level":"info","context":"InstanceLoader","message":"SectionClassroomAssignmentsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.397Z","level":"info","context":"InstanceLoader","message":"PermissionsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.397Z","level":"info","context":"InstanceLoader","message":"GlobalSettingsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.397Z","level":"info","context":"InstanceLoader","message":"LookupBloodTypesModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.398Z","level":"info","context":"InstanceLoader","message":"LookupEnrollmentStatusesModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.398Z","level":"info","context":"InstanceLoader","message":"LookupOrphanStatusesModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.398Z","level":"info","context":"InstanceLoader","message":"LookupAbilityLevelsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.399Z","level":"info","context":"InstanceLoader","message":"LookupActivityTypesModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.399Z","level":"info","context":"InstanceLoader","message":"LookupGradeDescriptionsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.399Z","level":"info","context":"InstanceLoader","message":"LookupCatalogModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.400Z","level":"info","context":"InstanceLoader","message":"LookupIdTypesModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.400Z","level":"info","context":"InstanceLoader","message":"LookupOwnershipTypesModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.400Z","level":"info","context":"InstanceLoader","message":"LookupPeriodsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.400Z","level":"info","context":"InstanceLoader","message":"RemindersTickerModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.400Z","level":"info","context":"InstanceLoader","message":"UserPermissionsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.401Z","level":"info","context":"InstanceLoader","message":"SchoolProfilesModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.401Z","level":"info","context":"InstanceLoader","message":"BranchesModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.401Z","level":"info","context":"InstanceLoader","message":"CurrenciesModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.401Z","level":"info","context":"InstanceLoader","message":"CurrencyExchangeRatesModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.402Z","level":"info","context":"InstanceLoader","message":"FiscalYearsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.402Z","level":"info","context":"InstanceLoader","message":"FiscalPeriodsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.402Z","level":"info","context":"InstanceLoader","message":"ChartOfAccountsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.402Z","level":"info","context":"InstanceLoader","message":"JournalEntriesModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.403Z","level":"info","context":"InstanceLoader","message":"PaymentGatewaysModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.403Z","level":"info","context":"InstanceLoader","message":"PaymentTransactionsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.403Z","level":"info","context":"InstanceLoader","message":"BankReconciliationsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.403Z","level":"info","context":"InstanceLoader","message":"FeeStructuresModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.403Z","level":"info","context":"InstanceLoader","message":"DiscountRulesModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.404Z","level":"info","context":"InstanceLoader","message":"StudentInvoicesModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.404Z","level":"info","context":"InstanceLoader","message":"InvoiceInstallmentsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.404Z","level":"info","context":"InstanceLoader","message":"TaxConfigurationsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.404Z","level":"info","context":"InstanceLoader","message":"CreditDebitNotesModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.404Z","level":"info","context":"InstanceLoader","message":"CostCentersModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.404Z","level":"info","context":"InstanceLoader","message":"BudgetsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.405Z","level":"info","context":"InstanceLoader","message":"HrIntegrationsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.405Z","level":"info","context":"InstanceLoader","message":"ProcurementIntegrationsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.405Z","level":"info","context":"InstanceLoader","message":"TransportIntegrationsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.405Z","level":"info","context":"InstanceLoader","message":"AuditTrailModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.405Z","level":"info","context":"InstanceLoader","message":"FinancialFundsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.405Z","level":"info","context":"InstanceLoader","message":"FinancialCategoriesModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.406Z","level":"info","context":"InstanceLoader","message":"RevenuesModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.406Z","level":"info","context":"InstanceLoader","message":"ExpensesModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.406Z","level":"info","context":"InstanceLoader","message":"StudentAttendanceModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.406Z","level":"info","context":"InstanceLoader","message":"StudentsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.406Z","level":"info","context":"InstanceLoader","message":"StudentExamScoresModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.406Z","level":"info","context":"InstanceLoader","message":"HomeworksModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.407Z","level":"info","context":"InstanceLoader","message":"StudentHomeworksModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.407Z","level":"info","context":"InstanceLoader","message":"SystemSettingsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.407Z","level":"info","context":"InstanceLoader","message":"StudentBooksModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.407Z","level":"info","context":"InstanceLoader","message":"RecurringJournalsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.407Z","level":"info","context":"InstanceLoader","message":"EmployeeTasksModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.408Z","level":"info","context":"InstanceLoader","message":"EmployeeCoursesModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.408Z","level":"info","context":"InstanceLoader","message":"EmployeeViolationsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.408Z","level":"info","context":"InstanceLoader","message":"EmployeeTeachingAssignmentsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.408Z","level":"info","context":"InstanceLoader","message":"EmployeeSectionSupervisionsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.408Z","level":"info","context":"InstanceLoader","message":"EmployeeAttendanceModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.408Z","level":"info","context":"InstanceLoader","message":"EmployeeLeaveBalancesModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.409Z","level":"info","context":"InstanceLoader","message":"EmployeePerformanceEvaluationsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.409Z","level":"info","context":"InstanceLoader","message":"UsersModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.409Z","level":"info","context":"InstanceLoader","message":"BillingEngineModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.409Z","level":"info","context":"InstanceLoader","message":"StudentEnrollmentsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.409Z","level":"info","context":"InstanceLoader","message":"StudentSiblingsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.410Z","level":"info","context":"InstanceLoader","message":"StudentProblemsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.410Z","level":"info","context":"InstanceLoader","message":"ParentNotificationsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.410Z","level":"info","context":"InstanceLoader","message":"AuthModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.410Z","level":"info","context":"InstanceLoader","message":"EmployeeTalentsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.410Z","level":"info","context":"InstanceLoader","message":"EmployeeDocumentsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.411Z","level":"info","context":"InstanceLoader","message":"EmployeeLeavesModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.411Z","level":"info","context":"InstanceLoader","message":"EmployeeLifecycleChecklistsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.411Z","level":"info","context":"InstanceLoader","message":"EmployeeContractsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.411Z","level":"info","context":"InstanceLoader","message":"CommunityContributionsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.412Z","level":"info","context":"InstanceLoader","message":"StudentGuardiansModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.412Z","level":"info","context":"InstanceLoader","message":"StudentTalentsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.412Z","level":"info","context":"InstanceLoader","message":"HealthVisitsModule dependencies initialized"}
+{"timestamp":"2026-04-08T22:19:51.412Z","level":"info","context":"RoutesResolver","message":"AppController {/}:"}
+{"timestamp":"2026-04-08T22:19:51.413Z","level":"info","context":"RouterExplorer","message":"Mapped {/health, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.413Z","level":"info","context":"RoutesResolver","message":"AuthController {/auth}:"}
+{"timestamp":"2026-04-08T22:19:51.413Z","level":"info","context":"RouterExplorer","message":"Mapped {/auth/login, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.413Z","level":"info","context":"RouterExplorer","message":"Mapped {/auth/mfa/verify, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.413Z","level":"info","context":"RouterExplorer","message":"Mapped {/auth/mfa/setup, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.414Z","level":"info","context":"RouterExplorer","message":"Mapped {/auth/mfa/enable, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.414Z","level":"info","context":"RouterExplorer","message":"Mapped {/auth/mfa/disable, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.414Z","level":"info","context":"RouterExplorer","message":"Mapped {/auth/profile, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.415Z","level":"info","context":"RouterExplorer","message":"Mapped {/auth/profile, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.415Z","level":"info","context":"RouterExplorer","message":"Mapped {/auth/webauthn/registration/options, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.415Z","level":"info","context":"RouterExplorer","message":"Mapped {/auth/webauthn/registration/verify, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.416Z","level":"info","context":"RouterExplorer","message":"Mapped {/auth/webauthn/credentials, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.416Z","level":"info","context":"RouterExplorer","message":"Mapped {/auth/webauthn/credentials/:credentialId, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.417Z","level":"info","context":"RouterExplorer","message":"Mapped {/auth/webauthn/authentication/options, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.417Z","level":"info","context":"RouterExplorer","message":"Mapped {/auth/webauthn/authentication/verify, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.417Z","level":"info","context":"RouterExplorer","message":"Mapped {/auth/refresh, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.417Z","level":"info","context":"RouterExplorer","message":"Mapped {/auth/logout, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.417Z","level":"info","context":"RouterExplorer","message":"Mapped {/auth/sessions, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.417Z","level":"info","context":"RouterExplorer","message":"Mapped {/auth/sessions/:sessionId, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.418Z","level":"info","context":"RoutesResolver","message":"UserNotificationsController {/user-notifications}:"}
+{"timestamp":"2026-04-08T22:19:51.418Z","level":"info","context":"RouterExplorer","message":"Mapped {/user-notifications, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.418Z","level":"info","context":"RouterExplorer","message":"Mapped {/user-notifications/unread-count, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.418Z","level":"info","context":"RouterExplorer","message":"Mapped {/user-notifications/preferences, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.418Z","level":"info","context":"RouterExplorer","message":"Mapped {/user-notifications/preferences, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.419Z","level":"info","context":"RouterExplorer","message":"Mapped {/user-notifications/mark-all-read, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.419Z","level":"info","context":"RouterExplorer","message":"Mapped {/user-notifications/:id/read, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.419Z","level":"info","context":"RouterExplorer","message":"Mapped {/user-notifications/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.419Z","level":"info","context":"RoutesResolver","message":"AuditLogsController {/audit-logs}:"}
+{"timestamp":"2026-04-08T22:19:51.419Z","level":"info","context":"RouterExplorer","message":"Mapped {/audit-logs, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.420Z","level":"info","context":"RouterExplorer","message":"Mapped {/audit-logs, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.420Z","level":"info","context":"RouterExplorer","message":"Mapped {/audit-logs/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.420Z","level":"info","context":"RouterExplorer","message":"Mapped {/audit-logs/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.420Z","level":"info","context":"RoutesResolver","message":"AcademicYearsController {/academic-years}:"}
+{"timestamp":"2026-04-08T22:19:51.420Z","level":"info","context":"RouterExplorer","message":"Mapped {/academic-years, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.421Z","level":"info","context":"RouterExplorer","message":"Mapped {/academic-years, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.421Z","level":"info","context":"RouterExplorer","message":"Mapped {/academic-years/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.421Z","level":"info","context":"RouterExplorer","message":"Mapped {/academic-years/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.421Z","level":"info","context":"RouterExplorer","message":"Mapped {/academic-years/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.422Z","level":"info","context":"RoutesResolver","message":"AcademicTermsController {/academic-terms}:"}
+{"timestamp":"2026-04-08T22:19:51.422Z","level":"info","context":"RouterExplorer","message":"Mapped {/academic-terms, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.422Z","level":"info","context":"RouterExplorer","message":"Mapped {/academic-terms, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.422Z","level":"info","context":"RouterExplorer","message":"Mapped {/academic-terms/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.422Z","level":"info","context":"RouterExplorer","message":"Mapped {/academic-terms/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.422Z","level":"info","context":"RouterExplorer","message":"Mapped {/academic-terms/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.423Z","level":"info","context":"RoutesResolver","message":"AcademicMonthsController {/academic-months}:"}
+{"timestamp":"2026-04-08T22:19:51.423Z","level":"info","context":"RouterExplorer","message":"Mapped {/academic-months, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.423Z","level":"info","context":"RouterExplorer","message":"Mapped {/academic-months, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.423Z","level":"info","context":"RouterExplorer","message":"Mapped {/academic-months/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.423Z","level":"info","context":"RouterExplorer","message":"Mapped {/academic-months/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.424Z","level":"info","context":"RouterExplorer","message":"Mapped {/academic-months/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.424Z","level":"info","context":"RoutesResolver","message":"GradeLevelSubjectsController {/grade-level-subjects}:"}
+{"timestamp":"2026-04-08T22:19:51.424Z","level":"info","context":"RouterExplorer","message":"Mapped {/grade-level-subjects, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.424Z","level":"info","context":"RouterExplorer","message":"Mapped {/grade-level-subjects, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.424Z","level":"info","context":"RouterExplorer","message":"Mapped {/grade-level-subjects/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.424Z","level":"info","context":"RouterExplorer","message":"Mapped {/grade-level-subjects/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.425Z","level":"info","context":"RouterExplorer","message":"Mapped {/grade-level-subjects/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.425Z","level":"info","context":"RoutesResolver","message":"GradeLevelsController {/grade-levels}:"}
+{"timestamp":"2026-04-08T22:19:51.425Z","level":"info","context":"RouterExplorer","message":"Mapped {/grade-levels, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.425Z","level":"info","context":"RouterExplorer","message":"Mapped {/grade-levels, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.425Z","level":"info","context":"RouterExplorer","message":"Mapped {/grade-levels/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.426Z","level":"info","context":"RouterExplorer","message":"Mapped {/grade-levels/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.426Z","level":"info","context":"RouterExplorer","message":"Mapped {/grade-levels/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.426Z","level":"info","context":"RoutesResolver","message":"ClassroomsController {/classrooms}:"}
+{"timestamp":"2026-04-08T22:19:51.426Z","level":"info","context":"RouterExplorer","message":"Mapped {/classrooms, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.426Z","level":"info","context":"RouterExplorer","message":"Mapped {/classrooms, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.426Z","level":"info","context":"RouterExplorer","message":"Mapped {/classrooms/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.427Z","level":"info","context":"RouterExplorer","message":"Mapped {/classrooms/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.427Z","level":"info","context":"RouterExplorer","message":"Mapped {/classrooms/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.427Z","level":"info","context":"RoutesResolver","message":"SectionsController {/sections}:"}
+{"timestamp":"2026-04-08T22:19:51.427Z","level":"info","context":"RouterExplorer","message":"Mapped {/sections, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.428Z","level":"info","context":"RouterExplorer","message":"Mapped {/sections, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.428Z","level":"info","context":"RouterExplorer","message":"Mapped {/sections/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.428Z","level":"info","context":"RouterExplorer","message":"Mapped {/sections/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.428Z","level":"info","context":"RouterExplorer","message":"Mapped {/sections/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.428Z","level":"info","context":"RoutesResolver","message":"SubjectsController {/subjects}:"}
+{"timestamp":"2026-04-08T22:19:51.428Z","level":"info","context":"RouterExplorer","message":"Mapped {/subjects, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.429Z","level":"info","context":"RouterExplorer","message":"Mapped {/subjects, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.429Z","level":"info","context":"RouterExplorer","message":"Mapped {/subjects/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.429Z","level":"info","context":"RouterExplorer","message":"Mapped {/subjects/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.429Z","level":"info","context":"RouterExplorer","message":"Mapped {/subjects/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.429Z","level":"info","context":"RoutesResolver","message":"StudentsController {/students}:"}
+{"timestamp":"2026-04-08T22:19:51.429Z","level":"info","context":"RouterExplorer","message":"Mapped {/students, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.430Z","level":"info","context":"RouterExplorer","message":"Mapped {/students, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.430Z","level":"info","context":"RouterExplorer","message":"Mapped {/students/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.430Z","level":"info","context":"RouterExplorer","message":"Mapped {/students/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.430Z","level":"info","context":"RouterExplorer","message":"Mapped {/students/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.430Z","level":"info","context":"RoutesResolver","message":"GuardiansController {/guardians}:"}
+{"timestamp":"2026-04-08T22:19:51.431Z","level":"info","context":"RouterExplorer","message":"Mapped {/guardians, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.431Z","level":"info","context":"RouterExplorer","message":"Mapped {/guardians, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.432Z","level":"info","context":"RouterExplorer","message":"Mapped {/guardians/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.432Z","level":"info","context":"RouterExplorer","message":"Mapped {/guardians/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.432Z","level":"info","context":"RouterExplorer","message":"Mapped {/guardians/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.433Z","level":"info","context":"RoutesResolver","message":"StudentGuardiansController {/student-guardians}:"}
+{"timestamp":"2026-04-08T22:19:51.433Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-guardians, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.433Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-guardians, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.433Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-guardians/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.434Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-guardians/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.434Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-guardians/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.434Z","level":"info","context":"RoutesResolver","message":"StudentEnrollmentsController {/student-enrollments}:"}
+{"timestamp":"2026-04-08T22:19:51.434Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-enrollments, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.434Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-enrollments, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.435Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-enrollments/distribution/board, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.435Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-enrollments/distribution/auto-assign, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.435Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-enrollments/distribution/manual-assign, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.435Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-enrollments/distribution/transfer-section, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.436Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-enrollments/distribution/return-to-pending, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.436Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-enrollments/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.436Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-enrollments/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.436Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-enrollments/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.437Z","level":"info","context":"RoutesResolver","message":"StudentAttendanceController {/student-attendance}:"}
+{"timestamp":"2026-04-08T22:19:51.437Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-attendance, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.437Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-attendance, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.437Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-attendance/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.437Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-attendance/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.437Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-attendance/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.438Z","level":"info","context":"RoutesResolver","message":"StudentBooksController {/student-books}:"}
+{"timestamp":"2026-04-08T22:19:51.438Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-books, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.438Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-books, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.438Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-books/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.438Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-books/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.439Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-books/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.439Z","level":"info","context":"RoutesResolver","message":"StudentTalentsController {/student-talents}:"}
+{"timestamp":"2026-04-08T22:19:51.439Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-talents, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.439Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-talents, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.439Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-talents/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.440Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-talents/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.440Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-talents/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.440Z","level":"info","context":"RoutesResolver","message":"TalentsController {/talents}:"}
+{"timestamp":"2026-04-08T22:19:51.440Z","level":"info","context":"RouterExplorer","message":"Mapped {/talents, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.440Z","level":"info","context":"RouterExplorer","message":"Mapped {/talents, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.440Z","level":"info","context":"RouterExplorer","message":"Mapped {/talents/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.441Z","level":"info","context":"RouterExplorer","message":"Mapped {/talents/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.441Z","level":"info","context":"RouterExplorer","message":"Mapped {/talents/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.441Z","level":"info","context":"RoutesResolver","message":"StudentSiblingsController {/student-siblings}:"}
+{"timestamp":"2026-04-08T22:19:51.441Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-siblings, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.441Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-siblings, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.441Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-siblings/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.442Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-siblings/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.442Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-siblings/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.442Z","level":"info","context":"RoutesResolver","message":"StudentProblemsController {/student-problems}:"}
+{"timestamp":"2026-04-08T22:19:51.442Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-problems, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.442Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-problems, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.442Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-problems/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.443Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-problems/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.443Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-problems/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.443Z","level":"info","context":"RoutesResolver","message":"HealthVisitsController {/health}:"}
+{"timestamp":"2026-04-08T22:19:51.443Z","level":"info","context":"RouterExplorer","message":"Mapped {/health/visits, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.443Z","level":"info","context":"RouterExplorer","message":"Mapped {/health/visits, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.444Z","level":"info","context":"RouterExplorer","message":"Mapped {/health/visits/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.444Z","level":"info","context":"RouterExplorer","message":"Mapped {/health/visits/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.444Z","level":"info","context":"RouterExplorer","message":"Mapped {/health/visits/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.444Z","level":"info","context":"RouterExplorer","message":"Mapped {/health/summary, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.444Z","level":"info","context":"RoutesResolver","message":"EmployeesController {/employees}:"}
+{"timestamp":"2026-04-08T22:19:51.444Z","level":"info","context":"RouterExplorer","message":"Mapped {/employees, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.445Z","level":"info","context":"RouterExplorer","message":"Mapped {/employees, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.445Z","level":"info","context":"RouterExplorer","message":"Mapped {/employees/organization-options, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.445Z","level":"info","context":"RouterExplorer","message":"Mapped {/employees/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.445Z","level":"info","context":"RouterExplorer","message":"Mapped {/employees/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.445Z","level":"info","context":"RouterExplorer","message":"Mapped {/employees/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.445Z","level":"info","context":"RoutesResolver","message":"ParentNotificationsController {/parent-notifications}:"}
+{"timestamp":"2026-04-08T22:19:51.446Z","level":"info","context":"RouterExplorer","message":"Mapped {/parent-notifications, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.446Z","level":"info","context":"RouterExplorer","message":"Mapped {/parent-notifications, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.446Z","level":"info","context":"RouterExplorer","message":"Mapped {/parent-notifications/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.446Z","level":"info","context":"RouterExplorer","message":"Mapped {/parent-notifications/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.446Z","level":"info","context":"RouterExplorer","message":"Mapped {/parent-notifications/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.446Z","level":"info","context":"RoutesResolver","message":"ExamPeriodsController {/exam-periods}:"}
+{"timestamp":"2026-04-08T22:19:51.447Z","level":"info","context":"RouterExplorer","message":"Mapped {/exam-periods, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.447Z","level":"info","context":"RouterExplorer","message":"Mapped {/exam-periods, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.447Z","level":"info","context":"RouterExplorer","message":"Mapped {/exam-periods/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.448Z","level":"info","context":"RouterExplorer","message":"Mapped {/exam-periods/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.448Z","level":"info","context":"RouterExplorer","message":"Mapped {/exam-periods/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.449Z","level":"info","context":"RoutesResolver","message":"ExamAssessmentsController {/exam-assessments}:"}
+{"timestamp":"2026-04-08T22:19:51.449Z","level":"info","context":"RouterExplorer","message":"Mapped {/exam-assessments, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.449Z","level":"info","context":"RouterExplorer","message":"Mapped {/exam-assessments, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.450Z","level":"info","context":"RouterExplorer","message":"Mapped {/exam-assessments/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.450Z","level":"info","context":"RouterExplorer","message":"Mapped {/exam-assessments/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.450Z","level":"info","context":"RouterExplorer","message":"Mapped {/exam-assessments/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.450Z","level":"info","context":"RoutesResolver","message":"StudentExamScoresController {/student-exam-scores}:"}
+{"timestamp":"2026-04-08T22:19:51.450Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-exam-scores, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.450Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-exam-scores, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.451Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-exam-scores/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.451Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-exam-scores/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.451Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-exam-scores/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.451Z","level":"info","context":"RoutesResolver","message":"HomeworkTypesController {/homework-types}:"}
+{"timestamp":"2026-04-08T22:19:51.452Z","level":"info","context":"RouterExplorer","message":"Mapped {/homework-types, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.452Z","level":"info","context":"RouterExplorer","message":"Mapped {/homework-types, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.452Z","level":"info","context":"RouterExplorer","message":"Mapped {/homework-types/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.452Z","level":"info","context":"RouterExplorer","message":"Mapped {/homework-types/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.453Z","level":"info","context":"RouterExplorer","message":"Mapped {/homework-types/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.453Z","level":"info","context":"RoutesResolver","message":"HomeworksController {/homeworks}:"}
+{"timestamp":"2026-04-08T22:19:51.453Z","level":"info","context":"RouterExplorer","message":"Mapped {/homeworks, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.453Z","level":"info","context":"RouterExplorer","message":"Mapped {/homeworks, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.453Z","level":"info","context":"RouterExplorer","message":"Mapped {/homeworks/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.453Z","level":"info","context":"RouterExplorer","message":"Mapped {/homeworks/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.454Z","level":"info","context":"RouterExplorer","message":"Mapped {/homeworks/:id/populate-students, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.454Z","level":"info","context":"RouterExplorer","message":"Mapped {/homeworks/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.454Z","level":"info","context":"RoutesResolver","message":"StudentHomeworksController {/student-homeworks}:"}
+{"timestamp":"2026-04-08T22:19:51.454Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-homeworks, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.454Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-homeworks, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.455Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-homeworks/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.455Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-homeworks/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.455Z","level":"info","context":"RouterExplorer","message":"Mapped {/student-homeworks/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.455Z","level":"info","context":"RoutesResolver","message":"HrReportsController {/hr-reports}:"}
+{"timestamp":"2026-04-08T22:19:51.455Z","level":"info","context":"RouterExplorer","message":"Mapped {/hr-reports/summary, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.456Z","level":"info","context":"RoutesResolver","message":"EmployeeTasksController {/employee-tasks}:"}
+{"timestamp":"2026-04-08T22:19:51.456Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-tasks, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.456Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-tasks, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.456Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-tasks/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.456Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-tasks/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.456Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-tasks/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.457Z","level":"info","context":"RoutesResolver","message":"EmployeeTalentsController {/employee-talents}:"}
+{"timestamp":"2026-04-08T22:19:51.457Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-talents, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.457Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-talents, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.457Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-talents/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.457Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-talents/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.458Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-talents/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.458Z","level":"info","context":"RoutesResolver","message":"EmployeeCoursesController {/employee-courses}:"}
+{"timestamp":"2026-04-08T22:19:51.458Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-courses, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.458Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-courses, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.458Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-courses/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.459Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-courses/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.459Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-courses/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.459Z","level":"info","context":"RoutesResolver","message":"EmployeeViolationsController {/employee-violations}:"}
+{"timestamp":"2026-04-08T22:19:51.459Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-violations, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.459Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-violations, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.460Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-violations/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.460Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-violations/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.460Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-violations/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.460Z","level":"info","context":"RoutesResolver","message":"EmployeeTeachingAssignmentsController {/employee-teaching-assignments}:"}
+{"timestamp":"2026-04-08T22:19:51.460Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-teaching-assignments, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.460Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-teaching-assignments, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.461Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-teaching-assignments/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.461Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-teaching-assignments/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.461Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-teaching-assignments/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.461Z","level":"info","context":"RoutesResolver","message":"EmployeeSectionSupervisionsController {/employee-section-supervisions}:"}
+{"timestamp":"2026-04-08T22:19:51.461Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-section-supervisions, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.462Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-section-supervisions, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.462Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-section-supervisions/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.462Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-section-supervisions/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.462Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-section-supervisions/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.462Z","level":"info","context":"RoutesResolver","message":"EmployeeAttendanceController {/employee-attendance}:"}
+{"timestamp":"2026-04-08T22:19:51.463Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-attendance, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.463Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-attendance, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.463Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-attendance/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.463Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-attendance/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.463Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-attendance/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.463Z","level":"info","context":"RoutesResolver","message":"EmployeeDocumentsController {/employee-documents}:"}
+{"timestamp":"2026-04-08T22:19:51.464Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-documents, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.464Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-documents/generate-expiry-alerts, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.465Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-documents, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.465Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-documents/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.465Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-documents/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.465Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-documents/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.466Z","level":"info","context":"RoutesResolver","message":"EmployeeDepartmentsController {/employee-departments}:"}
+{"timestamp":"2026-04-08T22:19:51.466Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-departments, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.467Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-departments, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.467Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-departments/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.468Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-departments/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.468Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-departments/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.468Z","level":"info","context":"RoutesResolver","message":"EmployeeLeaveBalancesController {/employee-leave-balances}:"}
+{"timestamp":"2026-04-08T22:19:51.468Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-leave-balances, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.468Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-leave-balances/generate, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.469Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-leave-balances, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.469Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-leave-balances/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.469Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-leave-balances/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.469Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-leave-balances/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.469Z","level":"info","context":"RoutesResolver","message":"EmployeeLeavesController {/employee-leaves}:"}
+{"timestamp":"2026-04-08T22:19:51.470Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-leaves, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.470Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-leaves, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.470Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-leaves/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.470Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-leaves/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.470Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-leaves/:id/approve, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.470Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-leaves/:id/reject, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.471Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-leaves/:id/cancel, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.471Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-leaves/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.471Z","level":"info","context":"RoutesResolver","message":"EmployeeLifecycleChecklistsController {/employee-lifecycle-checklists}:"}
+{"timestamp":"2026-04-08T22:19:51.471Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-lifecycle-checklists, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.471Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-lifecycle-checklists/generate-templates, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.472Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-lifecycle-checklists/generate-due-alerts, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.472Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-lifecycle-checklists, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.472Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-lifecycle-checklists/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.472Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-lifecycle-checklists/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.472Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-lifecycle-checklists/:id/start, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.473Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-lifecycle-checklists/:id/complete, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.473Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-lifecycle-checklists/:id/waive, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.473Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-lifecycle-checklists/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.473Z","level":"info","context":"RoutesResolver","message":"EmployeeContractsController {/employee-contracts}:"}
+{"timestamp":"2026-04-08T22:19:51.473Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-contracts, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.474Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-contracts/generate-expiry-alerts, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.474Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-contracts/:id/renew-draft, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.474Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-contracts, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.474Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-contracts/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.474Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-contracts/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.474Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-contracts/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.475Z","level":"info","context":"RoutesResolver","message":"EmployeePerformanceEvaluationsController {/employee-performance-evaluations}:"}
+{"timestamp":"2026-04-08T22:19:51.475Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-performance-evaluations, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.475Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-performance-evaluations, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.475Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-performance-evaluations/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.475Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-performance-evaluations/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.476Z","level":"info","context":"RouterExplorer","message":"Mapped {/employee-performance-evaluations/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.476Z","level":"info","context":"RoutesResolver","message":"TimetableEntriesController {/timetable-entries}:"}
+{"timestamp":"2026-04-08T22:19:51.476Z","level":"info","context":"RouterExplorer","message":"Mapped {/timetable-entries, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.476Z","level":"info","context":"RouterExplorer","message":"Mapped {/timetable-entries, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.476Z","level":"info","context":"RouterExplorer","message":"Mapped {/timetable-entries/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.477Z","level":"info","context":"RouterExplorer","message":"Mapped {/timetable-entries/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.477Z","level":"info","context":"RouterExplorer","message":"Mapped {/timetable-entries/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.477Z","level":"info","context":"RoutesResolver","message":"TermSubjectOfferingsController {/term-subject-offerings}:"}
+{"timestamp":"2026-04-08T22:19:51.477Z","level":"info","context":"RouterExplorer","message":"Mapped {/term-subject-offerings, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.478Z","level":"info","context":"RouterExplorer","message":"Mapped {/term-subject-offerings, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.478Z","level":"info","context":"RouterExplorer","message":"Mapped {/term-subject-offerings/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.478Z","level":"info","context":"RouterExplorer","message":"Mapped {/term-subject-offerings/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.478Z","level":"info","context":"RouterExplorer","message":"Mapped {/term-subject-offerings/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.478Z","level":"info","context":"RoutesResolver","message":"UsersController {/users}:"}
+{"timestamp":"2026-04-08T22:19:51.479Z","level":"info","context":"RouterExplorer","message":"Mapped {/users, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.479Z","level":"info","context":"RouterExplorer","message":"Mapped {/users, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.479Z","level":"info","context":"RouterExplorer","message":"Mapped {/users/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.479Z","level":"info","context":"RouterExplorer","message":"Mapped {/users/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.480Z","level":"info","context":"RouterExplorer","message":"Mapped {/users/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.480Z","level":"info","context":"RouterExplorer","message":"Mapped {/users/:id/employee-link, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.480Z","level":"info","context":"RouterExplorer","message":"Mapped {/users/:id/employee-link, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.480Z","level":"info","context":"RoutesResolver","message":"RolesController {/roles}:"}
+{"timestamp":"2026-04-08T22:19:51.481Z","level":"info","context":"RouterExplorer","message":"Mapped {/roles, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.481Z","level":"info","context":"RouterExplorer","message":"Mapped {/roles, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.482Z","level":"info","context":"RouterExplorer","message":"Mapped {/roles/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.484Z","level":"info","context":"RouterExplorer","message":"Mapped {/roles/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.484Z","level":"info","context":"RouterExplorer","message":"Mapped {/roles/:id/permissions, PUT} route"}
+{"timestamp":"2026-04-08T22:19:51.485Z","level":"info","context":"RouterExplorer","message":"Mapped {/roles/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.485Z","level":"info","context":"RoutesResolver","message":"SectionClassroomAssignmentsController {/section-classroom-assignments}:"}
+{"timestamp":"2026-04-08T22:19:51.486Z","level":"info","context":"RouterExplorer","message":"Mapped {/section-classroom-assignments, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.486Z","level":"info","context":"RouterExplorer","message":"Mapped {/section-classroom-assignments, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.486Z","level":"info","context":"RouterExplorer","message":"Mapped {/section-classroom-assignments/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.486Z","level":"info","context":"RouterExplorer","message":"Mapped {/section-classroom-assignments/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.486Z","level":"info","context":"RouterExplorer","message":"Mapped {/section-classroom-assignments/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.486Z","level":"info","context":"RoutesResolver","message":"PermissionsController {/permissions}:"}
+{"timestamp":"2026-04-08T22:19:51.486Z","level":"info","context":"RouterExplorer","message":"Mapped {/permissions, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.487Z","level":"info","context":"RouterExplorer","message":"Mapped {/permissions, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.487Z","level":"info","context":"RouterExplorer","message":"Mapped {/permissions/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.487Z","level":"info","context":"RouterExplorer","message":"Mapped {/permissions/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.487Z","level":"info","context":"RouterExplorer","message":"Mapped {/permissions/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.487Z","level":"info","context":"RoutesResolver","message":"GlobalSettingsController {/global-settings}:"}
+{"timestamp":"2026-04-08T22:19:51.487Z","level":"info","context":"RouterExplorer","message":"Mapped {/global-settings, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.488Z","level":"info","context":"RouterExplorer","message":"Mapped {/global-settings, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.488Z","level":"info","context":"RouterExplorer","message":"Mapped {/global-settings/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.488Z","level":"info","context":"RouterExplorer","message":"Mapped {/global-settings/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.488Z","level":"info","context":"RouterExplorer","message":"Mapped {/global-settings/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.488Z","level":"info","context":"RoutesResolver","message":"LookupBloodTypesController {/lookup/blood-types}:"}
+{"timestamp":"2026-04-08T22:19:51.488Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/blood-types, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.489Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/blood-types, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.489Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/blood-types/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.489Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/blood-types/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.489Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/blood-types/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.489Z","level":"info","context":"RoutesResolver","message":"LookupEnrollmentStatusesController {/lookup/enrollment-statuses}:"}
+{"timestamp":"2026-04-08T22:19:51.489Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/enrollment-statuses, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.490Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/enrollment-statuses, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.490Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/enrollment-statuses/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.490Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/enrollment-statuses/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.490Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/enrollment-statuses/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.490Z","level":"info","context":"RoutesResolver","message":"LookupOrphanStatusesController {/lookup/orphan-statuses}:"}
+{"timestamp":"2026-04-08T22:19:51.490Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/orphan-statuses, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.491Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/orphan-statuses, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.491Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/orphan-statuses/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.491Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/orphan-statuses/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.491Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/orphan-statuses/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.491Z","level":"info","context":"RoutesResolver","message":"LookupAbilityLevelsController {/lookup/ability-levels}:"}
+{"timestamp":"2026-04-08T22:19:51.492Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/ability-levels, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.492Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/ability-levels, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.492Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/ability-levels/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.492Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/ability-levels/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.492Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/ability-levels/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.492Z","level":"info","context":"RoutesResolver","message":"LookupActivityTypesController {/lookup/activity-types}:"}
+{"timestamp":"2026-04-08T22:19:51.492Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/activity-types, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.493Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/activity-types, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.493Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/activity-types/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.493Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/activity-types/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.493Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/activity-types/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.493Z","level":"info","context":"RoutesResolver","message":"LookupGradeDescriptionsController {/lookup/grade-descriptions}:"}
+{"timestamp":"2026-04-08T22:19:51.493Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/grade-descriptions, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.493Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/grade-descriptions, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.494Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/grade-descriptions/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.494Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/grade-descriptions/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.495Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/grade-descriptions/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.495Z","level":"info","context":"RoutesResolver","message":"LookupCatalogController {/lookup/catalog}:"}
+{"timestamp":"2026-04-08T22:19:51.495Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/catalog/:type, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.495Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/catalog/:type, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.495Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/catalog/:type/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.496Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/catalog/:type/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.496Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/catalog/:type/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.496Z","level":"info","context":"RoutesResolver","message":"LookupIdTypesController {/lookup/id-types}:"}
+{"timestamp":"2026-04-08T22:19:51.496Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/id-types, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.496Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/id-types, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.496Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/id-types/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.497Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/id-types/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.497Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/id-types/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.497Z","level":"info","context":"RoutesResolver","message":"LookupOwnershipTypesController {/lookup/ownership-types}:"}
+{"timestamp":"2026-04-08T22:19:51.497Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/ownership-types, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.498Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/ownership-types, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.500Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/ownership-types/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.501Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/ownership-types/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.501Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/ownership-types/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.502Z","level":"info","context":"RoutesResolver","message":"LookupPeriodsController {/lookup/periods}:"}
+{"timestamp":"2026-04-08T22:19:51.502Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/periods, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.502Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/periods, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.503Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/periods/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.503Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/periods/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.503Z","level":"info","context":"RouterExplorer","message":"Mapped {/lookup/periods/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.503Z","level":"info","context":"RoutesResolver","message":"SystemSettingsController {/system-settings}:"}
+{"timestamp":"2026-04-08T22:19:51.503Z","level":"info","context":"RouterExplorer","message":"Mapped {/system-settings, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.504Z","level":"info","context":"RouterExplorer","message":"Mapped {/system-settings, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.504Z","level":"info","context":"RouterExplorer","message":"Mapped {/system-settings/branch-config, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.504Z","level":"info","context":"RouterExplorer","message":"Mapped {/system-settings/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.504Z","level":"info","context":"RouterExplorer","message":"Mapped {/system-settings/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.504Z","level":"info","context":"RouterExplorer","message":"Mapped {/system-settings/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.505Z","level":"info","context":"RoutesResolver","message":"RemindersTickerController {/reminders-ticker}:"}
+{"timestamp":"2026-04-08T22:19:51.505Z","level":"info","context":"RouterExplorer","message":"Mapped {/reminders-ticker, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.505Z","level":"info","context":"RouterExplorer","message":"Mapped {/reminders-ticker, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.505Z","level":"info","context":"RouterExplorer","message":"Mapped {/reminders-ticker/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.505Z","level":"info","context":"RouterExplorer","message":"Mapped {/reminders-ticker/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.506Z","level":"info","context":"RouterExplorer","message":"Mapped {/reminders-ticker/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.506Z","level":"info","context":"RoutesResolver","message":"UserPermissionsController {/user-permissions}:"}
+{"timestamp":"2026-04-08T22:19:51.506Z","level":"info","context":"RouterExplorer","message":"Mapped {/user-permissions, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.506Z","level":"info","context":"RouterExplorer","message":"Mapped {/user-permissions, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.506Z","level":"info","context":"RouterExplorer","message":"Mapped {/user-permissions/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.506Z","level":"info","context":"RouterExplorer","message":"Mapped {/user-permissions/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.507Z","level":"info","context":"RouterExplorer","message":"Mapped {/user-permissions/:id/revoke, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.507Z","level":"info","context":"RouterExplorer","message":"Mapped {/user-permissions/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.507Z","level":"info","context":"RoutesResolver","message":"SchoolProfilesController {/school-profiles}:"}
+{"timestamp":"2026-04-08T22:19:51.507Z","level":"info","context":"RouterExplorer","message":"Mapped {/school-profiles, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.507Z","level":"info","context":"RouterExplorer","message":"Mapped {/school-profiles, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.508Z","level":"info","context":"RouterExplorer","message":"Mapped {/school-profiles/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.508Z","level":"info","context":"RouterExplorer","message":"Mapped {/school-profiles/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.508Z","level":"info","context":"RouterExplorer","message":"Mapped {/school-profiles/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.508Z","level":"info","context":"RoutesResolver","message":"BranchesController {/finance/branches}:"}
+{"timestamp":"2026-04-08T22:19:51.508Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/branches, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.509Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/branches, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.509Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/branches/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.509Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/branches/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.509Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/branches/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.509Z","level":"info","context":"RoutesResolver","message":"CurrenciesController {/finance/currencies}:"}
+{"timestamp":"2026-04-08T22:19:51.510Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/currencies, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.510Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/currencies, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.510Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/currencies/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.510Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/currencies/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.510Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/currencies/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.511Z","level":"info","context":"RoutesResolver","message":"CurrencyExchangeRatesController {/finance/currency-exchange-rates}:"}
+{"timestamp":"2026-04-08T22:19:51.511Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/currency-exchange-rates, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.511Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/currency-exchange-rates, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.511Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/currency-exchange-rates/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.511Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/currency-exchange-rates/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.511Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/currency-exchange-rates/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.512Z","level":"info","context":"RoutesResolver","message":"FiscalYearsController {/finance/fiscal-years}:"}
+{"timestamp":"2026-04-08T22:19:51.512Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/fiscal-years, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.512Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/fiscal-years, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.512Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/fiscal-years/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.513Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/fiscal-years/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.513Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/fiscal-years/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.513Z","level":"info","context":"RoutesResolver","message":"FiscalPeriodsController {/finance/fiscal-periods}:"}
+{"timestamp":"2026-04-08T22:19:51.513Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/fiscal-periods, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.513Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/fiscal-periods, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.513Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/fiscal-periods/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.513Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/fiscal-periods/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.514Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/fiscal-periods/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.514Z","level":"info","context":"RoutesResolver","message":"ChartOfAccountsController {/finance/chart-of-accounts}:"}
+{"timestamp":"2026-04-08T22:19:51.515Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/chart-of-accounts, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.515Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/chart-of-accounts, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.516Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/chart-of-accounts/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.516Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/chart-of-accounts/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.516Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/chart-of-accounts/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.516Z","level":"info","context":"RoutesResolver","message":"JournalEntriesController {/finance/journal-entries}:"}
+{"timestamp":"2026-04-08T22:19:51.517Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/journal-entries, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.517Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/journal-entries, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.517Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/journal-entries/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.517Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/journal-entries/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.517Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/journal-entries/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.518Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/journal-entries/:id/approve, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.518Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/journal-entries/:id/post, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.518Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/journal-entries/:id/reverse, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.518Z","level":"info","context":"RoutesResolver","message":"PaymentGatewaysController {/finance/payment-gateways}:"}
+{"timestamp":"2026-04-08T22:19:51.518Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/payment-gateways, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.519Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/payment-gateways, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.519Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/payment-gateways/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.519Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/payment-gateways/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.519Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/payment-gateways/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.519Z","level":"info","context":"RoutesResolver","message":"PaymentTransactionsController {/finance/payment-transactions}:"}
+{"timestamp":"2026-04-08T22:19:51.520Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/payment-transactions, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.520Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/payment-transactions/simulate, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.520Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/payment-transactions/:id/reconcile, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.521Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/payment-transactions/:id/complete-and-reconcile, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.521Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/payment-transactions, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.521Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/payment-transactions/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.521Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/payment-transactions/:id/receipt, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.522Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/payment-transactions/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.522Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/payment-transactions/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.522Z","level":"info","context":"RoutesResolver","message":"PaymentWebhooksController {/webhooks/payment}:"}
+{"timestamp":"2026-04-08T22:19:51.522Z","level":"info","context":"RouterExplorer","message":"Mapped {/webhooks/payment/success, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.522Z","level":"info","context":"RouterExplorer","message":"Mapped {/webhooks/payment/failure, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.523Z","level":"info","context":"RouterExplorer","message":"Mapped {/webhooks/payment/refund, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.523Z","level":"info","context":"RoutesResolver","message":"BankReconciliationsController {/finance/bank-reconciliations}:"}
+{"timestamp":"2026-04-08T22:19:51.523Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/bank-reconciliations, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.524Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/bank-reconciliations/:id/items, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.524Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/bank-reconciliations/:id/auto-match-transactions, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.524Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/bank-reconciliations, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.524Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/bank-reconciliations/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.524Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/bank-reconciliations/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.525Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/bank-reconciliations/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.525Z","level":"info","context":"RoutesResolver","message":"FinancialReportsController {/finance/reports}:"}
+{"timestamp":"2026-04-08T22:19:51.525Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/reports/trial-balance, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.525Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/reports/general-ledger, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.526Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/reports/account-summary, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.526Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/reports/income-statement, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.526Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/reports/balance-sheet, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.527Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/reports/student-account-statement, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.527Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/reports/vat-report, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.528Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/reports/accounts-receivable-aging, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.528Z","level":"info","context":"RoutesResolver","message":"FeeStructuresController {/finance/fee-structures}:"}
+{"timestamp":"2026-04-08T22:19:51.528Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/fee-structures, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.528Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/fee-structures, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.529Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/fee-structures/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.529Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/fee-structures/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.529Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/fee-structures/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.530Z","level":"info","context":"RoutesResolver","message":"DiscountRulesController {/finance/discount-rules}:"}
+{"timestamp":"2026-04-08T22:19:51.530Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/discount-rules, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.530Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/discount-rules, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.530Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/discount-rules/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.530Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/discount-rules/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.531Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/discount-rules/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.531Z","level":"info","context":"RoutesResolver","message":"StudentInvoicesController {/finance/student-invoices}:"}
+{"timestamp":"2026-04-08T22:19:51.532Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/student-invoices, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.532Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/student-invoices, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.532Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/student-invoices/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.533Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/student-invoices/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.533Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/student-invoices/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.533Z","level":"info","context":"RoutesResolver","message":"InvoiceInstallmentsController {/finance/invoice-installments}:"}
+{"timestamp":"2026-04-08T22:19:51.533Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/invoice-installments, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.533Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/invoice-installments, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.534Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/invoice-installments/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.534Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/invoice-installments/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.535Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/invoice-installments/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.535Z","level":"info","context":"RoutesResolver","message":"TaxConfigurationsController {/finance/tax-configurations}:"}
+{"timestamp":"2026-04-08T22:19:51.536Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/tax-configurations, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.537Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/tax-configurations, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.537Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/tax-configurations/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.538Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/tax-configurations/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.538Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/tax-configurations/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.538Z","level":"info","context":"RoutesResolver","message":"BillingEngineController {/finance/billing}:"}
+{"timestamp":"2026-04-08T22:19:51.539Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/billing/defaults, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.539Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/billing/bulk-generate, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.539Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/billing/apply-sibling-discount, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.540Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/billing/student-statement/:enrollmentId, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.540Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/billing/family-balance/:guardianId, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.540Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/billing/process-withdrawal, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.540Z","level":"info","context":"RoutesResolver","message":"CreditDebitNotesController {/finance/credit-debit-notes}:"}
+{"timestamp":"2026-04-08T22:19:51.540Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/credit-debit-notes, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.541Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/credit-debit-notes, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.541Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/credit-debit-notes/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.541Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/credit-debit-notes/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.541Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/credit-debit-notes/:id/approve, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.541Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/credit-debit-notes/:id/apply, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.541Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/credit-debit-notes/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.542Z","level":"info","context":"RoutesResolver","message":"CostCentersController {/finance/cost-centers}:"}
+{"timestamp":"2026-04-08T22:19:51.542Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/cost-centers, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.542Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/cost-centers, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.542Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/cost-centers/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.542Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/cost-centers/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.542Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/cost-centers/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.543Z","level":"info","context":"RoutesResolver","message":"BudgetsController {/finance/budgets}:"}
+{"timestamp":"2026-04-08T22:19:51.543Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/budgets, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.543Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/budgets, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.543Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/budgets/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.543Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/budgets/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.543Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/budgets/:id/approve, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.544Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/budgets/:id/budget-vs-actual, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.544Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/budgets/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.544Z","level":"info","context":"RoutesResolver","message":"RecurringJournalsController {/finance/recurring-journals}:"}
+{"timestamp":"2026-04-08T22:19:51.544Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/recurring-journals, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.544Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/recurring-journals, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.544Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/recurring-journals/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.544Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/recurring-journals/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.545Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/recurring-journals/:id/generate, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.545Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/recurring-journals/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.545Z","level":"info","context":"RoutesResolver","message":"HrIntegrationsController {/finance/hr}:"}
+{"timestamp":"2026-04-08T22:19:51.546Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/hr/payroll-journal, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.546Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/hr/payroll-summary/:month, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.546Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/hr/payroll-preview/:month, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.546Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/hr/deduction-journal, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.547Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/hr/employee-balance/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.547Z","level":"info","context":"RoutesResolver","message":"ProcurementIntegrationsController {/finance/procurement}:"}
+{"timestamp":"2026-04-08T22:19:51.547Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/procurement/purchase-journal, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.547Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/procurement/inventory/adjustment-journal, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.548Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/procurement/payment-journal, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.548Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/procurement/vendor-balance/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.549Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/procurement/depreciation-journal, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.549Z","level":"info","context":"RoutesResolver","message":"InventoryIntegrationsController {/finance/inventory}:"}
+{"timestamp":"2026-04-08T22:19:51.549Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/inventory/adjustment-journal, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.549Z","level":"info","context":"RoutesResolver","message":"TransportIntegrationsController {/finance/transport}:"}
+{"timestamp":"2026-04-08T22:19:51.549Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/transport/revenue-report, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.550Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/transport/generate-invoices, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.550Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/transport/subscription-fee, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.550Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/transport/maintenance-expense, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.550Z","level":"info","context":"RoutesResolver","message":"AuditTrailController {/finance/audit-trail}:"}
+{"timestamp":"2026-04-08T22:19:51.550Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/audit-trail, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.550Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/audit-trail, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.550Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/audit-trail/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.551Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/audit-trail/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.551Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/audit-trail/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.551Z","level":"info","context":"RoutesResolver","message":"FinancialFundsController {/finance/financial-funds}:"}
+{"timestamp":"2026-04-08T22:19:51.551Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/financial-funds, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.551Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/financial-funds, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.551Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/financial-funds/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.552Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/financial-funds/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.552Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/financial-funds/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.552Z","level":"info","context":"RoutesResolver","message":"FinancialCategoriesController {/finance/financial-categories}:"}
+{"timestamp":"2026-04-08T22:19:51.552Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/financial-categories, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.552Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/financial-categories, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.552Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/financial-categories/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.553Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/financial-categories/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.553Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/financial-categories/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.553Z","level":"info","context":"RoutesResolver","message":"RevenuesController {/finance/revenues}:"}
+{"timestamp":"2026-04-08T22:19:51.553Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/revenues, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.553Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/revenues, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.553Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/revenues/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.554Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/revenues/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.554Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/revenues/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.554Z","level":"info","context":"RoutesResolver","message":"ExpensesController {/finance/expenses}:"}
+{"timestamp":"2026-04-08T22:19:51.554Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/expenses, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.554Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/expenses, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.554Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/expenses/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.555Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/expenses/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.555Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/expenses/:id/approve, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.555Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/expenses/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.555Z","level":"info","context":"RoutesResolver","message":"CommunityContributionsController {/finance/community-contributions}:"}
+{"timestamp":"2026-04-08T22:19:51.556Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/community-contributions, POST} route"}
+{"timestamp":"2026-04-08T22:19:51.556Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/community-contributions, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.556Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/community-contributions/:id, GET} route"}
+{"timestamp":"2026-04-08T22:19:51.556Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/community-contributions/:id, PATCH} route"}
+{"timestamp":"2026-04-08T22:19:51.556Z","level":"info","context":"RouterExplorer","message":"Mapped {/finance/community-contributions/:id, DELETE} route"}
+{"timestamp":"2026-04-08T22:19:51.557Z","level":"warn","context":"RecurringJournalsSchedulerService","message":"FINANCE_SYSTEM_USER_ID is not configured; skipping recurring journal scheduler run."}
+{"timestamp":"2026-04-08T22:19:51.557Z","level":"info","context":"RecurringJournalsSchedulerService","message":"Recurring journal scheduler started (interval 900000ms)"}
+{"timestamp":"2026-04-08T22:19:51.557Z","level":"info","context":"NestApplication","message":"Nest application successfully started"}
+{"timestamp":"2026-04-08T22:19:51.558Z","level":"info","message":"API is running on http://localhost:3000"}
+{"timestamp":"2026-04-08T22:19:51.558Z","level":"info","message":"Swagger docs available at http://localhost:3000/api/docs"}

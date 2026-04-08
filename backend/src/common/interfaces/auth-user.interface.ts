@@ -3,4 +3,5 @@ export interface AuthUser {
   email: string;
   roleCodes: string[];
   permissionCodes: string[];
+  sessionId?: string;
 }

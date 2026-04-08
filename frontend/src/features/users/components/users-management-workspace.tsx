@@ -49,6 +49,8 @@ import { Label } from "@/components/ui/label";
 type UserFormState = {
   email: string;
   username: string;
+  phoneCountryCode: string;
+  phoneNationalNumber: string;
   firstName: string;
   lastName: string;
   password: string;
@@ -62,6 +64,8 @@ const PAGE_SIZE = 10;
 const DEFAULT_FORM_STATE: UserFormState = {
   email: "",
   username: "",
+  phoneCountryCode: "",
+  phoneNationalNumber: "",
   firstName: "",
   lastName: "",
   password: "",
@@ -74,6 +78,8 @@ function toFormState(user: UserListItem): UserFormState {
   return {
     email: user.email,
     username: user.username ?? "",
+    phoneCountryCode: user.phoneCountryCode ?? "",
+    phoneNationalNumber: user.phoneNationalNumber ?? "",
     firstName: user.firstName,
     lastName: user.lastName,
     password: "",
@@ -250,6 +256,8 @@ export function UsersManagementWorkspace({
     const email = formState.email.trim();
     const firstName = formState.firstName.trim();
     const lastName = formState.lastName.trim();
+    const phoneCountryCode = formState.phoneCountryCode.trim();
+    const phoneNationalNumber = formState.phoneNationalNumber.trim();
 
     if (!email || !firstName || !lastName) {
       setFormError(
@@ -277,6 +285,11 @@ export function UsersManagementWorkspace({
       return false;
     }
 
+    if (Boolean(phoneCountryCode) !== Boolean(phoneNationalNumber)) {
+      setFormError("الرجاء إدخال مفتاح الدولة ورقم الهاتف معًا أو تركهما فارغين.");
+      return false;
+    }
+
     setFormError(null);
     return true;
   };
@@ -292,6 +305,8 @@ export function UsersManagementWorkspace({
     const payload = {
       email: formState.email.trim().toLowerCase(),
       username: toOptionalString(formState.username),
+      phoneCountryCode: toOptionalString(formState.phoneCountryCode),
+      phoneNationalNumber: toOptionalString(formState.phoneNationalNumber),
       firstName: formState.firstName.trim(),
       lastName: formState.lastName.trim(),
       employeeId: toOptionalString(formState.employeeId),
@@ -550,6 +565,11 @@ export function UsersManagementWorkspace({
                           اسم المستخدم: <code>{user.username}</code>
                         </p>
                       ) : null}
+                      {user.phoneE164 ? (
+                        <p className="text-xs text-muted-foreground">
+                          الهاتف: <code>{user.phoneE164}</code>
+                        </p>
+                      ) : null}
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant={user.isActive ? "default" : "destructive"}>
@@ -765,6 +785,35 @@ export function UsersManagementWorkspace({
                 placeholder="ahmad_teacher"
                 icon={<User className="h-4 w-4" />}
               />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <Label>مفتاح الدولة</Label>
+                <Input
+                  value={formState.phoneCountryCode}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      phoneCountryCode: event.target.value,
+                    }))
+                  }
+                  placeholder="+967"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>رقم الهاتف</Label>
+                <Input
+                  value={formState.phoneNationalNumber}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      phoneNationalNumber: event.target.value,
+                    }))
+                  }
+                  placeholder="7XXXXXXXX"
+                />
+              </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">

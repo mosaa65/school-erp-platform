@@ -25,6 +25,20 @@ export class CreateUserDto {
   @MaxLength(64)
   username?: string;
 
+  @ApiPropertyOptional({ example: '+967' })
+  @IsOptional()
+  @Transform(({ value }: { value?: string }) => value?.trim())
+  @IsString()
+  @MaxLength(8)
+  phoneCountryCode?: string;
+
+  @ApiPropertyOptional({ example: '777123456' })
+  @IsOptional()
+  @Transform(({ value }: { value?: string }) => value?.trim())
+  @IsString()
+  @MaxLength(32)
+  phoneNationalNumber?: string;
+
   @ApiPropertyOptional({ example: 'cmf2f32b60000uvh95h7tk7q1' })
   @IsOptional()
   @IsString()

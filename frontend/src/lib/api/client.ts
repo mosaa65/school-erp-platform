@@ -1,6 +1,10 @@
 import { appConfig } from "@/lib/env";
 import type { AuthSession } from "@/features/auth/types/auth-session";
-import { getAccessTokenFromStorage } from "@/lib/auth/session";
+import {
+  clearAuthSession,
+  getAccessTokenFromStorage,
+  saveAuthSession,
+} from "@/lib/auth/session";
 
 type HttpMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
@@ -11,13 +15,106 @@ export type HealthCheckResponse = {
 };
 
 export type LoginPayload = {
-  email: string;
+  loginId: string;
   password: string;
+  deviceId?: string;
+  deviceLabel?: string;
+  captchaToken?: string;
+};
+
+export type LoginMfaChallengeResponse = {
+  mfaRequired: true;
+  factorType: "TOTP";
+  challengeId: string;
+  challengeExpiresInSeconds: number;
+};
+
+export type LoginWebAuthnChallengeResponse = {
+  webauthnRequired: true;
+  factorType: "WEBAUTHN";
+  challengeId: string;
+  challengeExpiresInSeconds: number;
+  options: Record<string, unknown>;
+};
+
+export type LoginResponse =
+  | AuthSession
+  | LoginMfaChallengeResponse
+  | LoginWebAuthnChallengeResponse;
+
+export type VerifyLoginMfaPayload = {
+  challengeId: string;
+  code: string;
+};
+
+export type WebAuthnCredentialListItem = {
+  id: string;
+  credentialName: string | null;
+  deviceType: string;
+  backedUp: boolean;
+  transports: string[];
+  lastUsedAt: string | null;
+  createdAt: string;
+};
+
+export type BeginWebAuthnRegistrationResponse = {
+  challengeId: string;
+  options: Record<string, unknown>;
+};
+
+export type FinishWebAuthnRegistrationPayload = {
+  challengeId: string;
+  response: Record<string, unknown>;
+  credentialName?: string;
+};
+
+export type BeginWebAuthnAuthenticationResponse = {
+  challengeId: string;
+  options: Record<string, unknown>;
+};
+
+export type FinishWebAuthnAuthenticationPayload = {
+  challengeId: string;
+  response: Record<string, unknown>;
+  deviceId?: string;
+  deviceLabel?: string;
+};
+
+export type AuthSessionView = {
+  id: string;
+  deviceId: string | null;
+  deviceLabel: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  lastActivity: string;
+  expiresAt: string;
+  isCurrent: boolean;
+};
+
+export type AuthProfile = {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phoneCountryCode: string | null;
+  phoneNationalNumber: string | null;
+  phoneE164: string | null;
+  webAuthnRequired: boolean;
+  hasWebAuthnCredentials: boolean;
+};
+
+export type UpdateProfilePayload = {
+  phoneCountryCode?: string;
+  phoneNationalNumber?: string;
+  webAuthnRequired?: boolean;
 };
 
 export type UserListItem = {
   id: string;
   email: string;
+  phoneCountryCode: string | null;
+  phoneNationalNumber: string | null;
+  phoneE164: string | null;
   username: string | null;
   firstName: string;
   lastName: string;
@@ -3301,6 +3398,8 @@ export type CreateUserPayload = {
   email: string;
   username?: string;
   employeeId?: string;
+  phoneCountryCode?: string;
+  phoneNationalNumber?: string;
   password: string;
   firstName: string;
   lastName: string;
@@ -3312,6 +3411,8 @@ export type UpdateUserPayload = {
   email?: string;
   username?: string;
   employeeId?: string;
+  phoneCountryCode?: string;
+  phoneNationalNumber?: string;
   password?: string;
   firstName?: string;
   lastName?: string;
@@ -6554,6 +6655,7 @@ export type PaginatedResponse<T> = {
 type RequestOptions = Omit<RequestInit, "method" | "body"> & {
   json?: unknown;
   withAuth?: boolean;
+  _retryAuth?: boolean;
 };
 
 export class ApiError extends Error {
@@ -6656,12 +6758,54 @@ function resolveApiPath(path: string): string {
   return isFinancePath ? `/finance${path}` : path;
 }
 
+let refreshPromise: Promise<AuthSession | null> | null = null;
+
+async function tryRefreshAuthSession(): Promise<AuthSession | null> {
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  refreshPromise = (async () => {
+    try {
+      const response = await fetch(
+        `${appConfig.apiProxyPrefix}/auth/refresh`,
+        {
+          method: "POST",
+          credentials: "include",
+          cache: "no-store",
+        },
+      );
+
+      if (!response.ok) {
+        clearAuthSession();
+        return null;
+      }
+
+      const body = (await response.json()) as AuthSession;
+      if (!body?.accessToken) {
+        clearAuthSession();
+        return null;
+      }
+
+      saveAuthSession(body);
+      return body;
+    } catch {
+      clearAuthSession();
+      return null;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
 async function request<T>(
   path: string,
   method: HttpMethod = "GET",
   options: RequestOptions = {},
 ): Promise<T> {
-  const { json, withAuth = false, ...fetchOptions } = options;
+  const { json, withAuth = false, _retryAuth = false, ...fetchOptions } = options;
   const headers = new Headers(options.headers);
 
   if (withAuth) {
@@ -6686,6 +6830,7 @@ async function request<T>(
     method,
     headers,
     body: requestBody,
+    credentials: fetchOptions.credentials ?? "include",
     cache: "no-store",
   });
 
@@ -6695,6 +6840,17 @@ async function request<T>(
     : await response.text();
 
   if (!response.ok) {
+    if (withAuth && response.status === 401 && !_retryAuth) {
+      const refreshedSession = await tryRefreshAuthSession();
+
+      if (refreshedSession?.accessToken) {
+        return request<T>(path, method, {
+          ...options,
+          _retryAuth: true,
+        });
+      }
+    }
+
     throw new ApiError(
       resolveErrorMessage(responseBody, response.status),
       response.status,
@@ -6707,9 +6863,71 @@ async function request<T>(
 export const apiClient = {
   healthCheck: () => request<HealthCheckResponse>("/health"),
   login: (payload: LoginPayload) =>
-    request<AuthSession>("/auth/login", "POST", {
+    request<LoginResponse>("/auth/login", "POST", {
       json: payload,
     }),
+  verifyLoginMfa: (payload: VerifyLoginMfaPayload) =>
+    request<AuthSession>("/auth/mfa/verify", "POST", {
+      json: payload,
+    }),
+  beginWebAuthnRegistration: () =>
+    request<BeginWebAuthnRegistrationResponse>(
+      "/auth/webauthn/registration/options",
+      "POST",
+      {
+        withAuth: true,
+      },
+    ),
+  finishWebAuthnRegistration: (payload: FinishWebAuthnRegistrationPayload) =>
+    request<WebAuthnCredentialListItem>("/auth/webauthn/registration/verify", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  listWebAuthnCredentials: () =>
+    request<WebAuthnCredentialListItem[]>("/auth/webauthn/credentials", "GET", {
+      withAuth: true,
+    }),
+  removeWebAuthnCredential: (credentialId: string) =>
+    request<{ success: boolean; credentialId: string }>(
+      `/auth/webauthn/credentials/${credentialId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
+  beginWebAuthnAuthentication: () =>
+    request<BeginWebAuthnAuthenticationResponse>(
+      "/auth/webauthn/authentication/options",
+      "POST",
+      {},
+    ),
+  finishWebAuthnAuthentication: (payload: FinishWebAuthnAuthenticationPayload) =>
+    request<AuthSession>("/auth/webauthn/authentication/verify", "POST", {
+      json: payload,
+    }),
+  logout: () =>
+    request<{ success: boolean }>("/auth/logout", "POST", {}),
+  getProfile: () =>
+    request<AuthProfile>("/auth/profile", "GET", {
+      withAuth: true,
+    }),
+  updateProfile: (payload: UpdateProfilePayload) =>
+    request<AuthProfile>("/auth/profile", "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  listAuthSessions: () =>
+    request<AuthSessionView[]>("/auth/sessions", "GET", {
+      withAuth: true,
+    }),
+  revokeAuthSession: (sessionId: string) =>
+    request<{ success: boolean; sessionId: string }>(
+      `/auth/sessions/${sessionId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listUsers: (query?: {
     page?: number;
     limit?: number;

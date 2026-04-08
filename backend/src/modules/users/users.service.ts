@@ -5,7 +5,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AuditStatus, Prisma, type User } from '@prisma/client';
-import { hash } from 'bcrypt';
+import * as argon2 from 'argon2';
+import {
+  parsePhoneNumberFromString,
+  type CountryCode,
+} from 'libphonenumber-js';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { EmployeesService } from '../employees/employees.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -16,6 +20,9 @@ import { UpdateUserDto } from './dto/update-user.dto';
 const userPublicSelect = {
   id: true,
   email: true,
+  phoneCountryCode: true,
+  phoneNationalNumber: true,
+  phoneE164: true,
   username: true,
   firstName: true,
   lastName: true,
@@ -58,18 +65,27 @@ export class UsersService {
   ) {}
 
   async create(createUserDto: CreateUserDto, actorUserId: string) {
+    let normalizedPhone: ReturnType<typeof this.normalizePhoneInput> = null;
+
     try {
       if (createUserDto.employeeId) {
         await this.ensureEmployeeExistsAndActive(createUserDto.employeeId);
       }
 
-      const passwordHash = await hash(createUserDto.password, 12);
+      const passwordHash = await argon2.hash(createUserDto.password);
+      normalizedPhone = this.normalizePhoneInput(
+        createUserDto.phoneCountryCode,
+        createUserDto.phoneNationalNumber,
+      );
 
       const user = await this.prisma.$transaction(async (tx) => {
         const createdUser = await tx.user.create({
           data: {
             email: createUserDto.email,
             username: createUserDto.username,
+            phoneCountryCode: normalizedPhone?.phoneCountryCode ?? null,
+            phoneNationalNumber: normalizedPhone?.phoneNationalNumber ?? null,
+            phoneE164: normalizedPhone?.phoneE164 ?? null,
             employeeId: createUserDto.employeeId,
             passwordHash,
             firstName: createUserDto.firstName,
@@ -116,6 +132,7 @@ export class UsersService {
         status: AuditStatus.FAILURE,
         details: {
           email: createUserDto.email,
+          phoneE164: normalizedPhone?.phoneE164 ?? null,
           reason: this.extractErrorMessage(error),
         },
       });
@@ -135,6 +152,8 @@ export class UsersService {
       OR: query.search
         ? [
             { email: { contains: query.search } },
+            { phoneE164: { contains: query.search } },
+            { phoneNationalNumber: { contains: query.search } },
             { username: { contains: query.search } },
             { firstName: { contains: query.search } },
             { lastName: { contains: query.search } },
@@ -192,9 +211,17 @@ export class UsersService {
         await this.ensureEmployeeExistsAndActive(updateUserDto.employeeId);
       }
 
+      const normalizedPhone = this.normalizePhoneInput(
+        updateUserDto.phoneCountryCode,
+        updateUserDto.phoneNationalNumber,
+        {
+          allowNoPhone: true,
+        },
+      );
+
       const user = await this.prisma.$transaction(async (tx) => {
         const passwordHash = updateUserDto.password
-          ? await hash(updateUserDto.password, 12)
+          ? await argon2.hash(updateUserDto.password)
           : undefined;
 
         await tx.user.update({
@@ -202,6 +229,9 @@ export class UsersService {
           data: {
             email: updateUserDto.email,
             username: updateUserDto.username,
+            phoneCountryCode: normalizedPhone?.phoneCountryCode,
+            phoneNationalNumber: normalizedPhone?.phoneNationalNumber,
+            phoneE164: normalizedPhone?.phoneE164,
             employeeId: updateUserDto.employeeId,
             passwordHash,
             firstName: updateUserDto.firstName,
@@ -442,13 +472,77 @@ export class UsersService {
     }
   }
 
+  private normalizePhoneInput(
+    phoneCountryCode: string | undefined,
+    phoneNationalNumber: string | undefined,
+    options?: {
+      allowNoPhone?: boolean;
+    },
+  ): {
+    phoneCountryCode: string;
+    phoneNationalNumber: string;
+    phoneE164: string;
+  } | null {
+    const rawCountryCode = phoneCountryCode?.trim();
+    const rawNationalNumber = phoneNationalNumber?.trim();
+
+    const hasCountryCode = Boolean(rawCountryCode);
+    const hasNationalNumber = Boolean(rawNationalNumber);
+
+    if (!hasCountryCode && !hasNationalNumber) {
+      return options?.allowNoPhone ? null : null;
+    }
+
+    if (!hasCountryCode || !hasNationalNumber) {
+      throw new BadRequestException(
+        'Both phoneCountryCode and phoneNationalNumber are required together',
+      );
+    }
+
+    const normalizedCountryCode = rawCountryCode!.startsWith('+')
+      ? rawCountryCode!
+      : `+${rawCountryCode!}`;
+
+    const normalizedNationalNumber = rawNationalNumber!.replace(/\D+/g, '');
+    if (!normalizedNationalNumber) {
+      throw new BadRequestException('Invalid phone number');
+    }
+
+    const parsed = parsePhoneNumberFromString(
+      `${normalizedCountryCode}${normalizedNationalNumber}`,
+      this.resolveDefaultPhoneRegion(),
+    );
+
+    if (!parsed?.isValid()) {
+      throw new BadRequestException('Invalid phone number');
+    }
+
+    return {
+      phoneCountryCode: normalizedCountryCode,
+      phoneNationalNumber: normalizedNationalNumber,
+      phoneE164: parsed.number,
+    };
+  }
+
+  private resolveDefaultPhoneRegion(): CountryCode {
+    const configuredValue = process.env.AUTH_DEFAULT_PHONE_REGION
+      ?.trim()
+      .toUpperCase();
+
+    if (configuredValue && /^[A-Z]{2}$/.test(configuredValue)) {
+      return configuredValue as CountryCode;
+    }
+
+    return 'YE';
+  }
+
   private throwKnownDatabaseErrors(error: unknown): never {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === 'P2002'
     ) {
       throw new ConflictException(
-        'User email, username, or employee link already exists',
+        'User email, phone, username, or employee link already exists',
       );
     }
 

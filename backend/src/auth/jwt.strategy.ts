@@ -11,6 +11,7 @@ import type { AuthUser } from '../common/interfaces/auth-user.interface';
 interface JwtPayload {
   sub: string;
   email: string;
+  sid?: string;
 }
 
 @Injectable()
@@ -20,13 +21,36 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
       secretOrKey:
-        process.env.JWT_SECRET ?? 'change_me_with_very_strong_secret',
+        process.env.JWT_ACCESS_SECRET?.trim() ||
+        process.env.JWT_SECRET?.trim() ||
+        'change_me_with_very_strong_secret',
     };
 
     super(options);
   }
 
   async validate(payload: JwtPayload): Promise<AuthUser> {
+    if (payload.sid) {
+      const activeSession = await this.prisma.userSession.findFirst({
+        where: {
+          id: payload.sid,
+          userId: payload.sub,
+          deletedAt: null,
+          isRevoked: false,
+          expiresAt: {
+            gt: new Date(),
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (!activeSession) {
+        throw new UnauthorizedException('Session is no longer active');
+      }
+    }
+
     const user = await this.prisma.user.findFirst({
       where: {
         id: payload.sub,
@@ -79,6 +103,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       email: user.email,
       roleCodes,
       permissionCodes,
+      sessionId: payload.sid,
     };
   }
 }

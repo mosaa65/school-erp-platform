@@ -394,15 +394,28 @@ enum UserNotificationType {
   ACTION_REQUIRED
 }
 
+enum AuthFactorType {
+  TOTP
+}
+
+enum AuthWebAuthnChallengeFlow {
+  REGISTRATION
+  AUTHENTICATION
+}
+
 model User {
   id           String    @id @default(cuid()) @db.VarChar(191)
   email        String    @unique @db.VarChar(191)
+  phoneCountryCode String? @map("phone_country_code") @db.VarChar(8)
+  phoneNationalNumber String? @map("phone_national_number") @db.VarChar(32)
+  phoneE164    String?   @unique @map("phone_e164") @db.VarChar(20)
   username     String?   @unique @db.VarChar(64)
   employeeId   String?   @unique @map("employee_id") @db.VarChar(191)
   passwordHash String    @map("password_hash") @db.VarChar(255)
   firstName    String    @map("first_name") @db.VarChar(120)
   lastName     String    @map("last_name") @db.VarChar(120)
   isActive     Boolean   @default(true) @map("is_active")
+  webAuthnRequired Boolean @default(false) @map("webauthn_required")
   lastLoginAt  DateTime? @map("last_login_at")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
@@ -437,6 +450,10 @@ model User {
   sessions                            UserSession[]                   @relation("session_user")
   sessionsCreated                     UserSession[]                   @relation("session_created_by")
   sessionsUpdated                     UserSession[]                   @relation("session_updated_by")
+  authFactors                         UserAuthFactor[]                @relation("user_auth_factor_user")
+  authMfaChallenges                   AuthMfaChallenge[]              @relation("auth_mfa_challenge_user")
+  webAuthnCredentials                 UserWebAuthnCredential[]        @relation("user_webauthn_credential_user")
+  webAuthnChallenges                  AuthWebAuthnChallenge[]         @relation("auth_webauthn_challenge_user")
   settingsCreated                     GlobalSetting[]                 @relation("setting_created_by")
   settingsUpdated                     GlobalSetting[]                 @relation("setting_updated_by")
   calendarSettingsCreated             CalendarSetting[]               @relation("calendar_setting_created_by")
@@ -808,7 +825,14 @@ model UserSession {
   userId       String    @map("user_id") @db.VarChar(191)
   ipAddress    String?   @map("ip_address") @db.VarChar(45)
   userAgent    String?   @map("user_agent") @db.VarChar(255)
+  deviceId     String?   @map("device_id") @db.VarChar(191)
+  deviceLabel  String?   @map("device_label") @db.VarChar(191)
   payload      String?   @db.Text
+  refreshTokenHash String? @map("refresh_token_hash") @db.VarChar(255)
+  isRevoked    Boolean   @default(false) @map("is_revoked")
+  revokedAt    DateTime? @map("revoked_at")
+  revokedReason String?  @map("revoked_reason") @db.VarChar(255)
+  rotatedFromSessionId String? @map("rotated_from_session_id") @db.VarChar(128)
   lastActivity DateTime  @default(now()) @map("last_activity")
   expiresAt    DateTime  @map("expires_at")
   createdAt    DateTime  @default(now()) @map("created_at")
@@ -823,8 +847,96 @@ model UserSession {
 
   @@index([userId], map: "session_user_idx")
   @@index([expiresAt], map: "session_expires_at_idx")
+  @@index([refreshTokenHash], map: "session_refresh_token_hash_idx")
+  @@index([deviceId], map: "session_device_id_idx")
+  @@index([isRevoked, deletedAt], map: "session_revoked_deleted_idx")
   @@index([deletedAt], map: "session_deleted_at_idx")
   @@map("sessions")
+}
+
+model UserAuthFactor {
+  id              String         @id @default(cuid()) @db.VarChar(191)
+  userId          String         @map("user_id") @db.VarChar(191)
+  type            AuthFactorType @default(TOTP)
+  secretEncrypted String         @map("secret_encrypted") @db.Text
+  isEnabled       Boolean        @default(false) @map("is_enabled")
+  verifiedAt      DateTime?      @map("verified_at")
+  lastUsedAt      DateTime?      @map("last_used_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+  deletedAt       DateTime?      @map("deleted_at")
+
+  user User @relation("user_auth_factor_user", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type], map: "uaf_user_type_uq")
+  @@index([userId, isEnabled, deletedAt], map: "uaf_user_enabled_del_idx")
+  @@index([deletedAt], map: "uaf_deleted_at_idx")
+  @@map("user_auth_factors")
+}
+
+model AuthMfaChallenge {
+  id         String         @id @default(cuid()) @db.VarChar(191)
+  userId     String         @map("user_id") @db.VarChar(191)
+  factorType AuthFactorType @default(TOTP) @map("factor_type")
+  loginId    String?        @map("login_id") @db.VarChar(191)
+  ipAddress  String?        @map("ip_address") @db.VarChar(45)
+  userAgent  String?        @map("user_agent") @db.VarChar(255)
+  deviceId   String?        @map("device_id") @db.VarChar(191)
+  deviceLabel String?       @map("device_label") @db.VarChar(191)
+  expiresAt  DateTime       @map("expires_at")
+  consumedAt DateTime?      @map("consumed_at")
+  createdAt  DateTime       @default(now()) @map("created_at")
+  updatedAt  DateTime       @updatedAt @map("updated_at")
+  deletedAt  DateTime?      @map("deleted_at")
+
+  user User @relation("auth_mfa_challenge_user", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt], map: "amc_user_exp_idx")
+  @@index([expiresAt, consumedAt], map: "amc_exp_cons_idx")
+  @@index([deletedAt], map: "amc_deleted_at_idx")
+  @@map("auth_mfa_challenges")
+}
+
+model UserWebAuthnCredential {
+  id             String   @id @default(cuid()) @db.VarChar(191)
+  userId         String   @map("user_id") @db.VarChar(191)
+  credentialId   String   @unique @map("credential_id") @db.VarChar(255)
+  publicKey      String   @map("public_key") @db.Text
+  counter        Int      @default(0)
+  deviceType     String   @map("device_type") @db.VarChar(40)
+  backedUp       Boolean  @default(false) @map("backed_up")
+  transports     String?  @db.VarChar(255)
+  credentialName String?  @map("credential_name") @db.VarChar(120)
+  lastUsedAt     DateTime? @map("last_used_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  user User @relation("user_webauthn_credential_user", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, deletedAt], map: "uwc_user_deleted_idx")
+  @@index([lastUsedAt], map: "uwc_last_used_idx")
+  @@index([deletedAt], map: "uwc_deleted_at_idx")
+  @@map("user_webauthn_credentials")
+}
+
+model AuthWebAuthnChallenge {
+  id        String                     @id @default(cuid()) @db.VarChar(191)
+  userId    String?                    @map("user_id") @db.VarChar(191)
+  flow      AuthWebAuthnChallengeFlow
+  challenge String                     @db.VarChar(255)
+  expiresAt DateTime                   @map("expires_at")
+  usedAt    DateTime?                  @map("used_at")
+  createdAt DateTime                   @default(now()) @map("created_at")
+  updatedAt DateTime                   @updatedAt @map("updated_at")
+  deletedAt DateTime?                  @map("deleted_at")
+
+  user User? @relation("auth_webauthn_challenge_user", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([flow, expiresAt, usedAt], map: "awc_flow_exp_used_idx")
+  @@index([userId, flow, deletedAt], map: "awc_user_flow_deleted_idx")
+  @@index([deletedAt], map: "awc_deleted_at_idx")
+  @@map("auth_webauthn_challenges")
 }
 
 model UserNotification {

@@ -42,10 +42,10 @@ const STORAGE_KEY = "school-erp.navigation.v1";
 
 export const DEFAULT_NAVIGATION_PREFERENCES: NavigationPreferences = {
   layoutMode: "classic",
-  mobilePresentation: "drawer",
+  mobilePresentation: "bottom-sheet",
   landingPage: "dashboard",
-  density: "comfortable",
-  showHeaderMenuButton: true,
+  density: "compact",
+  showHeaderMenuButton: false,
 };
 
 export const NAVIGATION_LAYOUT_OPTIONS: NavigationLayoutDefinition[] = [
