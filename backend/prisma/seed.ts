@@ -4,11 +4,8 @@ import { runCoreSeed } from './seeds/core';
 const prisma = new PrismaClient();
 
 async function main() {
-  const result = await runCoreSeed(prisma);
-
-  console.log('Core seed completed');
-  console.log(`Admin email: ${result.adminCredentials.email}`);
-  console.log(`Admin password: ${result.adminCredentials.password}`);
+  await runCoreSeed(prisma);
+  console.log('Core seed completed successfully.');
 }
 
 main()

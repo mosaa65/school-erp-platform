@@ -27,12 +27,12 @@ function SummaryTile({
   icon: React.ComponentType<{ className?: string }>;
 }) {
   return (
-    <div className="rounded-[1.05rem] border border-white/70 bg-background/80 px-3 py-3 text-slate-900 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-black/25 dark:text-white">
-      <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-white/55">
-        <Icon className="h-3.5 w-3.5 text-[color:var(--app-accent-color)]" />
-        <span>{label}</span>
+    <div className="rounded-[1.05rem] border border-white/70 bg-background/80 px-2 py-2.5 text-slate-900 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-black/25 dark:text-white">
+      <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-white/55">
+        <Icon className="h-3 w-3 text-[color:var(--app-accent-color)]" />
+        <span className="truncate">{label}</span>
       </div>
-      <p className="mt-2 truncate text-sm font-semibold">{value}</p>
+      <p className="mt-1.5 truncate text-xs font-semibold">{value}</p>
     </div>
   );
 }
@@ -45,7 +45,7 @@ function ControlBlock({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[1.25rem] border border-white/70 bg-white/68 p-3 shadow-[0_14px_34px_-26px_rgba(15,23,42,0.18)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.04] dark:shadow-[0_12px_30px_-24px_rgba(15,23,42,0.85)] sm:p-4">
+    <section className="rounded-[1.25rem] border border-white/70 bg-white/68 p-3 shadow-[0_14px_34px_-26px_rgba(15,23,42,0.18)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.04] dark:shadow-[0_12px_30px_-24px_rgba(15,23,42,0.85)]">
       <div className="mb-3 flex items-center justify-between gap-3">
         <span className="text-sm font-semibold text-slate-900 dark:text-white">{title}</span>
         <span className="h-px flex-1 bg-black/[0.06] dark:bg-white/10" />
@@ -60,7 +60,8 @@ export function ProfileNavigationSection({ className }: ProfileNavigationSection
 
   return (
     <div className={cn("space-y-3", className)}>
-      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+      {/* Summary tiles — 2 columns on mobile, more on larger screens */}
+      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 xl:grid-cols-5">
         <SummaryTile
           label="نمط الملاحة"
           value={getNavigationLayoutLabel(navigation.layoutMode)}
@@ -104,7 +105,7 @@ export function ProfileNavigationSection({ className }: ProfileNavigationSection
                   option.available
                     ? active
                       ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
-                      : "border-white/70 bg-background/75 text-slate-700 hover:bg-white hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/72 dark:hover:bg-white/[0.06] dark:hover:text-white"
+                      : "border-white/70 bg-background/75 text-slate-700 hover:bg-white hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/80 dark:hover:bg-white/[0.06] dark:hover:text-white"
                     : "cursor-not-allowed border-dashed border-slate-300 bg-slate-50/80 text-slate-400 dark:border-white/10 dark:bg-white/[0.02] dark:text-white/35",
                 )}
               >
@@ -112,7 +113,9 @@ export function ProfileNavigationSection({ className }: ProfileNavigationSection
                   <span className="text-sm font-semibold">{option.label}</span>
                   {active ? <Check className="h-4 w-4" /> : null}
                 </div>
-                <p className="mt-1 text-[11px] leading-5 opacity-80">{option.description}</p>
+                <p className="mt-1 text-[11px] leading-5 text-slate-500 dark:text-white/55">
+                  {option.description}
+                </p>
                 {!option.available ? (
                   <span className="mt-2 inline-flex rounded-full border border-dashed px-2 py-1 text-[10px]">
                     قريبًا
@@ -139,11 +142,13 @@ export function ProfileNavigationSection({ className }: ProfileNavigationSection
                     "rounded-[1rem] border px-3 py-3 text-right transition-all",
                     active
                       ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
-                      : "border-white/70 bg-background/75 text-slate-700 hover:bg-white hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/72 dark:hover:bg-white/[0.06] dark:hover:text-white",
+                      : "border-white/70 bg-background/75 text-slate-700 hover:bg-white hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/80 dark:hover:bg-white/[0.06] dark:hover:text-white",
                   )}
                 >
                   <span className="text-sm font-semibold">{option.label}</span>
-                  <p className="mt-1 text-[11px] leading-5 opacity-80">{option.description}</p>
+                  <p className="mt-1 text-[11px] leading-5 text-slate-500 dark:text-white/55">
+                    {option.description}
+                  </p>
                 </button>
               );
             })}
@@ -164,11 +169,13 @@ export function ProfileNavigationSection({ className }: ProfileNavigationSection
                     "rounded-[1rem] border px-3 py-3 text-right transition-all",
                     active
                       ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
-                      : "border-white/70 bg-background/75 text-slate-700 hover:bg-white hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/72 dark:hover:bg-white/[0.06] dark:hover:text-white",
+                      : "border-white/70 bg-background/75 text-slate-700 hover:bg-white hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/80 dark:hover:bg-white/[0.06] dark:hover:text-white",
                   )}
                 >
                   <span className="text-sm font-semibold">{option.label}</span>
-                  <p className="mt-1 text-[11px] leading-5 opacity-80">{option.description}</p>
+                  <p className="mt-1 text-[11px] leading-5 text-slate-500 dark:text-white/55">
+                    {option.description}
+                  </p>
                 </button>
               );
             })}
@@ -192,12 +199,14 @@ export function ProfileNavigationSection({ className }: ProfileNavigationSection
                   option.available
                     ? active
                       ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
-                      : "border-white/70 bg-background/75 text-slate-700 hover:bg-white hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/72 dark:hover:bg-white/[0.06] dark:hover:text-white"
+                      : "border-white/70 bg-background/75 text-slate-700 hover:bg-white hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/80 dark:hover:bg-white/[0.06] dark:hover:text-white"
                     : "cursor-not-allowed border-dashed border-slate-300 bg-slate-50/80 text-slate-400 dark:border-white/10 dark:bg-white/[0.02] dark:text-white/35",
                 )}
               >
                 <span className="text-sm font-semibold">{option.label}</span>
-                <p className="mt-1 text-[11px] leading-5 opacity-80">{option.description}</p>
+                <p className="mt-1 text-[11px] leading-5 text-slate-500 dark:text-white/55">
+                  {option.description}
+                </p>
                 {!option.available ? (
                   <span className="mt-2 inline-flex rounded-full border border-dashed px-2 py-1 text-[10px]">
                     قريبًا
@@ -218,11 +227,11 @@ export function ProfileNavigationSection({ className }: ProfileNavigationSection
               "rounded-[1rem] border px-3 py-3 text-right transition-all",
               navigation.showHeaderMenuButton
                 ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
-                : "border-white/70 bg-background/75 text-slate-700 hover:bg-white hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/72 dark:hover:bg-white/[0.06] dark:hover:text-white",
+                : "border-white/70 bg-background/75 text-slate-700 hover:bg-white hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/80 dark:hover:bg-white/[0.06] dark:hover:text-white",
             )}
           >
             <span className="text-sm font-semibold">إظهار الزر</span>
-            <p className="mt-1 text-[11px] leading-5 opacity-80">
+            <p className="mt-1 text-[11px] leading-5 text-slate-500 dark:text-white/55">
               يظهر زر القائمة في الهيدر على الجوال.
             </p>
           </button>
@@ -233,11 +242,11 @@ export function ProfileNavigationSection({ className }: ProfileNavigationSection
               "rounded-[1rem] border px-3 py-3 text-right transition-all",
               !navigation.showHeaderMenuButton
                 ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
-                : "border-white/70 bg-background/75 text-slate-700 hover:bg-white hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/72 dark:hover:bg-white/[0.06] dark:hover:text-white",
+                : "border-white/70 bg-background/75 text-slate-700 hover:bg-white hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/80 dark:hover:bg-white/[0.06] dark:hover:text-white",
             )}
           >
             <span className="text-sm font-semibold">إخفاء الزر</span>
-            <p className="mt-1 text-[11px] leading-5 opacity-80">
+            <p className="mt-1 text-[11px] leading-5 text-slate-500 dark:text-white/55">
               إخفاء زر الهيدر والاكتفاء بزر التنقل السفلي.
             </p>
           </button>

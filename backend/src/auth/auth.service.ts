@@ -1,18 +1,26 @@
 ﻿import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Prisma, UserNotificationType } from '@prisma/client';
+import {
+  AccountApprovalPurpose,
+  AccountApprovalStatus,
+  Prisma,
+  UserActivationStatus,
+  UserNotificationType,
+} from '@prisma/client';
 import * as argon2 from 'argon2';
 import { compare as compareBcrypt } from 'bcrypt';
-import { randomBytes, randomUUID, createHash } from 'crypto';
+import { createHash, randomBytes, randomInt, randomUUID, timingSafeEqual } from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import {
   parsePhoneNumberFromString,
   type CountryCode,
 } from 'libphonenumber-js';
+import { AuditLogsService } from '../modules/audit-logs/audit-logs.service';
 import { UserNotificationsService } from '../modules/user-notifications/user-notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthMfaService, type TotpSetupResponse } from './auth-mfa.service';
@@ -26,6 +34,7 @@ import { AuthSecurityService } from './auth-security.service';
 import { LoginDto } from './dto/login.dto';
 import { VerifyMfaDto } from './dto/verify-mfa.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ListAccountApprovalRequestsDto } from './dto/list-account-approval-requests.dto';
 
 const authUserInclude = {
   userRoles: {
@@ -49,6 +58,32 @@ const authUserInclude = {
   },
 } as const;
 
+const approvalRequestInclude = {
+  user: {
+    select: {
+      id: true,
+      email: true,
+      phoneE164: true,
+      phoneCountryCode: true,
+      phoneNationalNumber: true,
+      firstName: true,
+      lastName: true,
+      guardianId: true,
+      employeeId: true,
+      activationStatus: true,
+      isActive: true,
+    },
+  },
+  approvedByUser: {
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+    },
+  },
+} as const;
+
 type ActiveSessionRecord = Prisma.UserSessionGetPayload<{
   include: {
     user: {
@@ -59,6 +94,10 @@ type ActiveSessionRecord = Prisma.UserSessionGetPayload<{
 
 type AuthenticatedUserRecord = Prisma.UserGetPayload<{
   include: typeof authUserInclude;
+}>;
+
+type ApprovalRequestRecord = Prisma.AccountApprovalRequestGetPayload<{
+  include: typeof approvalRequestInclude;
 }>;
 
 type LoginIdentifier =
@@ -126,6 +165,53 @@ interface AuthTokensResult {
   sessionId: string;
 }
 
+export interface AuthAccountApprovalView {
+  id: string;
+  userId: string;
+  purpose: AccountApprovalPurpose;
+  status: AccountApprovalStatus;
+  loginId: string | null;
+  deviceId: string | null;
+  deviceLabel: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  expiresAt: Date;
+  approvedAt: Date | null;
+  rejectedAt: Date | null;
+  completedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  user: {
+    id: string;
+    email: string;
+    phoneE164: string | null;
+    phoneCountryCode: string | null;
+    phoneNationalNumber: string | null;
+    firstName: string;
+    lastName: string;
+    guardianId: string | null;
+    employeeId: string | null;
+    activationStatus: UserActivationStatus;
+    isActive: boolean;
+  };
+  approvedByUser: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+}
+
+export interface AuthApprovalListPayload {
+  data: AuthAccountApprovalView[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 export interface AuthMfaChallengeResult {
   mfaRequired: true;
   factorType: 'TOTP';
@@ -141,16 +227,48 @@ export interface AuthWebAuthnChallengeResult {
   options: BeginWebAuthnAuthenticationResult['options'];
 }
 
+export interface AuthActivationRequiredResult {
+  activationRequired: true;
+  loginId: string;
+  activationStatus: 'PENDING_INITIAL_PASSWORD';
+  initialPasswordExpiresAt: Date | null;
+  requiresApproval: boolean;
+}
+
+export interface AuthApprovalPendingResult {
+  approvalRequired: true;
+  purpose: 'FIRST_PASSWORD_SETUP' | 'NEW_DEVICE_LOGIN' | 'PASSWORD_RESET';
+  requestId: string;
+  expiresAt: Date;
+}
+
+export interface AuthDeviceApprovalRequiredResult {
+  deviceApprovalRequired: true;
+  purpose: 'NEW_DEVICE_LOGIN';
+  requestId: string;
+  expiresAt: Date;
+}
+
+export interface AuthIdentifyResult {
+  status: 'ACTIVE_LOGIN' | 'PENDING_ACTIVATION' | 'UNKNOWN_ACCOUNT';
+  loginId: string;
+  requiresOneTimePassword: boolean;
+}
+
 export type AuthLoginResult =
   | AuthTokensResult
   | AuthMfaChallengeResult
-  | AuthWebAuthnChallengeResult;
+  | AuthWebAuthnChallengeResult
+  | AuthActivationRequiredResult
+  | AuthDeviceApprovalRequiredResult;
 
 const DEFAULT_ACCESS_EXPIRES_IN = '15m';
 const DEFAULT_REFRESH_EXPIRES_IN = '7d';
 const DEFAULT_REFRESH_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 const REFRESH_TOKEN_BYTES = 64;
 const DEFAULT_MFA_CHALLENGE_TTL_SECONDS = 5 * 60;
+const DEFAULT_APPROVAL_CODE_TTL_SECONDS = 10 * 60;
+const PASSWORD_RESET_PURPOSE = 'PASSWORD_RESET' as AccountApprovalPurpose;
 
 @Injectable()
 export class AuthService {
@@ -177,6 +295,11 @@ export class AuthService {
     300,
   );
 
+  private readonly approvalCodeTtlSeconds = this.parseIntEnv(
+    'AUTH_APPROVAL_CODE_TTL_SECONDS',
+    DEFAULT_APPROVAL_CODE_TTL_SECONDS,
+  );
+
   private readonly defaultPhoneRegion = this.resolveDefaultPhoneRegion();
 
   constructor(
@@ -186,6 +309,7 @@ export class AuthService {
     private readonly authMfaService: AuthMfaService,
     private readonly authWebAuthnService: AuthWebAuthnService,
     private readonly userNotificationsService: UserNotificationsService,
+    private readonly auditLogsService: AuditLogsService,
   ) {}
 
   async login(
@@ -228,6 +352,14 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    if (user.activationStatus === UserActivationStatus.SUSPENDED) {
+      this.authSecurityService.recordLoginFailure({
+        ipAddress: context.ipAddress,
+        loginId: rateLimitLoginId,
+      });
+      throw new UnauthorizedException('Account suspended');
+    }
+
     const verification = await this.verifyPassword(
       loginDto.password,
       user.passwordHash,
@@ -239,6 +371,29 @@ export class AuthService {
         loginId: rateLimitLoginId,
       });
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (user.activationStatus === UserActivationStatus.PENDING_INITIAL_PASSWORD) {
+      if (
+        user.initialPasswordExpiresAt &&
+        user.initialPasswordExpiresAt.getTime() <= Date.now()
+      ) {
+        this.authSecurityService.recordLoginFailure({
+          ipAddress: context.ipAddress,
+          loginId: rateLimitLoginId,
+        });
+        throw new UnauthorizedException('Initial password expired');
+      }
+
+      return {
+        activationRequired: true,
+        loginId: loginIdentifier.normalized,
+        activationStatus: UserActivationStatus.PENDING_INITIAL_PASSWORD,
+        initialPasswordExpiresAt: user.initialPasswordExpiresAt,
+        requiresApproval: await this.requiresAdminApprovalForInitialActivation(
+          user,
+        ),
+      };
     }
 
     const hasTotpMfa = await this.authMfaService.hasEnabledTotp(user.id);
@@ -277,6 +432,16 @@ export class AuthService {
       return this.createWebAuthnChallengeForUser(user.id);
     }
 
+    const deviceApproval = await this.createDeviceApprovalIfRequired({
+      user,
+      loginId: loginIdentifier.normalized,
+      context,
+    });
+
+    if (deviceApproval) {
+      return deviceApproval;
+    }
+
     const authTokens = await this.issueTokensForUser({
       user,
       context,
@@ -293,6 +458,975 @@ export class AuthService {
     });
 
     return authTokens;
+  }
+
+  async identifyAccount(loginId: string): Promise<AuthIdentifyResult> {
+    const normalizedLoginId = loginId.trim();
+
+    if (!normalizedLoginId) {
+      throw new BadRequestException('loginId is required');
+    }
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        ...(normalizedLoginId.includes('@')
+          ? { email: normalizedLoginId.toLowerCase() }
+          : { phoneE164: this.normalizePhoneToE164(normalizedLoginId) ?? '__none__' }),
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        activationStatus: true,
+      },
+    });
+
+    if (!user) {
+      return {
+        status: 'UNKNOWN_ACCOUNT',
+        loginId: normalizedLoginId,
+        requiresOneTimePassword: false,
+      };
+    }
+
+    if (user.activationStatus === UserActivationStatus.PENDING_INITIAL_PASSWORD) {
+      return {
+        status: 'PENDING_ACTIVATION',
+        loginId: normalizedLoginId,
+        requiresOneTimePassword: true,
+      };
+    }
+
+    return {
+      status: 'ACTIVE_LOGIN',
+      loginId: normalizedLoginId,
+      requiresOneTimePassword: false,
+    };
+  }
+
+  async beginAccountActivation(
+    input: {
+      loginId: string;
+      currentPassword: string;
+      newPassword: string;
+      confirmPassword: string;
+    },
+    context: AuthIssueContext,
+  ): Promise<AuthTokensResult | AuthApprovalPendingResult> {
+    if (input.newPassword !== input.confirmPassword) {
+      throw new BadRequestException('Passwords do not match');
+    }
+
+    const loginIdentifier = this.resolveLoginIdentifier({
+      loginId: input.loginId,
+      password: input.currentPassword,
+    } as LoginDto);
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        ...loginIdentifier.where,
+        deletedAt: null,
+      },
+      include: authUserInclude,
+    });
+
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException('Invalid activation credentials');
+    }
+
+    if (user.activationStatus === UserActivationStatus.SUSPENDED) {
+      throw new UnauthorizedException('Account suspended');
+    }
+
+    if (user.activationStatus !== UserActivationStatus.PENDING_INITIAL_PASSWORD) {
+      throw new ConflictException('Account does not require initial activation');
+    }
+
+    if (!user.employeeId && !user.guardianId) {
+      throw new ConflictException('Account must be linked to employee or guardian');
+    }
+
+    if (
+      user.initialPasswordExpiresAt &&
+      user.initialPasswordExpiresAt.getTime() <= Date.now()
+    ) {
+      throw new UnauthorizedException('Initial password expired');
+    }
+
+    const verification = await this.verifyPassword(
+      input.currentPassword,
+      user.passwordHash,
+    );
+
+    if (!verification.matches) {
+      throw new UnauthorizedException('Invalid activation credentials');
+    }
+
+    const pendingPasswordHash = await argon2.hash(input.newPassword);
+    const requiresApproval = await this.requiresAdminApprovalForInitialActivation(
+      user,
+    );
+
+    if (!requiresApproval) {
+      await this.prisma.user.update({
+        where: {
+          id: user.id,
+        },
+        data: {
+          passwordHash: pendingPasswordHash,
+          activationStatus: UserActivationStatus.ACTIVE,
+          passwordSetAt: new Date(),
+          initialPasswordIssuedAt: null,
+          initialPasswordExpiresAt: null,
+        },
+      });
+
+      const refreshedUser = await this.prisma.user.findUniqueOrThrow({
+        where: {
+          id: user.id,
+        },
+        include: authUserInclude,
+      });
+
+      await this.auditLogsService.record({
+        actorUserId: user.id,
+        action: 'AUTH_FIRST_PASSWORD_SETUP_COMPLETE',
+        resource: 'auth-approval-requests',
+        resourceId: user.id,
+        details: {
+          purpose: AccountApprovalPurpose.FIRST_PASSWORD_SETUP,
+          loginId: loginIdentifier.normalized,
+          mode: 'self_service',
+        },
+      });
+
+      return this.issueTokensForUser({
+        user: refreshedUser,
+        context,
+        sessionPayload: {
+          loginId: loginIdentifier.normalized,
+          loginType: 'activation',
+        },
+      });
+    }
+
+    const approvalCode = this.generateApprovalCode();
+    const expiresAt = new Date(Date.now() + this.approvalCodeTtlSeconds * 1000);
+
+    const request = await this.upsertApprovalRequest({
+      user,
+      purpose: AccountApprovalPurpose.FIRST_PASSWORD_SETUP,
+      loginId: loginIdentifier.normalized,
+      approvalCode,
+      pendingPasswordHash,
+      context,
+    });
+
+    await this.notifyApprovalManagers({
+      purpose: AccountApprovalPurpose.FIRST_PASSWORD_SETUP,
+      subjectUser: user,
+      approvalCode,
+      requestId: request.id,
+      context,
+    });
+
+    await this.auditLogsService.record({
+      actorUserId: user.id,
+      action: 'AUTH_FIRST_PASSWORD_SETUP_REQUEST_CREATE',
+      resource: 'auth-approval-requests',
+      resourceId: request.id,
+      details: {
+        purpose: AccountApprovalPurpose.FIRST_PASSWORD_SETUP,
+        loginId: loginIdentifier.normalized,
+        approvalCodeExpiresAt: request.expiresAt.toISOString(),
+      },
+    });
+
+    return {
+      approvalRequired: true,
+      purpose: 'FIRST_PASSWORD_SETUP',
+      requestId: request.id,
+      expiresAt: request.expiresAt,
+    };
+  }
+
+  async completeAccountActivation(
+    input: {
+      requestId: string;
+      approvalCode: string;
+    },
+    context: AuthIssueContext,
+  ): Promise<AuthTokensResult> {
+    const request = await this.prisma.accountApprovalRequest.findFirst({
+      where: {
+        id: input.requestId,
+        purpose: AccountApprovalPurpose.FIRST_PASSWORD_SETUP,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        userId: true,
+        loginId: true,
+        pendingPasswordHash: true,
+        approvalCodeHash: true,
+        expiresAt: true,
+        deletedAt: true,
+        status: true,
+        user: {
+          select: {
+            id: true,
+            isActive: true,
+          },
+        },
+      },
+    });
+
+    if (
+      !request ||
+      request.status !== AccountApprovalStatus.APPROVED ||
+      request.deletedAt
+    ) {
+      throw new UnauthorizedException('Invalid activation request');
+    }
+
+    if (!request.user.isActive) {
+      throw new UnauthorizedException('Invalid activation request');
+    }
+
+    if (request.expiresAt.getTime() <= Date.now()) {
+      await this.prisma.accountApprovalRequest.update({
+        where: {
+          id: request.id,
+        },
+        data: {
+          status: AccountApprovalStatus.EXPIRED,
+        },
+      });
+      throw new UnauthorizedException('Activation request expired');
+    }
+
+    if (!this.verifyApprovalCode(input.approvalCode, request.approvalCodeHash)) {
+      throw new UnauthorizedException('Invalid approval code');
+    }
+
+    if (!request.pendingPasswordHash) {
+      throw new UnauthorizedException('Activation request is incomplete');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: {
+          id: request.userId,
+        },
+        data: {
+          passwordHash: request.pendingPasswordHash!,
+          activationStatus: UserActivationStatus.ACTIVE,
+          passwordSetAt: new Date(),
+          initialPasswordIssuedAt: null,
+          initialPasswordExpiresAt: null,
+        },
+      });
+
+      await tx.accountApprovalRequest.update({
+        where: {
+          id: request.id,
+        },
+        data: {
+          status: AccountApprovalStatus.COMPLETED,
+          completedAt: new Date(),
+        },
+      });
+    });
+
+    await this.auditLogsService.record({
+      actorUserId: request.userId,
+      action: 'AUTH_FIRST_PASSWORD_SETUP_COMPLETE',
+      resource: 'auth-approval-requests',
+      resourceId: request.id,
+      details: {
+        purpose: AccountApprovalPurpose.FIRST_PASSWORD_SETUP,
+        loginId: request.loginId,
+      },
+    });
+
+    const refreshedUser = await this.prisma.user.findUniqueOrThrow({
+      where: {
+        id: request.userId,
+      },
+      include: authUserInclude,
+    });
+
+    return this.issueTokensForUser({
+      user: refreshedUser,
+      context,
+      sessionPayload: {
+        loginId: request.loginId ?? refreshedUser.email ?? refreshedUser.id,
+        loginType: 'activation_approved',
+      },
+    });
+  }
+
+  async beginForgotPasswordReset(
+    input: {
+      loginId: string;
+    },
+    context: AuthIssueContext,
+  ): Promise<AuthApprovalPendingResult> {
+    const loginIdentifier = this.resolveLoginIdentifier({
+      loginId: input.loginId,
+      password: '__placeholder__',
+    } as LoginDto);
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        ...loginIdentifier.where,
+        deletedAt: null,
+      },
+      include: authUserInclude,
+    });
+
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException('Invalid account');
+    }
+
+    if (user.activationStatus === UserActivationStatus.SUSPENDED) {
+      throw new UnauthorizedException('Account suspended');
+    }
+
+    if (user.activationStatus === UserActivationStatus.PENDING_INITIAL_PASSWORD) {
+      throw new ConflictException('Account must complete initial activation first');
+    }
+
+    const approvalCode = this.generateApprovalCode();
+    const request = await this.upsertApprovalRequest({
+      user,
+      purpose: PASSWORD_RESET_PURPOSE,
+      loginId: loginIdentifier.normalized,
+      approvalCode,
+      context,
+    });
+
+    await this.notifyApprovalManagers({
+      purpose: PASSWORD_RESET_PURPOSE,
+      subjectUser: user,
+      approvalCode,
+      requestId: request.id,
+      context,
+    });
+
+    await this.auditLogsService.record({
+      actorUserId: user.id,
+      action: 'AUTH_PASSWORD_RESET_REQUEST_CREATE',
+      resource: 'auth-approval-requests',
+      resourceId: request.id,
+      details: {
+        purpose: PASSWORD_RESET_PURPOSE,
+        loginId: loginIdentifier.normalized,
+        approvalCodeExpiresAt: request.expiresAt.toISOString(),
+      },
+    });
+
+    return {
+      approvalRequired: true,
+      purpose: 'PASSWORD_RESET',
+      requestId: request.id,
+      expiresAt: request.expiresAt,
+    };
+  }
+
+  async completeForgotPasswordReset(
+    input: {
+      requestId: string;
+      approvalCode: string;
+      newPassword: string;
+      confirmPassword: string;
+    },
+    _context: AuthIssueContext,
+  ): Promise<{ success: true }> {
+    if (input.newPassword !== input.confirmPassword) {
+      throw new BadRequestException('Passwords do not match');
+    }
+
+    const request = await this.prisma.accountApprovalRequest.findFirst({
+      where: {
+        id: input.requestId,
+        purpose: PASSWORD_RESET_PURPOSE,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        userId: true,
+        loginId: true,
+        approvalCodeHash: true,
+        expiresAt: true,
+        deletedAt: true,
+        status: true,
+        user: {
+          select: {
+            id: true,
+            isActive: true,
+          },
+        },
+      },
+    });
+
+    if (
+      !request ||
+      request.status !== AccountApprovalStatus.APPROVED ||
+      request.deletedAt
+    ) {
+      throw new UnauthorizedException('Invalid password reset request');
+    }
+
+    if (!request.user.isActive) {
+      throw new UnauthorizedException('Invalid password reset request');
+    }
+
+    if (request.expiresAt.getTime() <= Date.now()) {
+      await this.prisma.accountApprovalRequest.update({
+        where: {
+          id: request.id,
+        },
+        data: {
+          status: AccountApprovalStatus.EXPIRED,
+        },
+      });
+      throw new UnauthorizedException('Password reset request expired');
+    }
+
+    if (!this.verifyApprovalCode(input.approvalCode, request.approvalCodeHash)) {
+      throw new UnauthorizedException('Invalid approval code');
+    }
+
+    const passwordHash = await argon2.hash(input.newPassword);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: {
+          id: request.userId,
+        },
+        data: {
+          passwordHash,
+          passwordSetAt: new Date(),
+          initialPasswordIssuedAt: null,
+          initialPasswordExpiresAt: null,
+        },
+      });
+
+      await tx.accountApprovalRequest.update({
+        where: {
+          id: request.id,
+        },
+        data: {
+          status: AccountApprovalStatus.COMPLETED,
+          completedAt: new Date(),
+        },
+      });
+
+      await tx.userSession.updateMany({
+        where: {
+          userId: request.userId,
+          deletedAt: null,
+          isRevoked: false,
+        },
+        data: {
+          isRevoked: true,
+          revokedAt: new Date(),
+          revokedReason: 'password_reset',
+          refreshTokenHash: null,
+          updatedById: request.userId,
+        },
+      });
+    });
+
+    await this.auditLogsService.record({
+      actorUserId: request.userId,
+      action: 'AUTH_PASSWORD_RESET_COMPLETE',
+      resource: 'auth-approval-requests',
+      resourceId: request.id,
+      details: {
+        purpose: PASSWORD_RESET_PURPOSE,
+        loginId: request.loginId,
+      },
+    });
+
+    return {
+      success: true,
+    };
+  }
+
+  async changePasswordByCredentials(input: {
+    loginId: string;
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+  }): Promise<{ success: true }> {
+    if (input.newPassword !== input.confirmPassword) {
+      throw new BadRequestException('Passwords do not match');
+    }
+
+    const loginIdentifier = this.resolveLoginIdentifier({
+      loginId: input.loginId,
+      password: input.currentPassword,
+    } as LoginDto);
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        ...loginIdentifier.where,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        isActive: true,
+        passwordHash: true,
+        activationStatus: true,
+      },
+    });
+
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (user.activationStatus === UserActivationStatus.SUSPENDED) {
+      throw new UnauthorizedException('Account suspended');
+    }
+
+    if (user.activationStatus === UserActivationStatus.PENDING_INITIAL_PASSWORD) {
+      throw new ConflictException('Account must complete initial activation first');
+    }
+
+    const verification = await this.verifyPassword(
+      input.currentPassword,
+      user.passwordHash,
+    );
+
+    if (!verification.matches) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const passwordHash = await argon2.hash(input.newPassword);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: {
+          id: user.id,
+        },
+        data: {
+          passwordHash,
+          passwordSetAt: new Date(),
+          initialPasswordIssuedAt: null,
+          initialPasswordExpiresAt: null,
+        },
+      });
+
+      await tx.userSession.updateMany({
+        where: {
+          userId: user.id,
+          deletedAt: null,
+          isRevoked: false,
+        },
+        data: {
+          isRevoked: true,
+          revokedAt: new Date(),
+          revokedReason: 'password_changed',
+          refreshTokenHash: null,
+          updatedById: user.id,
+        },
+      });
+    });
+
+    await this.auditLogsService.record({
+      actorUserId: user.id,
+      action: 'AUTH_PASSWORD_CHANGE_BY_CREDENTIALS',
+      resource: 'users',
+      resourceId: user.id,
+      details: {
+        loginId: loginIdentifier.normalized,
+      },
+    });
+
+    return {
+      success: true,
+    };
+  }
+
+  async completeDeviceApproval(
+    input: {
+      requestId: string;
+      approvalCode: string;
+    },
+    context: AuthIssueContext,
+  ): Promise<AuthTokensResult> {
+    const request = await this.prisma.accountApprovalRequest.findFirst({
+      where: {
+        id: input.requestId,
+        purpose: AccountApprovalPurpose.NEW_DEVICE_LOGIN,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        userId: true,
+        loginId: true,
+        approvalCodeHash: true,
+        deviceId: true,
+        deviceLabel: true,
+        ipAddress: true,
+        userAgent: true,
+        expiresAt: true,
+        deletedAt: true,
+        status: true,
+        user: {
+          select: {
+            id: true,
+            isActive: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (
+      !request ||
+      request.status !== AccountApprovalStatus.APPROVED ||
+      request.deletedAt
+    ) {
+      throw new UnauthorizedException('Invalid device approval request');
+    }
+
+    if (!request.user.isActive) {
+      throw new UnauthorizedException('Invalid device approval request');
+    }
+
+    if (request.expiresAt.getTime() <= Date.now()) {
+      await this.prisma.accountApprovalRequest.update({
+        where: {
+          id: request.id,
+        },
+        data: {
+          status: AccountApprovalStatus.EXPIRED,
+        },
+      });
+      throw new UnauthorizedException('Device approval request expired');
+    }
+
+    if (!this.verifyApprovalCode(input.approvalCode, request.approvalCodeHash)) {
+      throw new UnauthorizedException('Invalid approval code');
+    }
+
+    const singleSessionMode = await this.getBooleanSystemSetting(
+      'employee_single_session_mode',
+      false,
+    );
+
+    await this.prisma.accountApprovalRequest.update({
+      where: {
+        id: request.id,
+      },
+      data: {
+        status: AccountApprovalStatus.COMPLETED,
+        completedAt: new Date(),
+      },
+    });
+
+    await this.auditLogsService.record({
+      actorUserId: request.userId,
+      action: 'AUTH_DEVICE_APPROVAL_COMPLETE',
+      resource: 'auth-approval-requests',
+      resourceId: request.id,
+      details: {
+        purpose: AccountApprovalPurpose.NEW_DEVICE_LOGIN,
+        loginId: request.loginId,
+      },
+    });
+
+    if (singleSessionMode) {
+      await this.prisma.userSession.updateMany({
+        where: {
+          userId: request.userId,
+          deletedAt: null,
+          isRevoked: false,
+        },
+        data: {
+          isRevoked: true,
+          revokedAt: new Date(),
+          revokedReason: 'approved_new_device_login',
+          refreshTokenHash: null,
+          updatedById: request.userId,
+        },
+      });
+    }
+
+    const refreshedUser = await this.prisma.user.findUniqueOrThrow({
+      where: {
+        id: request.userId,
+      },
+      include: authUserInclude,
+    });
+
+    return this.issueTokensForUser({
+      user: refreshedUser,
+      context: {
+        ipAddress: this.truncate(context.ipAddress, 45) ?? request.ipAddress,
+        userAgent: this.truncate(context.userAgent, 255) ?? request.userAgent,
+        deviceId: this.truncate(context.deviceId, 191) ?? request.deviceId,
+        deviceLabel:
+          this.truncate(context.deviceLabel, 191) ?? request.deviceLabel,
+      },
+      sessionPayload: {
+        loginId: request.loginId ?? refreshedUser.email ?? refreshedUser.id,
+        loginType: 'device_approval',
+      },
+    });
+  }
+
+  async listPendingApprovalRequests(
+    query: ListAccountApprovalRequestsDto,
+  ): Promise<AuthApprovalListPayload> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+
+    const where: Prisma.AccountApprovalRequestWhereInput = {
+      deletedAt: null,
+      status: AccountApprovalStatus.PENDING,
+      purpose: query.purpose,
+      OR: query.search
+        ? [
+            {
+              loginId: {
+                contains: query.search,
+              },
+            },
+            {
+              user: {
+                firstName: {
+                  contains: query.search,
+                },
+              },
+            },
+            {
+              user: {
+                lastName: {
+                  contains: query.search,
+                },
+              },
+            },
+            {
+              user: {
+                phoneE164: {
+                  contains: query.search,
+                },
+              },
+            },
+          ]
+        : undefined,
+    };
+
+    const [total, rows] = await this.prisma.$transaction([
+      this.prisma.accountApprovalRequest.count({ where }),
+      this.prisma.accountApprovalRequest.findMany({
+        where,
+        include: approvalRequestInclude,
+        orderBy: {
+          createdAt: 'desc',
+        },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+    ]);
+
+    return {
+      data: rows.map((row) => this.mapApprovalRequestView(row)),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async approveApprovalRequest(
+    requestId: string,
+    actorUserId: string,
+  ): Promise<AuthAccountApprovalView> {
+    const request = await this.ensureApprovalRequestExists(requestId);
+
+    if (request.status === AccountApprovalStatus.REJECTED) {
+      throw new ConflictException('Approval request was rejected');
+    }
+
+    if (request.expiresAt.getTime() <= Date.now()) {
+      await this.prisma.accountApprovalRequest.update({
+        where: {
+          id: request.id,
+        },
+        data: {
+          status: AccountApprovalStatus.EXPIRED,
+        },
+      });
+      throw new ConflictException('Approval request expired');
+    }
+
+    if (request.status === AccountApprovalStatus.COMPLETED) {
+      throw new ConflictException('Approval request was completed');
+    }
+
+    const updated =
+      request.status === AccountApprovalStatus.APPROVED
+        ? request
+        : await this.prisma.accountApprovalRequest.update({
+            where: {
+              id: request.id,
+            },
+            data: {
+              status: AccountApprovalStatus.APPROVED,
+              approvedByUserId: actorUserId,
+              approvedAt: new Date(),
+              rejectedAt: null,
+            },
+            include: approvalRequestInclude,
+          });
+
+    await this.auditLogsService.record({
+      actorUserId,
+      action: 'AUTH_APPROVAL_REQUEST_APPROVE',
+      resource: 'auth-approval-requests',
+      resourceId: request.id,
+      details: {
+        purpose: request.purpose,
+        loginId: request.loginId,
+      },
+    });
+
+    return this.mapApprovalRequestView(updated);
+  }
+
+  async rejectApprovalRequest(
+    requestId: string,
+    actorUserId: string,
+  ): Promise<AuthAccountApprovalView> {
+    const request = await this.ensureApprovalRequestExists(requestId);
+
+    if (request.status === AccountApprovalStatus.COMPLETED) {
+      throw new ConflictException('Approval request was completed');
+    }
+
+    if (request.expiresAt.getTime() <= Date.now()) {
+      await this.prisma.accountApprovalRequest.update({
+        where: {
+          id: request.id,
+        },
+        data: {
+          status: AccountApprovalStatus.EXPIRED,
+        },
+      });
+      throw new ConflictException('Approval request expired');
+    }
+
+    if (request.status === AccountApprovalStatus.REJECTED) {
+      return this.mapApprovalRequestView(request);
+    }
+
+    const updated = await this.prisma.accountApprovalRequest.update({
+      where: {
+        id: request.id,
+      },
+      data: {
+        status: AccountApprovalStatus.REJECTED,
+        rejectedAt: new Date(),
+      },
+      include: approvalRequestInclude,
+    });
+
+    await this.auditLogsService.record({
+      actorUserId,
+      action: 'AUTH_APPROVAL_REQUEST_REJECT',
+      resource: 'auth-approval-requests',
+      resourceId: request.id,
+      details: {
+        purpose: request.purpose,
+        loginId: request.loginId,
+      },
+    });
+
+    return this.mapApprovalRequestView(updated);
+  }
+
+  async reissueApprovalRequest(
+    requestId: string,
+    actorUserId: string,
+  ): Promise<{ request: AuthAccountApprovalView; approvalCode: string }> {
+    const request = await this.ensureApprovalRequestExists(requestId);
+
+    if (request.status === AccountApprovalStatus.REJECTED) {
+      throw new ConflictException('Approval request was rejected');
+    }
+
+    if (request.status === AccountApprovalStatus.COMPLETED) {
+      throw new ConflictException('Approval request was completed');
+    }
+
+    const approvalCode = this.generateApprovalCode();
+    const expiresAt = new Date(Date.now() + this.approvalCodeTtlSeconds * 1000);
+
+    const updated = await this.prisma.accountApprovalRequest.update({
+      where: {
+        id: request.id,
+      },
+      data: {
+        approvalCodeHash: this.hashApprovalCode(approvalCode),
+        expiresAt,
+        status:
+          request.status === AccountApprovalStatus.EXPIRED
+            ? AccountApprovalStatus.PENDING
+            : request.status,
+        ...(request.status === AccountApprovalStatus.EXPIRED
+          ? {
+              approvedByUserId: null,
+              approvedAt: null,
+              rejectedAt: null,
+              completedAt: null,
+            }
+          : {}),
+      },
+      include: approvalRequestInclude,
+    });
+
+    await this.notifyApprovalManagers({
+      purpose: request.purpose,
+      subjectUser: request.user,
+      approvalCode,
+      requestId: request.id,
+      context: {
+        ipAddress: request.ipAddress,
+        userAgent: request.userAgent,
+        deviceId: request.deviceId,
+        deviceLabel: request.deviceLabel,
+      },
+    });
+
+    await this.auditLogsService.record({
+      actorUserId,
+      action: 'AUTH_APPROVAL_REQUEST_REISSUE',
+      resource: 'auth-approval-requests',
+      resourceId: request.id,
+      details: {
+        purpose: request.purpose,
+        loginId: request.loginId,
+        approvalCodeExpiresAt: expiresAt.toISOString(),
+      },
+    });
+
+    return {
+      request: this.mapApprovalRequestView(updated),
+      approvalCode,
+    };
+  }
+
+  async beginDeviceApproval(
+    loginDto: LoginDto,
+    context: AuthIssueContext,
+  ): Promise<AuthLoginResult> {
+    return this.login(loginDto, context);
   }
 
   private async createWebAuthnChallengeForUser(
@@ -483,10 +1617,16 @@ export class AuthService {
     userId: string,
     payload: UpdateProfileDto,
   ): Promise<AuthProfileView> {
-    const phoneInput = this.normalizeProfilePhoneInput(
-      payload.phoneCountryCode,
-      payload.phoneNationalNumber,
-    );
+    const shouldUpdatePhone =
+      payload.phoneCountryCode !== undefined ||
+      payload.phoneNationalNumber !== undefined;
+
+    const phoneInput = shouldUpdatePhone
+      ? this.normalizeProfilePhoneInput(
+          payload.phoneCountryCode,
+          payload.phoneNationalNumber,
+        )
+      : undefined;
 
     if (payload.webAuthnRequired) {
       const credentialsCount = await this.prisma.userWebAuthnCredential.count({
@@ -512,13 +1652,7 @@ export class AuthService {
               phoneNationalNumber: phoneInput.phoneNationalNumber,
               phoneE164: phoneInput.phoneE164,
             }
-          : phoneInput === null
-            ? {
-                phoneCountryCode: null,
-                phoneNationalNumber: null,
-                phoneE164: null,
-              }
-            : {}),
+          : {}),
         webAuthnRequired:
           payload.webAuthnRequired === undefined
             ? undefined
@@ -820,13 +1954,86 @@ export class AuthService {
     }
   }
 
+  private async createDeviceApprovalIfRequired(input: {
+    user: AuthenticatedUserRecord;
+    loginId: string;
+    context: AuthIssueContext;
+  }): Promise<AuthDeviceApprovalRequiredResult | null> {
+    const normalizedDeviceId =
+      this.truncate(input.context.deviceId, 191) ??
+      this.buildFallbackDeviceId(input.context);
+
+    if (!normalizedDeviceId) {
+      return null;
+    }
+
+    const existingSession = await this.prisma.userSession.findFirst({
+      where: {
+        userId: input.user.id,
+        deviceId: normalizedDeviceId,
+        deletedAt: null,
+        isRevoked: false,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (existingSession || !input.user.lastLoginAt) {
+      return null;
+    }
+
+    const requiresApproval = await this.requiresNewDeviceApproval(input.user);
+    if (!requiresApproval) {
+      return null;
+    }
+
+    const request = await this.upsertApprovalRequest({
+      user: input.user,
+      purpose: AccountApprovalPurpose.NEW_DEVICE_LOGIN,
+      loginId: input.loginId,
+      approvalCode: this.generateApprovalCode(),
+      context: input.context,
+    });
+
+    await this.notifyApprovalManagers({
+      purpose: AccountApprovalPurpose.NEW_DEVICE_LOGIN,
+      subjectUser: input.user,
+      approvalCode: request.approvalCode,
+      requestId: request.id,
+      context: input.context,
+    });
+
+    await this.auditLogsService.record({
+      actorUserId: input.user.id,
+      action: 'AUTH_NEW_DEVICE_APPROVAL_REQUEST_CREATE',
+      resource: 'auth-approval-requests',
+      resourceId: request.id,
+      details: {
+        purpose: AccountApprovalPurpose.NEW_DEVICE_LOGIN,
+        loginId: input.loginId,
+        deviceId: normalizedDeviceId,
+        approvalCodeExpiresAt: request.expiresAt.toISOString(),
+      },
+    });
+
+    return {
+      deviceApprovalRequired: true,
+      purpose: 'NEW_DEVICE_LOGIN',
+      requestId: request.id,
+      expiresAt: request.expiresAt,
+    };
+  }
+
   private async issueTokensForUser(input: {
     user: AuthenticatedUserRecord;
     context: AuthIssueContext;
     sessionPayload: Record<string, unknown>;
     passwordToRehash?: string | null;
   }): Promise<AuthTokensResult> {
-    const normalizedDeviceId = this.truncate(input.context.deviceId, 191);
+    const normalizedDeviceId =
+      this.truncate(input.context.deviceId, 191) ??
+      this.buildFallbackDeviceId(input.context);
 
     const isKnownDevice =
       normalizedDeviceId === null
@@ -845,6 +2052,23 @@ export class AuthService {
     const shouldNotifyNewDevice = Boolean(
       input.user.lastLoginAt && normalizedDeviceId && !isKnownDevice,
     );
+
+    if (await this.shouldForceSingleSession(input.user)) {
+      await this.prisma.userSession.updateMany({
+        where: {
+          userId: input.user.id,
+          deletedAt: null,
+          isRevoked: false,
+        },
+        data: {
+          isRevoked: true,
+          revokedAt: new Date(),
+          revokedReason: 'single_session_replaced',
+          refreshTokenHash: null,
+          updatedById: input.user.id,
+        },
+      });
+    }
 
     const { roleCodes, permissionCodes } = this.extractSecurityGrants(
       input.user.userRoles,
@@ -1027,12 +2251,12 @@ export class AuthService {
     phoneCountryCode: string;
     phoneNationalNumber: string;
     phoneE164: string;
-  } | null | undefined {
+  } {
     const hasCountry = phoneCountryCode !== undefined;
     const hasNational = phoneNationalNumber !== undefined;
 
     if (!hasCountry && !hasNational) {
-      return undefined;
+      throw new BadRequestException('Phone number is required');
     }
 
     if (!hasCountry || !hasNational) {
@@ -1045,7 +2269,7 @@ export class AuthService {
     const rawNationalNumber = phoneNationalNumber?.trim() ?? '';
 
     if (!rawCountryCode && !rawNationalNumber) {
-      return null;
+      throw new BadRequestException('Phone number is required');
     }
 
     if (!rawCountryCode || !rawNationalNumber) {
@@ -1156,6 +2380,339 @@ export class AuthService {
     return {
       roleCodes,
       permissionCodes: [...permissionCodes],
+    };
+  }
+
+  private async requiresAdminApprovalForInitialActivation(
+    user: AuthenticatedUserRecord,
+  ): Promise<boolean> {
+    const { roleCodes } = this.extractSecurityGrants(user.userRoles);
+    const isGuardianOnly =
+      roleCodes.length === 1 && roleCodes[0]?.toLowerCase() === 'guardian';
+
+    if (isGuardianOnly) {
+      return this.getBooleanSystemSetting(
+        'first_activation_requires_admin_approval_for_guardian',
+        false,
+      );
+    }
+
+    return this.getBooleanSystemSetting(
+      'first_activation_requires_admin_approval_for_employee',
+      true,
+    );
+  }
+
+  private async requiresNewDeviceApproval(
+    user: AuthenticatedUserRecord,
+  ): Promise<boolean> {
+    const { roleCodes } = this.extractSecurityGrants(user.userRoles);
+    const isGuardianOnly =
+      roleCodes.length === 1 && roleCodes[0]?.toLowerCase() === 'guardian';
+
+    if (isGuardianOnly) {
+      return !(await this.getBooleanSystemSetting(
+        'guardian_multi_device_allowed',
+        true,
+      ));
+    }
+
+    const singleSessionMode = await this.getBooleanSystemSetting(
+      'employee_single_session_mode',
+      false,
+    );
+
+    if (singleSessionMode) {
+      return true;
+    }
+
+    return this.getBooleanSystemSetting(
+      'employee_new_device_requires_approval',
+      false,
+    );
+  }
+
+  private async shouldForceSingleSession(
+    user: AuthenticatedUserRecord,
+  ): Promise<boolean> {
+    const { roleCodes } = this.extractSecurityGrants(user.userRoles);
+    const isGuardianOnly =
+      roleCodes.length === 1 && roleCodes[0]?.toLowerCase() === 'guardian';
+
+    if (isGuardianOnly) {
+      return false;
+    }
+
+    return this.getBooleanSystemSetting('employee_single_session_mode', false);
+  }
+
+  private async getBooleanSystemSetting(
+    settingKey: string,
+    fallback: boolean,
+  ): Promise<boolean> {
+    const setting = await this.prisma.systemSetting.findFirst({
+      where: {
+        settingKey,
+        deletedAt: null,
+      },
+      select: {
+        settingValue: true,
+      },
+    });
+
+    const raw = setting?.settingValue?.trim().toLowerCase();
+    if (!raw) {
+      return fallback;
+    }
+
+    if (raw === 'true' || raw === '1') {
+      return true;
+    }
+
+    if (raw === 'false' || raw === '0') {
+      return false;
+    }
+
+    return fallback;
+  }
+
+  private generateApprovalCode(): string {
+    return randomInt(100000, 1000000).toString();
+  }
+
+  private buildFallbackDeviceId(context: AuthIssueContext): string | null {
+    const userAgent = this.truncate(context.userAgent, 255) ?? '';
+    const ipAddress = this.truncate(context.ipAddress, 45) ?? '';
+
+    if (!userAgent && !ipAddress) {
+      return null;
+    }
+
+    const fingerprint = createHash('sha256')
+      .update(`${userAgent}|${ipAddress}`)
+      .digest('hex')
+      .slice(0, 40);
+
+    return `fallback:${fingerprint}`;
+  }
+
+  private hashApprovalCode(code: string): string {
+    return createHash('sha256').update(code.trim()).digest('hex');
+  }
+
+  private verifyApprovalCode(rawCode: string, expectedHash: string): boolean {
+    const received = Buffer.from(this.hashApprovalCode(rawCode), 'hex');
+    const expected = Buffer.from(expectedHash, 'hex');
+
+    if (received.length !== expected.length) {
+      return false;
+    }
+
+    return timingSafeEqual(received, expected);
+  }
+
+  private async notifyApprovalManagers(input: {
+    purpose: AccountApprovalPurpose;
+    subjectUser: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      phoneE164: string | null;
+    };
+    approvalCode: string;
+    requestId: string;
+    context: AuthIssueContext;
+  }): Promise<void> {
+    const managers = await this.prisma.user.findMany({
+      where: {
+        isActive: true,
+        deletedAt: null,
+        userRoles: {
+          some: {
+            deletedAt: null,
+            role: {
+              deletedAt: null,
+              isActive: true,
+              code: {
+                in: ['super_admin', 'school_admin'],
+              },
+            },
+          },
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (managers.length === 0) {
+      return;
+    }
+
+    const title =
+      input.purpose === AccountApprovalPurpose.FIRST_PASSWORD_SETUP
+        ? 'طلب تفعيل كلمة المرور الأولى'
+        : input.purpose === AccountApprovalPurpose.NEW_DEVICE_LOGIN
+          ? 'طلب اعتماد جهاز جديد'
+          : 'طلب استعادة كلمة المرور';
+
+    const message = [
+      `المستخدم: ${input.subjectUser.firstName} ${input.subjectUser.lastName}`.trim(),
+      input.subjectUser.phoneE164 ? `الهاتف: ${input.subjectUser.phoneE164}` : null,
+      `الكود: ${input.approvalCode}`,
+      input.context.deviceLabel ? `الجهاز: ${input.context.deviceLabel}` : null,
+      input.context.ipAddress ? `IP: ${input.context.ipAddress}` : null,
+    ]
+      .filter(Boolean)
+      .join(' | ');
+
+    await this.userNotificationsService.createForUsers(
+      managers.map((manager) => ({
+        userId: manager.id,
+        title,
+        message,
+        notificationType: UserNotificationType.ACTION_REQUIRED,
+        resource: 'auth',
+        resourceId: input.requestId,
+        actionUrl: '/app/user-notifications',
+        triggeredByUserId: input.subjectUser.id,
+      })),
+    );
+  }
+
+  private async upsertApprovalRequest(input: {
+    user: AuthenticatedUserRecord;
+    purpose: AccountApprovalPurpose;
+    loginId: string;
+    approvalCode: string;
+    context: AuthIssueContext;
+    pendingPasswordHash?: string | null;
+  }): Promise<{ id: string; approvalCode: string; expiresAt: Date }> {
+    const expiresAt = new Date(Date.now() + this.approvalCodeTtlSeconds * 1000);
+    const normalizedDeviceId = this.truncate(input.context.deviceId, 191);
+    const normalizedDeviceLabel = this.truncate(input.context.deviceLabel, 191);
+    const normalizedIpAddress = this.truncate(input.context.ipAddress, 45);
+    const normalizedUserAgent = this.truncate(input.context.userAgent, 255);
+
+    const openRequest = await this.prisma.accountApprovalRequest.findFirst({
+      where: {
+        userId: input.user.id,
+        purpose: input.purpose,
+        deletedAt: null,
+        ...(input.purpose === AccountApprovalPurpose.NEW_DEVICE_LOGIN &&
+        normalizedDeviceId
+          ? {
+              deviceId: normalizedDeviceId,
+            }
+          : {}),
+        status: {
+          in: [AccountApprovalStatus.PENDING, AccountApprovalStatus.APPROVED],
+        },
+      },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+
+    if (openRequest) {
+      await this.prisma.accountApprovalRequest.update({
+        where: {
+          id: openRequest.id,
+        },
+        data: {
+          loginId: input.loginId,
+          pendingPasswordHash: input.pendingPasswordHash ?? null,
+          approvalCodeHash: this.hashApprovalCode(input.approvalCode),
+          deviceId: normalizedDeviceId,
+          deviceLabel: normalizedDeviceLabel,
+          ipAddress: normalizedIpAddress,
+          userAgent: normalizedUserAgent,
+          expiresAt,
+          status: openRequest.status,
+          ...(openRequest.status === AccountApprovalStatus.PENDING
+            ? {
+                approvedByUserId: null,
+                approvedAt: null,
+                rejectedAt: null,
+                completedAt: null,
+              }
+            : {}),
+        },
+      });
+
+      return {
+        id: openRequest.id,
+        approvalCode: input.approvalCode,
+        expiresAt,
+      };
+    }
+
+    const request = await this.prisma.accountApprovalRequest.create({
+      data: {
+        userId: input.user.id,
+        purpose: input.purpose,
+        status: AccountApprovalStatus.PENDING,
+        loginId: input.loginId,
+        pendingPasswordHash: input.pendingPasswordHash ?? null,
+        approvalCodeHash: this.hashApprovalCode(input.approvalCode),
+        deviceId: normalizedDeviceId,
+        deviceLabel: normalizedDeviceLabel,
+        ipAddress: normalizedIpAddress,
+        userAgent: normalizedUserAgent,
+        expiresAt,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    return {
+      id: request.id,
+      approvalCode: input.approvalCode,
+      expiresAt,
+    };
+  }
+
+  private async ensureApprovalRequestExists(
+    requestId: string,
+  ): Promise<ApprovalRequestRecord> {
+    const request = await this.prisma.accountApprovalRequest.findFirst({
+      where: {
+        id: requestId,
+        deletedAt: null,
+      },
+      include: approvalRequestInclude,
+    });
+
+    if (!request) {
+      throw new NotFoundException('Approval request not found');
+    }
+
+    return request;
+  }
+
+  private mapApprovalRequestView(
+    request: ApprovalRequestRecord,
+  ): AuthAccountApprovalView {
+    return {
+      id: request.id,
+      userId: request.userId,
+      purpose: request.purpose,
+      status: request.status,
+      loginId: request.loginId,
+      deviceId: request.deviceId,
+      deviceLabel: request.deviceLabel,
+      ipAddress: request.ipAddress,
+      userAgent: request.userAgent,
+      expiresAt: request.expiresAt,
+      approvedAt: request.approvedAt,
+      rejectedAt: request.rejectedAt,
+      completedAt: request.completedAt,
+      createdAt: request.createdAt,
+      updatedAt: request.updatedAt,
+      user: request.user,
+      approvedByUser: request.approvedByUser,
     };
   }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, Palette, Sparkles, Type } from "lucide-react";
+import { Check, Palette, Plus, Sparkles, Type, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppearance } from "@/hooks/use-appearance";
 import { COLOR_PRESETS } from "@/theme/color-presets";
@@ -34,11 +34,24 @@ type FontScaleOption = {
 const MODE_OPTIONS: Array<{
   value: AppearanceMode;
   label: string;
+  icon: string;
 }> = [
-  { value: "system", label: "تلقائي" },
-  { value: "light", label: "نهاري" },
-  { value: "dark", label: "ليلي" },
+  { value: "system", label: "تلقائي", icon: "⚙️" },
+  { value: "light", label: "نهاري", icon: "☀️" },
+  { value: "dark", label: "ليلي", icon: "🌙" },
 ];
+
+// Accent color per preset for the color dot
+const PRESET_ACCENT_COLORS: Record<string, string> = {
+  adaptive: "#94a3b8",
+  violet: "#8b5cf6",
+  emerald: "#10b981",
+  sky: "#0ea5e9",
+  indigo: "#6366f1",
+  fuchsia: "#d946ef",
+  slate: "#64748b",
+  ruby: "#f43f5e",
+};
 
 function getSelectedLabel<T extends { id?: string; value?: string; label: string }>(
   items: T[],
@@ -57,12 +70,10 @@ function GlassShell({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[1.25rem] border border-white/70 bg-white/68 p-3 shadow-[0_14px_34px_-26px_rgba(15,23,42,0.18)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.04] dark:shadow-[0_12px_30px_-24px_rgba(15,23,42,0.85)] sm:p-4">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <span className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
-          <Icon className="h-4 w-4 text-[color:var(--app-accent-color)]" />
-          {title}
-        </span>
+    <section className="rounded-[1.25rem] border border-white/70 bg-white/68 p-3 shadow-[0_14px_34px_-26px_rgba(15,23,42,0.18)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.04] dark:shadow-[0_12px_30px_-24px_rgba(15,23,42,0.85)]">
+      <div className="mb-3 flex items-center gap-2">
+        <Icon className="h-3.5 w-3.5 text-[color:var(--app-accent-color)]" />
+        <span className="text-sm font-semibold text-slate-900 dark:text-white">{title}</span>
         <span className="h-px flex-1 bg-black/[0.06] dark:bg-white/10" />
       </div>
       {children}
@@ -80,24 +91,51 @@ function SummaryTile({
   icon: React.ComponentType<{ className?: string }>;
 }) {
   return (
-    <div className="rounded-[1.05rem] border border-white/70 bg-background/80 px-3 py-3 text-slate-900 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-black/25 dark:text-white">
-      <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-white/55">
-        <Icon className="h-3.5 w-3.5 text-[color:var(--app-accent-color)]" />
+    <div className="rounded-[1.05rem] border border-white/70 bg-background/80 px-2 py-2.5 text-slate-900 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-black/25 dark:text-white">
+      <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-white/55">
+        <Icon className="h-3 w-3 text-[color:var(--app-accent-color)]" />
         <span>{label}</span>
       </div>
-      <p className="mt-2 truncate text-sm font-semibold">{value}</p>
+      <p className="mt-1.5 truncate text-xs font-semibold">{value}</p>
     </div>
   );
 }
 
+function applyCustomThemeColor(hex: string) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const root = document.documentElement;
+  root.style.setProperty("--app-accent-color", `rgb(${r} ${g} ${b})`);
+  root.style.setProperty("--app-accent-soft", `rgba(${r}, ${g}, ${b}, 0.12)`);
+  root.style.setProperty("--app-accent-strong", `rgba(${r}, ${g}, ${b}, 0.22)`);
+  root.style.setProperty("--app-accent-ring", `rgba(${r}, ${g}, ${b}, 0.3)`);
+  try {
+    localStorage.setItem("school-erp.custom-accent", hex);
+  } catch {
+    /* ignore */
+  }
+}
+
 export function ProfileAppearanceSection({ className }: AppearanceSectionProps) {
   const appearance = useAppearance();
+  const [showCustomForm, setShowCustomForm] = React.useState(false);
+  const [customColor, setCustomColor] = React.useState("#6366f1");
+
+  // Load saved custom color on mount
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem("school-erp.custom-accent");
+      if (saved) setCustomColor(saved);
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const themePresets = React.useMemo<ThemePreviewOption[]>(
     () =>
       appearance.colorPresetOptions.map((option) => {
         const preview = COLOR_PRESETS.find((preset) => preset.id === option.value);
-
         return {
           value: option.value,
           label: option.label,
@@ -113,7 +151,6 @@ export function ProfileAppearanceSection({ className }: AppearanceSectionProps) 
     () =>
       appearance.fontFamilyOptions.map((option) => {
         const preview = FONT_PRESETS.find((font) => font.id === option.value);
-
         return {
           value: option.value,
           label: option.label,
@@ -127,13 +164,13 @@ export function ProfileAppearanceSection({ className }: AppearanceSectionProps) 
   const fontScales = appearance.fontScaleOptions as FontScaleOption[];
   const currentTheme = getSelectedLabel(themePresets, appearance.preset);
   const currentFont = getSelectedLabel(fontPresets, appearance.fontFamily);
-  const currentScale = getSelectedLabel(fontScales, appearance.fontScale);
   const currentMode =
     MODE_OPTIONS.find((option) => option.value === appearance.mode)?.label ?? "تلقائي";
 
   return (
     <div className={cn("space-y-3", className)}>
-      <div className="grid gap-2 sm:grid-cols-3">
+      {/* Summary tiles — 3 columns always */}
+      <div className="grid grid-cols-3 gap-1.5">
         <SummaryTile label="الوضع" value={currentMode} icon={Sparkles} />
         <SummaryTile
           label="الثيم"
@@ -147,115 +184,173 @@ export function ProfileAppearanceSection({ className }: AppearanceSectionProps) 
         />
       </div>
 
-      <div
-        className="rounded-[1.3rem] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(248,250,252,0.72))] p-3 text-slate-900 shadow-[0_18px_44px_-28px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-[#14161c] dark:text-white dark:shadow-[0_18px_44px_-28px_rgba(15,23,42,0.95)]"
-        style={{
-          fontFamily: currentFont?.stack ?? "var(--appearance-font-family)",
-          fontSize: "calc(14px * var(--appearance-font-scale))",
-        }}
-      >
-        <div className="flex items-center justify-between gap-3 text-[11px] text-slate-500 dark:text-white/50">
-          <span>المعاينة</span>
-          <span className="rounded-full border border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] px-2.5 py-1 text-[color:var(--app-accent-color)]">
-            {appearance.resolvedSurfaceMode}
-          </span>
-        </div>
-        <p className="mt-3 text-sm font-semibold">مدرسة النجاح الحديثة</p>
-        <p className="mt-1 text-[11px] leading-6 text-slate-500 dark:text-white/55">
-          {currentTheme?.label ?? appearance.preset} • {currentFont?.label ?? appearance.fontFamily} •{" "}
-          {currentScale?.label ?? appearance.fontScale}
-        </p>
-      </div>
-
+      {/* Mode selector */}
       <GlassShell title="وضع العرض" icon={Sparkles}>
         <div className="grid grid-cols-3 gap-2">
           {MODE_OPTIONS.map((option) => {
             const active = appearance.mode === option.value;
-
             return (
               <button
                 key={option.value}
                 type="button"
                 onClick={() => appearance.setMode(option.value)}
                 className={cn(
-                  "rounded-[1rem] border px-3 py-2.5 text-sm font-medium transition-all",
+                  "flex flex-col items-center gap-1 rounded-[1rem] border px-2 py-2.5 text-sm font-medium transition-all",
                   active
                     ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
-                    : "border-white/70 bg-background/75 text-slate-700 hover:bg-white hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-white/[0.06] dark:hover:text-white",
+                    : "border-white/70 bg-background/75 text-slate-700 hover:bg-white hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/70 dark:hover:bg-white/[0.06] dark:hover:text-white",
                 )}
               >
-                {option.label}
+                <span className="text-base">{option.icon}</span>
+                <span className="text-xs">{option.label}</span>
               </button>
             );
           })}
         </div>
       </GlassShell>
 
+      {/* Theme selector — 3 per row with color dot */}
       <GlassShell title="الثيم" icon={Palette}>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
           {themePresets.map((preset) => {
             const active = preset.value === appearance.preset;
-
+            const accentColor = PRESET_ACCENT_COLORS[preset.value] ?? "#94a3b8";
             return (
               <button
                 key={preset.value}
                 type="button"
                 onClick={() => appearance.setPreset(preset.value as typeof appearance.preset)}
                 className={cn(
-                  "overflow-hidden rounded-[1rem] border text-right transition-all",
+                  "relative flex flex-col items-center gap-1.5 rounded-[0.9rem] border py-2.5 transition-all",
                   active
-                    ? "border-[color:var(--app-accent-strong)] shadow-[0_14px_28px_-24px_rgba(15,23,42,0.8)]"
-                    : "border-white/70 hover:bg-white/70 dark:border-white/10 dark:hover:border-white/20",
+                    ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] shadow-[0_8px_24px_-12px_rgba(15,23,42,0.35)]"
+                    : "border-white/70 bg-background/78 hover:bg-white/90 dark:border-white/10 dark:bg-white/[0.03] dark:hover:bg-white/[0.06]",
                 )}
               >
-                <div className={cn("h-9 bg-gradient-to-br", preset.previewClassName)} />
-                <div className="flex items-center justify-between gap-2 bg-white/[0.62] px-3 py-3 dark:bg-white/[0.03]">
-                  <span className="truncate text-sm font-medium text-slate-900 dark:text-white">
-                    {preset.label}
-                  </span>
-                  {active ? (
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[color:var(--app-accent-color)] text-white">
-                      <Check className="h-3.5 w-3.5" />
-                    </span>
-                  ) : null}
-                </div>
+                <span
+                  className="flex h-6 w-6 items-center justify-center rounded-full shadow-md"
+                  style={{ backgroundColor: accentColor }}
+                >
+                  {active ? <Check className="h-3 w-3 text-white" /> : null}
+                </span>
+                <span className="px-1 text-center text-[10px] font-medium leading-tight text-slate-800 dark:text-white/80">
+                  {preset.label}
+                </span>
               </button>
             );
           })}
+
+          {/* Custom theme button */}
+          <button
+            type="button"
+            onClick={() => setShowCustomForm((v) => !v)}
+            className={cn(
+              "flex flex-col items-center gap-1.5 rounded-[0.9rem] border py-2.5 transition-all",
+              showCustomForm
+                ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)]"
+                : "border-dashed border-slate-300 bg-background/60 hover:bg-white/80 dark:border-white/15 dark:bg-white/[0.02] dark:hover:bg-white/[0.05]",
+            )}
+          >
+            <span
+              className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-dashed"
+              style={{
+                borderColor: showCustomForm ? "var(--app-accent-color)" : "#94a3b8",
+                backgroundColor: showCustomForm ? customColor + "33" : "transparent",
+              }}
+            >
+              {showCustomForm ? (
+                <X className="h-3 w-3 text-[color:var(--app-accent-color)]" />
+              ) : (
+                <Plus className="h-3 w-3 text-slate-400 dark:text-white/40" />
+              )}
+            </span>
+            <span className="px-1 text-[10px] font-medium text-slate-500 dark:text-white/50">
+              مخصص
+            </span>
+          </button>
         </div>
+
+        {/* Custom theme color form */}
+        {showCustomForm && (
+          <div className="mt-3 rounded-[1rem] border border-white/70 bg-background/80 p-3 dark:border-white/10 dark:bg-white/[0.03]">
+            <p className="mb-2 text-xs font-semibold text-slate-800 dark:text-white">
+              اختر لون الثيم المخصص
+            </p>
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                value={customColor}
+                onChange={(e) => setCustomColor(e.target.value)}
+                className="h-10 w-12 cursor-pointer rounded-lg border border-white/70 bg-transparent p-0.5 dark:border-white/10"
+              />
+              <div
+                className="h-10 flex-1 rounded-lg transition-all"
+                style={{
+                  background: `linear-gradient(135deg, ${customColor}25, ${customColor}70)`,
+                  border: `1.5px solid ${customColor}50`,
+                }}
+              />
+              <div
+                className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full shadow-md"
+                style={{ backgroundColor: customColor }}
+              >
+                <Check className="h-4 w-4 text-white opacity-0" />
+              </div>
+            </div>
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  applyCustomThemeColor(customColor);
+                  setShowCustomForm(false);
+                }}
+                className="h-9 flex-1 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                style={{ backgroundColor: customColor }}
+              >
+                تطبيق اللون
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCustomForm(false)}
+                className="h-9 rounded-lg border border-white/70 bg-background/75 px-4 text-xs font-medium text-slate-700 transition-colors hover:bg-white dark:border-white/10 dark:text-white/70 dark:hover:bg-white/[0.06]"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        )}
       </GlassShell>
 
+      {/* Font selector — 2 per row */}
       <GlassShell title="الخط" icon={Type}>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-1.5">
           {fontPresets.map((font) => {
             const active = font.value === appearance.fontFamily;
-
             return (
               <button
                 key={font.value}
                 type="button"
                 onClick={() => appearance.setFontFamily(font.value as typeof appearance.fontFamily)}
                 className={cn(
-                  "rounded-[1rem] border px-3 py-3 text-right transition-all",
+                  "rounded-[1rem] border px-3 py-2.5 text-right transition-all",
                   active
-                    ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)]/20 shadow-[0_14px_28px_-24px_rgba(15,23,42,0.8)]"
-                    : "border-white/70 bg-background/78 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-white/20 dark:hover:bg-white/[0.05]",
+                    ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)]/20 shadow-[0_8px_20px_-12px_rgba(15,23,42,0.5)]"
+                    : "border-white/70 bg-background/78 hover:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:hover:bg-white/[0.05]",
                 )}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-medium text-slate-900 dark:text-white">
+                  <span className="text-xs font-semibold text-slate-900 dark:text-white">
                     {font.label}
                   </span>
-                  {active ? <Check className="h-4 w-4 text-[color:var(--app-accent-color)]" /> : null}
+                  {active ? (
+                    <Check className="h-3.5 w-3.5 flex-shrink-0 text-[color:var(--app-accent-color)]" />
+                  ) : null}
                 </div>
                 <p
-                  className="mt-2 truncate text-sm text-slate-700 dark:text-white/70"
+                  className="mt-1 truncate text-xs text-slate-600 dark:text-white/60"
                   style={{ fontFamily: font.stack }}
                 >
-                  مدرسة النجاح الحديثة
-                </p>
-                <p className="mt-1 text-[11px] leading-5 text-slate-500 dark:text-white/45">
-                  {font.preview}
+                  مدرسة النجاح
                 </p>
               </button>
             );
@@ -263,21 +358,21 @@ export function ProfileAppearanceSection({ className }: AppearanceSectionProps) 
         </div>
       </GlassShell>
 
+      {/* Font scale — 3 per row */}
       <GlassShell title="الحجم" icon={Sparkles}>
         <div className="grid grid-cols-3 gap-2">
           {fontScales.map((scale) => {
             const active = scale.value === appearance.fontScale;
-
             return (
               <button
                 key={scale.value}
                 type="button"
                 onClick={() => appearance.setFontScale(scale.value as typeof appearance.fontScale)}
                 className={cn(
-                  "rounded-[1rem] border px-3 py-2.5 text-sm font-medium transition-all",
+                  "rounded-[1rem] border px-3 py-2.5 text-xs font-medium transition-all",
                   active
                     ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
-                    : "border-white/70 bg-background/75 text-slate-700 hover:bg-white hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-white/[0.06] dark:hover:text-white",
+                    : "border-white/70 bg-background/75 text-slate-700 hover:bg-white hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/70 dark:hover:bg-white/[0.06] dark:hover:text-white",
                 )}
               >
                 {scale.label}

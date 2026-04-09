@@ -7,7 +7,6 @@ import {
   IsOptional,
   IsString,
   MaxLength,
-  MinLength,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -42,15 +41,21 @@ export class UpdateUserDto {
 
   @ApiPropertyOptional({ example: 'cmf2f32b60000uvh95h7tk7q1' })
   @IsOptional()
+  @Transform(({ value }: { value?: string | null }) =>
+    value === null ? null : value?.trim() || undefined,
+  )
   @IsString()
-  employeeId?: string;
+  @MaxLength(191)
+  employeeId?: string | null;
 
-  @ApiPropertyOptional({ example: 'NewStrongPassword123!' })
+  @ApiPropertyOptional({ example: 'cmguardian1234567890' })
   @IsOptional()
+  @Transform(({ value }: { value?: string | null }) =>
+    value === null ? null : value?.trim() || undefined,
+  )
   @IsString()
-  @MinLength(8)
-  @MaxLength(128)
-  password?: string;
+  @MaxLength(191)
+  guardianId?: string | null;
 
   @ApiPropertyOptional({ example: 'Ahmad' })
   @IsOptional()

@@ -403,6 +403,26 @@ enum AuthWebAuthnChallengeFlow {
   AUTHENTICATION
 }
 
+enum UserActivationStatus {
+  ACTIVE
+  PENDING_INITIAL_PASSWORD
+  SUSPENDED
+}
+
+enum AccountApprovalPurpose {
+  FIRST_PASSWORD_SETUP
+  NEW_DEVICE_LOGIN
+  PASSWORD_RESET
+}
+
+enum AccountApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+  COMPLETED
+}
+
 model User {
   id           String    @id @default(cuid()) @db.VarChar(191)
   email        String    @unique @db.VarChar(191)
@@ -411,7 +431,12 @@ model User {
   phoneE164    String?   @unique @map("phone_e164") @db.VarChar(20)
   username     String?   @unique @db.VarChar(64)
   employeeId   String?   @unique @map("employee_id") @db.VarChar(191)
+  guardianId   String?   @unique @map("guardian_id") @db.VarChar(191)
   passwordHash String    @map("password_hash") @db.VarChar(255)
+  activationStatus UserActivationStatus @default(ACTIVE) @map("activation_status")
+  passwordSetAt DateTime? @map("password_set_at")
+  initialPasswordIssuedAt DateTime? @map("initial_password_issued_at")
+  initialPasswordExpiresAt DateTime? @map("initial_password_expires_at")
   firstName    String    @map("first_name") @db.VarChar(120)
   lastName     String    @map("last_name") @db.VarChar(120)
   isActive     Boolean   @default(true) @map("is_active")
@@ -426,6 +451,7 @@ model User {
   createdBy User?     @relation("user_created_by", fields: [createdById], references: [id], onDelete: SetNull)
   updatedBy User?     @relation("user_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
   employee  Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  guardian  Guardian? @relation("user_guardian", fields: [guardianId], references: [id], onDelete: SetNull)
 
   createdUsers User[] @relation("user_created_by")
   updatedUsers User[] @relation("user_updated_by")
@@ -454,6 +480,8 @@ model User {
   authMfaChallenges                   AuthMfaChallenge[]              @relation("auth_mfa_challenge_user")
   webAuthnCredentials                 UserWebAuthnCredential[]        @relation("user_webauthn_credential_user")
   webAuthnChallenges                  AuthWebAuthnChallenge[]         @relation("auth_webauthn_challenge_user")
+  accountApprovalRequests             AccountApprovalRequest[]        @relation("account_approval_request_user")
+  accountApprovalRequestsApproved     AccountApprovalRequest[]        @relation("account_approval_request_approved_by")
   settingsCreated                     GlobalSetting[]                 @relation("setting_created_by")
   settingsUpdated                     GlobalSetting[]                 @relation("setting_updated_by")
   calendarSettingsCreated             CalendarSetting[]               @relation("calendar_setting_created_by")
@@ -692,6 +720,37 @@ model User {
   @@index([deletedAt])
   @@index([isActive, deletedAt])
   @@map("users")
+}
+
+model AccountApprovalRequest {
+  id                  String                @id @default(cuid()) @db.VarChar(191)
+  userId              String                @map("user_id") @db.VarChar(191)
+  purpose             AccountApprovalPurpose
+  status              AccountApprovalStatus @default(PENDING)
+  loginId             String?               @map("login_id") @db.VarChar(191)
+  pendingPasswordHash String?               @map("pending_password_hash") @db.VarChar(255)
+  approvalCodeHash    String                @map("approval_code_hash") @db.VarChar(255)
+  deviceId            String?               @map("device_id") @db.VarChar(191)
+  deviceLabel         String?               @map("device_label") @db.VarChar(191)
+  ipAddress           String?               @map("ip_address") @db.VarChar(45)
+  userAgent           String?               @map("user_agent") @db.VarChar(255)
+  expiresAt           DateTime              @map("expires_at")
+  approvedByUserId    String?               @map("approved_by_user_id") @db.VarChar(191)
+  approvedAt          DateTime?             @map("approved_at")
+  completedAt         DateTime?             @map("completed_at")
+  rejectedAt          DateTime?             @map("rejected_at")
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @updatedAt @map("updated_at")
+  deletedAt           DateTime?             @map("deleted_at")
+
+  user           User  @relation("account_approval_request_user", fields: [userId], references: [id], onDelete: Cascade)
+  approvedByUser User? @relation("account_approval_request_approved_by", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status, deletedAt], map: "acct_approval_user_status_del_idx")
+  @@index([purpose, status, deletedAt], map: "acct_approval_purpose_status_del_idx")
+  @@index([expiresAt], map: "acct_approval_expires_at_idx")
+  @@index([deviceId], map: "acct_approval_device_id_idx")
+  @@map("account_approval_requests")
 }
 
 model Role {
@@ -2865,6 +2924,7 @@ model Guardian {
 
   createdBy    User?         @relation("guardian_created_by", fields: [createdById], references: [id], onDelete: SetNull)
   updatedBy    User?         @relation("guardian_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+  user         User?         @relation("user_guardian")
   idType       LookupIdType? @relation(fields: [idTypeId], references: [id], onDelete: SetNull)
   locality     Locality?     @relation(fields: [localityId], references: [id], onDelete: SetNull)
   genderLookup LookupGender? @relation("guardian_gender_lookup", fields: [genderId], references: [id], onDelete: SetNull)

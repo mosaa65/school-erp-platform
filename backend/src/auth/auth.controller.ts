@@ -10,6 +10,7 @@
   Post,
   Req,
   Res,
+  Query,
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
@@ -18,15 +19,26 @@ import {
   ApiBody,
   ApiOkResponse,
   ApiOperation,
+  ApiQuery,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { RequirePermissions } from '../common/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
 import type { AuthUser } from '../common/interfaces/auth-user.interface';
 import { AuthService } from './auth.service';
+import { BeginAccountActivationDto } from './dto/begin-account-activation.dto';
+import { BeginForgotPasswordDto } from './dto/begin-forgot-password.dto';
+import { ChangePasswordByCredentialsDto } from './dto/change-password-by-credentials.dto';
+import { CompleteAccountActivationDto } from './dto/complete-account-activation.dto';
+import { CompleteDeviceApprovalDto } from './dto/complete-device-approval.dto';
+import { CompleteForgotPasswordDto } from './dto/complete-forgot-password.dto';
+import { IdentifyAuthAccountDto } from './dto/identify-auth-account.dto';
 import { LoginDto } from './dto/login.dto';
+import { ListAccountApprovalRequestsDto } from './dto/list-account-approval-requests.dto';
 import { MfaCodeDto } from './dto/mfa-code.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { VerifyMfaDto } from './dto/verify-mfa.dto';
@@ -84,6 +96,14 @@ export class AuthController {
       return loginResult;
     }
 
+    if ('activationRequired' in loginResult) {
+      return loginResult;
+    }
+
+    if ('deviceApprovalRequired' in loginResult) {
+      return loginResult;
+    }
+
     this.setRefreshTokenCookie(
       res,
       loginResult.refreshToken,
@@ -91,6 +111,270 @@ export class AuthController {
     );
 
     return loginResult.response;
+  }
+
+  @Post('identify')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Identify whether account is active or pending activation' })
+  async identify(@Body() payload: IdentifyAuthAccountDto) {
+    return this.authService.identifyAccount(payload.loginId);
+  }
+
+  @Post('device-approval/begin')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Begin new-device approval using login credentials' })
+  @ApiBody({ type: LoginDto })
+  async beginDeviceApproval(
+    @Body() loginDto: LoginDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.beginDeviceApproval(loginDto, {
+      ipAddress: this.resolveRequestIp(req),
+      userAgent: req.headers['user-agent'] ?? null,
+      deviceId: loginDto.deviceId ?? this.extractDeviceId(req),
+      deviceLabel: loginDto.deviceLabel ?? this.extractDeviceLabel(req),
+    });
+
+    if ('mfaRequired' in result) {
+      return result;
+    }
+
+    if ('webauthnRequired' in result) {
+      return result;
+    }
+
+    if ('activationRequired' in result) {
+      return result;
+    }
+
+    if ('deviceApprovalRequired' in result) {
+      return result;
+    }
+
+    this.setRefreshTokenCookie(
+      res,
+      result.refreshToken,
+      result.refreshTokenMaxAgeSeconds,
+    );
+
+    return result.response;
+  }
+
+  @Post('activation/begin')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Begin first-time password setup using one-time password' })
+  async beginActivation(
+    @Body() payload: BeginAccountActivationDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.beginAccountActivation(
+      {
+        loginId: payload.loginId,
+        currentPassword: payload.currentPassword,
+        newPassword: payload.newPassword,
+        confirmPassword: payload.confirmPassword,
+      },
+      {
+        ipAddress: this.resolveRequestIp(req),
+        userAgent: req.headers['user-agent'] ?? null,
+        deviceId: payload.deviceId ?? this.extractDeviceId(req),
+        deviceLabel: payload.deviceLabel ?? this.extractDeviceLabel(req),
+      },
+    );
+
+    if ('response' in result) {
+      this.setRefreshTokenCookie(
+        res,
+        result.refreshToken,
+        result.refreshTokenMaxAgeSeconds,
+      );
+
+      return result.response;
+    }
+
+    return result;
+  }
+
+  @Post('activation/complete')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Complete first-time password setup with approval code' })
+  async completeActivation(
+    @Body() payload: CompleteAccountActivationDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.completeAccountActivation(
+      {
+        requestId: payload.requestId,
+        approvalCode: payload.approvalCode,
+      },
+      {
+        ipAddress: this.resolveRequestIp(req),
+        userAgent: req.headers['user-agent'] ?? null,
+        deviceId: payload.deviceId ?? this.extractDeviceId(req),
+        deviceLabel: payload.deviceLabel ?? this.extractDeviceLabel(req),
+      },
+    );
+
+    this.setRefreshTokenCookie(
+      res,
+      result.refreshToken,
+      result.refreshTokenMaxAgeSeconds,
+    );
+
+    return result.response;
+  }
+
+  @Post('password/forgot/begin')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Begin forgot-password flow and create admin approval request',
+  })
+  async beginForgotPassword(
+    @Body() payload: BeginForgotPasswordDto,
+    @Req() req: Request,
+  ) {
+    return this.authService.beginForgotPasswordReset(
+      {
+        loginId: payload.loginId,
+      },
+      {
+        ipAddress: this.resolveRequestIp(req),
+        userAgent: req.headers['user-agent'] ?? null,
+        deviceId: payload.deviceId ?? this.extractDeviceId(req),
+        deviceLabel: payload.deviceLabel ?? this.extractDeviceLabel(req),
+      },
+    );
+  }
+
+  @Post('password/forgot/complete')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Complete forgot-password flow with approval code and new password',
+  })
+  async completeForgotPassword(
+    @Body() payload: CompleteForgotPasswordDto,
+    @Req() req: Request,
+  ) {
+    return this.authService.completeForgotPasswordReset(
+      {
+        requestId: payload.requestId,
+        approvalCode: payload.approvalCode,
+        newPassword: payload.newPassword,
+        confirmPassword: payload.confirmPassword,
+      },
+      {
+        ipAddress: this.resolveRequestIp(req),
+        userAgent: req.headers['user-agent'] ?? null,
+        deviceId: payload.deviceId ?? this.extractDeviceId(req),
+        deviceLabel: payload.deviceLabel ?? this.extractDeviceLabel(req),
+      },
+    );
+  }
+
+  @Post('password/change')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Change password by login identifier and current password',
+  })
+  async changePasswordByCredentials(
+    @Body() payload: ChangePasswordByCredentialsDto,
+  ) {
+    return this.authService.changePasswordByCredentials({
+      loginId: payload.loginId,
+      currentPassword: payload.currentPassword,
+      newPassword: payload.newPassword,
+      confirmPassword: payload.confirmPassword,
+    });
+  }
+
+  @Get('approvals/pending')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('users.update')
+  @ApiBearerAuth('bearer')
+  @ApiOperation({ summary: 'List pending approval requests for admins' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({
+    name: 'purpose',
+    required: false,
+    enum: ['FIRST_PASSWORD_SETUP', 'NEW_DEVICE_LOGIN', 'PASSWORD_RESET'],
+  })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  async listPendingApprovals(@Query() query: ListAccountApprovalRequestsDto) {
+    return this.authService.listPendingApprovalRequests(query);
+  }
+
+  @Patch('approvals/:id/approve')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('users.update')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('bearer')
+  @ApiOperation({ summary: 'Approve one pending account approval request' })
+  async approveApprovalRequest(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: AuthUser,
+  ) {
+    return this.authService.approveApprovalRequest(id, currentUser.userId);
+  }
+
+  @Patch('approvals/:id/reject')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('users.update')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('bearer')
+  @ApiOperation({ summary: 'Reject one pending account approval request' })
+  async rejectApprovalRequest(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: AuthUser,
+  ) {
+    return this.authService.rejectApprovalRequest(id, currentUser.userId);
+  }
+
+  @Post('approvals/:id/reissue')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('users.update')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('bearer')
+  @ApiOperation({ summary: 'Reissue approval code for a pending request' })
+  async reissueApprovalRequest(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: AuthUser,
+  ) {
+    return this.authService.reissueApprovalRequest(id, currentUser.userId);
+  }
+
+  @Post('device-approval/complete')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Complete new-device login with approval code' })
+  async completeDeviceApproval(
+    @Body() payload: CompleteDeviceApprovalDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.completeDeviceApproval(
+      {
+        requestId: payload.requestId,
+        approvalCode: payload.approvalCode,
+      },
+      {
+        ipAddress: this.resolveRequestIp(req),
+        userAgent: req.headers['user-agent'] ?? null,
+        deviceId: this.extractDeviceId(req),
+        deviceLabel: this.extractDeviceLabel(req),
+      },
+    );
+
+    this.setRefreshTokenCookie(
+      res,
+      result.refreshToken,
+      result.refreshTokenMaxAgeSeconds,
+    );
+
+    return result.response;
   }
 
   @Post('mfa/verify')

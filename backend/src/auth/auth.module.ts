@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import type { StringValue } from 'ms';
+import { AuditLogsModule } from '../modules/audit-logs/audit-logs.module';
 import { UserNotificationsModule } from '../modules/user-notifications/user-notifications.module';
 import { AuthController } from './auth.controller';
 import { AuthMfaService } from './auth-mfa.service';
@@ -21,6 +22,7 @@ const jwtExpiresIn = (process.env.JWT_ACCESS_EXPIRES_IN ??
 @Module({
   imports: [
     PassportModule,
+    AuditLogsModule,
     UserNotificationsModule,
     JwtModule.register({
       secret: jwtSecret,

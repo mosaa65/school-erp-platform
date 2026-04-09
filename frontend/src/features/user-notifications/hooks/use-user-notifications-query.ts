@@ -6,6 +6,7 @@ import { appConfig } from "@/lib/env";
 import {
   ApiError,
   apiClient,
+  type AuthApprovalPurpose,
   type UserNotificationType,
 } from "@/lib/api/client";
 import { useAuth } from "@/features/auth/providers/auth-provider";
@@ -19,6 +20,14 @@ type UseUserNotificationsQueryOptions = {
 };
 
 type UseUserNotificationsUnreadCountQueryOptions = {
+  enabled?: boolean;
+};
+
+type UsePendingAuthApprovalsOptions = {
+  page?: number;
+  limit?: number;
+  purpose?: AuthApprovalPurpose;
+  search?: string;
   enabled?: boolean;
 };
 
@@ -140,6 +149,54 @@ export function useUserNotificationPreferencesQuery(
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) {
           auth.signOut();
+        }
+
+        throw error;
+      }
+    },
+  });
+}
+
+export function usePendingAuthApprovalsQuery(
+  options: UsePendingAuthApprovalsOptions = {},
+) {
+  const auth = useAuth();
+
+  return useQuery({
+    queryKey: [
+      "auth-approvals",
+      "pending",
+      options.page ?? 1,
+      options.limit ?? 50,
+      options.purpose ?? "all",
+      options.search ?? "",
+    ],
+    enabled:
+      (options.enabled ?? true) && auth.isHydrated && auth.isAuthenticated,
+    queryFn: async () => {
+      try {
+        return await apiClient.listPendingAuthApprovals({
+          page: options.page ?? 1,
+          limit: options.limit ?? 50,
+          purpose: options.purpose,
+          search: options.search,
+        });
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) {
+          auth.signOut();
+          throw error;
+        }
+
+        if (error instanceof ApiError && error.status === 403) {
+          return {
+            data: [],
+            pagination: {
+              page: 1,
+              limit: options.limit ?? 50,
+              total: 0,
+              totalPages: 1,
+            },
+          };
         }
 
         throw error;

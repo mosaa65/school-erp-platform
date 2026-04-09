@@ -23,8 +23,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InternationalPhoneField } from "@/components/ui/international-phone-field";
 import { Label } from "@/components/ui/label";
-import { PhoneContactInput } from "@/components/ui/phone-contact-input";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
@@ -1252,20 +1252,30 @@ export function EmployeesWorkspace() {
             <div className="grid gap-4 md:grid-cols-2 border-t pt-4 border-border/40">
               <div className="space-y-1">
                 <Label>الهاتف الأساسي</Label>
-                <PhoneContactInput
+                <InternationalPhoneField
                   value={formState.phonePrimary}
-                  onValueChange={(value) => setFormState((prev) => ({ ...prev, phonePrimary: value }))}
-                  placeholder="+967777111222"
-                  helpText=""
+                  onChange={(next) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      phonePrimary: next.e164,
+                    }))
+                  }
+                  placeholder="7XXXXXXXX"
+                  enableContactPicker
                 />
               </div>
               <div className="space-y-1">
                 <Label>الهاتف الاحتياطي</Label>
-                <PhoneContactInput
+                <InternationalPhoneField
                   value={formState.phoneSecondary}
-                  onValueChange={(value) => setFormState((prev) => ({ ...prev, phoneSecondary: value }))}
-                  placeholder="+967733444555"
-                  helpText=""
+                  onChange={(next) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      phoneSecondary: next.e164,
+                    }))
+                  }
+                  placeholder="7XXXXXXXX"
+                  enableContactPicker
                 />
               </div>
             </div>

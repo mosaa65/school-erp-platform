@@ -5,7 +5,6 @@ import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   LoaderCircle,
   Mail,
-  Lock,
   PencilLine,
   RefreshCw,
   Trash2,
@@ -16,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InternationalPhoneField } from "@/components/ui/international-phone-field";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
@@ -40,6 +40,7 @@ import {
 import { useUsersQuery } from "@/features/users/hooks/use-users-query";
 import {
   useEmployeeOptionsQuery,
+  useGuardianOptionsQuery,
   useRoleOptionsQuery,
 } from "@/features/users/hooks/use-user-form-options-query";
 import type { UserListItem } from "@/lib/api/client";
@@ -53,9 +54,9 @@ type UserFormState = {
   phoneNationalNumber: string;
   firstName: string;
   lastName: string;
-  password: string;
   isActive: boolean;
   employeeId: string;
+  guardianId: string;
   roleIds: string[];
 };
 
@@ -68,9 +69,9 @@ const DEFAULT_FORM_STATE: UserFormState = {
   phoneNationalNumber: "",
   firstName: "",
   lastName: "",
-  password: "",
   isActive: true,
   employeeId: "",
+  guardianId: "",
   roleIds: [],
 };
 
@@ -82,9 +83,9 @@ function toFormState(user: UserListItem): UserFormState {
     phoneNationalNumber: user.phoneNationalNumber ?? "",
     firstName: user.firstName,
     lastName: user.lastName,
-    password: "",
     isActive: user.isActive,
     employeeId: user.employee?.id ?? "",
+    guardianId: user.guardian?.id ?? "",
     roleIds: user.userRoles.map((item) => item.role.id),
   };
 }
@@ -111,6 +112,7 @@ export function UsersManagementWorkspace({
   const canDelete = hasPermission("users.delete");
   const canReadRoles = hasPermission("roles.read");
   const canReadEmployees = hasPermission("employees.read");
+  const canReadGuardians = hasPermission("guardians.read");
 
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState(initialSearchQuery);
@@ -131,6 +133,8 @@ export function UsersManagementWorkspace({
     React.useState<UserFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
+  const [createdActivationSummary, setCreatedActivationSummary] =
+    React.useState<string | null>(null);
   const [employeeSelections, setEmployeeSelections] = React.useState<
     Record<string, string>
   >({});
@@ -148,6 +152,7 @@ export function UsersManagementWorkspace({
 
   const rolesQuery = useRoleOptionsQuery();
   const employeesQuery = useEmployeeOptionsQuery();
+  const guardiansQuery = useGuardianOptionsQuery();
 
   const createUserMutation = useCreateUserMutation();
   const updateUserMutation = useUpdateUserMutation();
@@ -224,6 +229,7 @@ export function UsersManagementWorkspace({
   const resetForm = () => {
     setEditingUserId(null);
     setFormError(null);
+    setCreatedActivationSummary(null);
     setFormState(DEFAULT_FORM_STATE);
     setIsFormOpen(false);
   };
@@ -235,6 +241,7 @@ export function UsersManagementWorkspace({
 
     setFormError(null);
     setActionSuccess(null);
+    setCreatedActivationSummary(null);
     setEditingUserId(null);
     setFormState(DEFAULT_FORM_STATE);
     setIsFormOpen(true);
@@ -248,45 +255,36 @@ export function UsersManagementWorkspace({
     setEditingUserId(user.id);
     setFormError(null);
     setActionSuccess(null);
+    setCreatedActivationSummary(null);
     setFormState(toFormState(user));
     setIsFormOpen(true);
   };
 
   const validateForm = (): boolean => {
-    const email = formState.email.trim();
     const firstName = formState.firstName.trim();
     const lastName = formState.lastName.trim();
     const phoneCountryCode = formState.phoneCountryCode.trim();
     const phoneNationalNumber = formState.phoneNationalNumber.trim();
 
-    if (!email || !firstName || !lastName) {
+    if (!firstName || !lastName) {
       setFormError(
-        "الرجاء تعبئة الحقول الإلزامية: البريد، الاسم الأول، الاسم الأخير.",
+        "الرجاء تعبئة الحقول الإلزامية: رقم الهاتف، الاسم الأول، الاسم الأخير.",
       );
       return false;
     }
 
-    if (!isValidEmail(email)) {
+    if (formState.email.trim() && !isValidEmail(formState.email)) {
       setFormError("صيغة البريد الإلكتروني غير صحيحة.");
       return false;
     }
 
-    if (!isEditing && formState.password.trim().length < 8) {
-      setFormError("كلمة المرور يجب أن تكون 8 أحرف على الأقل.");
+    if (!phoneCountryCode || !phoneNationalNumber) {
+      setFormError("رقم الهاتف مطلوب مع مفتاح الدولة.");
       return false;
     }
 
-    if (
-      isEditing &&
-      formState.password.trim() &&
-      formState.password.trim().length < 8
-    ) {
-      setFormError("كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل.");
-      return false;
-    }
-
-    if (Boolean(phoneCountryCode) !== Boolean(phoneNationalNumber)) {
-      setFormError("الرجاء إدخال مفتاح الدولة ورقم الهاتف معًا أو تركهما فارغين.");
+    if (formState.employeeId.trim() && formState.guardianId.trim()) {
+      setFormError("لا يمكن ربط المستخدم بموظف وولي أمر معًا في نفس الحساب.");
       return false;
     }
 
@@ -302,11 +300,11 @@ export function UsersManagementWorkspace({
       return;
     }
 
-    const payload = {
-      email: formState.email.trim().toLowerCase(),
+    const basePayload = {
+      email: toOptionalString(formState.email)?.toLowerCase(),
       username: toOptionalString(formState.username),
-      phoneCountryCode: toOptionalString(formState.phoneCountryCode),
-      phoneNationalNumber: toOptionalString(formState.phoneNationalNumber),
+      phoneCountryCode: formState.phoneCountryCode.trim(),
+      phoneNationalNumber: formState.phoneNationalNumber.trim(),
       firstName: formState.firstName.trim(),
       lastName: formState.lastName.trim(),
       employeeId: toOptionalString(formState.employeeId),
@@ -320,15 +318,13 @@ export function UsersManagementWorkspace({
         return;
       }
 
-      const updatePayload = {
-        ...payload,
-        password: toOptionalString(formState.password),
-      };
-
       updateUserMutation.mutate(
         {
           userId: editingUserId,
-          payload: updatePayload,
+          payload: {
+            ...basePayload,
+            guardianId: toOptionalString(formState.guardianId) ?? null,
+          },
         },
         {
           onSuccess: () => {
@@ -347,14 +343,19 @@ export function UsersManagementWorkspace({
 
     createUserMutation.mutate(
       {
-        ...payload,
-        password: formState.password.trim(),
+        ...basePayload,
+        guardianId: toOptionalString(formState.guardianId),
       },
       {
-        onSuccess: () => {
+        onSuccess: (createdUser) => {
           resetForm();
           setPage(1);
           setActionSuccess("تم إنشاء المستخدم بنجاح.");
+          setCreatedActivationSummary(
+            `كلمة المرور الأولية لمرة واحدة: ${createdUser.activationSetup.initialOneTimePassword} | تنتهي: ${new Date(
+              createdUser.activationSetup.expiresAt,
+            ).toLocaleString("ar-EG")}`,
+          );
         },
       },
     );
@@ -559,7 +560,9 @@ export function UsersManagementWorkspace({
                       <p className="font-medium">
                         {user.firstName} {user.lastName}
                       </p>
-                      <p className="text-xs text-muted-foreground">{user.email}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {user.email ?? "بريد داخلي مؤقت"}
+                      </p>
                       {user.username ? (
                         <p className="text-xs text-muted-foreground">
                           اسم المستخدم: <code>{user.username}</code>
@@ -574,6 +577,13 @@ export function UsersManagementWorkspace({
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant={user.isActive ? "default" : "destructive"}>
                         {user.isActive ? "نشط" : "غير نشط"}
+                      </Badge>
+                      <Badge variant="secondary">
+                        {user.activationStatus === "PENDING_INITIAL_PASSWORD"
+                          ? "بانتظار التفعيل"
+                          : user.activationStatus === "SUSPENDED"
+                            ? "معلق"
+                            : "مفعّل"}
                       </Badge>
                       {user.userRoles.length > 0 ? (
                         <Badge variant="outline">
@@ -593,6 +603,15 @@ export function UsersManagementWorkspace({
                       <span>
                         {user.employee?.fullName} ({user.employee?.jobNumber})
                       </span>
+                    ) : (
+                      <span>لا يوجد</span>
+                    )}
+                  </div>
+
+                  <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+                    ولي الأمر المرتبط:{" "}
+                    {user.guardian ? (
+                      <span>{user.guardian.fullName}</span>
                     ) : (
                       <span>لا يوجد</span>
                     )}
@@ -756,64 +775,28 @@ export function UsersManagementWorkspace({
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
+            <div className="rounded-2xl border border-primary/15 bg-primary/5 p-3 text-xs leading-6 text-foreground/75">
+              يُنشأ الحساب برقم الهاتف أولًا، وتُولَّد كلمة مرور أولية لمرة واحدة تلقائيًا
+              بعد الإنشاء. لا تُحدَّد كلمة المرور يدويًا من الإدارة.
+            </div>
+
             <div className="space-y-1">
-              <Label required>البريد الإلكتروني</Label>
-              <Input
-                value={formState.email}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    email: event.target.value,
-                  }))
-                }
-                placeholder="user@school.local"
-                icon={<Mail className="h-4 w-4" />}
+              <Label required>رقم الهاتف</Label>
+              <InternationalPhoneField
                 required
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label>اسم المستخدم</Label>
-              <Input
-                value={formState.username}
-                onChange={(event) =>
+                value={
+                  formState.phoneCountryCode || formState.phoneNationalNumber
+                    ? `${formState.phoneCountryCode}${formState.phoneNationalNumber}`
+                    : ""
+                }
+                onChange={(next) =>
                   setFormState((prev) => ({
                     ...prev,
-                    username: event.target.value,
+                    phoneCountryCode: next.dialCode,
+                    phoneNationalNumber: next.nationalNumber,
                   }))
                 }
-                placeholder="ahmad_teacher"
-                icon={<User className="h-4 w-4" />}
               />
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-1">
-                <Label>مفتاح الدولة</Label>
-                <Input
-                  value={formState.phoneCountryCode}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      phoneCountryCode: event.target.value,
-                    }))
-                  }
-                  placeholder="+967"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>رقم الهاتف</Label>
-                <Input
-                  value={formState.phoneNationalNumber}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      phoneNationalNumber: event.target.value,
-                    }))
-                  }
-                  placeholder="7XXXXXXXX"
-                />
-              </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -850,22 +833,17 @@ export function UsersManagementWorkspace({
             </div>
 
             <div className="space-y-1">
-              <Label required={!isEditing}>
-                {isEditing ? "تغيير كلمة المرور (اختياري)" : "كلمة المرور"}
-              </Label>
+              <Label>اسم المستخدم</Label>
               <Input
-                type="password"
-                value={formState.password}
+                value={formState.username}
                 onChange={(event) =>
                   setFormState((prev) => ({
                     ...prev,
-                    password: event.target.value,
+                    username: event.target.value,
                   }))
                 }
-                placeholder="StrongPassword123!"
-                icon={<Lock className="h-4 w-4" />}
-                required={!isEditing}
-                minLength={isEditing ? undefined : 8}
+                placeholder="ahmad_teacher"
+                icon={<User className="h-4 w-4" />}
               />
             </div>
 
@@ -892,6 +870,33 @@ export function UsersManagementWorkspace({
               {!canReadEmployees ? (
                 <p className="text-[10px] text-muted-foreground px-1">
                   ليس لديك الصلاحية المطلوبة: <code>employees.read</code> لعرض الموظفين.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-1">
+              <Label>ربط ولي أمر (اختياري)</Label>
+              <SelectField
+                value={formState.guardianId}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    guardianId: event.target.value,
+                  }))
+                }
+                disabled={!canReadGuardians || guardiansQuery.isLoading}
+                icon={<UserPlus className="h-4 w-4" />}
+              >
+                <option value="">اختر ولي أمر</option>
+                {(guardiansQuery.data ?? []).map((guardian) => (
+                  <option key={guardian.id} value={guardian.id}>
+                    {guardian.fullName}
+                  </option>
+                ))}
+              </SelectField>
+              {!canReadGuardians ? (
+                <p className="text-[10px] text-muted-foreground px-1">
+                  ليس لديك الصلاحية المطلوبة: <code>guardians.read</code> لعرض أولياء الأمور.
                 </p>
               ) : null}
             </div>
@@ -939,6 +944,21 @@ export function UsersManagementWorkspace({
               />
             </label>
 
+            <div className="space-y-1">
+              <Label>البريد الإلكتروني (اختياري)</Label>
+              <Input
+                value={formState.email}
+                onChange={(event) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    email: event.target.value,
+                  }))
+                }
+                placeholder="user@school.local"
+                icon={<Mail className="h-4 w-4" />}
+              />
+            </div>
+
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
                 {formError}
@@ -953,6 +973,15 @@ export function UsersManagementWorkspace({
             {actionSuccess ? (
               <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
                 {actionSuccess}
+              </div>
+            ) : null}
+            {createdActivationSummary ? (
+              <div className="space-y-2 rounded-md border border-sky-300/40 bg-sky-500/10 p-3 text-xs text-sky-700 dark:text-sky-300">
+                <p className="font-medium">تم إصدار كلمة المرور الأولية لمرة واحدة.</p>
+                <p>شاركها مع المستخدم عبر قناة آمنة فقط، ولن تُعرض مرة أخرى بعد إغلاق هذه النافذة.</p>
+                <p className="break-all font-mono text-[11px] leading-6" dir="ltr">
+                  {createdActivationSummary}
+                </p>
               </div>
             ) : null}
 

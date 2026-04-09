@@ -18,9 +18,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InternationalPhoneField } from "@/components/ui/international-phone-field";
 import { Label } from "@/components/ui/label";
 import { SelectField } from "@/components/ui/select-field";
-import { PhoneContactInput } from "@/components/ui/phone-contact-input";
 import {
   Card,
   CardContent,
@@ -635,6 +635,12 @@ export function GuardiansWorkspace() {
                 />
               </div>
 
+              <div className="rounded-2xl border border-sky-500/15 bg-sky-500/5 p-3 text-xs leading-6 text-foreground/75">
+                إذا احتاج ولي الأمر لحساب دخول، يُنشأ حساب مستخدم مستقل برقم الهاتف من
+                شاشة المستخدمين، وتُدار كلمة المرور الأولية لمرة واحدة هناك من دون تعيين
+                كلمة مرور يدويًا.
+              </div>
+
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-1">
                   <Label required>الجنس</Label>
@@ -701,27 +707,31 @@ export function GuardiansWorkspace() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-1">
                   <Label>الهاتف الأساسي</Label>
-                  <PhoneContactInput
+                  <InternationalPhoneField
                     value={formState.phonePrimary}
-                    onValueChange={(value) =>
-                      setFormState((prev) => ({ ...prev, phonePrimary: value }))
+                    onChange={(next) =>
+                      setFormState((prev) => ({
+                        ...prev,
+                        phonePrimary: next.e164,
+                      }))
                     }
-                    placeholder="+967777111222"
-                    autoComplete="tel"
-                    inputMode="tel"
+                    placeholder="7XXXXXXXX"
+                    enableContactPicker
                     buttonTestId="guardian-phone-primary-contact-picker"
                   />
                 </div>
                 <div className="space-y-1">
                   <Label>الهاتف الاحتياطي</Label>
-                  <PhoneContactInput
+                  <InternationalPhoneField
                     value={formState.phoneSecondary}
-                    onValueChange={(value) =>
-                      setFormState((prev) => ({ ...prev, phoneSecondary: value }))
+                    onChange={(next) =>
+                      setFormState((prev) => ({
+                        ...prev,
+                        phoneSecondary: next.e164,
+                      }))
                     }
-                    placeholder="+967733444555"
-                    autoComplete="tel"
-                    inputMode="tel"
+                    placeholder="7XXXXXXXX"
+                    enableContactPicker
                     buttonTestId="guardian-phone-secondary-contact-picker"
                   />
                 </div>
@@ -729,17 +739,16 @@ export function GuardiansWorkspace() {
 
               <div className="space-y-1">
                 <Label>رقم واتساب</Label>
-                <PhoneContactInput
+                <InternationalPhoneField
                   value={formState.whatsappNumber}
-                  onValueChange={(value) =>
+                  onChange={(next) =>
                     setFormState((prev) => ({
                       ...prev,
-                      whatsappNumber: value,
+                      whatsappNumber: next.e164,
                     }))
                   }
-                  placeholder="+967777111222"
-                  autoComplete="tel"
-                  inputMode="tel"
+                  placeholder="7XXXXXXXX"
+                  enableContactPicker
                   buttonTestId="guardian-whatsapp-contact-picker"
                 />
               </div>

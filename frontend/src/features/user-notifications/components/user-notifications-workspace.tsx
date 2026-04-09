@@ -24,17 +24,25 @@ import { Input } from "@/components/ui/input";
 import { SelectField } from "@/components/ui/select-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
+  useApproveAuthApprovalMutation,
   useDeleteUserNotificationMutation,
   useMarkAllUserNotificationsReadMutation,
   useMarkUserNotificationReadMutation,
+  useRejectAuthApprovalMutation,
+  useReissueAuthApprovalMutation,
   useUpdateUserNotificationPreferencesMutation,
 } from "@/features/user-notifications/hooks/use-user-notifications-mutations";
 import {
+  usePendingAuthApprovalsQuery,
   useUserNotificationPreferencesQuery,
   useUserNotificationsQuery,
   type UserNotificationPreferences,
 } from "@/features/user-notifications/hooks/use-user-notifications-query";
-import type { UserNotificationListItem, UserNotificationType } from "@/lib/api/client";
+import type {
+  AuthApprovalRequestItem,
+  UserNotificationListItem,
+  UserNotificationType,
+} from "@/lib/api/client";
 
 const PAGE_SIZE = 12;
 
@@ -58,10 +66,89 @@ function formatDate(value: string | null): string {
   return date.toLocaleString("ar-YE");
 }
 
+type AuthApprovalRequestKind =
+  | "FIRST_PASSWORD_SETUP"
+  | "NEW_DEVICE_LOGIN"
+  | "PASSWORD_RESET";
+
+type AuthApprovalRequestDetail = {
+  label: string;
+  value: string;
+};
+
+type AuthApprovalRequestCard = {
+  request: AuthApprovalRequestItem;
+  kind: AuthApprovalRequestKind;
+  title: string;
+  subtitle: string;
+  details: AuthApprovalRequestDetail[];
+};
+
+const AUTH_APPROVAL_TITLES: Record<AuthApprovalRequestKind, string> = {
+  FIRST_PASSWORD_SETUP: "طلب تفعيل كلمة المرور الأولى",
+  NEW_DEVICE_LOGIN: "طلب اعتماد جهاز جديد",
+  PASSWORD_RESET: "طلب استعادة كلمة المرور",
+};
+
+const AUTH_APPROVAL_SUBTITLES: Record<AuthApprovalRequestKind, string> = {
+  FIRST_PASSWORD_SETUP:
+    "هذا الطلب يخص أول كلمة مرور للمستخدم، ويحتاج تمرير الكود للمستخدم نفسه قبل تفعيل الحساب.",
+  NEW_DEVICE_LOGIN:
+    "هذا الطلب يخص دخولًا من جهاز جديد، ويحتاج تمرير الكود للمستخدم قبل إصدار الجلسة.",
+  PASSWORD_RESET:
+    "هذا الطلب يخص استعادة كلمة المرور، ويحتاج تمرير الكود للمستخدم لاستكمال إعادة التعيين.",
+};
+
+function toAuthApprovalCard(request: AuthApprovalRequestItem): AuthApprovalRequestCard {
+  const kind: AuthApprovalRequestKind =
+    request.purpose === "FIRST_PASSWORD_SETUP"
+      ? "FIRST_PASSWORD_SETUP"
+      : request.purpose === "NEW_DEVICE_LOGIN"
+        ? "NEW_DEVICE_LOGIN"
+        : "PASSWORD_RESET";
+
+  const details: AuthApprovalRequestDetail[] = [
+    {
+      label: "المستخدم",
+      value: `${request.user.firstName} ${request.user.lastName}`.trim(),
+    },
+  ];
+
+  if (request.user.phoneE164) {
+    details.push({
+      label: "الهاتف",
+      value: request.user.phoneE164,
+    });
+  }
+
+  if (request.deviceLabel) {
+    details.push({
+      label: "الجهاز",
+      value: request.deviceLabel,
+    });
+  }
+
+  if (request.ipAddress) {
+    details.push({
+      label: "IP",
+      value: request.ipAddress,
+    });
+  }
+
+  return {
+    request,
+    kind,
+    title: AUTH_APPROVAL_TITLES[kind],
+    subtitle: AUTH_APPROVAL_SUBTITLES[kind],
+    details,
+  };
+}
+
 export function UserNotificationsWorkspace() {
   const { hasPermission } = useRbac();
   const canUpdate = hasPermission("user-notifications.update");
   const canDelete = hasPermission("user-notifications.delete");
+  const canManageApprovals = hasPermission("users.update");
 
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
@@ -77,10 +164,18 @@ export function UserNotificationsWorkspace() {
       readFilter === "all" ? undefined : readFilter === "read",
     notificationType: typeFilter === "all" ? undefined : typeFilter,
   });
+  const pendingApprovalsQuery = usePendingAuthApprovalsQuery({
+    page: 1,
+    limit: 50,
+    enabled: canManageApprovals,
+  });
 
   const markReadMutation = useMarkUserNotificationReadMutation();
   const markAllReadMutation = useMarkAllUserNotificationsReadMutation();
   const deleteMutation = useDeleteUserNotificationMutation();
+  const approveApprovalMutation = useApproveAuthApprovalMutation();
+  const rejectApprovalMutation = useRejectAuthApprovalMutation();
+  const reissueApprovalMutation = useReissueAuthApprovalMutation();
   const preferencesQuery = useUserNotificationPreferencesQuery();
   const updatePreferencesMutation = useUpdateUserNotificationPreferencesMutation();
   const [preferencesDraft, setPreferencesDraft] =
@@ -91,6 +186,18 @@ export function UserNotificationsWorkspace() {
     () => notificationsQuery.data?.data ?? [],
     [notificationsQuery.data?.data],
   );
+  const authApprovalCards = React.useMemo(
+    () => (pendingApprovalsQuery.data?.data ?? []).map(toAuthApprovalCard),
+    [pendingApprovalsQuery.data?.data],
+  );
+  const authApprovalRequestIds = React.useMemo(
+    () => new Set(authApprovalCards.map((item) => item.request.id)),
+    [authApprovalCards],
+  );
+  const regularNotifications = React.useMemo(
+    () => notifications.filter((item) => !authApprovalRequestIds.has(item.resourceId ?? "")),
+    [authApprovalRequestIds, notifications],
+  );
   const pagination = notificationsQuery.data?.pagination;
   const unreadCount =
     notificationsQuery.data?.unreadCount ??
@@ -100,6 +207,10 @@ export function UserNotificationsWorkspace() {
     (markReadMutation.error as Error | null)?.message ??
     (markAllReadMutation.error as Error | null)?.message ??
     (deleteMutation.error as Error | null)?.message ??
+    (approveApprovalMutation.error as Error | null)?.message ??
+    (rejectApprovalMutation.error as Error | null)?.message ??
+    (reissueApprovalMutation.error as Error | null)?.message ??
+    (pendingApprovalsQuery.error as Error | null)?.message ??
     null;
   const preferencesError =
     (preferencesQuery.error as Error | null)?.message ??
@@ -146,6 +257,34 @@ export function UserNotificationsWorkspace() {
     }
 
     deleteMutation.mutate(item.id);
+  };
+
+  const handleApprove = (requestId: string) => {
+    if (!canManageApprovals) {
+      return;
+    }
+
+    approveApprovalMutation.mutate(requestId);
+  };
+
+  const handleReject = (requestId: string) => {
+    if (!canManageApprovals) {
+      return;
+    }
+
+    rejectApprovalMutation.mutate(requestId);
+  };
+
+  const handleReissue = (requestId: string) => {
+    if (!canManageApprovals) {
+      return;
+    }
+
+    reissueApprovalMutation.mutate(requestId, {
+      onSuccess: (response) => {
+        window.alert(`كود جديد: ${response.approvalCode}`);
+      },
+    });
   };
 
   const handleTogglePreference = (
@@ -372,7 +511,12 @@ export function UserNotificationsWorkspace() {
         <Button
           variant="outline"
           className="gap-2"
-          onClick={() => void notificationsQuery.refetch()}
+          onClick={() => {
+            void notificationsQuery.refetch();
+            if (canManageApprovals) {
+              void pendingApprovalsQuery.refetch();
+            }
+          }}
           disabled={notificationsQuery.isFetching}
         >
           <RefreshCw
@@ -381,6 +525,120 @@ export function UserNotificationsWorkspace() {
           تحديث
         </Button>
       </div>
+
+      {authApprovalCards.length > 0 ? (
+        <Card className="border-amber-400/30 bg-amber-500/5 backdrop-blur-sm">
+          <CardHeader className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>طلبات الاعتماد</CardTitle>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="secondary">
+                  التفعيل الأولي:{" "}
+                  {authApprovalCards.filter((item) => item.kind === "FIRST_PASSWORD_SETUP").length}
+                </Badge>
+                <Badge variant="secondary">
+                  الأجهزة الجديدة:{" "}
+                  {authApprovalCards.filter((item) => item.kind === "NEW_DEVICE_LOGIN").length}
+                </Badge>
+                <Badge variant="secondary">
+                  استعادة المرور:{" "}
+                  {authApprovalCards.filter((item) => item.kind === "PASSWORD_RESET").length}
+                </Badge>
+              </div>
+            </div>
+            <CardDescription>
+              تظهر هنا طلبات تفعيل أول كلمة مرور وطلبات اعتماد الجهاز الجديد مع تفاصيل الطلب.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-3">
+            {pendingApprovalsQuery.isFetching ? (
+              <div className="rounded-md border border-dashed border-amber-400/30 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-100">
+                جارٍ تحديث طلبات الاعتماد...
+              </div>
+            ) : null}
+
+            {authApprovalCards.map((card) => (
+              <div
+                key={card.request.id}
+                className="space-y-3 rounded-lg border border-amber-400/30 bg-background/80 p-3"
+                data-testid="auth-approval-card"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium">{card.title}</p>
+                      <Badge variant="default">معلّق</Badge>
+                      <Badge variant="secondary">إجراء مطلوب</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{card.subtitle}</p>
+                    <p className="text-xs text-muted-foreground">
+                      أُنشئ في: {formatDate(card.request.createdAt)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      معرف الطلب: <code>{card.request.id}</code>
+                    </p>
+                  </div>
+
+                  <Button variant="outline" size="sm" className="gap-1.5" asChild>
+                    <Link href="/app/user-notifications">
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        فتح
+                    </Link>
+                  </Button>
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                  {card.details.map((detail) => (
+                    <div
+                      key={`${card.request.id}-${detail.label}`}
+                      className="rounded-md border border-border/60 bg-background/70 p-2"
+                    >
+                      <p className="text-[10px] text-muted-foreground">{detail.label}</p>
+                      <p className="mt-1 break-all text-xs font-medium">{detail.value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleApprove(card.request.id)}
+                    disabled={!canManageApprovals || approveApprovalMutation.isPending}
+                  >
+                    اعتماد
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleReject(card.request.id)}
+                    disabled={!canManageApprovals || rejectApprovalMutation.isPending}
+                  >
+                    رفض
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleReissue(card.request.id)}
+                    disabled={!canManageApprovals || reissueApprovalMutation.isPending}
+                  >
+                    إعادة إصدار الكود
+                  </Button>
+                  {!canManageApprovals ? (
+                    <p className="text-[10px] text-muted-foreground">
+                      لا تملك الصلاحية المطلوبة: <code>users.update</code>.
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
@@ -414,13 +672,15 @@ export function UserNotificationsWorkspace() {
             </div>
           ) : null}
 
-          {!notificationsQuery.isPending && notifications.length === 0 ? (
+          {!notificationsQuery.isPending &&
+          authApprovalCards.length === 0 &&
+          regularNotifications.length === 0 ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
               لا توجد إشعارات مطابقة.
             </div>
           ) : null}
 
-          {notifications.map((item) => (
+          {regularNotifications.map((item) => (
             <div
               key={item.id}
               className={`space-y-3 rounded-lg border p-3 ${item.isRead ? "border-border/70 bg-background/60" : "border-sky-500/30 bg-sky-500/5"}`}
@@ -522,8 +782,8 @@ export function UserNotificationsWorkspace() {
         <div className="flex items-center gap-2">
           <BellRing className="h-4 w-4" />
           <span>
-            ستظهر هنا إشعارات طلبات الإجازات والقرارات المرتبطة بحسابك، ويمكن توسيع
-            هذه القناة لاحقًا للعقود والمستندات والمهام الإدارية.
+            ستظهر هنا الإشعارات العامة وطلبات الاعتماد المرتبطة بحسابك، وتُعرض
+            طلبات تفعيل الحساب أو اعتماد الجهاز أعلى الصفحة كبطاقات منفصلة.
           </span>
         </div>
       </div>

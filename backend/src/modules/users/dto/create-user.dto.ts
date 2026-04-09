@@ -4,19 +4,20 @@ import {
   IsArray,
   IsBoolean,
   IsEmail,
+  IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
-  MinLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateUserDto {
-  @ApiProperty({ example: 'teacher@school.local' })
+  @ApiPropertyOptional({ example: 'teacher@school.local' })
   @Transform(({ value }: { value: string }) => value?.toLowerCase().trim())
+  @IsOptional()
   @IsEmail()
   @MaxLength(191)
-  email!: string;
+  email?: string;
 
   @ApiPropertyOptional({ example: 'teacher_ahmad' })
   @IsOptional()
@@ -25,30 +26,33 @@ export class CreateUserDto {
   @MaxLength(64)
   username?: string;
 
-  @ApiPropertyOptional({ example: '+967' })
-  @IsOptional()
+  @ApiProperty({ example: '+967' })
   @Transform(({ value }: { value?: string }) => value?.trim())
   @IsString()
+  @IsNotEmpty()
   @MaxLength(8)
-  phoneCountryCode?: string;
+  phoneCountryCode!: string;
 
-  @ApiPropertyOptional({ example: '777123456' })
-  @IsOptional()
+  @ApiProperty({ example: '777123456' })
   @Transform(({ value }: { value?: string }) => value?.trim())
   @IsString()
+  @IsNotEmpty()
   @MaxLength(32)
-  phoneNationalNumber?: string;
+  phoneNationalNumber!: string;
 
   @ApiPropertyOptional({ example: 'cmf2f32b60000uvh95h7tk7q1' })
   @IsOptional()
+  @Transform(({ value }: { value?: string }) => value?.trim() || undefined)
   @IsString()
+  @MaxLength(191)
   employeeId?: string;
 
-  @ApiProperty({ example: 'StrongPassword123!' })
+  @ApiPropertyOptional({ example: 'cmguardian1234567890' })
+  @IsOptional()
+  @Transform(({ value }: { value?: string }) => value?.trim() || undefined)
   @IsString()
-  @MinLength(8)
-  @MaxLength(128)
-  password!: string;
+  @MaxLength(191)
+  guardianId?: string;
 
   @ApiProperty({ example: 'Ahmad' })
   @Transform(({ value }: { value: string }) => value?.trim())

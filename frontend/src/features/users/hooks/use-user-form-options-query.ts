@@ -65,4 +65,35 @@ export function useEmployeeOptionsQuery() {
   });
 }
 
+export function useGuardianOptionsQuery() {
+  const auth = useAuth();
+
+  return useQuery({
+    queryKey: ["guardians", "options"],
+    enabled: auth.isHydrated && auth.isAuthenticated,
+    queryFn: async () => {
+      try {
+        const response = await apiClient.listGuardians({
+          page: 1,
+          limit: 100,
+          isActive: true,
+        });
+
+        return response.data;
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) {
+          auth.signOut();
+          throw error;
+        }
+
+        if (error instanceof ApiError && error.status === 403) {
+          return [];
+        }
+
+        throw error;
+      }
+    },
+  });
+}
+
 

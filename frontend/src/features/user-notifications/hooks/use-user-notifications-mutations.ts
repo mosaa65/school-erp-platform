@@ -64,6 +64,9 @@ function useInvalidateUserNotifications() {
     void queryClient.invalidateQueries({
       queryKey: ["user-notifications"],
     });
+    void queryClient.invalidateQueries({
+      queryKey: ["auth-approvals"],
+    });
   };
 }
 
@@ -125,6 +128,45 @@ export function useUpdateUserNotificationPreferencesMutation() {
   return useMutation({
     mutationFn: (payload: UpdateUserNotificationPreferencesPayload) =>
       updateUserNotificationPreferences(payload),
+    onSuccess: () => {
+      invalidate();
+    },
+    onError: handleAuthFailure,
+  });
+}
+
+export function useApproveAuthApprovalMutation() {
+  const invalidate = useInvalidateUserNotifications();
+  const handleAuthFailure = useHandleAuthFailure();
+
+  return useMutation({
+    mutationFn: (requestId: string) => apiClient.approveAuthApproval(requestId),
+    onSuccess: () => {
+      invalidate();
+    },
+    onError: handleAuthFailure,
+  });
+}
+
+export function useRejectAuthApprovalMutation() {
+  const invalidate = useInvalidateUserNotifications();
+  const handleAuthFailure = useHandleAuthFailure();
+
+  return useMutation({
+    mutationFn: (requestId: string) => apiClient.rejectAuthApproval(requestId),
+    onSuccess: () => {
+      invalidate();
+    },
+    onError: handleAuthFailure,
+  });
+}
+
+export function useReissueAuthApprovalMutation() {
+  const invalidate = useInvalidateUserNotifications();
+  const handleAuthFailure = useHandleAuthFailure();
+
+  return useMutation({
+    mutationFn: (requestId: string) => apiClient.reissueAuthApproval(requestId),
     onSuccess: () => {
       invalidate();
     },

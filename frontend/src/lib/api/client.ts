@@ -37,10 +37,134 @@ export type LoginWebAuthnChallengeResponse = {
   options: Record<string, unknown>;
 };
 
+export type LoginActivationRequiredResponse = {
+  activationRequired: true;
+  loginId: string;
+  activationStatus: "PENDING_INITIAL_PASSWORD";
+  initialPasswordExpiresAt: string | null;
+  requiresApproval: boolean;
+};
+
+export type LoginDeviceApprovalRequiredResponse = {
+  deviceApprovalRequired: true;
+  purpose: "NEW_DEVICE_LOGIN";
+  requestId: string;
+  expiresAt: string;
+};
+
+export type AccountIdentifyResponse = {
+  status: "ACTIVE_LOGIN" | "PENDING_ACTIVATION" | "UNKNOWN_ACCOUNT";
+  loginId: string;
+  requiresOneTimePassword: boolean;
+};
+
+export type BeginAccountActivationPayload = {
+  loginId: string;
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+  deviceId?: string;
+  deviceLabel?: string;
+};
+
+export type AccountApprovalPendingResponse = {
+  approvalRequired: true;
+  purpose: "FIRST_PASSWORD_SETUP" | "NEW_DEVICE_LOGIN" | "PASSWORD_RESET";
+  requestId: string;
+  expiresAt: string;
+};
+
+export type AuthApprovalPurpose =
+  | "FIRST_PASSWORD_SETUP"
+  | "NEW_DEVICE_LOGIN"
+  | "PASSWORD_RESET";
+
+export type AuthApprovalStatus =
+  | "PENDING"
+  | "APPROVED"
+  | "REJECTED"
+  | "EXPIRED"
+  | "COMPLETED";
+
+export type AuthApprovalRequestItem = {
+  id: string;
+  userId: string;
+  purpose: AuthApprovalPurpose;
+  status: AuthApprovalStatus;
+  loginId: string | null;
+  deviceId: string | null;
+  deviceLabel: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  expiresAt: string;
+  approvedAt: string | null;
+  rejectedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  user: {
+    id: string;
+    email: string;
+    phoneE164: string | null;
+    phoneCountryCode: string | null;
+    phoneNationalNumber: string | null;
+    firstName: string;
+    lastName: string;
+    guardianId: string | null;
+    employeeId: string | null;
+    activationStatus: "ACTIVE" | "PENDING_INITIAL_PASSWORD" | "SUSPENDED";
+    isActive: boolean;
+  };
+  approvedByUser: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+};
+
+export type AuthApprovalRequestsResponse = PaginatedResponse<AuthApprovalRequestItem>;
+
+export type CompleteAccountActivationPayload = {
+  requestId: string;
+  approvalCode: string;
+  deviceId?: string;
+  deviceLabel?: string;
+};
+
+export type CompleteDeviceApprovalPayload = {
+  requestId: string;
+  approvalCode: string;
+};
+
+export type BeginForgotPasswordPayload = {
+  loginId: string;
+  deviceId?: string;
+  deviceLabel?: string;
+};
+
+export type CompleteForgotPasswordPayload = {
+  requestId: string;
+  approvalCode: string;
+  newPassword: string;
+  confirmPassword: string;
+  deviceId?: string;
+  deviceLabel?: string;
+};
+
+export type ChangePasswordByCredentialsPayload = {
+  loginId: string;
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+};
+
 export type LoginResponse =
   | AuthSession
   | LoginMfaChallengeResponse
-  | LoginWebAuthnChallengeResponse;
+  | LoginWebAuthnChallengeResponse
+  | LoginActivationRequiredResponse
+  | LoginDeviceApprovalRequiredResponse;
 
 export type VerifyLoginMfaPayload = {
   challengeId: string;
@@ -119,6 +243,8 @@ export type UserListItem = {
   firstName: string;
   lastName: string;
   isActive: boolean;
+  activationStatus: "ACTIVE" | "PENDING_INITIAL_PASSWORD" | "SUSPENDED";
+  initialPasswordExpiresAt: string | null;
   lastLoginAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -127,6 +253,13 @@ export type UserListItem = {
     jobNumber: string;
     fullName: string;
     jobTitle: string;
+    isActive: boolean;
+  } | null;
+  guardian: {
+    id: string;
+    fullName: string;
+    phonePrimary: string | null;
+    whatsappNumber: string | null;
     isActive: boolean;
   } | null;
   userRoles: Array<{
@@ -3395,12 +3528,12 @@ export type HrSummaryReportResponse = {
 };
 
 export type CreateUserPayload = {
-  email: string;
+  email?: string;
   username?: string;
   employeeId?: string;
-  phoneCountryCode?: string;
-  phoneNationalNumber?: string;
-  password: string;
+  guardianId?: string;
+  phoneCountryCode: string;
+  phoneNationalNumber: string;
   firstName: string;
   lastName: string;
   isActive?: boolean;
@@ -3410,14 +3543,22 @@ export type CreateUserPayload = {
 export type UpdateUserPayload = {
   email?: string;
   username?: string;
-  employeeId?: string;
+  employeeId?: string | null;
+  guardianId?: string | null;
   phoneCountryCode?: string;
   phoneNationalNumber?: string;
-  password?: string;
   firstName?: string;
   lastName?: string;
   isActive?: boolean;
   roleIds?: string[];
+};
+
+export type CreatedUserResponse = UserListItem & {
+  activationSetup: {
+    initialOneTimePassword: string;
+    expiresAt: string;
+    activationStatus: "ACTIVE" | "PENDING_INITIAL_PASSWORD" | "SUSPENDED";
+  };
 };
 
 export type DeleteEntityResponse = {
@@ -6866,6 +7007,76 @@ export const apiClient = {
     request<LoginResponse>("/auth/login", "POST", {
       json: payload,
     }),
+  identifyAccount: (loginId: string) =>
+    request<AccountIdentifyResponse>("/auth/identify", "POST", {
+      json: { loginId },
+    }),
+  beginAccountActivation: (payload: BeginAccountActivationPayload) =>
+    request<AuthSession | AccountApprovalPendingResponse>(
+      "/auth/activation/begin",
+      "POST",
+      {
+        json: payload,
+      },
+    ),
+  completeAccountActivation: (payload: CompleteAccountActivationPayload) =>
+    request<AuthSession>("/auth/activation/complete", "POST", {
+      json: payload,
+    }),
+  beginDeviceApproval: (payload: LoginPayload) =>
+    request<LoginResponse>("/auth/device-approval/begin", "POST", {
+      json: payload,
+    }),
+  completeDeviceApproval: (payload: CompleteDeviceApprovalPayload) =>
+    request<AuthSession>("/auth/device-approval/complete", "POST", {
+      json: payload,
+    }),
+  beginForgotPasswordReset: (payload: BeginForgotPasswordPayload) =>
+    request<AccountApprovalPendingResponse>("/auth/password/forgot/begin", "POST", {
+      json: payload,
+    }),
+  completeForgotPasswordReset: (payload: CompleteForgotPasswordPayload) =>
+    request<{ success: true }>("/auth/password/forgot/complete", "POST", {
+      json: payload,
+    }),
+  changePasswordByCredentials: (payload: ChangePasswordByCredentialsPayload) =>
+    request<{ success: true }>("/auth/password/change", "POST", {
+      json: payload,
+    }),
+  listPendingAuthApprovals: (query?: {
+    page?: number;
+    limit?: number;
+    purpose?: AuthApprovalPurpose;
+    search?: string;
+  }) =>
+    request<AuthApprovalRequestsResponse>(
+      `/auth/approvals/pending${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        purpose: query?.purpose,
+        search: query?.search,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  approveAuthApproval: (requestId: string) =>
+    request<AuthApprovalRequestItem>(`/auth/approvals/${requestId}/approve`, "PATCH", {
+      withAuth: true,
+    }),
+  rejectAuthApproval: (requestId: string) =>
+    request<AuthApprovalRequestItem>(`/auth/approvals/${requestId}/reject`, "PATCH", {
+      withAuth: true,
+    }),
+  reissueAuthApproval: (requestId: string) =>
+    request<{ request: AuthApprovalRequestItem; approvalCode: string }>(
+      `/auth/approvals/${requestId}/reissue`,
+      "POST",
+      {
+        withAuth: true,
+      },
+    ),
   verifyLoginMfa: (payload: VerifyLoginMfaPayload) =>
     request<AuthSession>("/auth/mfa/verify", "POST", {
       json: payload,
@@ -6949,7 +7160,7 @@ export const apiClient = {
       },
     ),
   createUser: (payload: CreateUserPayload) =>
-    request<UserListItem>("/users", "POST", {
+    request<CreatedUserResponse>("/users", "POST", {
       withAuth: true,
       json: payload,
     }),

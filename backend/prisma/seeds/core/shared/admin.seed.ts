@@ -390,8 +390,17 @@ export async function seedSuperAdmin(
   prisma: PrismaClient,
   permissions: SeedPermission[],
 ) {
-  const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@school.local';
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? 'ChangeMe123!';
+  const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'mousa.mc13@gmail.com';
+  const adminPassword =
+    process.env.SEED_ADMIN_PASSWORD ?? 'M0usa!Awdi#2026$Secure';
+  const adminUsername = process.env.SEED_ADMIN_USERNAME ?? 'eng_mousa';
+  const adminPhoneCountryCode =
+    process.env.SEED_ADMIN_PHONE_COUNTRY_CODE ?? '+967';
+  const adminPhoneNationalNumber =
+    process.env.SEED_ADMIN_PHONE_NATIONAL_NUMBER ?? '772217218';
+  const adminPhoneE164 = `${adminPhoneCountryCode}${adminPhoneNationalNumber}`;
+  const adminFirstName = process.env.SEED_ADMIN_FIRST_NAME ?? 'موسئ';
+  const adminLastName = process.env.SEED_ADMIN_LAST_NAME ?? 'العواضي';
 
   const roleIdByCode = await seedDefaultRoles(prisma, permissions);
   const superAdminRoleId = roleIdByCode.get('super_admin');
@@ -407,8 +416,12 @@ export async function seedSuperAdmin(
       email: adminEmail,
     },
     update: {
-      firstName: 'System',
-      lastName: 'Administrator',
+      username: adminUsername,
+      firstName: adminFirstName,
+      lastName: adminLastName,
+      phoneCountryCode: adminPhoneCountryCode,
+      phoneNationalNumber: adminPhoneNationalNumber,
+      phoneE164: adminPhoneE164,
       passwordHash,
       isActive: true,
       deletedAt: null,
@@ -416,9 +429,13 @@ export async function seedSuperAdmin(
     },
     create: {
       email: adminEmail,
+      username: adminUsername,
       passwordHash,
-      firstName: 'System',
-      lastName: 'Administrator',
+      firstName: adminFirstName,
+      lastName: adminLastName,
+      phoneCountryCode: adminPhoneCountryCode,
+      phoneNationalNumber: adminPhoneNationalNumber,
+      phoneE164: adminPhoneE164,
       isActive: true,
     },
     select: {
@@ -446,7 +463,6 @@ export async function seedSuperAdmin(
 
   return {
     email: adminUser.email,
-    password: adminPassword,
   };
 }
 

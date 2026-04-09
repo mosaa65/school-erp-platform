@@ -4,14 +4,16 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AuditStatus, Prisma, type User } from '@prisma/client';
+import { AuditStatus, Prisma, UserActivationStatus, type User } from '@prisma/client';
 import * as argon2 from 'argon2';
+import { randomBytes } from 'crypto';
 import {
   parsePhoneNumberFromString,
   type CountryCode,
 } from 'libphonenumber-js';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { EmployeesService } from '../employees/employees.service';
+import { GuardiansService } from '../guardians/guardians.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { ListUsersDto } from './dto/list-users.dto';
@@ -26,7 +28,10 @@ const userPublicSelect = {
   username: true,
   firstName: true,
   lastName: true,
+  guardianId: true,
   isActive: true,
+  activationStatus: true,
+  initialPasswordExpiresAt: true,
   lastLoginAt: true,
   createdAt: true,
   updatedAt: true,
@@ -36,6 +41,15 @@ const userPublicSelect = {
       jobNumber: true,
       fullName: true,
       jobTitle: true,
+      isActive: true,
+    },
+  },
+  guardian: {
+    select: {
+      id: true,
+      fullName: true,
+      phonePrimary: true,
+      whatsappNumber: true,
       isActive: true,
     },
   },
@@ -58,10 +72,16 @@ const userPublicSelect = {
 
 @Injectable()
 export class UsersService {
+  private readonly initialPasswordTtlHours = this.parseIntEnv(
+    'AUTH_INITIAL_PASSWORD_TTL_HOURS',
+    72,
+  );
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLogsService: AuditLogsService,
     private readonly employeesService: EmployeesService,
+    private readonly guardiansService: GuardiansService,
   ) {}
 
   async create(createUserDto: CreateUserDto, actorUserId: string) {
@@ -72,22 +92,41 @@ export class UsersService {
         await this.ensureEmployeeExistsAndActive(createUserDto.employeeId);
       }
 
-      const passwordHash = await argon2.hash(createUserDto.password);
+      if (createUserDto.guardianId) {
+        await this.ensureGuardianExistsAndActive(createUserDto.guardianId);
+      }
+
       normalizedPhone = this.normalizePhoneInput(
         createUserDto.phoneCountryCode,
         createUserDto.phoneNationalNumber,
+      );
+      if (!normalizedPhone) {
+        throw new BadRequestException('Phone number is required');
+      }
+      const initialPassword = this.generateInitialPassword();
+      const passwordHash = await argon2.hash(initialPassword);
+      const now = new Date();
+      const initialPasswordExpiresAt = new Date(
+        now.getTime() + this.initialPasswordTtlHours * 60 * 60 * 1000,
       );
 
       const user = await this.prisma.$transaction(async (tx) => {
         const createdUser = await tx.user.create({
           data: {
-            email: createUserDto.email,
+            email: this.resolveEmailForCreate(
+              createUserDto.email,
+              normalizedPhone!.phoneE164,
+            ),
             username: createUserDto.username,
-            phoneCountryCode: normalizedPhone?.phoneCountryCode ?? null,
-            phoneNationalNumber: normalizedPhone?.phoneNationalNumber ?? null,
-            phoneE164: normalizedPhone?.phoneE164 ?? null,
+            phoneCountryCode: normalizedPhone!.phoneCountryCode,
+            phoneNationalNumber: normalizedPhone!.phoneNationalNumber,
+            phoneE164: normalizedPhone!.phoneE164,
             employeeId: createUserDto.employeeId,
+            guardianId: createUserDto.guardianId,
             passwordHash,
+            activationStatus: UserActivationStatus.PENDING_INITIAL_PASSWORD,
+            initialPasswordIssuedAt: now,
+            initialPasswordExpiresAt,
             firstName: createUserDto.firstName,
             lastName: createUserDto.lastName,
             isActive: createUserDto.isActive ?? true,
@@ -119,11 +158,21 @@ export class UsersService {
         details: {
           email: user.email,
           employeeId: createUserDto.employeeId,
+          guardianId: createUserDto.guardianId,
+          phoneE164: normalizedPhone.phoneE164,
           rolesCount: user.userRoles.length,
+          activationStatus: user.activationStatus,
         },
       });
 
-      return user;
+      return {
+        ...user,
+        activationSetup: {
+          initialOneTimePassword: initialPassword,
+          expiresAt: initialPasswordExpiresAt,
+          activationStatus: user.activationStatus,
+        },
+      };
     } catch (error) {
       await this.auditLogsService.record({
         actorUserId,
@@ -157,6 +206,7 @@ export class UsersService {
             { username: { contains: query.search } },
             { firstName: { contains: query.search } },
             { lastName: { contains: query.search } },
+            { guardian: { fullName: { contains: query.search } } },
             { employee: { fullName: { contains: query.search } } },
             { employee: { jobNumber: { contains: query.search } } },
           ]
@@ -211,29 +261,36 @@ export class UsersService {
         await this.ensureEmployeeExistsAndActive(updateUserDto.employeeId);
       }
 
-      const normalizedPhone = this.normalizePhoneInput(
-        updateUserDto.phoneCountryCode,
-        updateUserDto.phoneNationalNumber,
-        {
-          allowNoPhone: true,
-        },
-      );
+      if (updateUserDto.guardianId) {
+        await this.ensureGuardianExistsAndActive(updateUserDto.guardianId);
+      }
+
+      const shouldUpdatePhone =
+        updateUserDto.phoneCountryCode !== undefined ||
+        updateUserDto.phoneNationalNumber !== undefined;
+
+      const normalizedPhone = shouldUpdatePhone
+        ? this.normalizePhoneInput(
+            updateUserDto.phoneCountryCode,
+            updateUserDto.phoneNationalNumber,
+          )
+        : null;
 
       const user = await this.prisma.$transaction(async (tx) => {
-        const passwordHash = updateUserDto.password
-          ? await argon2.hash(updateUserDto.password)
-          : undefined;
-
         await tx.user.update({
           where: { id },
           data: {
             email: updateUserDto.email,
             username: updateUserDto.username,
-            phoneCountryCode: normalizedPhone?.phoneCountryCode,
-            phoneNationalNumber: normalizedPhone?.phoneNationalNumber,
-            phoneE164: normalizedPhone?.phoneE164,
+            ...(normalizedPhone
+              ? {
+                  phoneCountryCode: normalizedPhone.phoneCountryCode,
+                  phoneNationalNumber: normalizedPhone.phoneNationalNumber,
+                  phoneE164: normalizedPhone.phoneE164,
+                }
+              : {}),
             employeeId: updateUserDto.employeeId,
-            passwordHash,
+            guardianId: updateUserDto.guardianId,
             firstName: updateUserDto.firstName,
             lastName: updateUserDto.lastName,
             isActive: updateUserDto.isActive,
@@ -256,10 +313,7 @@ export class UsersService {
         action: 'USER_UPDATE',
         resource: 'users',
         resourceId: id,
-        details: {
-          ...updateUserDto,
-          password: updateUserDto.password ? '[PROTECTED]' : undefined,
-        } as Prisma.InputJsonValue,
+        details: updateUserDto as Prisma.InputJsonValue,
       });
 
       return user;
@@ -346,6 +400,7 @@ export class UsersService {
         data: {
           deletedAt: new Date(),
           employeeId: null,
+          guardianId: null,
           updatedById: actorUserId,
         },
       });
@@ -392,6 +447,10 @@ export class UsersService {
 
   private async ensureEmployeeExistsAndActive(employeeId: string) {
     await this.employeesService.ensureEmployeeExistsAndActive(employeeId);
+  }
+
+  private async ensureGuardianExistsAndActive(guardianId: string) {
+    await this.guardiansService.ensureGuardianExistsAndActive(guardianId);
   }
 
   private async syncUserRoles(
@@ -490,7 +549,11 @@ export class UsersService {
     const hasNationalNumber = Boolean(rawNationalNumber);
 
     if (!hasCountryCode && !hasNationalNumber) {
-      return options?.allowNoPhone ? null : null;
+      if (options?.allowNoPhone) {
+        return null;
+      }
+
+      throw new BadRequestException('Phone number is required');
     }
 
     if (!hasCountryCode || !hasNationalNumber) {
@@ -542,7 +605,7 @@ export class UsersService {
       error.code === 'P2002'
     ) {
       throw new ConflictException(
-        'User email, phone, username, or employee link already exists',
+        'User email, phone, username, employee link, or guardian link already exists',
       );
     }
 
@@ -555,5 +618,32 @@ export class UsersService {
     }
 
     return 'Unknown error';
+  }
+
+  private resolveEmailForCreate(
+    email: string | undefined,
+    phoneE164: string,
+  ): string {
+    const normalized = email?.trim().toLowerCase();
+    if (normalized) {
+      return normalized;
+    }
+
+    const phoneSlug = phoneE164.replace(/\D+/g, '');
+    return `pending-user-${phoneSlug}@local.invalid`;
+  }
+
+  private generateInitialPassword(): string {
+    return randomBytes(9).toString('base64url');
+  }
+
+  private parseIntEnv(key: string, fallback: number): number {
+    const raw = process.env[key]?.trim();
+    if (!raw) {
+      return fallback;
+    }
+
+    const parsed = Number.parseInt(raw, 10);
+    return Number.isNaN(parsed) || parsed <= 0 ? fallback : parsed;
   }
 }
