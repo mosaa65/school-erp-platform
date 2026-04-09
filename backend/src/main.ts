@@ -192,7 +192,7 @@ async function bootstrap() {
 
   app.use(
     json({
-      verify: (req, _res, buf) => {
+      verify: (req: Request, _res: Response, buf: Buffer) => {
         (req as { rawBody?: Buffer }).rawBody = buf;
       },
     }),
