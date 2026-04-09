@@ -44,6 +44,7 @@ const MODE_OPTIONS: Array<{
 // Accent color per preset for the color dot
 const PRESET_ACCENT_COLORS: Record<string, string> = {
   adaptive: "#94a3b8",
+  custom: "#6366f1",
   violet: "#8b5cf6",
   emerald: "#10b981",
   sky: "#0ea5e9",
@@ -101,49 +102,29 @@ function SummaryTile({
   );
 }
 
-function applyCustomThemeColor(hex: string) {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  const root = document.documentElement;
-  root.style.setProperty("--app-accent-color", `rgb(${r} ${g} ${b})`);
-  root.style.setProperty("--app-accent-soft", `rgba(${r}, ${g}, ${b}, 0.12)`);
-  root.style.setProperty("--app-accent-strong", `rgba(${r}, ${g}, ${b}, 0.22)`);
-  root.style.setProperty("--app-accent-ring", `rgba(${r}, ${g}, ${b}, 0.3)`);
-  try {
-    localStorage.setItem("school-erp.custom-accent", hex);
-  } catch {
-    /* ignore */
-  }
-}
-
 export function ProfileAppearanceSection({ className }: AppearanceSectionProps) {
   const appearance = useAppearance();
   const [showCustomForm, setShowCustomForm] = React.useState(false);
-  const [customColor, setCustomColor] = React.useState("#6366f1");
+  const [customColor, setCustomColor] = React.useState(appearance.customAccentHex);
 
-  // Load saved custom color on mount
   React.useEffect(() => {
-    try {
-      const saved = localStorage.getItem("school-erp.custom-accent");
-      if (saved) setCustomColor(saved);
-    } catch {
-      /* ignore */
-    }
-  }, []);
+    setCustomColor(appearance.customAccentHex);
+  }, [appearance.customAccentHex]);
 
   const themePresets = React.useMemo<ThemePreviewOption[]>(
     () =>
-      appearance.colorPresetOptions.map((option) => {
-        const preview = COLOR_PRESETS.find((preset) => preset.id === option.value);
-        return {
-          value: option.value,
-          label: option.label,
-          previewClassName:
-            preview?.previewClassName ??
-            "from-slate-500/70 via-background/10 to-transparent",
-        };
-      }),
+      appearance.colorPresetOptions
+        .filter((option) => option.value !== "custom")
+        .map((option) => {
+          const preview = COLOR_PRESETS.find((preset) => preset.id === option.value);
+          return {
+            value: option.value,
+            label: option.label,
+            previewClassName:
+              preview?.previewClassName ??
+              "from-slate-500/70 via-background/10 to-transparent",
+          };
+        }),
     [appearance.colorPresetOptions],
   );
 
@@ -162,7 +143,9 @@ export function ProfileAppearanceSection({ className }: AppearanceSectionProps) 
   );
 
   const fontScales = appearance.fontScaleOptions as FontScaleOption[];
-  const currentTheme = getSelectedLabel(themePresets, appearance.preset);
+  const currentThemeLabel =
+    appearance.colorPresetOptions.find((option) => option.value === appearance.preset)
+      ?.label ?? appearance.preset;
   const currentFont = getSelectedLabel(fontPresets, appearance.fontFamily);
   const currentMode =
     MODE_OPTIONS.find((option) => option.value === appearance.mode)?.label ?? "تلقائي";
@@ -174,7 +157,7 @@ export function ProfileAppearanceSection({ className }: AppearanceSectionProps) 
         <SummaryTile label="الوضع" value={currentMode} icon={Sparkles} />
         <SummaryTile
           label="الثيم"
-          value={currentTheme?.label ?? appearance.preset}
+          value={currentThemeLabel}
           icon={Palette}
         />
         <SummaryTile
@@ -246,7 +229,7 @@ export function ProfileAppearanceSection({ className }: AppearanceSectionProps) 
             onClick={() => setShowCustomForm((v) => !v)}
             className={cn(
               "flex flex-col items-center gap-1.5 rounded-[0.9rem] border py-2.5 transition-all",
-              showCustomForm
+              showCustomForm || appearance.preset === "custom"
                 ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)]"
                 : "border-dashed border-slate-300 bg-background/60 hover:bg-white/80 dark:border-white/15 dark:bg-white/[0.02] dark:hover:bg-white/[0.05]",
             )}
@@ -254,12 +237,20 @@ export function ProfileAppearanceSection({ className }: AppearanceSectionProps) 
             <span
               className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-dashed"
               style={{
-                borderColor: showCustomForm ? "var(--app-accent-color)" : "#94a3b8",
-                backgroundColor: showCustomForm ? customColor + "33" : "transparent",
+                borderColor:
+                  showCustomForm || appearance.preset === "custom"
+                    ? "var(--app-accent-color)"
+                    : "#94a3b8",
+                backgroundColor:
+                  showCustomForm || appearance.preset === "custom"
+                    ? `${appearance.customAccentHex}33`
+                    : "transparent",
               }}
             >
               {showCustomForm ? (
                 <X className="h-3 w-3 text-[color:var(--app-accent-color)]" />
+              ) : appearance.preset === "custom" ? (
+                <Check className="h-3 w-3 text-[color:var(--app-accent-color)]" />
               ) : (
                 <Plus className="h-3 w-3 text-slate-400 dark:text-white/40" />
               )}
@@ -301,7 +292,8 @@ export function ProfileAppearanceSection({ className }: AppearanceSectionProps) 
               <button
                 type="button"
                 onClick={() => {
-                  applyCustomThemeColor(customColor);
+                  appearance.setCustomAccentHex(customColor);
+                  appearance.setPreset("custom");
                   setShowCustomForm(false);
                 }}
                 className="h-9 flex-1 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90"

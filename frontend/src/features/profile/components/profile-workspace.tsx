@@ -29,6 +29,7 @@ import { ProfileNavigationSection } from "@/components/layout/profile-navigation
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InternationalPhoneField } from "@/components/ui/international-phone-field";
+import { PasswordFieldWithBiometricAction } from "@/components/ui/password-field-with-biometric-action";
 import { useAppearance } from "@/hooks/use-appearance";
 import { useBranchMode } from "@/hooks/use-branch-mode";
 import { useAuth } from "@/features/auth/providers/auth-provider";
@@ -41,6 +42,7 @@ import { translateRoleCode } from "@/lib/i18n/ar";
 import { cn } from "@/lib/utils";
 
 type SectionId = "appearance" | "navigation" | "account" | "security";
+type PasswordIdentityMethod = "phone" | "email";
 
 const APP_VERSION_LABEL = "School ERP Web v0.1.0";
 const WEBAUTHN_QUERY_KEY = ["auth", "webauthn", "credentials"] as const;
@@ -177,27 +179,33 @@ function ProfileSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="overflow-hidden rounded-[1.8rem] border border-white/65 bg-white/76 text-slate-900 shadow-[0_26px_68px_-42px_rgba(15,23,42,0.2)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/58 dark:text-white dark:shadow-[0_26px_68px_-42px_rgba(15,23,42,0.95)]">
+    <section className="overflow-hidden rounded-[2rem] border border-white/75 bg-white/82 text-slate-900 shadow-[0_30px_80px_-48px_rgba(15,23,42,0.22)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/60 dark:text-white dark:shadow-[0_26px_68px_-42px_rgba(15,23,42,0.95)]">
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center justify-between gap-3 px-3 py-3.5 text-right transition hover:bg-black/[0.03] dark:hover:bg-white/[0.03] sm:px-5 sm:py-4"
+        className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-right transition hover:bg-black/[0.03] dark:hover:bg-white/[0.03] sm:px-5 sm:py-4"
       >
         <span className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-[1rem] border border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]">
-            <Icon className="h-4 w-4" />
+          <span className="flex h-9 w-9 items-center justify-center rounded-[0.9rem] border border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]">
+            <Icon className="h-3.5 w-3.5" />
           </span>
           <span className="text-sm font-semibold sm:text-base">{title}</span>
         </span>
-        <ChevronDown
+        <span
           className={cn(
-            "h-4 w-4 text-slate-400 transition-transform dark:text-white/45",
-            open ? "rotate-180" : "",
+            "flex h-8 w-8 items-center justify-center rounded-full border border-black/10 bg-white/70 text-slate-500 transition-all dark:border-white/15 dark:bg-white/[0.05] dark:text-white/55",
+            open
+              ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
+              : "",
           )}
-        />
+        >
+          <ChevronDown
+            className={cn("h-3.5 w-3.5 transition-transform", open ? "rotate-180" : "")}
+          />
+        </span>
       </button>
       {open ? (
-        <div className="border-t border-black/5 px-3 py-3.5 dark:border-white/10 sm:px-5 sm:py-4">
+        <div className="border-t border-black/5 px-4 py-4 dark:border-white/10 sm:px-5 sm:py-4">
           {children}
         </div>
       ) : null}
@@ -251,6 +259,15 @@ export function ProfileWorkspace() {
     message: string;
   } | null>(null);
   const [profileNotice, setProfileNotice] = React.useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+  const [passwordIdentityMethod, setPasswordIdentityMethod] =
+    React.useState<PasswordIdentityMethod>("phone");
+  const [currentPassword, setCurrentPassword] = React.useState("");
+  const [nextPassword, setNextPassword] = React.useState("");
+  const [confirmNextPassword, setConfirmNextPassword] = React.useState("");
+  const [accountNotice, setAccountNotice] = React.useState<{
     type: "success" | "error";
     message: string;
   } | null>(null);
@@ -344,6 +361,29 @@ export function ProfileWorkspace() {
     },
   });
 
+  const changePasswordMutation = useMutation({
+    mutationFn: (payload: {
+      loginId: string;
+      currentPassword: string;
+      newPassword: string;
+      confirmPassword: string;
+    }) => apiClient.changePasswordByCredentials(payload),
+    onSuccess: () => {
+      setCurrentPassword("");
+      setNextPassword("");
+      setConfirmNextPassword("");
+      setAccountNotice({
+        type: "success",
+        message: "تم تغيير كلمة المرور بنجاح.",
+      });
+    },
+    onError: (error) => {
+      const message =
+        error instanceof Error ? error.message : "تعذر تغيير كلمة المرور.";
+      setAccountNotice({ type: "error", message });
+    },
+  });
+
   const revokeSessionMutation = useMutation({
     mutationFn: (sessionId: string) => apiClient.revokeAuthSession(sessionId),
     onSuccess: async () => {
@@ -362,6 +402,19 @@ export function ProfileWorkspace() {
       setProfileInitialized(true);
     }
   }, [profileInitialized, profileQuery.data]);
+
+  React.useEffect(() => {
+    if (!profileQuery.data) {
+      return;
+    }
+
+    if (profileQuery.data.phoneE164) {
+      setPasswordIdentityMethod("phone");
+      return;
+    }
+
+    setPasswordIdentityMethod("email");
+  }, [profileQuery.data]);
 
   if (!auth.session) return null;
 
@@ -391,8 +444,55 @@ export function ProfileWorkspace() {
     }));
   };
 
+  const phoneLoginId = profile?.phoneE164?.trim() ?? "";
+  const emailLoginId = auth.session.user.email.trim().toLowerCase();
+
+  const handleChangePassword = () => {
+    setAccountNotice(null);
+
+    const loginId = passwordIdentityMethod === "phone" ? phoneLoginId : emailLoginId;
+    if (!loginId) {
+      setAccountNotice({
+        type: "error",
+        message: "أضف رقم هاتف صالح أولًا أو استخدم البريد الإلكتروني.",
+      });
+      return;
+    }
+
+    if (currentPassword.trim().length < 8) {
+      setAccountNotice({
+        type: "error",
+        message: "أدخل كلمة المرور الحالية بشكل صحيح.",
+      });
+      return;
+    }
+
+    if (nextPassword.trim().length < 8) {
+      setAccountNotice({
+        type: "error",
+        message: "كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل.",
+      });
+      return;
+    }
+
+    if (nextPassword !== confirmNextPassword) {
+      setAccountNotice({
+        type: "error",
+        message: "تأكيد كلمة المرور غير مطابق.",
+      });
+      return;
+    }
+
+    changePasswordMutation.mutate({
+      loginId,
+      currentPassword,
+      newPassword: nextPassword,
+      confirmPassword: confirmNextPassword,
+    });
+  };
+
   return (
-    <div className="mx-auto max-w-2xl space-y-2 sm:space-y-3">
+    <div className="mx-auto max-w-2xl space-y-3 sm:space-y-4">
 
       {/* ── Profile Card ─────────────────────────────────── */}
       <section className="relative overflow-hidden rounded-[2rem] border border-white/70 bg-white/76 text-slate-900 shadow-[0_36px_100px_-56px_rgba(15,23,42,0.22)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/58 dark:text-white sm:rounded-[2.25rem]">
@@ -462,7 +562,7 @@ export function ProfileWorkspace() {
       </section>
 
       {/* ── Sections ─────────────────────────────────────── */}
-      <div className="space-y-3">
+      <div className="space-y-4">
 
         {/* Appearance */}
         <ProfileSection
@@ -592,6 +692,105 @@ export function ProfileWorkspace() {
                 )}
               >
                 {profileNotice.message}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="mt-4 rounded-[1.1rem] border border-white/70 bg-background/78 p-3 dark:border-white/10 dark:bg-white/[0.04]">
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+              تغيير كلمة المرور
+            </p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-white/60">
+              غيّر كلمة المرور من إعدادات الحساب بدل شاشة تسجيل الدخول.
+            </p>
+
+            <div className="mt-3 grid grid-cols-2 gap-2 rounded-2xl border border-border/60 bg-muted/30 p-1">
+              <button
+                type="button"
+                onClick={() => setPasswordIdentityMethod("phone")}
+                disabled={!phoneLoginId}
+                className={cn(
+                  "rounded-[1rem] px-3 py-2 text-sm font-bold transition",
+                  passwordIdentityMethod === "phone"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground",
+                  !phoneLoginId ? "cursor-not-allowed opacity-40" : "",
+                )}
+              >
+                رقم الهاتف
+              </button>
+              <button
+                type="button"
+                onClick={() => setPasswordIdentityMethod("email")}
+                className={cn(
+                  "rounded-[1rem] px-3 py-2 text-sm font-bold transition",
+                  passwordIdentityMethod === "email"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground",
+                )}
+              >
+                البريد الإلكتروني
+              </button>
+            </div>
+
+            <p className="mt-2 text-[11px] text-slate-500 dark:text-white/55" dir="ltr">
+              {passwordIdentityMethod === "phone"
+                ? phoneLoginId || "لا يوجد رقم هاتف محفوظ بعد."
+                : emailLoginId}
+            </p>
+
+            <div className="mt-3 space-y-2">
+              <label className="text-xs font-semibold text-slate-700 dark:text-white/70">
+                كلمة المرور الحالية
+              </label>
+              <PasswordFieldWithBiometricAction
+                value={currentPassword}
+                onChange={setCurrentPassword}
+                autoComplete="current-password"
+              />
+            </div>
+
+            <div className="mt-3 space-y-2">
+              <label className="text-xs font-semibold text-slate-700 dark:text-white/70">
+                كلمة المرور الجديدة
+              </label>
+              <PasswordFieldWithBiometricAction
+                value={nextPassword}
+                onChange={setNextPassword}
+                autoComplete="new-password"
+              />
+            </div>
+
+            <div className="mt-3 space-y-2">
+              <label className="text-xs font-semibold text-slate-700 dark:text-white/70">
+                تأكيد كلمة المرور
+              </label>
+              <PasswordFieldWithBiometricAction
+                value={confirmNextPassword}
+                onChange={setConfirmNextPassword}
+                autoComplete="new-password"
+              />
+            </div>
+
+            <Button
+              type="button"
+              className="mt-3 h-10 w-full rounded-lg"
+              onClick={handleChangePassword}
+              disabled={changePasswordMutation.isPending}
+            >
+              {changePasswordMutation.isPending ? "جارٍ التحديث..." : "حفظ كلمة المرور الجديدة"}
+            </Button>
+
+            {accountNotice ? (
+              <p
+                className={cn(
+                  "mt-2 text-xs font-medium",
+                  accountNotice.type === "success"
+                    ? "text-emerald-700 dark:text-emerald-300"
+                    : "text-rose-700 dark:text-rose-300",
+                )}
+              >
+                {accountNotice.message}
               </p>
             ) : null}
           </div>
@@ -829,18 +1028,18 @@ export function ProfileWorkspace() {
         <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center">
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            className="absolute inset-0 bg-slate-900/45 backdrop-blur-sm"
             onClick={() => setShowSignOutConfirm(false)}
           />
 
           {/* Dialog */}
-          <div className="relative w-full max-w-sm overflow-hidden rounded-[2rem] border border-white/70 bg-white/92 shadow-[0_36px_100px_-30px_rgba(15,23,42,0.4)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/95 dark:shadow-[0_36px_100px_-30px_rgba(0,0,0,0.8)]">
+          <div className="relative w-full max-w-sm overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-[0_30px_80px_-34px_rgba(15,23,42,0.28)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/95 dark:shadow-[0_36px_100px_-30px_rgba(0,0,0,0.8)]">
             {/* Top accent line */}
             <div className="h-1 w-full bg-gradient-to-r from-rose-400 via-rose-500 to-rose-600" />
 
             <div className="p-6">
               {/* Icon */}
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-rose-500/25 bg-rose-500/10">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-rose-500/30 bg-rose-50 shadow-sm dark:border-rose-500/25 dark:bg-rose-500/10">
                 <LogOut className="h-7 w-7 text-rose-600 dark:text-rose-400" />
               </div>
 
@@ -871,7 +1070,7 @@ export function ProfileWorkspace() {
                 </button>
                 <button
                   type="button"
-                  className="flex h-11 w-full items-center justify-center rounded-[1rem] border border-black/8 bg-transparent text-sm font-medium text-slate-600 transition-all hover:bg-black/[0.04] dark:border-white/10 dark:text-white/70 dark:hover:bg-white/[0.05]"
+                  className="flex h-11 w-full items-center justify-center rounded-[1rem] border border-slate-200 bg-slate-50 text-sm font-medium text-slate-700 transition-all hover:bg-slate-100 dark:border-white/10 dark:bg-transparent dark:text-white/70 dark:hover:bg-white/[0.05]"
                   onClick={() => setShowSignOutConfirm(false)}
                 >
                   إلغاء

@@ -34,14 +34,15 @@ export function PasswordFieldWithBiometricAction({
   className,
 }: PasswordFieldWithBiometricActionProps) {
   const [isVisible, setIsVisible] = React.useState(false);
+  const hasBiometricAction = Boolean(onBiometricAction) && !biometricDisabled;
 
   return (
     <div className={cn("relative", className)}>
-      {onBiometricAction ? (
+      {hasBiometricAction ? (
         <button
           type="button"
-          onClick={onBiometricAction}
-          disabled={disabled || biometricDisabled}
+          onClick={() => onBiometricAction?.()}
+          disabled={disabled}
           title={biometricLabel}
           aria-label={biometricLabel}
           className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full p-1.5 text-primary/80 transition hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
@@ -70,7 +71,7 @@ export function PasswordFieldWithBiometricAction({
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary/50",
           "hover:border-border/80 hover:bg-background/80",
           "disabled:cursor-not-allowed disabled:opacity-50",
-          onBiometricAction ? "pl-11" : "pl-4",
+          hasBiometricAction ? "pl-11" : "pl-4",
           "pr-20",
         )}
         dir="ltr"

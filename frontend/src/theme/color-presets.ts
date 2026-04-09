@@ -158,6 +158,31 @@ const PRESET_DEFINITIONS: Record<ColorPresetId, ColorPresetDefinition> = {
       },
     },
   ),
+  custom: createPresetDefinition(
+    "custom",
+    "مخصص",
+    "لون مخصص من اختيارك مع نفس سلوك الثيمات الجاهزة.",
+    {
+      light: {
+        surface: neutralSurface,
+        accent: {
+          color: "rgb(99 102 241)",
+          soft: "rgba(99, 102, 241, 0.14)",
+          strong: "rgba(99, 102, 241, 0.24)",
+          ring: "rgba(99, 102, 241, 0.34)",
+        },
+      },
+      dark: {
+        surface: neutralSurface,
+        accent: {
+          color: "rgb(129 140 248)",
+          soft: "rgba(129, 140, 248, 0.16)",
+          strong: "rgba(129, 140, 248, 0.3)",
+          ring: "rgba(129, 140, 248, 0.4)",
+        },
+      },
+    },
+  ),
   violet: createPresetDefinition(
     "violet",
     "بنفسجي",

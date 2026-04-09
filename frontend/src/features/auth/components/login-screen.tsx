@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { LoaderCircle, LogIn, Mail, ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import { Fingerprint, LoaderCircle, LogIn, Mail, ShieldCheck } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { startAuthentication } from "@simplewebauthn/browser";
@@ -18,7 +19,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { AuthRecoveryPanels } from "@/features/auth/components/auth-recovery-panels";
 import { useLoginMutation } from "@/features/auth/hooks/use-login-mutation";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 import {
@@ -747,8 +747,6 @@ export function LoginScreen() {
                     id="password"
                     value={password}
                     onChange={setPassword}
-                    onBiometricAction={() => passkeyLoginMutation.mutate()}
-                    biometricDisabled={isSubmitting}
                     required
                     minLength={8}
                   />
@@ -756,6 +754,26 @@ export function LoginScreen() {
                     للحسابات الجديدة استخدم كلمة المرور المؤقتة لمرة واحدة المرسلة إليك،
                     ثم أكمل إنشاء كلمة المرور الخاصة بك بعد التحقق.
                   </p>
+                  <div className="flex items-center justify-between">
+                    <Link
+                      href="/auth/forgot-password"
+                      className="text-xs font-semibold text-[color:var(--app-accent-color)] transition hover:opacity-80"
+                    >
+                      نسيت كلمة المرور؟
+                    </Link>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => passkeyLoginMutation.mutate()}
+                      disabled={isSubmitting}
+                      title="تسجيل الدخول بالبصمة"
+                      aria-label="تسجيل الدخول بالبصمة"
+                      className="h-9 w-9 rounded-full border-primary/25 bg-primary/5 text-primary hover:bg-primary/10"
+                    >
+                      <Fingerprint className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
 
                 {recaptchaSiteKey ? (
@@ -824,8 +842,6 @@ export function LoginScreen() {
                   ? "تأكيد بالبصمة"
                   : "دخول"}
             </Button>
-
-            <AuthRecoveryPanels />
           </form>
         </CardContent>
       </Card>

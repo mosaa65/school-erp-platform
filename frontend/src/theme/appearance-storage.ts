@@ -48,6 +48,9 @@ export type AppearanceFontScaleDefinition = {
 
 const STORAGE_VERSION = 1;
 const STORAGE_KEY = "school-erp.appearance.v1";
+const CUSTOM_ACCENT_STORAGE_KEY = "school-erp.appearance.custom-accent.v1";
+const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
+const DEFAULT_CUSTOM_ACCENT_HEX = "#6366f1";
 
 export const DEFAULT_APPEARANCE_PREFERENCES: AppearancePreferences = {
   colorPreset: "adaptive",
@@ -111,6 +114,27 @@ function toResolvedTokens(
     accentStrong: accent.strong,
     accentRing: accent.ring,
   };
+}
+
+function normalizeHexColor(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim();
+  if (!HEX_COLOR_PATTERN.test(normalized)) {
+    return null;
+  }
+
+  return normalized.toLowerCase();
+}
+
+function parseHexColor(value: string): { r: number; g: number; b: number } {
+  const normalized = normalizeHexColor(value) ?? DEFAULT_CUSTOM_ACCENT_HEX;
+  const r = Number.parseInt(normalized.slice(1, 3), 16);
+  const g = Number.parseInt(normalized.slice(3, 5), 16);
+  const b = Number.parseInt(normalized.slice(5, 7), 16);
+  return { r, g, b };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -222,6 +246,49 @@ export function clearAppearancePreferences(): void {
   }
 }
 
+export function loadCustomAccentHex(): string {
+  const storage = getStorage();
+  if (!storage) {
+    return DEFAULT_CUSTOM_ACCENT_HEX;
+  }
+
+  try {
+    const stored = storage.getItem(CUSTOM_ACCENT_STORAGE_KEY);
+    return normalizeHexColor(stored) ?? DEFAULT_CUSTOM_ACCENT_HEX;
+  } catch {
+    return DEFAULT_CUSTOM_ACCENT_HEX;
+  }
+}
+
+export function saveCustomAccentHex(value: string): string {
+  const normalized = normalizeHexColor(value) ?? DEFAULT_CUSTOM_ACCENT_HEX;
+  const storage = getStorage();
+  if (!storage) {
+    return normalized;
+  }
+
+  try {
+    storage.setItem(CUSTOM_ACCENT_STORAGE_KEY, normalized);
+  } catch {
+    // Ignore storage failures.
+  }
+
+  return normalized;
+}
+
+export function clearCustomAccentHex(): void {
+  const storage = getStorage();
+  if (!storage) {
+    return;
+  }
+
+  try {
+    storage.removeItem(CUSTOM_ACCENT_STORAGE_KEY);
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
 export function resolveSurfaceMode(
   surfaceMode: AppearanceSurfaceMode,
   prefersDark: boolean,
@@ -241,7 +308,32 @@ export function resolveAppearanceTokens(
     return null;
   }
 
+  if (preset === "custom") {
+    return resolveCustomAccentTokens(loadCustomAccentHex(), scheme);
+  }
+
   return toResolvedTokens(resolvePresetThemeTokens(preset, scheme).accent);
+}
+
+export function resolveCustomAccentTokens(
+  customAccentHex: string,
+  scheme: ColorScheme,
+): AppearanceResolvedTokens {
+  const { r, g, b } = parseHexColor(customAccentHex);
+  const softAlpha = scheme === "dark" ? 0.2 : 0.14;
+  const strongAlpha = scheme === "dark" ? 0.34 : 0.24;
+  const ringAlpha = scheme === "dark" ? 0.44 : 0.34;
+
+  return {
+    accentColor: `rgb(${r} ${g} ${b})`,
+    accentSoft: `rgba(${r}, ${g}, ${b}, ${softAlpha})`,
+    accentStrong: `rgba(${r}, ${g}, ${b}, ${strongAlpha})`,
+    accentRing: `rgba(${r}, ${g}, ${b}, ${ringAlpha})`,
+  };
+}
+
+export function getDefaultCustomAccentHex(): string {
+  return DEFAULT_CUSTOM_ACCENT_HEX;
 }
 
 export function resolveFontFamilyStack(fontFamily: AppearanceFontFamily): string {
