@@ -144,8 +144,8 @@ export function GradeLevelsWorkspace() {
     setIsFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!form.name.trim()) {
       setFormError("اسم المستوى مطلوب.");
       return;

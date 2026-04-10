@@ -172,8 +172,8 @@ export function TimetableEntriesWorkspace() {
     setIsFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!form.academicTermId || !form.sectionId || !form.termSubjectOfferingId) {
       setFormError("كافة الاختيارات الأكاديمية (فصل، شعبة، مادة) مطلوبة.");
       return;
@@ -369,7 +369,7 @@ export function TimetableEntriesWorkspace() {
                         <Calendar className="h-4 w-4 text-emerald-500/60 mt-0.5 shrink-0" />
                         <div className="flex flex-col overflow-hidden">
                            <span className="text-[7px] uppercase font-bold text-muted-foreground leading-none mb-1">الفصل الأكاديمي</span>
-                           <span className="text-[10px] font-bold truncate leading-tight tracking-tight">{item.academicTerm.name} ({item.academicTerm.academicYear.code})</span>
+                           <span className="text-[10px] font-bold truncate leading-tight tracking-tight">{item.academicTerm.name} ({item.academicTerm.academicYear?.code ?? ""})</span>
                         </div>
                      </div>
                      <div className="flex items-start gap-2 px-3 py-2 rounded-xl border border-border/40 bg-background/50 group-hover:bg-background transition-colors">

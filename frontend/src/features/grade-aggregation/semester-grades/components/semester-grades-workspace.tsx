@@ -198,8 +198,8 @@ export function SemesterGradesWorkspace() {
     setIsFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!form.academicTermId || !form.studentEnrollmentId || !form.subjectId) {
       setFormError("الفصل، الطالب، والمادة حقول إجبارية.");
       return;
@@ -323,15 +323,15 @@ export function SemesterGradesWorkspace() {
             </CardHeader>
             <CardContent className="p-4 space-y-3">
               <div className="grid grid-cols-3 gap-2">
-                <SelectField size="sm" className="h-8 text-[10px]" value={calcForm.academicTermId} onChange={(e) => setCalcForm(p => ({ ...p, academicTermId: e.target.value }))}>
+                <SelectField className="h-8 text-[10px]" value={calcForm.academicTermId} onChange={(e) => setCalcForm(p => ({ ...p, academicTermId: e.target.value }))}>
                   <option value="">الفصل</option>
                   {(termsQuery.data ?? []).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </SelectField>
-                <SelectField size="sm" className="h-8 text-[10px]" value={calcForm.sectionId} onChange={(e) => setCalcForm(p => ({ ...p, sectionId: e.target.value }))}>
+                <SelectField className="h-8 text-[10px]" value={calcForm.sectionId} onChange={(e) => setCalcForm(p => ({ ...p, sectionId: e.target.value }))}>
                   <option value="">الشعبة</option>
                   {(sectionsQuery.data ?? []).map(s => <option key={s.id} value={s.id}>{formatSectionWithGradeLabel(s)}</option>)}
                 </SelectField>
-                <SelectField size="sm" className="h-8 text-[10px]" value={calcForm.subjectId} onChange={(e) => setCalcForm(p => ({ ...p, subjectId: e.target.value }))}>
+                <SelectField className="h-8 text-[10px]" value={calcForm.subjectId} onChange={(e) => setCalcForm(p => ({ ...p, subjectId: e.target.value }))}>
                   <option value="">المادة</option>
                   {(subjectsQuery.data ?? []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </SelectField>
@@ -359,15 +359,15 @@ export function SemesterGradesWorkspace() {
             </CardHeader>
             <CardContent className="p-4 space-y-3">
               <div className="grid grid-cols-3 gap-2">
-                <SelectField size="sm" className="h-8 text-[10px]" value={fillForm.academicTermId} onChange={(e) => setFillForm(p => ({ ...p, academicTermId: e.target.value }))}>
+                <SelectField className="h-8 text-[10px]" value={fillForm.academicTermId} onChange={(e) => setFillForm(p => ({ ...p, academicTermId: e.target.value }))}>
                   <option value="">الفصل</option>
                   {(termsQuery.data ?? []).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </SelectField>
-                <SelectField size="sm" className="h-8 text-[10px]" value={fillForm.sectionId} onChange={(e) => setFillForm(p => ({ ...p, sectionId: e.target.value }))}>
+                <SelectField className="h-8 text-[10px]" value={fillForm.sectionId} onChange={(e) => setFillForm(p => ({ ...p, sectionId: e.target.value }))}>
                   <option value="">الشعبة</option>
                   {(sectionsQuery.data ?? []).map(s => <option key={s.id} value={s.id}>{formatSectionWithGradeLabel(s)}</option>)}
                 </SelectField>
-                <SelectField size="sm" className="h-8 text-[10px]" value={fillForm.subjectId} onChange={(e) => setFillForm(p => ({ ...p, subjectId: e.target.value }))}>
+                <SelectField className="h-8 text-[10px]" value={fillForm.subjectId} onChange={(e) => setFillForm(p => ({ ...p, subjectId: e.target.value }))}>
                   <option value="">المادة</option>
                   {(subjectsQuery.data ?? []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </SelectField>

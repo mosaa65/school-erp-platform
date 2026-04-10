@@ -10,7 +10,8 @@ type ManagementToolbarProps = {
   onSearchChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   searchPlaceholder: string;
   filterCount?: number;
-  onFilterClick: () => void;
+  onFilterClick?: () => void;
+  onSearchEnter?: () => void;
   showFilterButton?: boolean;
   className?: string;
   searchWrapperClassName?: string;
@@ -18,6 +19,7 @@ type ManagementToolbarProps = {
   actionsClassName?: string;
   filterButtonClassName?: string;
   actions?: React.ReactNode;
+  children?: React.ReactNode;
 };
 
 export function ManagementToolbar({
@@ -26,6 +28,7 @@ export function ManagementToolbar({
   searchPlaceholder,
   filterCount = 0,
   onFilterClick,
+  onSearchEnter,
   showFilterButton = true,
   className,
   searchWrapperClassName,
@@ -33,6 +36,7 @@ export function ManagementToolbar({
   actionsClassName,
   filterButtonClassName,
   actions,
+  children,
 }: ManagementToolbarProps) {
   return (
     <div className={cn("flex flex-wrap items-center justify-between gap-2", className)}>
@@ -46,11 +50,12 @@ export function ManagementToolbar({
           containerClassName={cn("flex-1", searchFieldClassName)}
           value={searchValue}
           onChange={onSearchChange}
+          onKeyDown={onSearchEnter ? (e) => { if (e.key === "Enter") onSearchEnter(); } : undefined}
           placeholder={searchPlaceholder}
         />
       </div>
       <div className={cn("flex flex-wrap items-center gap-2", actionsClassName)}>
-        {showFilterButton ? (
+        {showFilterButton && onFilterClick ? (
           <FilterTriggerButton
             count={filterCount}
             onClick={onFilterClick}
@@ -59,6 +64,7 @@ export function ManagementToolbar({
         ) : null}
         {actions}
       </div>
+      {children}
     </div>
   );
 }

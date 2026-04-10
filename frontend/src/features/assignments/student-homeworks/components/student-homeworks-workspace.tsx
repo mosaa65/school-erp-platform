@@ -285,12 +285,10 @@ export function StudentHomeworksWorkspace() {
     let count = 0;
     if (searchInput.trim()) count++;
     if (homeworkFilter !== "all") count++;
-    if (enrollmentFilter !== "all") count++;
-    if (studentFilter !== "all") count++;
     if (completedFilter !== "all") count++;
     if (activeFilter !== "all") count++;
     return count;
-  }, [activeFilter, completedFilter, enrollmentFilter, homeworkFilter, searchInput, studentFilter]);
+  }, [activeFilter, completedFilter, homeworkFilter, searchInput]);
 
 
   const validateForm = (): boolean => {

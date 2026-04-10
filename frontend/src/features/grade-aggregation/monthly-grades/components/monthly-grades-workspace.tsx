@@ -187,8 +187,8 @@ export function MonthlyGradesWorkspace() {
     setIsFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!form.academicMonthId || !form.studentEnrollmentId || !form.subjectId) {
       setFormError("الشهر، الطالب، والمادة حقول إجبارية.");
       return;
@@ -284,15 +284,15 @@ export function MonthlyGradesWorkspace() {
               <span>احتساب سريع:</span>
             </div>
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <SelectField size="sm" className="h-8 text-[11px]" value={calcForm.academicMonthId} onChange={(e) => setCalcForm(p => ({ ...p, academicMonthId: e.target.value }))}>
+              <SelectField className="h-8 text-[11px]" value={calcForm.academicMonthId} onChange={(e) => setCalcForm(p => ({ ...p, academicMonthId: e.target.value }))}>
                 <option value="">اختر الشهر</option>
                 {(monthsQuery.data ?? []).map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
               </SelectField>
-              <SelectField size="sm" className="h-8 text-[11px]" value={calcForm.sectionId} onChange={(e) => setCalcForm(p => ({ ...p, sectionId: e.target.value }))}>
+              <SelectField className="h-8 text-[11px]" value={calcForm.sectionId} onChange={(e) => setCalcForm(p => ({ ...p, sectionId: e.target.value }))}>
                 <option value="">اختر الشعبة</option>
                 {(sectionsQuery.data ?? []).map(s => <option key={s.id} value={s.id}>{formatSectionWithGradeLabel(s)}</option>)}
               </SelectField>
-              <SelectField size="sm" className="h-8 text-[11px]" value={calcForm.subjectId} onChange={(e) => setCalcForm(p => ({ ...p, subjectId: e.target.value }))}>
+              <SelectField className="h-8 text-[11px]" value={calcForm.subjectId} onChange={(e) => setCalcForm(p => ({ ...p, subjectId: e.target.value }))}>
                 <option value="">اختر المادة</option>
                 {(subjectsQuery.data ?? []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </SelectField>

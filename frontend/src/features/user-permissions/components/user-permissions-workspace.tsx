@@ -166,8 +166,8 @@ export function UserPermissionsWorkspace() {
     setIsFormOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!isEditing && (!form.userId || form.selectedPermissionIds.length === 0)) {
       setFormError("يجب اختيار المستخدم وصلاحية واحدة على الأقل.");
       return;

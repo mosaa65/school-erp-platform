@@ -3,16 +3,7 @@ import { PermissionGuard } from "@/features/auth/components/permission-guard";
 import { UsersManagementWorkspace } from "@/features/users/components/users-management-workspace";
 import { Badge } from "@/components/ui/badge";
 
-type UsersPageProps = {
-  searchParams?: {
-    q?: string;
-  };
-};
-
-export default function UsersPage({ searchParams }: UsersPageProps) {
-  const initialSearchQuery =
-    typeof searchParams?.q === "string" ? searchParams.q : "";
-
+export default function UsersPage() {
   return (
     <PermissionGuard permission="users.read">
       <div className="space-y-4">
@@ -30,7 +21,7 @@ export default function UsersPage({ searchParams }: UsersPageProps) {
           </p>
         </div>
 
-        <UsersManagementWorkspace initialSearchQuery={initialSearchQuery} />
+        <UsersManagementWorkspace />
       </div>
     </PermissionGuard>
   );

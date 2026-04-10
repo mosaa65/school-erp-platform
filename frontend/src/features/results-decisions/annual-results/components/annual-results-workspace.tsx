@@ -425,10 +425,9 @@ export function AnnualResultsWorkspace() {
         open={isFormOpen}
         onClose={resetFormState}
         title={isEditing ? "تحرير النتيجة السنوية" : "رصد نتيجة سنوية جديدة"}
-        isEditing={isEditing}
         isSubmitting={isSubmitting}
         onSubmit={(e) => {
-           e.preventDefault();
+           e?.preventDefault();
            if (!form.academicYearId || !form.studentEnrollmentId || !form.promotionDecisionId) {
              setFormError("الحقول الأساسية مطلوبة.");
              return;
@@ -470,6 +469,7 @@ export function AnnualResultsWorkspace() {
                   onSelect={(opt) => setForm(p => ({ ...p, studentEnrollmentId: opt?.id ?? "" }))}
                   academicYearId={form.academicYearId || undefined}
                   variant="form"
+                  scope="annual-results"
                 />
               </div>
             </div>

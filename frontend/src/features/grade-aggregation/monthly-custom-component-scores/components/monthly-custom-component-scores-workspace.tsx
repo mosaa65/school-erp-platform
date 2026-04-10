@@ -138,7 +138,7 @@ export function MonthlyCustomComponentScoresWorkspace() {
       return {
         gradingPolicyId: editingItem.monthlyGrade.gradingPolicyId,
         academicYearId: editingItem.monthlyGrade.academicYearId,
-        gradeLevelId: editingItem.monthlyGrade.studentEnrollment.section.gradeLevel.id,
+        gradeLevelId: editingItem.monthlyGrade.studentEnrollment.section.gradeLevel?.id ?? '',
         subjectId: editingItem.monthlyGrade.subjectId,
       };
     }
@@ -188,8 +188,8 @@ export function MonthlyCustomComponentScoresWorkspace() {
     setIsFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!form.monthlyGradeId || !form.gradingPolicyComponentId) {
       setFormError("الدرجة الشهرية ومكون التقييم مطلوبان.");
       return;

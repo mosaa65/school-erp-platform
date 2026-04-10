@@ -318,8 +318,8 @@ export function EmployeesWorkspace() {
     setIsFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!form.fullName.trim() || !form.genderId) {
       setFormError("الاسم الكامل والجنس حقول مطلوبة.");
       return;
@@ -487,7 +487,7 @@ export function EmployeesWorkspace() {
                           </Badge>
                         </div>
                         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-bold uppercase tracking-tight">
-                          <Briefcase className="h-3.5 w-3.5" /> <span>{item.jobRole?.nameAr || "غير محدد"}</span>
+                          <Briefcase className="h-3.5 w-3.5" /> <span>{item.jobRoleLookup?.nameAr || "غير محدد"}</span>
                           <span className="mx-1 opacity-30">•</span>
                           <Network className="h-3.5 w-3.5" /> <span>{item.department?.name || "بدون قسم"}</span>
                           {item.financialNumber && (
@@ -506,7 +506,7 @@ export function EmployeesWorkspace() {
                           {item.isActive ? "Active Employee" : "Inactive"}
                         </Badge>
                         <Badge variant="outline" className="h-5 text-[8px] font-black uppercase border-border/70 text-blue-600 bg-blue-50">
-                          {translateEmploymentType(item.employmentType)}
+                          {item.employmentType ? translateEmploymentType(item.employmentType) : "غير محدد"}
                         </Badge>
                       </div>
                       <div className="flex items-center gap-2">
@@ -524,7 +524,7 @@ export function EmployeesWorkspace() {
                      {[
                         { label: "رقم التواصل", val: item.phonePrimary || "-", icon: Phone, color: "text-blue-500/60" },
                         { label: "الموقع السكني", val: item.locality?.nameAr || "غير محدد", icon: MapPinned, color: "text-emerald-500/60" },
-                        { label: "المؤهل العلمي", val: item.qualification?.nameAr || "-", icon: GraduationCap, color: "text-amber-500/60" },
+                        { label: "المؤهل العلمي", val: item.qualificationLookup?.nameAr || item.qualification || "-", icon: GraduationCap, color: "text-amber-500/60" },
                         { label: "سنوات الخبرة", val: `${item.experienceYears} عام`, icon: Clock, color: "text-rose-500/60" },
                      ].map((stat, sIdx) => (
                         <div key={sIdx} className="flex items-start gap-2 px-3 py-2 rounded-xl border border-border/40 bg-background/50 group-hover:bg-background transition-colors">
@@ -639,7 +639,7 @@ export function EmployeesWorkspace() {
                 <InternationalPhoneField 
                    value={form.phonePrimary} 
                    countryIso2={form.phonePrimaryCountryIso2}
-                   onValueChange={(val, iso) => setForm(p => ({ ...p, phonePrimary: val, phonePrimaryNationalNumber: val, phonePrimaryCountryIso2: iso }))}
+                   onChange={(next) => setForm(p => ({ ...p, phonePrimary: next.nationalNumber, phonePrimaryNationalNumber: next.nationalNumber, phonePrimaryCountryIso2: next.countryIso2 }))}
                 />
               </div>
               <label className="flex items-center gap-2 cursor-pointer transition-opacity hover:opacity-80">

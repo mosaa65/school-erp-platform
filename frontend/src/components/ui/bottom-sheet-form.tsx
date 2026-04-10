@@ -10,7 +10,7 @@ export type BottomSheetFormProps = {
   open: boolean;
   title: string;
   onClose: () => void;
-  onSubmit: () => void;
+  onSubmit: (e?: React.FormEvent) => void;
   children: React.ReactNode;
   description?: string;
   eyebrow?: string;

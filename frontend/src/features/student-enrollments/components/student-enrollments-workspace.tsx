@@ -143,6 +143,7 @@ function buildStudentPickerOption(enrollment: StudentEnrollmentListItem): Studen
     title: enrollment.student.fullName,
     subtitle: enrollment.student.admissionNo ? `رقم قبول ${enrollment.student.admissionNo}` : "بدون رقم قبول",
     meta: [enrollment.gradeLevel?.name || enrollment.section?.gradeLevel.name, enrollment.section?.name, enrollment.academicYear.name].filter(Boolean).join(" | "),
+    groupLabel: enrollment.gradeLevel?.name || enrollment.section?.gradeLevel.name || "",
   };
 }
 
@@ -228,8 +229,8 @@ export function StudentEnrollmentsWorkspace() {
     setIsFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!form.studentId || !form.academicYearId || !form.gradeLevelId) {
       setFormError("الطالب، السنة الأكاديمية، والصف حقول إلزامية.");
       return;
@@ -522,14 +523,14 @@ export function StudentEnrollmentsWorkspace() {
                 <label className="text-xs font-bold text-muted-foreground uppercase leading-none">الصف الدراسي *</label>
                 <SelectField value={form.gradeLevelId} onChange={(e) => setForm(p => ({ ...p, gradeLevelId: e.target.value, sectionId: "" }))}>
                   <option value="">اختر الصف</option>
-                  {gradeLevelOptions.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                  {(gradeLevelsQuery.data ?? []).map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                 </SelectField>
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-muted-foreground uppercase leading-none">الشعبة المخصصة</label>
                 <SelectField value={form.sectionId} onChange={(e) => setForm(p => ({ ...p, sectionId: e.target.value }))}>
                   <option value="">بانتظار التوزيع</option>
-                  {formSectionOptions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  {(formSectionsQuery.data ?? []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </SelectField>
               </div>
             </div>

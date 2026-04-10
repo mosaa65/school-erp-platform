@@ -231,8 +231,8 @@ export function StudentsWorkspace() {
     setIsFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!form.fullName.trim() || !form.genderId) {
       setFormError("الاسم الكامل والجنس حقول مطلوبة.");
       return;
@@ -333,14 +333,14 @@ export function StudentsWorkspace() {
               <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">فصيلة الدم</label>
               <SelectField value={filterDraft.blood} onChange={(e) => setFilterDraft(p => ({ ...p, blood: e.target.value }))}>
                 <option value="all">الكل</option>
-                {(bloodTypeOptionsQuery.data ?? []).map(b => <option key={b.id} value={b.id}>{b.nameAr}</option>)}
-              </SelectField>
-            </div>
-            <div className="space-y-1.5 sm:col-span-2">
-              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">حالة اليتم</label>
-              <SelectField value={filterDraft.orphan} onChange={(e) => setFilterDraft(p => ({ ...p, orphan: e.target.value }))}>
-                <option value="all">كل الحالات</option>
-                {(orphanQuery.data?.data ?? []).map(o => <option key={o.id} value={o.id}>{o.nameAr}</option>)}
+                            {(bloodTypeOptionsQuery.data ?? []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                          </SelectField>
+                        </div>
+                        <div className="space-y-1.5 sm:col-span-2">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">حالة اليتم</label>
+                          <SelectField value={filterDraft.orphan} onChange={(e) => setFilterDraft(p => ({ ...p, orphan: e.target.value }))}>
+                            <option value="all">كل الحالات</option>
+                            {(orphanQuery.data?.data ?? []).map(o => <option key={o.id} value={o.id}>{o.nameAr}</option>)}
               </SelectField>
             </div>
             <div className="space-y-1.5 sm:col-span-2">
@@ -394,7 +394,7 @@ export function StudentsWorkspace() {
                           {item.bloodType && (
                             <>
                               <span className="mx-1 opacity-30">•</span>
-                              <Badge variant="outline" className="h-4 text-[7px] border-rose-500/20 text-rose-600 bg-rose-500/5"><Droplets className="h-2 w-2 mr-0.5" /> {item.bloodType.code}</Badge>
+                              <Badge variant="outline" className="h-4 text-[7px] border-rose-500/20 text-rose-600 bg-rose-500/5"><Droplets className="h-2 w-2 mr-0.5" /> {item.bloodType.name}</Badge>
                             </>
                           )}
                         </div>
@@ -427,7 +427,7 @@ export function StudentsWorkspace() {
                         <div className="flex flex-col overflow-hidden">
                            <span className="text-[7px] uppercase font-bold text-muted-foreground leading-none mb-1">الموقع الجغرافي</span>
                            <span className="text-[10px] font-bold truncate leading-tight">
-                              {item.locality ? `${item.locality.governorate?.nameAr || ''} / ${item.locality.directorate?.nameAr || ''} / ${item.locality.nameAr || ''}` : "غير محدد"}
+                              {item.locality ? item.locality.nameAr : "غير محدد"}
                            </span>
                         </div>
                      </div>
@@ -436,7 +436,7 @@ export function StudentsWorkspace() {
                         <div className="flex flex-col overflow-hidden">
                            <span className="text-[7px] uppercase font-bold text-muted-foreground leading-none mb-1">الحالة الصحية</span>
                            <span className="text-[10px] font-bold leading-tight">
-                              {translateStudentHealthStatus(item.healthStatus)}
+                              {item.healthStatus ? translateStudentHealthStatus(item.healthStatus) : "سليم"}
                               {item.healthNotes && <span className="text-[9px] font-normal text-muted-foreground block mt-0.5 truncate">{item.healthNotes}</span>}
                            </span>
                         </div>
@@ -562,11 +562,11 @@ export function StudentsWorkspace() {
                 <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5"><Droplets className="h-3.5 w-3.5 text-rose-500" /> فصيلة الدم</label>
                 <SelectField value={form.bloodTypeId} onChange={(e) => setForm(p => ({ ...p, bloodTypeId: e.target.value }))}>
                   <option value="">غير متاح</option>
-                  {(bloodTypeOptionsQuery.data ?? []).map(b => <option key={b.id} value={b.id}>{b.nameAr}</option>)}
-                </SelectField>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-muted-foreground uppercase px-1">التصنيف الصحي</label>
+                                {(bloodTypeOptionsQuery.data ?? []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                              </SelectField>
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-xs font-bold text-muted-foreground uppercase px-1">التصنيف الصحي</label>
                 <SelectField value={form.healthStatusId} onChange={(e) => setForm(p => ({ ...p, healthStatusId: e.target.value }))}>
                   <option value="">سليم / عادي</option>
                   {(healthQuery.data ?? []).map(h => <option key={h.id} value={h.id}>{h.nameAr}</option>)}

@@ -181,8 +181,8 @@ export function StudentExamScoresWorkspace() {
     setIsFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!form.examAssessmentId || !form.studentEnrollmentId) {
       setFormError("التقييم والطالب حقول إجبارية.");
       return;

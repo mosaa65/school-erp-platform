@@ -156,8 +156,8 @@ export function TermSubjectOfferingsWorkspace() {
     setIsFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!form.academicTermId || !form.gradeLevelSubjectId) {
       setFormError("الفصل الدراسي وربط المادة حقول مطلوبة.");
       return;
@@ -300,7 +300,7 @@ export function TermSubjectOfferingsWorkspace() {
                         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-bold uppercase tracking-tight">
                           <GraduationCap className="h-3.5 w-3.5" /> <span>{item.gradeLevelSubject.gradeLevel.name}</span>
                           <span className="mx-1 opacity-30">•</span>
-                          <Calendar className="h-3.5 w-3.5" /> <span>{item.academicTerm.name} ({item.academicTerm.academicYear.code})</span>
+                          <Calendar className="h-3.5 w-3.5" /> <span>{item.academicTerm.name} ({item.academicTerm.academicYear?.code ?? ""})</span>
                         </div>
                       </div>
                     </div>

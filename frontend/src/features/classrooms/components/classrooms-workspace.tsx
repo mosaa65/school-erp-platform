@@ -150,8 +150,8 @@ export function ClassroomsWorkspace() {
     return true;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!validateForm()) return;
 
     const payload = {
@@ -159,7 +159,7 @@ export function ClassroomsWorkspace() {
       capacity: formState.capacity.trim() ? Number(formState.capacity) : undefined,
       notes: formState.notes.trim() || undefined,
       isActive: formState.isActive,
-      buildingLookupId: formState.buildingLookupId ? Number(formState.buildingLookupId) : null,
+      buildingLookupId: formState.buildingLookupId ? Number(formState.buildingLookupId) : undefined,
     };
 
     if (isEditing && editingItem) {

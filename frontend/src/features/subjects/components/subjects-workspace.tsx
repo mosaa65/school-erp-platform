@@ -164,8 +164,8 @@ export function SubjectsWorkspace() {
     setIsFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!form.name.trim()) {
       setFormError("اسم المادة حقل مطلوب.");
       return;
@@ -314,7 +314,7 @@ export function SubjectsWorkspace() {
                           {item.isActive ? "Active" : "Disabled"}
                         </Badge>
                         <Badge variant="outline" className="h-5 text-[8px] font-black uppercase border-border/70 italic">
-                          <Activity className="h-2.5 w-2.5 mr-1 inline" /> {item._count.gradeLevelSubjects} Levels
+                          <Activity className="h-2.5 w-2.5 mr-1 inline" /> {item._count?.gradeLevelSubjects ?? 0} Levels
                         </Badge>
                       </div>
                       <div className="flex items-center gap-2">

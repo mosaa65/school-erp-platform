@@ -211,8 +211,8 @@ export function HomeworksWorkspace() {
     setIsFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!form.title.trim() || !form.sectionId || !form.subjectId || !form.homeworkTypeId) {
       setFormError("العنوان، الشعبة، المادة، ونوع الواجب حقول مطلوبة.");
       return;

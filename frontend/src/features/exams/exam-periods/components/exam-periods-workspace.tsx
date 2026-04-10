@@ -223,8 +223,8 @@ export function ExamPeriodsWorkspace() {
     setIsFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!form.academicYearId || !form.academicTermId || !form.name.trim()) {
       setFormError("السنة، الفصل، واسم الفترة حقول إجبارية.");
       return;

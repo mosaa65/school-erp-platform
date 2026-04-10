@@ -255,8 +255,8 @@ export function SectionClassroomAssignmentsWorkspace({
     setIsFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!formState.academicYearId || !formState.sectionId || !formState.classroomId) {
       setFormError("السنة والشعبة والغرفة حقول مطلوبة.");
       return;

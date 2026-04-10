@@ -168,8 +168,8 @@ export function AcademicTermsWorkspace() {
     setIsFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!form.academicYearId || !form.name || !form.startDate || !form.endDate) {
       setFormError("الرجاء إكمال كافة الحقول الأساسية.");
       return;
@@ -320,7 +320,7 @@ export function AcademicTermsWorkspace() {
                           {item.isActive ? "Active" : "Disabled"}
                         </Badge>
                         <Badge variant="outline" className="h-5 text-[8px] font-black uppercase border-border/70 italic">
-                          <History className="h-2.5 w-2.5 mr-1 inline" /> {item._count.academicMonths} Months
+                          <History className="h-2.5 w-2.5 mr-1 inline" /> {item._count?.academicMonths ?? 0} Months
                         </Badge>
                       </div>
                       <div className="flex items-center gap-2">

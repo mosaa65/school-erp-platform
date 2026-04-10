@@ -166,8 +166,8 @@ export function GradingPolicyComponentsWorkspace() {
     setIsFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!form.gradingPolicyId || !form.name || !form.maxScore) {
       setFormError("الرجاء تحديد السياسة والاسم والدرجة القصوى.");
       return;

@@ -7,10 +7,11 @@ type CrudFormSheetProps = {
   open: boolean;
   title: string;
   onClose: () => void;
-  onSubmit: () => void;
+  onSubmit: (e?: React.FormEvent) => void;
   children: React.ReactNode;
   submitLabel?: string;
   isSubmitting?: boolean;
+  isEditing?: boolean;
   description?: string;
   eyebrow?: string;
   showCancelButton?: boolean;
@@ -25,6 +26,7 @@ export function CrudFormSheet({
   children,
   submitLabel,
   isSubmitting = false,
+  isEditing: _isEditing,
   description,
   eyebrow,
   showCancelButton = false,

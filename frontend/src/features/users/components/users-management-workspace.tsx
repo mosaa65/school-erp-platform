@@ -164,8 +164,8 @@ export function UsersManagementWorkspace() {
     setIsFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!form.firstName.trim() || !form.lastName.trim() || !form.phoneNationalNumber.trim()) {
       setFormError("الاسم الأول، اللقب، ورقم الهاتف حقول مطلوبة.");
       return;
@@ -198,7 +198,7 @@ export function UsersManagementWorkspace() {
   };
 
   const handleDelete = (item: UserListItem) => {
-    if (!canDelete || !window.confirm(`تأكيد حذف المستخدم ${item.fullName}؟`)) return;
+    if (!canDelete || !window.confirm(`تأكيد حذف المستخدم ${item.firstName} ${item.lastName}؟`)) return;
     deleteMutation.mutate(item.id);
   };
 
@@ -408,7 +408,7 @@ export function UsersManagementWorkspace() {
                 <InternationalPhoneField 
                    value={form.phoneNationalNumber} 
                    countryIso2={findCountryDialCodeOptionByDialCode(form.phoneCountryCode)?.iso2 || "YE"}
-                   onValueChange={(val, iso, dial) => setForm(p => ({ ...p, phoneNationalNumber: val, phoneCountryCode: dial }))}
+                   onChange={(next) => setForm(p => ({ ...p, phoneNationalNumber: next.nationalNumber, phoneCountryCode: next.dialCode }))}
                 />
               </div>
               <div className="space-y-1.5">

@@ -236,8 +236,8 @@ export function DiscountRulesWorkspace() {
     return true;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!validateForm()) return;
 
     const payload = {

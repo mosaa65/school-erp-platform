@@ -171,8 +171,8 @@ export function AcademicMonthsWorkspace() {
     setIsFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!form.academicYearId || !form.academicTermId || !form.name || !form.startDate || !form.endDate) {
       setFormError("الرجاء إكمال كافة الحقول الأساسية.");
       return;

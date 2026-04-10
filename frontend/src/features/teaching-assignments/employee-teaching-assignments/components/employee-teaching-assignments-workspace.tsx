@@ -160,8 +160,8 @@ export function EmployeeTeachingAssignmentsWorkspace() {
     setIsFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!form.employeeId || !form.sectionId || !form.subjectId || !form.academicYearId) {
       setFormError("الموظف، المادة، الشعبة، والسنة مقتضيات أساسية.");
       return;

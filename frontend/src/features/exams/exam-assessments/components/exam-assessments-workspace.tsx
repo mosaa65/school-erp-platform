@@ -200,8 +200,8 @@ export function ExamAssessmentsWorkspace() {
     setIsFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!form.examPeriodId || !form.sectionId || !form.subjectId || !form.title.trim() || !form.examDate) {
       setFormError("جميع الحقول المميزة بـ * مطلوبة.");
       return;

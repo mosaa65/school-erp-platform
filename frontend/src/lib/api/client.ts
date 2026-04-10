@@ -735,6 +735,9 @@ export type AcademicYearListItem = {
   isCurrent: boolean;
   createdAt: string;
   updatedAt: string;
+  _count?: {
+    academicTerms: number;
+  };
 };
 
 export type AcademicTermType = "SEMESTER" | "TRIMESTER" | "QUARTER" | "CUSTOM";
@@ -760,6 +763,9 @@ export type AcademicTermListItem = {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  _count?: {
+    academicMonths: number;
+  };
   academicYear: {
     id: string;
     code: string;
@@ -846,6 +852,9 @@ export type SubjectListItem = {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  _count?: {
+    gradeLevelSubjects: number;
+  };
 };
 
 export type SectionListItem = {
@@ -1012,6 +1021,12 @@ export type TermSubjectOfferingListItem = {
     sequence: number;
     academicYearId: string;
     isActive: boolean;
+    academicYear?: {
+      id: string;
+      code: string;
+      name: string;
+      status: AcademicYearStatus;
+    };
   };
   gradeLevelSubject: {
     id: string;
@@ -1064,6 +1079,12 @@ export type TimetableEntryListItem = {
     sequence: number;
     academicYearId: string;
     isActive: boolean;
+    academicYear?: {
+      id: string;
+      code: string;
+      name: string;
+      status: AcademicYearStatus;
+    };
   };
   section: {
     id: string;
@@ -2115,6 +2136,14 @@ export type GradingPolicyListItem = {
     id: string;
     email: string;
   } | null;
+  academicTerm?: {
+    id: string;
+    code: string;
+    name: string;
+    sequence: number;
+    termType: AcademicTermType;
+    isActive: boolean;
+  } | null;
 };
 
 export type GradingPolicyComponentListItem = {
@@ -2338,6 +2367,11 @@ export type MonthlyCustomComponentScoreListItem = {
         id: string;
         code: string;
         name: string;
+        gradeLevel?: {
+          id: string;
+          code: string;
+          name: string;
+        };
       };
     };
     subject: {
@@ -2887,6 +2921,10 @@ export type EmployeeTeachingAssignmentListItem = {
     fullName: string;
     jobNumber: string | null;
     jobTitle: string | null;
+    userAccount?: {
+      id: string;
+      email: string;
+    } | null;
   };
   section: {
     id: string;

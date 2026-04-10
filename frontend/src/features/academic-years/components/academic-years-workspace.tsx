@@ -155,8 +155,8 @@ export function AcademicYearsWorkspace() {
     setIsFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!form.name || !form.startDate || !form.endDate) {
       setFormError("الرجاء إكمال كافة الحقول الأساسية.");
       return;
@@ -287,7 +287,7 @@ export function AcademicYearsWorkspace() {
                           {statusLabel(item.status)}
                         </Badge>
                         <Badge variant="outline" className="h-5 text-[8px] font-black uppercase border-border/70 italic">
-                          <History className="h-2.5 w-2.5 mr-1 inline" /> {item._count.academicTerms} Terms
+                          <History className="h-2.5 w-2.5 mr-1 inline" /> {item._count?.academicTerms ?? 0} Terms
                         </Badge>
                       </div>
                       <div className="flex items-center gap-2">

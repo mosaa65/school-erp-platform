@@ -205,8 +205,8 @@ export function AnnualGradesWorkspace() {
     setIsFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!form.academicYearId || !form.studentEnrollmentId || !form.subjectId || !form.finalStatusId) {
       setFormError("السنة، الطالب، المادة، وحالة النتيجة حقول إجبارية.");
       return;

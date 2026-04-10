@@ -184,8 +184,8 @@ export function GradingPoliciesWorkspace() {
     setIsFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!form.academicYearId || !form.gradeLevelId || !form.subjectId || !form.totalMaxScore) {
       setFormError("الرجاء إكمال كافة الحقول الأساسية.");
       return;

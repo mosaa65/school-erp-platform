@@ -162,8 +162,8 @@ export function SectionsWorkspace() {
     setIsFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!form.gradeLevelId || !form.name.trim()) {
       setFormError("المرحلة الدراسية واسم الشعبة حقول مطلوبة.");
       return;
@@ -337,7 +337,7 @@ export function SectionsWorkspace() {
                   {item.building && (
                     <div className="mt-3 flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/40 bg-background/50 text-[10px] font-bold text-muted-foreground group-hover:bg-background transition-colors w-fit">
                       <Building className="h-3 w-3 text-primary/60" />
-                      <span>{item.building.nameAr || item.building.name}</span>
+                      <span>{item.building.nameAr}</span>
                       {item.roomLabel && (
                         <>
                           <span className="mx-1 opacity-40">|</span>
