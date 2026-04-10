@@ -1,11 +1,10 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import { RefreshCw, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { SearchField } from "@/components/ui/search-field";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import {
   Card,
@@ -162,3 +161,4 @@ export function PermissionsManagementWorkspace() {
     </div>
   );
 }
+

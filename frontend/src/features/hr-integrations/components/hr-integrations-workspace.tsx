@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { AlertTriangle, BadgeCheck, Calculator, LoaderCircle, ReceiptText, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -331,3 +331,4 @@ export function HrIntegrationsWorkspace() {
     </PageShell>
   );
 }
+

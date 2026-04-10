@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { ClipboardList, RefreshCw, Trash2 } from "lucide-react";
@@ -13,7 +13,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { SelectField } from "@/components/ui/select-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
@@ -350,3 +349,4 @@ export function AuditTrailWorkspace() {
     </div>
   );
 }
+

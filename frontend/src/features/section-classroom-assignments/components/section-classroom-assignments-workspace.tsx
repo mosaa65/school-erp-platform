@@ -9,6 +9,13 @@ import {
   Plus,
   RefreshCw,
   Trash2,
+  Building2,
+  Users,
+  Info,
+  Layers,
+  Star,
+  Clock,
+  Layout,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,14 +26,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Input } from "@/components/ui/input";
-import { SearchField } from "@/components/ui/search-field";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
+import { PageShell } from "@/components/ui/page-shell";
+import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useAcademicYearOptionsQuery } from "@/features/student-enrollments/hooks/use-academic-year-options-query";
 import { useSectionOptionsQuery } from "@/features/student-enrollments/hooks/use-section-options-query";
@@ -88,10 +94,7 @@ const DEFAULT_FORM_STATE: AssignmentFormState = {
 };
 
 function toDateInputValue(value?: string | null) {
-  if (!value) {
-    return "";
-  }
-
+  if (!value) return "";
   return value.slice(0, 10);
 }
 
@@ -114,55 +117,9 @@ function toFormState(
   };
 }
 
-function formatDate(value?: string | null) {
-  if (!value) {
-    return "—";
-  }
-
-  return new Intl.DateTimeFormat("ar-SA", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  }).format(new Date(value));
-}
-
 function normalizeText(value: string) {
   return value.trim().toLowerCase();
 }
-
-function formatBuildingLabel(building?: {
-  id: number;
-  code: string;
-  nameAr: string;
-  nameEn?: string | null;
-} | null) {
-  if (!building) {
-    return "بدون مبنى";
-  }
-
-  return building.nameAr || building.nameEn || building.code || `مبنى ${building.id}`;
-}
-
-type ClassroomSuggestion = {
-  classroom: {
-    id: string;
-    code: string;
-    name: string;
-    capacity: number | null;
-    notes: string | null;
-    activeAssignmentsCount: number;
-    building: {
-      id: number;
-      code: string;
-      nameAr: string;
-      nameEn?: string | null;
-      isActive: boolean;
-    } | null;
-  };
-  reason: string;
-  fitsCapacity: boolean;
-  matchesBuilding: boolean;
-};
 
 export function SectionClassroomAssignmentsWorkspace({
   initialSectionId,
@@ -193,17 +150,15 @@ export function SectionClassroomAssignmentsWorkspace({
   }));
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [editingAssignmentId, setEditingAssignmentId] = React.useState<string | null>(null);
+  const [editingItem, setEditingItem] = React.useState<SectionClassroomAssignmentListItem | null>(null);
   const [formState, setFormState] = React.useState<AssignmentFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
-  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const timer = window.setTimeout(() => {
       setPage(1);
       setSearch(searchInput.trim());
     }, 350);
-
     return () => window.clearTimeout(timer);
   }, [searchInput]);
 
@@ -225,51 +180,25 @@ export function SectionClassroomAssignmentsWorkspace({
   });
 
   const academicYearsQuery = useAcademicYearOptionsQuery();
-  const sectionsQuery = useSectionOptionsQuery({
-    gradeLevelId: initialGradeLevelId,
-  });
+  const sectionsQuery = useSectionOptionsQuery({ gradeLevelId: initialGradeLevelId });
   const classroomsQuery = useClassroomOptionsQuery();
 
   const createMutation = useCreateSectionClassroomAssignmentMutation();
   const updateMutation = useUpdateSectionClassroomAssignmentMutation();
   const deleteMutation = useDeleteSectionClassroomAssignmentMutation();
 
-  const assignments = React.useMemo(
-    () => assignmentsQuery.data?.data ?? [],
-    [assignmentsQuery.data?.data],
-  );
+  const assignments = React.useMemo(() => assignmentsQuery.data?.data ?? [], [assignmentsQuery.data?.data]);
   const pagination = assignmentsQuery.data?.pagination;
-  const academicYears = React.useMemo(
-    () => academicYearsQuery.data ?? [],
-    [academicYearsQuery.data],
-  );
-  const sections = React.useMemo(
-    () => sectionsQuery.data ?? [],
-    [sectionsQuery.data],
-  );
-  const classrooms = React.useMemo(
-    () => classroomsQuery.data ?? [],
-    [classroomsQuery.data],
-  );
-  const isEditing = editingAssignmentId !== null;
+  const academicYears = React.useMemo(() => academicYearsQuery.data ?? [], [academicYearsQuery.data]);
+  const sections = React.useMemo(() => sectionsQuery.data ?? [], [sectionsQuery.data]);
+  const classrooms = React.useMemo(() => classroomsQuery.data ?? [], [classroomsQuery.data]);
+  const isEditing = editingItem !== null;
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
-  const currentAcademicYear = React.useMemo(
-    () => academicYears.find((year) => year.isCurrent) ?? null,
-    [academicYears],
-  );
-  const selectedSection = React.useMemo(
-    () => sections.find((section) => section.id === formState.sectionId) ?? null,
-    [formState.sectionId, sections],
-  );
-
-  const mutationError =
-    (createMutation.error as Error | null)?.message ??
-    (updateMutation.error as Error | null)?.message ??
-    (deleteMutation.error as Error | null)?.message ??
-    null;
+  const currentAcademicYear = React.useMemo(() => academicYears.find((y) => y.isCurrent) ?? null, [academicYears]);
+  const selectedSection = React.useMemo(() => sections.find((s) => s.id === formState.sectionId) ?? null, [formState.sectionId, sections]);
 
   const resetForm = React.useCallback(() => {
-    setEditingAssignmentId(null);
+    setEditingItem(null);
     setFormState({
       ...DEFAULT_FORM_STATE,
       academicYearId: initialAcademicYearId ?? currentAcademicYear?.id ?? "",
@@ -281,230 +210,55 @@ export function SectionClassroomAssignmentsWorkspace({
   }, [currentAcademicYear?.id, initialAcademicYearId, initialClassroomId, initialSectionId]);
 
   React.useEffect(() => {
-    const nextAcademicYearId = initialAcademicYearId ?? currentAcademicYear?.id;
-    if (!nextAcademicYearId) {
-      return;
-    }
-
-    setFilters((prev) =>
-      prev.academicYearId === "all"
-        ? { ...prev, academicYearId: nextAcademicYearId }
-        : prev,
-    );
-    setFilterDraft((prev) =>
-      prev.academicYearId === "all"
-        ? { ...prev, academicYearId: nextAcademicYearId }
-        : prev,
-    );
-    setFormState((prev) =>
-      prev.academicYearId
-        ? prev
-        : {
-            ...prev,
-            academicYearId: nextAcademicYearId,
-          },
-    );
+    const nextYear = initialAcademicYearId ?? currentAcademicYear?.id;
+    if (!nextYear) return;
+    setFilters(p => p.academicYearId === "all" ? { ...p, academicYearId: nextYear } : p);
+    setFilterDraft(p => p.academicYearId === "all" ? { ...p, academicYearId: nextYear } : p);
+    setFormState(p => p.academicYearId ? p : { ...p, academicYearId: nextYear });
   }, [currentAcademicYear?.id, initialAcademicYearId]);
 
-  React.useEffect(() => {
-    if (!isEditing) {
-      return;
-    }
-
-    const stillExists = assignments.some((assignment) => assignment.id === editingAssignmentId);
-    if (!stillExists) {
-      resetForm();
-    }
-  }, [assignments, editingAssignmentId, isEditing, resetForm]);
-
-  const classroomSuggestion = React.useMemo<ClassroomSuggestion | null>(() => {
-    if (!selectedSection || classrooms.length === 0) {
-      return null;
-    }
-
+  const classroomSuggestion = React.useMemo(() => {
+    if (!selectedSection || classrooms.length === 0) return null;
     const sectionCapacity = selectedSection.capacity;
     const sectionBuildingId = selectedSection.building?.id ?? null;
-    const sectionBuildingTerms = [selectedSection.building?.nameAr, selectedSection.building?.code]
-      .filter(Boolean)
-      .map((value) => normalizeText(String(value)));
+    const sectionBuildingTerms = [selectedSection.building?.nameAr, selectedSection.building?.code].filter(Boolean).map(v => normalizeText(String(v)));
 
-    const ranked = classrooms
-      .map((classroom) => {
-        const roomText = normalizeText(
-          [
-            classroom.code,
-            classroom.name,
-            classroom.notes ?? "",
-            classroom.building?.nameAr ?? "",
-            classroom.building?.code ?? "",
-          ].join(" "),
-        );
-        const matchesBuilding =
-          (sectionBuildingId !== null && classroom.building?.id === sectionBuildingId) ||
-          (sectionBuildingTerms.length > 0 &&
-            sectionBuildingTerms.some((term) => term.length > 0 && roomText.includes(term)));
-
-        let score = 0;
-        let fitsCapacity = true;
-        const reasonParts: string[] = [];
-
-        if (sectionCapacity !== null) {
-          if (classroom.capacity === null) {
-            score += 1000;
-            fitsCapacity = false;
-            reasonParts.push("السعة غير محددة");
-          } else if (classroom.capacity >= sectionCapacity) {
-            score += classroom.capacity - sectionCapacity;
-            reasonParts.push(`السعة ${classroom.capacity} مناسبة`);
-          } else {
-            score += 500 + (sectionCapacity - classroom.capacity);
-            fitsCapacity = false;
-            reasonParts.push(`السعة أقل من المطلوب (${classroom.capacity}/${sectionCapacity})`);
-          }
-        } else if (classroom.capacity !== null) {
-          score += classroom.capacity;
-          reasonParts.push(`السعة المتاحة ${classroom.capacity}`);
-        } else {
-          score += 1000;
-        }
-
-        if (matchesBuilding) {
-          score -= 200;
-          reasonParts.push("يطابق المبنى");
-        }
-
-        if (classroom.activeAssignmentsCount > 0) {
-          score += classroom.activeAssignmentsCount * 10;
-          reasonParts.push(`مرتبط حاليًا بـ ${classroom.activeAssignmentsCount} شعبة`);
-        } else {
-          score -= 20;
-          reasonParts.push("غير مزدحم حاليًا");
-        }
-
-        return {
-          classroom,
-          score,
-          reason: reasonParts.join("، "),
-          fitsCapacity,
-          matchesBuilding,
-        };
-      })
-      .sort((left, right) => {
-        if (left.score !== right.score) {
-          return left.score - right.score;
-        }
-
-        const leftCapacity = left.classroom.capacity ?? Number.MAX_SAFE_INTEGER;
-        const rightCapacity = right.classroom.capacity ?? Number.MAX_SAFE_INTEGER;
-        return leftCapacity - rightCapacity;
-      });
+    const ranked = classrooms.map(room => {
+      const roomText = normalizeText([room.code, room.name, room.notes ?? "", room.building?.nameAr ?? "", room.building?.code ?? ""].join(" "));
+      const matchesBuilding = (sectionBuildingId !== null && room.building?.id === sectionBuildingId) || (sectionBuildingTerms.some(t => t.length > 0 && roomText.includes(t)));
+      let score = 0;
+      let fits = true;
+      if (sectionCapacity !== null) {
+        if (room.capacity === null) { score += 1000; fits = false; }
+        else if (room.capacity >= sectionCapacity) score += (room.capacity - sectionCapacity);
+        else { score += 500 + (sectionCapacity - room.capacity); fits = false; }
+      }
+      if (matchesBuilding) score -= 200;
+      score += (room.activeAssignmentsCount * 10);
+      return { room, score, fits, matchesBuilding };
+    }).sort((a, b) => a.score - b.score);
 
     const best = ranked[0];
-    if (!best) {
-      return null;
-    }
-
-    return {
-      classroom: best.classroom,
-      reason: best.reason || "اقتراح تلقائي مبني على البيانات المتاحة",
-      fitsCapacity: best.fitsCapacity,
-      matchesBuilding: best.matchesBuilding,
-    };
+    return best ? { room: best.room, fits: best.fits, matchesBuilding: best.matchesBuilding } : null;
   }, [classrooms, selectedSection]);
 
-  const handleStartCreate = React.useCallback(() => {
-    if (!canCreate) {
-      return;
-    }
-
-    setActionSuccess(null);
+  const handleStartCreate = () => {
+    if (!canCreate) return;
     setFormError(null);
-    setEditingAssignmentId(null);
+    setEditingItem(null);
     setFormState({
       ...DEFAULT_FORM_STATE,
-      academicYearId:
-        filters.academicYearId !== "all"
-          ? filters.academicYearId
-          : initialAcademicYearId ?? currentAcademicYear?.id ?? "",
+      academicYearId: filters.academicYearId !== "all" ? filters.academicYearId : initialAcademicYearId ?? currentAcademicYear?.id ?? "",
       sectionId: filters.sectionId !== "all" ? filters.sectionId : initialSectionId ?? "",
-      classroomId:
-        filters.classroomId !== "all" ? filters.classroomId : initialClassroomId ?? "",
+      classroomId: filters.classroomId !== "all" ? filters.classroomId : initialClassroomId ?? "",
     });
     setIsFormOpen(true);
-  }, [
-    canCreate,
-    currentAcademicYear?.id,
-    filters.academicYearId,
-    filters.classroomId,
-    filters.sectionId,
-    initialAcademicYearId,
-    initialClassroomId,
-    initialSectionId,
-  ]);
-
-  React.useEffect(() => {
-    if (initialMode !== "create" || isFormOpen || isEditing) {
-      return;
-    }
-
-    if (
-      initialSectionId ||
-      initialClassroomId ||
-      initialAcademicYearId ||
-      currentAcademicYear?.id
-    ) {
-      handleStartCreate();
-    }
-  }, [
-    currentAcademicYear?.id,
-    handleStartCreate,
-    initialAcademicYearId,
-    initialClassroomId,
-    initialMode,
-    initialSectionId,
-    isEditing,
-    isFormOpen,
-  ]);
-
-  const handleStartEdit = (assignment: SectionClassroomAssignmentListItem) => {
-    if (!canUpdate) {
-      return;
-    }
-
-    setActionSuccess(null);
-    setFormError(null);
-    setEditingAssignmentId(assignment.id);
-    setFormState(toFormState(assignment));
-    setIsFormOpen(true);
   };
 
-  const validateForm = () => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
     if (!formState.academicYearId || !formState.sectionId || !formState.classroomId) {
       setFormError("السنة والشعبة والغرفة حقول مطلوبة.");
-      return false;
-    }
-
-    if (formState.effectiveFrom && formState.effectiveTo) {
-      if (new Date(formState.effectiveTo) < new Date(formState.effectiveFrom)) {
-        setFormError("تاريخ النهاية يجب أن يكون بعد أو مساويًا لتاريخ البداية.");
-        return false;
-      }
-    }
-
-    if (formState.notes.trim().length > 255) {
-      setFormError("الملاحظات يجب ألا تتجاوز 255 حرفًا.");
-      return false;
-    }
-
-    setFormError(null);
-    return true;
-  };
-
-  const handleSubmit = (event?: React.FormEvent<HTMLFormElement>) => {
-    event?.preventDefault();
-    setActionSuccess(null);
-
-    if (!validateForm()) {
       return;
     }
 
@@ -519,61 +273,26 @@ export function SectionClassroomAssignmentsWorkspace({
       isActive: formState.isActive,
     };
 
-    if (isEditing && editingAssignmentId) {
-      if (!canUpdate) {
-        setFormError("لا تملك الصلاحية المطلوبة: sections.update.");
-        return;
-      }
-
-      updateMutation.mutate(
-        {
-          assignmentId: editingAssignmentId,
-          payload,
-        },
-        {
-          onSuccess: () => {
-            resetForm();
-            setActionSuccess("تم تحديث الربط بين الشعبة والغرفة بنجاح.");
-          },
-        },
-      );
-      return;
+    if (isEditing && editingItem) {
+      updateMutation.mutate({ assignmentId: editingItem.id, payload }, { onSuccess: resetForm });
+    } else {
+      createMutation.mutate(payload, { onSuccess: resetForm });
     }
-
-    if (!canCreate) {
-      setFormError("لا تملك الصلاحية المطلوبة: sections.create.");
-      return;
-    }
-
-    createMutation.mutate(payload, {
-      onSuccess: () => {
-        resetForm();
-        setPage(1);
-        setActionSuccess("تم حفظ ربط الشعبة بالغرفة بنجاح.");
-      },
-    });
   };
 
-  const handleDelete = (assignment: SectionClassroomAssignmentListItem) => {
-    if (!canDelete) {
-      return;
-    }
+  const handleStartEdit = (item: SectionClassroomAssignmentListItem) => {
+    if (!canUpdate) return;
+    setFormError(null);
+    setEditingItem(item);
+    setFormState(toFormState(item));
+    setIsFormOpen(true);
+  };
 
-    const confirmed = window.confirm(
-      `تأكيد حذف ربط ${assignment.section.name} مع ${assignment.classroom.name}؟`,
-    );
-    if (!confirmed) {
-      return;
-    }
-
-    deleteMutation.mutate(assignment.id, {
-      onSuccess: () => {
-        if (editingAssignmentId === assignment.id) {
-          resetForm();
-        }
-        setActionSuccess("تم حذف الربط بنجاح.");
-      },
-    });
+  const handleDelete = (item: SectionClassroomAssignmentListItem) => {
+    if (!canDelete) return;
+    const confirmed = window.confirm(`تأكيد حذف ربط ${item.section.name} مع ${item.classroom.name}؟`);
+    if (!confirmed) return;
+    deleteMutation.mutate(item.id);
   };
 
   const applyFilters = () => {
@@ -591,272 +310,195 @@ export function SectionClassroomAssignmentsWorkspace({
     setIsFilterOpen(false);
   };
 
-  const activeFiltersCount = React.useMemo(
-    () =>
-      [
-        searchInput.trim() ? 1 : 0,
-        filters.academicYearId !== "all" ? 1 : 0,
-        filters.sectionId !== "all" ? 1 : 0,
-        filters.classroomId !== "all" ? 1 : 0,
-        filters.active !== "all" ? 1 : 0,
-        filters.primary !== "all" ? 1 : 0,
-      ].reduce((sum, value) => sum + value, 0),
-    [filters, searchInput],
-  );
-
-  const handleUseClassroomSuggestion = () => {
-    if (!classroomSuggestion) {
-      return;
-    }
-
-    setFormState((prev) => ({
-      ...prev,
-      classroomId: classroomSuggestion.classroom.id,
-    }));
-  };
+  const activeFiltersCount = React.useMemo(() => {
+    return [
+      searchInput.trim() ? 1 : 0,
+      filters.academicYearId !== "all" ? 1 : 0,
+      filters.sectionId !== "all" ? 1 : 0,
+      filters.classroomId !== "all" ? 1 : 0,
+      filters.active !== "all" ? 1 : 0,
+      filters.primary !== "all" ? 1 : 0,
+    ].reduce((sum, v) => sum + v, 0);
+  }, [filters, searchInput]);
 
   return (
-    <>
+    <PageShell
+      title="توزيع الشعب على القاعات"
+      subtitle="تخصيص القاعات الدراسية لكل شعبة حسب السنة الأكاديمية والمبنى المتاح."
+    >
       <div className="space-y-4">
-        {initialSectionId ? (
-          <div className="flex items-start gap-2 rounded-md border border-amber-300/40 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-200">
-            <Lightbulb className="mt-0.5 h-4 w-4 shrink-0" />
-            <p>
-              تم فتح شاشة الربط مع شعبة محددة مسبقًا، ويمكنك اختيار الغرفة المناسبة مباشرة.
-            </p>
-          </div>
-        ) : null}
-
-        {!initialSectionId && initialClassroomId ? (
-          <div className="flex items-start gap-2 rounded-md border border-sky-300/40 bg-sky-500/10 p-3 text-sm text-sky-900 dark:text-sky-200">
-            <Lightbulb className="mt-0.5 h-4 w-4 shrink-0" />
-            <p>تم فتح الشاشة مع غرفة محددة مسبقًا لتسهيل مراجعة الروابط أو إنشاء ربط جديد عليها.</p>
-          </div>
-        ) : null}
-
-                  <ManagementToolbar
-            searchValue={searchInput}
-            onSearchChange={(event) => setSearchInput(event.target.value)}
-            searchPlaceholder="بحث بالشعبة أو الغرفة أو السنة..."
-            filterCount={activeFiltersCount}
-            onFilterClick={() => setIsFilterOpen((prev) => !prev)}
-            showFilterButton={true}
-          />
-
-        {actionSuccess ? (
-          <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">
-            {actionSuccess}
-          </div>
-        ) : null}
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(e) => setSearchInput(e.target.value)}
+          searchPlaceholder="بحث بالشعبة أو القاعة..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen(true)}
+          actions={
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => void assignmentsQuery.refetch()}
+              disabled={assignmentsQuery.isFetching}
+            >
+              <RefreshCw className={`h-4 w-4 ${assignmentsQuery.isFetching ? "animate-spin" : ""}`} />
+              تحديث
+            </Button>
+          }
+        />
 
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
-          title="فلاتر ربط الشعب بالغرف"
+          title="فلاتر التوزيع"
           actionButtons={
             <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
+              <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">
                 مسح
               </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
+              <Button type="button" onClick={applyFilters} className="flex-1">
                 تطبيق
               </Button>
             </div>
           }
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.academicYearId}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, academicYearId: event.target.value }))
-              }
-            >
-              <option value="all">كل السنوات</option>
-              {academicYears.map((academicYear) => (
-                <option key={academicYear.id} value={academicYear.id}>
-                  {academicYear.name}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField
-              value={filterDraft.sectionId}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, sectionId: event.target.value }))
-              }
-            >
-              <option value="all">كل الشعب</option>
-              {sections.map((section) => (
-                <option key={section.id} value={section.id}>
-                  {section.gradeLevel.code} - {section.name}
-                  {section.capacity !== null ? ` | السعة ${section.capacity}` : ""}
-                  {section.building ? ` | المبنى ${section.building.nameAr}` : ""}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField
-              value={filterDraft.classroomId}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, classroomId: event.target.value }))
-              }
-            >
-              <option value="all">كل الغرف</option>
-              {classrooms.map((classroom) => (
-                <option key={classroom.id} value={classroom.id}>
-                  {classroom.name}
-                  {classroom.building ? ` | ${formatBuildingLabel(classroom.building)}` : ""}
-                  {classroom.activeAssignmentsCount > 0
-                    ? ` | روابط نشطة ${classroom.activeAssignmentsCount}`
-                    : ""}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as FilterState["active"],
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </SelectField>
-
-            <SelectField
-              value={filterDraft.primary}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  primary: event.target.value as FilterState["primary"],
-                }))
-              }
-            >
-              <option value="all">كل أنواع الربط</option>
-              <option value="primary">الرئيسية فقط</option>
-              <option value="secondary">الثانوية فقط</option>
-            </SelectField>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">السنة الدراسية</label>
+              <SelectField value={filterDraft.academicYearId} onChange={(e) => setFilterDraft(p => ({ ...p, academicYearId: e.target.value }))}>
+                <option value="all">كل السنوات</option>
+                {academicYears.map(y => <option key={y.id} value={y.id}>{y.name}</option>)}
+              </SelectField>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الشعبة</label>
+              <SelectField value={filterDraft.sectionId} onChange={(e) => setFilterDraft(p => ({ ...p, sectionId: e.target.value }))}>
+                <option value="all">كل الشعب</option>
+                {sections.map(s => <option key={s.id} value={s.id}>{s.gradeLevel.code} - {s.name}</option>)}
+              </SelectField>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">القاعة</label>
+              <SelectField value={filterDraft.classroomId} onChange={(e) => setFilterDraft(p => ({ ...p, classroomId: e.target.value }))}>
+                <option value="all">كل القاعات</option>
+                {classrooms.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </SelectField>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الحالة</label>
+              <SelectField value={filterDraft.active} onChange={(e) => setFilterDraft(p => ({ ...p, active: e.target.value as any }))}>
+                <option value="all">كل الحالات</option>
+                <option value="active">نشط فقط</option>
+                <option value="inactive">غير نشط فقط</option>
+              </SelectField>
+            </div>
           </div>
         </FilterDrawer>
 
-        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-          <CardHeader className="space-y-3">
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm overflow-hidden">
+          <CardHeader className="space-y-3 bg-muted/20 border-b border-border/60 pb-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>ربط الشعب بالغرف</CardTitle>
-              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+              <CardTitle className="flex items-center gap-2 text-lg font-bold">
+                <Layout className="h-5 w-5 text-primary" />
+                سجل الربط التشغيلي
+              </CardTitle>
+              <Badge variant="secondary" className="rounded-full px-3">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
             <CardDescription>
-              إدارة الربط التشغيلي بين الشعبة والغرفة لكل سنة دراسية، مع دعم الربط
-              الرئيسي والمدد الزمنية.
+              تتبع تخصيص الفصول الدراسية للشعب الأكاديمية خلال السنوات المختلفة.
             </CardDescription>
           </CardHeader>
 
-          <CardContent className="space-y-3">
-            {mutationError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                {mutationError}
+          <CardContent className="space-y-4 pt-6">
+            {assignmentsQuery.isPending && (
+              <div className="rounded-2xl border border-dashed border-border/70 p-8 text-sm text-muted-foreground text-center">
+                جارٍ تحميل بيانات التوزيع...
               </div>
-            ) : null}
+            )}
 
-            {assignmentsQuery.isPending ? (
-              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                جارٍ تحميل بيانات الربط...
+            {!assignmentsQuery.isPending && assignments.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-border/70 p-8 text-sm text-muted-foreground text-center">
+                لم يتم تسجيل أي توزيع للقاعات يتوافق مع البحث.
               </div>
-            ) : null}
+            )}
 
-            {assignmentsQuery.error ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                {assignmentsQuery.error instanceof Error
-                  ? assignmentsQuery.error.message
-                  : "تعذّر تحميل البيانات."}
-              </div>
-            ) : null}
-
-            {!assignmentsQuery.isPending && assignments.length === 0 ? (
-              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                لا توجد روابط مطابقة بعد.
-              </div>
-            ) : null}
-
-            {assignments.map((assignment) => (
-              <div
-                key={assignment.id}
-                className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="space-y-1">
-                    <p className="font-medium">
-                      {assignment.section.gradeLevel.name} - {assignment.section.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      الغرفة: {assignment.classroom.name} ({assignment.classroom.code})
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      السنة: {assignment.academicYear.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      المدة: {formatDate(assignment.effectiveFrom)} إلى{" "}
-                      {formatDate(assignment.effectiveTo)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      الملاحظات: {assignment.notes ?? "—"}
-                    </p>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {assignments.map((item) => (
+                <div key={item.id} className="group relative space-y-4 rounded-2xl border border-border/70 bg-background/50 p-4 transition-all hover:border-primary/30 hover:shadow-lg">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="space-y-1">
+                      <p className="font-bold text-base leading-tight group-hover:text-primary transition-colors">
+                        {item.section.gradeLevel.name} - {item.section.name}
+                      </p>
+                      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                        <CalendarRange className="h-3 w-3" />
+                        <span>السنة: {item.academicYear.name}</span>
+                      </div>
+                    </div>
+                    {item.isPrimary && (
+                      <Badge className="h-5 bg-amber-500 hover:bg-amber-600 text-[9px] font-bold">
+                        رئيسي
+                      </Badge>
+                    )}
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge variant={assignment.isPrimary ? "default" : "outline"}>
-                      {assignment.isPrimary ? "ربط رئيسي" : "ربط ثانوي"}
-                    </Badge>
-                    <Badge variant={assignment.isActive ? "secondary" : "outline"}>
-                      {assignment.isActive ? "نشط" : "غير نشط"}
-                    </Badge>
+                  <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-3">
+                    <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-bold">{item.classroom.name}</span>
+                      </div>
+                      <Badge variant={item.isActive ? "default" : "outline"} className="h-5 text-[8px]">
+                        {item.isActive ? "نشط" : "معطل"}
+                      </Badge>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2 text-[10px] text-muted-foreground">
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="h-3 w-3" />
+                        <span>من: {toDateInputValue(item.effectiveFrom) || "-"}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="h-3 w-3" />
+                        <span>إلى: {toDateInputValue(item.effectiveTo) || "-"}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1 mt-auto">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 rounded-lg px-2 flex-1 text-[11px] gap-1.5 font-bold"
+                      onClick={() => handleStartEdit(item)}
+                      disabled={!canUpdate || updateMutation.isPending}
+                    >
+                      <PencilLine className="h-3.5 w-3.5" />
+                      تعديل
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 rounded-lg px-2 text-destructive hover:bg-destructive/10"
+                      onClick={() => handleDelete(item)}
+                      disabled={!canDelete || deleteMutation.isPending}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                 </div>
+              ))}
+            </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => handleStartEdit(assignment)}
-                    disabled={!canUpdate || updateMutation.isPending}
-                  >
-                    <PencilLine className="h-3.5 w-3.5" />
-                    تعديل
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => handleDelete(assignment)}
-                    disabled={!canDelete || deleteMutation.isPending}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    حذف
-                  </Button>
-                </div>
-              </div>
-            ))}
-
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-6 mt-2">
               <p className="text-xs text-muted-foreground">
-                الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
+                صفحة <strong className="text-foreground">{pagination?.page ?? 1}</strong> من <strong className="text-foreground">{pagination?.totalPages ?? 1}</strong>
               </p>
-
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
+                  className="h-9 px-4 rounded-2xl"
                   onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
                   disabled={!pagination || pagination.page <= 1 || assignmentsQuery.isFetching}
                 >
@@ -865,30 +507,13 @@ export function SectionClassroomAssignmentsWorkspace({
                 <Button
                   variant="outline"
                   size="sm"
+                  className="h-9 px-4 rounded-2xl"
                   onClick={() =>
-                    setPage((prev) =>
-                      pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                    )
+                    setPage((prev) => (pagination ? Math.min(prev + 1, pagination.totalPages) : prev))
                   }
-                  disabled={
-                    !pagination ||
-                    pagination.page >= pagination.totalPages ||
-                    assignmentsQuery.isFetching
-                  }
+                  disabled={!pagination || pagination.page >= pagination.totalPages || assignmentsQuery.isFetching}
                 >
                   التالي
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => void assignmentsQuery.refetch()}
-                  disabled={assignmentsQuery.isFetching}
-                >
-                  <RefreshCw
-                    className={`h-4 w-4 ${assignmentsQuery.isFetching ? "animate-spin" : ""}`}
-                  />
-                  تحديث
                 </Button>
               </div>
             </div>
@@ -897,263 +522,96 @@ export function SectionClassroomAssignmentsWorkspace({
       </div>
 
       <Fab
-        icon={<Plus className="h-4 w-4" />}
-        label="إنشاء"
-        ariaLabel="إنشاء ربط جديد للشعبة والغرفة"
+        icon={<Plus className="h-5 w-5" />}
+        label="إضافة توزيع"
         onClick={handleStartCreate}
         disabled={!canCreate}
       />
 
-      <BottomSheetForm
+      <CrudFormSheet
         open={isFormOpen}
-        title={isEditing ? "تعديل ربط الشعبة بالغرفة" : "إنشاء ربط شعبة بغرفة"}
         onClose={resetForm}
-        onSubmit={() => handleSubmit()}
+        title={isEditing ? "تعديل بيانات التوزيع" : "إضافة توزيع جديد"}
+        isEditing={isEditing}
         isSubmitting={isSubmitting}
-        submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء الربط"}
-        showFooter={false}
+        onSubmit={handleSubmit}
       >
-        {!canCreate && !isEditing ? (
-          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            لا تملك الصلاحية المطلوبة: <code>sections.create</code>.
-          </div>
-        ) : (
-          <form className="space-y-3" onSubmit={handleSubmit}>
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">السنة الدراسية *</label>
-                <SelectField
-                  value={formState.academicYearId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      academicYearId: event.target.value,
-                    }))
-                  }
-                >
-                  <option value="">اختر السنة</option>
-                  {academicYears.map((academicYear) => (
-                    <option key={academicYear.id} value={academicYear.id}>
-                      {academicYear.name}
-                    </option>
-                  ))}
-                </SelectField>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الشعبة *</label>
-                <SelectField
-                  value={formState.sectionId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      sectionId: event.target.value,
-                    }))
-                  }
-                >
-                  <option value="">اختر الشعبة</option>
-                  {sections.map((section) => (
-                    <option key={section.id} value={section.id}>
-                      {section.gradeLevel.code} - {section.name}
-                    </option>
-                  ))}
-                </SelectField>
-              </div>
-            </div>
-
+        <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الغرفة *</label>
-              <SelectField
-                value={formState.classroomId}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    classroomId: event.target.value,
-                  }))
-                }
-              >
-                <option value="">اختر الغرفة</option>
-                {classrooms.map((classroom) => (
-                  <option key={classroom.id} value={classroom.id}>
-                    {classroom.name} ({classroom.code})
-                    {classroom.capacity !== null ? ` | السعة ${classroom.capacity}` : ""}
-                    {classroom.activeAssignmentsCount > 0
-                      ? ` | روابط نشطة ${classroom.activeAssignmentsCount}`
-                      : ""}
-                  </option>
-                ))}
+              <label className="text-xs font-bold text-muted-foreground uppercase">السنة الدراسية *</label>
+              <SelectField value={formState.academicYearId} onChange={(e) => setFormState(p => ({ ...p, academicYearId: e.target.value }))}>
+                <option value="">اختر السنة</option>
+                {academicYears.map(y => <option key={y.id} value={y.id}>{y.name} {y.isCurrent ? "(الحالية)" : ""}</option>)}
               </SelectField>
             </div>
-
-            {selectedSection ? (
-              <div className="rounded-md border border-dashed border-border/70 bg-muted/30 p-3 text-xs text-muted-foreground">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Lightbulb className="h-4 w-4 text-amber-500" />
-                  <span>
-                    الشعبة المختارة: {selectedSection.gradeLevel.name} - {selectedSection.name}
-                  </span>
-                </div>
-                <p className="mt-1">
-                  {selectedSection.capacity !== null
-                    ? `سعة الشعبة: ${selectedSection.capacity}`
-                    : "سعة الشعبة غير محددة"}
-                  {selectedSection.building
-                    ? ` | المبنى: ${selectedSection.building.nameAr}`
-                    : " | لا يوجد مبنى محدد للشعبة"}
-                </p>
-              </div>
-            ) : null}
-
-            {selectedSection && classroomSuggestion ? (
-              <div className="rounded-md border border-amber-200/60 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-100">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Lightbulb className="h-4 w-4 text-amber-600" />
-                      <p className="font-medium">اقتراح غرفة مناسب</p>
-                    </div>
-                    <p className="text-muted-foreground dark:text-amber-100/80">
-                      {classroomSuggestion.classroom.name} ({classroomSuggestion.classroom.code})
-                      {classroomSuggestion.classroom.capacity !== null
-                        ? ` - السعة ${classroomSuggestion.classroom.capacity}`
-                        : ""}
-                    </p>
-                    <p className="text-muted-foreground dark:text-amber-100/80">
-                      {classroomSuggestion.classroom.building
-                        ? `المبنى: ${formatBuildingLabel(classroomSuggestion.classroom.building)}`
-                        : "المبنى: غير محدد"}
-                    </p>
-                    <p className="text-muted-foreground dark:text-amber-100/80">
-                      {classroomSuggestion.classroom.activeAssignmentsCount > 0
-                        ? `الروابط النشطة الحالية: ${classroomSuggestion.classroom.activeAssignmentsCount}`
-                        : "لا توجد روابط نشطة حاليًا على هذه الغرفة"}
-                    </p>
-                    <p className="text-muted-foreground dark:text-amber-100/80">
-                      {classroomSuggestion.reason}
-                    </p>
-                  </div>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="shrink-0 border-amber-300/70 bg-background/80 text-amber-900 hover:bg-amber-50 dark:text-amber-100 dark:hover:bg-amber-500/10"
-                    onClick={handleUseClassroomSuggestion}
-                  >
-                    استخدام الاقتراح
-                  </Button>
-                </div>
-              </div>
-            ) : null}
-
-            {selectedSection && !classroomSuggestion ? (
-              <div className="rounded-md border border-dashed border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
-                لا يوجد اقتراح واضح من الغرف المتاحة لهذه الشعبة حاليًا.
-              </div>
-            ) : null}
-
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">يبدأ من</label>
-                <Input
-                  type="date"
-                  value={formState.effectiveFrom}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      effectiveFrom: event.target.value,
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">ينتهي في</label>
-                <Input
-                  type="date"
-                  value={formState.effectiveTo}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      effectiveTo: event.target.value,
-                    }))
-                  }
-                />
-              </div>
-            </div>
-
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
-              <Input
-                value={formState.notes}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    notes: event.target.value,
-                  }))
-                }
-                placeholder="مثال: القاعة الرئيسية للحصة الصباحية"
-              />
+              <label className="text-xs font-bold text-muted-foreground uppercase">الشعبة المستهدفة *</label>
+              <SelectField value={formState.sectionId} onChange={(e) => setFormState(p => ({ ...p, sectionId: e.target.value }))}>
+                <option value="">اختر الشعبة</option>
+                {sections.map(s => <option key={s.id} value={s.id}>{s.gradeLevel.code} - {s.name}</option>)}
+              </SelectField>
             </div>
+          </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>ربط رئيسي</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isPrimary}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      isPrimary: event.target.checked,
-                    }))
-                  }
-                />
-              </label>
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشط</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      isActive: event.target.checked,
-                    }))
-                  }
-                />
-              </label>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground uppercase flex items-center justify-between">
+              <span>القاعة الدراسية *</span>
+              {classroomSuggestion && (
+                <Badge variant="outline" className="h-5 text-[8px] bg-sky-50 text-sky-700 border-sky-200 gap-1 cursor-pointer" onClick={() => setFormState(p => ({ ...p, classroomId: classroomSuggestion.room.id }))}>
+                  <Lightbulb className="h-2.5 w-2.5" />
+                  اقتراح: {classroomSuggestion.room.name}
+                </Badge>
+              )}
+            </label>
+            <SelectField value={formState.classroomId} onChange={(e) => setFormState(p => ({ ...p, classroomId: e.target.value }))}>
+              <option value="">اختر القاعة</option>
+              {classrooms.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.name} {c.capacity ? `(السعة: ${c.capacity})` : ""}
+                </option>
+              ))}
+            </SelectField>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted-foreground uppercase">فعال من</label>
+              <Input type="date" value={formState.effectiveFrom} onChange={(e) => setFormState(p => ({ ...p, effectiveFrom: e.target.value }))} />
             </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted-foreground uppercase">فعال إلى</label>
+              <Input type="date" value={formState.effectiveTo} onChange={(e) => setFormState(p => ({ ...p, effectiveTo: e.target.value }))} />
+            </div>
+          </div>
 
-            {formError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                {formError}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground uppercase">ملاحظات التوزيع</label>
+            <Input value={formState.notes} onChange={(e) => setFormState(p => ({ ...p, notes: e.target.value }))} placeholder="مثال: تخصيص مؤقت لحين انتهاء الصيانة" />
+          </div>
+
+          <div className="space-y-3 pt-2">
+            <label className="flex items-center justify-between rounded-2xl border border-border/70 bg-muted/20 px-4 py-3 text-sm">
+              <div className="flex items-center gap-2">
+                <Star className={`h-4 w-4 ${formState.isPrimary ? 'text-amber-500' : 'text-muted-foreground'}`} />
+                <span className="font-bold">تعيين كقاعة رئيسية للشعبة</span>
               </div>
-            ) : null}
+              <input type="checkbox" className="h-5 w-5 rounded-lg border-primary/30 text-primary" checked={formState.isPrimary} onChange={(e) => setFormState(p => ({ ...p, isPrimary: e.target.checked }))} />
+            </label>
 
-            {mutationError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                {mutationError}
-              </div>
-            ) : null}
+            <label className="flex items-center justify-between rounded-2xl border border-border/70 bg-muted/20 px-4 py-3 text-sm">
+              <span className="font-bold">تفعيل الربط حالياً</span>
+              <input type="checkbox" className="h-5 w-5 rounded-lg border-primary/30 text-primary" checked={formState.isActive} onChange={(e) => setFormState(p => ({ ...p, isActive: e.target.checked }))} />
+            </label>
+          </div>
 
-            <div className="flex gap-2">
-              <Button type="submit" className="flex-1 gap-2" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : (
-                  <CalendarRange className="h-4 w-4" />
-                )}
-                {isEditing ? "حفظ التعديلات" : "إنشاء الربط"}
-              </Button>
-              {isEditing ? (
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  إلغاء
-                </Button>
-              ) : null}
+          {formError && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive font-bold text-center">
+              {formError}
             </div>
-          </form>
-        )}
-      </BottomSheetForm>
-    </>
+          )}
+        </div>
+      </CrudFormSheet>
+    </PageShell>
   );
 }

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { BadgeCheck, BookOpenCheck, ReceiptText, RotateCcw, Settings2, UserRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -320,3 +320,4 @@ export function BillingEngineWorkspace() {
     </PageShell>
   );
 }
+

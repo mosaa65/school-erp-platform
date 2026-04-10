@@ -22,7 +22,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Input } from "@/components/ui/input";
 import {
   Card,
@@ -31,7 +30,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useSectionOptionsQuery } from "@/features/grade-aggregation/monthly-grades/hooks/use-section-options-query";
@@ -838,6 +836,7 @@ export function SemesterGradesWorkspace() {
     </PageShell>
   );
 }
+
 
 
 

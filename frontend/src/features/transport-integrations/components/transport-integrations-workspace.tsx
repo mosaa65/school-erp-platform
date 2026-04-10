@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { BadgeCheck, CalendarClock, LoaderCircle, ReceiptText, RotateCcw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -362,3 +362,4 @@ export function TransportIntegrationsWorkspace() {
     </PageShell>
   );
 }
+

@@ -14,9 +14,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { SelectField } from "@/components/ui/select-field";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import {
   FinanceAlert,
   FinanceAppliedFiltersSummary,
@@ -219,19 +218,28 @@ export function FinancialReportsWorkspace() {
     <PageShell
       title="التقارير المالية"
       subtitle="تشغيل تقارير المالية بسرعة مع تلميحات تساعدك على اختيار التقرير والفلتر المناسب."
-      actions={
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary">
-            نوع التقرير: {REPORT_OPTIONS.find((option) => option.value === reportType)?.label}
-          </Badge>
-          <FilterTriggerButton
-            count={activeFiltersCount}
-            onClick={() => setIsFilterOpen((prev) => !prev)}
-          />
-        </div>
-      }
     >
       <div className="space-y-4">
+        <ManagementToolbar
+          searchValue={appliedFilters.enrollmentId || ""}
+          onSearchChange={(event) => setAppliedFilters((prev) => ({ ...prev, enrollmentId: event.target.value }))}
+          searchPlaceholder="بحث بمعرف القيد..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen(true)}
+          actions={
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => void reportQuery.refetch()}
+              disabled={reportQuery.isFetching || !canRunReport}
+            >
+              <RefreshCw className={`h-4 w-4 ${reportQuery.isFetching ? "animate-spin" : ""}`} />
+              تحديث
+            </Button>
+          }
+        />
+
         <FinanceInlineHint title="متى أستخدم هذا التقرير؟">
           {REPORT_GUIDANCE[reportType]}
         </FinanceInlineHint>
@@ -243,9 +251,11 @@ export function FinancialReportsWorkspace() {
               type="button"
               variant={reportType === option.value ? "default" : "outline"}
               size="sm"
+              className="rounded-full px-4"
               onClick={() => {
-                setDraftFilters((prev) => ({ ...prev, reportType: option.value }));
-                setAppliedFilters((prev) => ({ ...prev, reportType: option.value }));
+                const newType = option.value;
+                setDraftFilters((prev) => ({ ...prev, reportType: newType }));
+                setAppliedFilters((prev) => ({ ...prev, reportType: newType }));
               }}
             >
               {option.label}
@@ -259,195 +269,219 @@ export function FinancialReportsWorkspace() {
           emptyLabel="التقرير يعمل الآن بدون فلاتر إضافية."
         />
 
-      <FilterDrawer
-        open={isFilterOpen}
-        onClose={() => setIsFilterOpen(false)}
-        title="فلاتر التقارير المالية"
-        actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
-      >
-        <div className="grid gap-3 sm:grid-cols-2">
-          <SelectField
-            value={draftFilters.reportType}
-            onChange={(event) =>
-              setDraftFilters((prev) => ({
-                ...prev,
-                reportType: event.target.value as FinancialReportType,
-              }))
-            }
-          >
-            {REPORT_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </SelectField>
-          <Input
-            placeholder="معرف الفرع"
-            value={draftFilters.branchId}
-            onChange={(event) =>
-              setDraftFilters((prev) => ({ ...prev, branchId: event.target.value }))
-            }
-          />
-          <Input
-            placeholder="معرف السنة المالية"
-            value={draftFilters.fiscalYearId}
-            onChange={(event) =>
-              setDraftFilters((prev) => ({ ...prev, fiscalYearId: event.target.value }))
-            }
-          />
-          <Input
-            placeholder="معرف الفترة المالية"
-            value={draftFilters.fiscalPeriodId}
-            onChange={(event) =>
-              setDraftFilters((prev) => ({ ...prev, fiscalPeriodId: event.target.value }))
-            }
-          />
-          <Input
-            placeholder="معرف الحساب"
-            value={draftFilters.accountId}
-            onChange={(event) =>
-              setDraftFilters((prev) => ({ ...prev, accountId: event.target.value }))
-            }
-          />
-          <Input
-            placeholder="معرف القيد الدراسي"
-            value={draftFilters.enrollmentId}
-            onChange={(event) =>
-              setDraftFilters((prev) => ({ ...prev, enrollmentId: event.target.value }))
-            }
-          />
-          <Input
-            placeholder="معرف العام الدراسي"
-            value={draftFilters.academicYearId}
-            onChange={(event) =>
-              setDraftFilters((prev) => ({ ...prev, academicYearId: event.target.value }))
-            }
-          />
-          <Input
-            type="date"
-            value={draftFilters.dateFrom}
-            onChange={(event) =>
-              setDraftFilters((prev) => ({ ...prev, dateFrom: event.target.value }))
-            }
-          />
-          <Input
-            type="date"
-            value={draftFilters.dateTo}
-            onChange={(event) =>
-              setDraftFilters((prev) => ({ ...prev, dateTo: event.target.value }))
-            }
-          />
-          <Input
-            type="date"
-            value={draftFilters.asOfDate}
-            onChange={(event) =>
-              setDraftFilters((prev) => ({ ...prev, asOfDate: event.target.value }))
-            }
-          />
-          <Input
-            placeholder="رقم الصفحة"
-            value={draftFilters.page}
-            onChange={(event) =>
-              setDraftFilters((prev) => ({ ...prev, page: event.target.value }))
-            }
-          />
-          <Input
-            placeholder="عدد السجلات"
-            value={draftFilters.limit}
-            onChange={(event) =>
-              setDraftFilters((prev) => ({ ...prev, limit: event.target.value }))
-            }
-          />
-          <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-            <span>إظهار العناوين</span>
-            <input
-              type="checkbox"
-              checked={draftFilters.includeHeaders}
-              onChange={(event) =>
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  includeHeaders: event.target.checked,
-                }))
-              }
-            />
-          </label>
-        </div>
-      </FilterDrawer>
-
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-primary" />
-            التقارير المالية
-          </CardTitle>
-          <CardDescription>
-            استعراض تقارير النظام المالي مع إمكانية ضبط الفلاتر المختلفة.
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
-          {!canRunReport ? (
-            <FinanceEmptyState>
-              يجب تحديد معرف القيد الدراسي لتوليد كشف حساب الطالب.
-            </FinanceEmptyState>
-          ) : null}
-
-          {reportQuery.isPending ? (
-            <FinanceEmptyState>جارٍ تحميل التقرير...</FinanceEmptyState>
-          ) : null}
-
-          {reportQuery.error ? (
-            <FinanceAlert tone="error">
-              {reportQuery.error instanceof Error
-                ? reportQuery.error.message
-                : "تعذر تحميل التقرير."}
-            </FinanceAlert>
-          ) : null}
-
-          {report ? (
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <span>تم الإنشاء: {report.generatedAt ? new Date(report.generatedAt).toLocaleString() : "-"}</span>
-                <span>عدد الصفوف: {reportRows.length}</span>
-              </div>
-
-              {summaryEntries.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {summaryEntries.map(([key, value]) => (
-                    <Badge key={key} variant="outline">
-                      {key}: {String(value)}
-                    </Badge>
-                  ))}
-                </div>
-              ) : null}
-
-              {reportRows.length > 0 ? (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-foreground">معاينة الصفوف الأولى</p>
-                  <pre className="max-h-72 overflow-auto rounded-md border border-dashed p-3 text-xs text-muted-foreground">
-                    {JSON.stringify(reportRows.slice(0, 10), null, 2)}
-                  </pre>
-                </div>
-              ) : (
-                <FinanceEmptyState>لا توجد بيانات تفصيلية للعرض.</FinanceEmptyState>
-              )}
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="فلاتر التقارير المالية"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">
+                مسح
+              </Button>
+              <Button type="button" onClick={applyFilters} className="flex-1">
+                تطبيق
+              </Button>
             </div>
-          ) : null}
-
-          <div className="flex justify-end">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-1.5"
-              onClick={() => void reportQuery.refetch()}
-              disabled={reportQuery.isFetching || !canRunReport}
-            >
-              <RefreshCw className={`h-4 w-4 ${reportQuery.isFetching ? "animate-spin" : ""}`} />
-              تحديث
-            </Button>
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">نوع التقرير</label>
+              <SelectField
+                value={draftFilters.reportType}
+                onChange={(event) =>
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    reportType: event.target.value as FinancialReportType,
+                  }))
+                }
+              >
+                {REPORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">معرف الفرع</label>
+              <Input
+                placeholder="branchId"
+                value={draftFilters.branchId}
+                onChange={(event) =>
+                  setDraftFilters((prev) => ({ ...prev, branchId: event.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">السنة المالية</label>
+              <Input
+                placeholder="fiscalYearId"
+                value={draftFilters.fiscalYearId}
+                onChange={(event) =>
+                  setDraftFilters((prev) => ({ ...prev, fiscalYearId: event.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الفترة المالية</label>
+              <Input
+                placeholder="fiscalPeriodId"
+                value={draftFilters.fiscalPeriodId}
+                onChange={(event) =>
+                  setDraftFilters((prev) => ({ ...prev, fiscalPeriodId: event.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">معرف الحساب</label>
+              <Input
+                placeholder="accountId"
+                value={draftFilters.accountId}
+                onChange={(event) =>
+                  setDraftFilters((prev) => ({ ...prev, accountId: event.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">العام الدراسي</label>
+              <Input
+                placeholder="academicYearId"
+                value={draftFilters.academicYearId}
+                onChange={(event) =>
+                  setDraftFilters((prev) => ({ ...prev, academicYearId: event.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">من تاريخ</label>
+              <Input
+                type="date"
+                value={draftFilters.dateFrom}
+                onChange={(event) =>
+                  setDraftFilters((prev) => ({ ...prev, dateFrom: event.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">إلى تاريخ</label>
+              <Input
+                type="date"
+                value={draftFilters.dateTo}
+                onChange={(event) =>
+                  setDraftFilters((prev) => ({ ...prev, dateTo: event.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">حتى تاريخ (As of)</label>
+              <Input
+                type="date"
+                value={draftFilters.asOfDate}
+                onChange={(event) =>
+                  setDraftFilters((prev) => ({ ...prev, asOfDate: event.target.value }))
+                }
+              />
+            </div>
+            <label className="flex items-center justify-between rounded-2xl border border-border/70 bg-background/50 px-4 py-2.5 text-sm">
+              <span>إظهار العناوين</span>
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                checked={draftFilters.includeHeaders}
+                onChange={(event) =>
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    includeHeaders: event.target.checked,
+                  }))
+                }
+              />
+            </label>
           </div>
-        </CardContent>
-      </Card>
+        </FilterDrawer>
+
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm overflow-hidden">
+          <CardHeader className="space-y-3 bg-muted/30 pb-6 border-b border-border/60">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                مخرجات التقرير
+              </CardTitle>
+              <Badge variant="outline" className="rounded-full bg-background/50">
+                {REPORT_OPTIONS.find(o => o.value === reportType)?.label}
+              </Badge>
+            </div>
+            <CardDescription>
+              استعراض مخرجات التقرير المالي بناءً على المعايير المحددة أعلاه.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-4 pt-6">
+            {!canRunReport ? (
+              <FinanceEmptyState>
+                يجب تحديد معرّف القيد الدراسي لتوليد كشف حساب الطالب. استخدم شريط البحث أعلاه لإدخال المعرف.
+              </FinanceEmptyState>
+            ) : null}
+
+            {reportQuery.isPending ? (
+              <FinanceEmptyState>جارٍ توليد وتحميل مخرجات التقرير... يرجى الانتظار.</FinanceEmptyState>
+            ) : null}
+
+            {reportQuery.error ? (
+              <FinanceAlert tone="error">
+                {reportQuery.error instanceof Error
+                  ? reportQuery.error.message
+                  : "حدث خطأ غير متوقع أثناء محاولة تحميل التقرير."}
+              </FinanceAlert>
+            ) : null}
+
+            {report ? (
+              <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+                <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-muted/20 border border-border/60">
+                  <div className="flex flex-wrap items-center gap-4 text-xs font-medium">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-muted-foreground">تاريخ الإنشاء:</span>
+                      <span className="text-foreground">{report.generatedAt ? new Date(report.generatedAt).toLocaleString("ar-SA") : "-"}</span>
+                    </div>
+                    <div className="h-3 w-px bg-border/60" />
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-muted-foreground">عدد السجلات:</span>
+                      <span className="text-foreground">{reportRows.length}</span>
+                    </div>
+                  </div>
+                  
+                  {summaryEntries.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {summaryEntries.map(([key, value]) => (
+                        <div key={key} className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/5 border border-primary/20 text-[10px] font-bold text-primary">
+                          <span>{key}:</span>
+                          <span>{String(value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+
+                {reportRows.length > 0 ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-bold text-foreground">معاينة أولية للسجلات</p>
+                      <Badge variant="secondary" className="text-[10px]">JSON Format Preview</Badge>
+                    </div>
+                    <div className="relative group">
+                      <pre className="max-h-96 overflow-auto rounded-2xl border border-border/70 bg-background/50 p-4 text-[11px] font-mono leading-relaxed text-muted-foreground scrollbar-thin scrollbar-thumb-border">
+                        {JSON.stringify(reportRows, null, 2)}
+                      </pre>
+                      <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-background/80 to-transparent pointer-events-none rounded-b-2xl" />
+                    </div>
+                  </div>
+                ) : (
+                  <FinanceEmptyState>التقرير ناجح ولكن لا توجد سجلات مطابقة للمعايير المختارة.</FinanceEmptyState>
+                )}
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
       </div>
     </PageShell>
   );

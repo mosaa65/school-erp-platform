@@ -8,14 +8,12 @@ import {
   PencilLine,
   Plus,
   RefreshCw,
-  Search,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SelectField } from "@/components/ui/select-field";
-import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
   CardContent,
@@ -24,7 +22,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
+import { PageShell } from "@/components/ui/page-shell";
+import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
 import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
@@ -57,7 +57,6 @@ function toFormState(item: LookupOrphanStatusListItem): LookupOrphanStatusFormSt
   };
 }
 
-
 export function LookupOrphanStatusesWorkspace() {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("lookup-orphan-statuses.create");
@@ -69,14 +68,10 @@ export function LookupOrphanStatusesWorkspace() {
   const [search, setSearch] = React.useState("");
   const [activeFilter, setActiveFilter] = React.useState<
     "all" | "active" | "inactive" | "deleted"
-  >(
-    "all",
-  );
+  >("all");
   const [filterDraft, setFilterDraft] = React.useState<
     "all" | "active" | "inactive" | "deleted"
-  >(
-    "all",
-  );
+  >("all");
   const [editingLookupOrphanStatusId, setEditingLookupOrphanStatusId] = React.useState<
     number | null
   >(null);
@@ -130,10 +125,14 @@ export function LookupOrphanStatusesWorkspace() {
     }
   }, [editingLookupOrphanStatusId, isEditing, lookupOrphanStatuses]);
 
-  useDebounceEffect(() => {
+  useDebounceEffect(
+    () => {
       setPage(1);
       setSearch(searchInput.trim());
-    }, 400, [searchInput]);
+    },
+    400,
+    [searchInput],
+  );
 
   React.useEffect(() => {
     if (!isFilterOpen) {
@@ -160,15 +159,26 @@ export function LookupOrphanStatusesWorkspace() {
   };
 
   const validateForm = (): boolean => {
+    const code = formState.code.trim();
     const nameAr = formState.nameAr.trim();
 
+    if (!code) {
+      setFormError("كود الحالة مطلوب.");
+      return false;
+    }
+
+    if (code.length > 50) {
+      setFormError("كود الحالة يجب ألا يتجاوز 50 حرفًا.");
+      return false;
+    }
+
     if (!nameAr) {
-      setFormError("الاسم بالعربية مطلوب.");
+      setFormError("الاسم العربي مطلوب.");
       return false;
     }
 
     if (nameAr.length > 100) {
-      setFormError("الاسم بالعربية يجب ألا يتجاوز 100 حرف.");
+      setFormError("الاسم العربي يجب ألا يتجاوز 100 حرف.");
       return false;
     }
 
@@ -184,6 +194,7 @@ export function LookupOrphanStatusesWorkspace() {
     }
 
     const payload = {
+      code: formState.code.trim(),
       nameAr: formState.nameAr.trim(),
       isActive: formState.isActive,
     };
@@ -276,28 +287,15 @@ export function LookupOrphanStatusesWorkspace() {
   }, [activeFilter, searchInput]);
 
   return (
-    <>
+    <PageShell title="حالات اليتم">
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
-            <div className="relative flex-1">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث..."
-                className="pr-8"
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterTriggerButton
-              count={activeFiltersCount}
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-            />
-          </div>
-        </div>
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="بحث..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen(true)}
+        />
 
         <FilterDrawer
           open={isFilterOpen}
@@ -348,13 +346,13 @@ export function LookupOrphanStatusesWorkspace() {
 
           <CardContent className="space-y-3">
             {lookupOrphanStatusesQuery.isPending ? (
-              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+              <div className="rounded-2xl border border-dashed border-border/70 p-6 text-sm text-muted-foreground text-center">
                 جارٍ تحميل حالات اليتم...
               </div>
             ) : null}
 
             {lookupOrphanStatusesQuery.error ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
                 {lookupOrphanStatusesQuery.error instanceof Error
                   ? lookupOrphanStatusesQuery.error.message
                   : "فشل تحميل حالات اليتم"}
@@ -362,7 +360,7 @@ export function LookupOrphanStatusesWorkspace() {
             ) : null}
 
             {!lookupOrphanStatusesQuery.isPending && lookupOrphanStatuses.length === 0 ? (
-              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+              <div className="rounded-2xl border border-dashed border-border/70 p-6 text-sm text-muted-foreground text-center">
                 لا توجد نتائج مطابقة.
               </div>
             ) : null}
@@ -371,19 +369,18 @@ export function LookupOrphanStatusesWorkspace() {
               <div
                 key={item.id}
                 className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-                data-testid="orphan-status-card"
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="space-y-1">
                     <p className="font-medium">{item.nameAr}</p>
-                    <p className="text-xs text-muted-foreground">{item.code}</p>
+                    <p className="text-xs text-muted-foreground">الكود: {item.code}</p>
                   </div>
                   <Badge variant={item.isActive ? "default" : "outline"}>
                     {item.isActive ? "نشط" : "غير نشط"}
                   </Badge>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
                   <Button
                     variant="outline"
                     size="sm"
@@ -395,9 +392,9 @@ export function LookupOrphanStatusesWorkspace() {
                     تعديل
                   </Button>
                   <Button
-                    variant="destructive"
+                    variant="ghost"
                     size="sm"
-                    className="gap-1.5"
+                    className="gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
                     onClick={() => handleDelete(item)}
                     disabled={!canDelete || deleteMutation.isPending}
                   >
@@ -460,26 +457,34 @@ export function LookupOrphanStatusesWorkspace() {
       <Fab
         icon={<Plus className="h-4 w-4" />}
         label="إنشاء"
-        ariaLabel="إنشاء حالة يتيم"
+        ariaLabel="إنشاء حالة يتم"
         onClick={handleStartCreate}
         disabled={!canCreate}
       />
 
-      <BottomSheetForm
+      <CrudFormSheet
         open={isFormOpen}
-        title={isEditing ? "تعديل حالة يتيم" : "إنشاء حالة يتيم"}
+        title={isEditing ? "تعديل حالة يتم" : "إنشاء حالة يتم"}
         onClose={resetForm}
         onSubmit={() => handleSubmitForm()}
         isSubmitting={isFormSubmitting}
-        submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء حالة يتيم"}
-        showFooter={false}
+        submitLabel={isEditing ? "حفظ التعديلات" : "إسناد حالة يتم"}
       >
-        {!canCreate && !isEditing ? (
-          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            لا تملك الصلاحية المطلوبة: <code>lookup-orphan-statuses.create</code>.
-          </div>
-        ) : (
-          <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="orphan-status-form">
+        <form
+          className="space-y-4"
+          onSubmit={handleSubmitForm}
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">كود الحالة *</label>
+              <Input
+                value={formState.code}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, code: event.target.value }))
+                }
+                placeholder="مثال: ORPH-01"
+              />
+            </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">الاسم بالعربية *</label>
               <Input
@@ -487,59 +492,56 @@ export function LookupOrphanStatusesWorkspace() {
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, nameAr: event.target.value }))
                 }
-                placeholder="يتيم الأب"
-                required
-                data-testid="orphan-status-form-name-ar"
+                placeholder="مثال: يتم الأب"
               />
             </div>
+          </div>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-                data-testid="orphan-status-form-active"
-              />
-            </label>
+          <label className="flex items-center justify-between rounded-2xl border border-border/70 bg-background/50 px-4 py-2.5 text-sm">
+            <span>نشط</span>
+            <input
+              type="checkbox"
+              checked={formState.isActive}
+              onChange={(event) =>
+                setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+              }
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+          </label>
 
-            {formError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                {formError}
-              </div>
-            ) : null}
+          {formError ? (
+            <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
+              {formError}
+            </div>
+          ) : null}
 
-            {mutationError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                {mutationError}
-              </div>
-            ) : null}
+          {mutationError ? (
+            <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
+              {mutationError}
+            </div>
+          ) : null}
 
-            <div className="flex gap-2">
-              <Button
-                type="submit"
-                className="flex-1 gap-2"
-                disabled={isFormSubmitting || (!canCreate && !isEditing)}
-                data-testid="orphan-status-form-submit"
-              >
-                {isFormSubmitting ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : (
-                  <BadgeCheck className="h-4 w-4" />
-                )}
-                {isEditing ? "حفظ التعديلات" : "إنشاء حالة يتيم"}
+          <div className="flex gap-2 pt-2">
+            <Button
+              type="submit"
+              className="flex-1 gap-2"
+              disabled={isFormSubmitting || (!canCreate && !isEditing)}
+            >
+              {isFormSubmitting ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <BadgeCheck className="h-4 w-4" />
+              )}
+              {isEditing ? "حفظ التعديلات" : "إسناد حالة يتم"}
+            </Button>
+            {isEditing ? (
+              <Button type="button" variant="outline" onClick={resetForm}>
+                إلغاء
               </Button>
-              {isEditing ? (
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  إلغاء
-                </Button>
-              ) : null}
-            </div>
-          </form>
-        )}
-      </BottomSheetForm>
-    </>
+            ) : null}
+          </div>
+        </form>
+      </CrudFormSheet>
+    </PageShell>
   );
 }

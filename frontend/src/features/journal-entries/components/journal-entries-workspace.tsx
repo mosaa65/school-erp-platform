@@ -13,9 +13,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
-import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
+import { PageShell } from "@/components/ui/page-shell";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   FinanceAlert,
@@ -91,10 +91,16 @@ export function JournalEntriesWorkspace() {
   );
   const pagination = journalEntriesQuery.data?.pagination;
 
-  useDebounceEffect(() => {
+  const helperText = journalEntriesQuery.isFetching ? "جارٍ التحديث" : "بيانات مباشرة";
+
+  useDebounceEffect(
+    () => {
       setPage(1);
       setSearch(searchInput.trim());
-    }, 350, [searchInput]);
+    },
+    350,
+    [searchInput],
+  );
 
   React.useEffect(() => {
     if (!isFilterOpen) {
@@ -169,184 +175,205 @@ export function JournalEntriesWorkspace() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
-          <SearchField
-            containerClassName="flex-1"
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            placeholder="ابحث برقم القيد أو الوصف..."
-          />
-        </div>
-        <FilterTriggerButton
-          count={activeFiltersCount}
-          onClick={() => setIsFilterOpen((prev) => !prev)}
-        />
-      </div>
-
-      <FilterDrawer
-        open={isFilterOpen}
-        onClose={() => setIsFilterOpen(false)}
-        title="فلاتر القيود"
-        actionButtons={
-          <div className="flex w-full gap-2">
-            <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">
-              مسح
-            </Button>
-            <Button type="button" onClick={applyFilters} className="flex-1">
-              تطبيق
-            </Button>
-          </div>
-        }
-      >
-        <div className="grid gap-3 sm:grid-cols-2">
-          <SelectField
-            value={filterDraft}
-            onChange={(event) => setFilterDraft(event.target.value as JournalEntryStatus | "all")}
-          >
-            <option value="all">كل الحالات</option>
-            <option value="DRAFT">مسودة</option>
-            <option value="APPROVED">معتمد</option>
-            <option value="POSTED">مرحّل</option>
-            <option value="REVERSED">معكوس</option>
-          </SelectField>
-        </div>
-      </FilterDrawer>
-
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>القيود اليومية</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
-          </div>
-          <CardDescription>اعتماد وترحيل القيود المالية مع مراجعة الحالة.</CardDescription>
-        </CardHeader>
-
-        <CardContent className="space-y-3">
-          {journalEntriesQuery.isPending ? (
-            <FinanceEmptyState>جارٍ تحميل القيود...</FinanceEmptyState>
-          ) : null}
-
-          {journalEntriesQuery.error ? (
-            <FinanceAlert tone="error">
-              {journalEntriesQuery.error instanceof Error
-                ? journalEntriesQuery.error.message
-                : "فشل تحميل القيود"}
-            </FinanceAlert>
-          ) : null}
-
-          {!journalEntriesQuery.isPending && entries.length === 0 ? (
-            <FinanceEmptyState>لا توجد قيود مطابقة للبحث الحالي.</FinanceEmptyState>
-          ) : null}
-
-          {entries.map((entry) => (
-            <div
-              key={entry.id}
-              className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+    <PageShell
+      title="القيود اليومية"
+      subtitle="إدارة واعتماد القيود اليومية وترحيلها للأستاذ العام."
+    >
+      <div className="space-y-4">
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="ابحث برقم القيد أو الوصف..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen(true)}
+          actions={
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => void journalEntriesQuery.refetch()}
+              disabled={journalEntriesQuery.isFetching}
             >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <p className="font-medium">{entry.entryNo}</p>
-                  <p className="text-sm text-muted-foreground">{entry.description}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {entry.date} • المصدر: {entry.source} • المُنشئ: {entry.createdBy}
-                  </p>
-                </div>
-                <div className="space-y-2 text-right">
-                  <Badge variant={STATUS_VARIANTS[entry.status]}>
-                    {STATUS_LABELS[entry.status]}
-                  </Badge>
-                  <p className="text-xs text-muted-foreground">
-                    مدين: {entry.totalDebit.toLocaleString()} | دائن: {entry.totalCredit.toLocaleString()}
-                  </p>
-                </div>
-              </div>
+              <RefreshCw className={`h-4 w-4 ${journalEntriesQuery.isFetching ? "animate-spin" : ""}`} />
+              تحديث
+            </Button>
+          }
+        />
 
-              <div className="flex flex-wrap items-center gap-2">
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="فلاتر القيود"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">
+                مسح
+              </Button>
+              <Button type="button" onClick={applyFilters} className="flex-1">
+                تطبيق
+              </Button>
+            </div>
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">حالة القيد</label>
+              <SelectField
+                value={filterDraft}
+                onChange={(event) => setFilterDraft(event.target.value as JournalEntryStatus | "all")}
+              >
+                <option value="all">كل الحالات</option>
+                <option value="DRAFT">مسودة</option>
+                <option value="APPROVED">معتمد</option>
+                <option value="POSTED">مرحّل</option>
+                <option value="REVERSED">معكوس</option>
+              </SelectField>
+            </div>
+          </div>
+        </FilterDrawer>
+
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+          <CardHeader className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>القيود المتاحة</CardTitle>
+              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+            </div>
+            <CardDescription>
+              {helperText} - راجع القيود بعناية قبل الترحيل النهائي للأستاذ العام.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-3">
+            {journalEntriesQuery.isPending ? (
+              <FinanceEmptyState>جارٍ تحميل القيود...</FinanceEmptyState>
+            ) : null}
+
+            {journalEntriesQuery.error ? (
+              <FinanceAlert tone="error">
+                {journalEntriesQuery.error instanceof Error
+                  ? journalEntriesQuery.error.message
+                  : "فشل تحميل القيود"}
+              </FinanceAlert>
+            ) : null}
+
+            {!journalEntriesQuery.isPending && entries.length === 0 ? (
+              <FinanceEmptyState>لا توجد قيود مطابقة للبحث الحالي.</FinanceEmptyState>
+            ) : null}
+
+            <div className="grid gap-4 md:grid-cols-2">
+              {entries.map((entry) => (
+                <div
+                  key={entry.id}
+                  className="space-y-4 rounded-2xl border border-border/70 bg-background/50 p-4 transition-all hover:border-primary/30"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-lg">{entry.entryNo}</p>
+                        <Badge variant={STATUS_VARIANTS[entry.status]} className="h-5 text-[10px]">
+                          {STATUS_LABELS[entry.status]}
+                        </Badge>
+                      </div>
+                      <p className="text-sm font-medium">{entry.description}</p>
+                    </div>
+                    <div className="text-left">
+                      <p className="text-xs text-muted-foreground font-mono">{entry.date}</p>
+                      <div className="mt-1 flex flex-col items-end gap-0.5">
+                        <span className="text-[10px] uppercase text-muted-foreground leading-none">الإجمالي</span>
+                        <p className="text-sm font-bold text-emerald-600">
+                          {entry.totalDebit.toLocaleString()} <span className="text-[10px] font-normal opacity-70">ريال</span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl bg-muted/30 p-2.5 text-[11px] grid grid-cols-2 gap-2">
+                    <div className="space-y-0.5">
+                      <span className="text-muted-foreground">المصدر:</span>
+                      <p className="font-medium">{entry.source}</p>
+                    </div>
+                    <div className="space-y-0.5">
+                      <span className="text-muted-foreground">المُنشئ:</span>
+                      <p className="font-medium text-xs">{entry.createdBy}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/60">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 gap-1.5 h-8 text-xs"
+                      onClick={() => handleApprove(entry)}
+                      disabled={!canApproveAction || !canApprove(entry) || approveMutation.isPending}
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                      اعتماد
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 gap-1.5 h-8 text-xs"
+                      onClick={() => handlePost(entry)}
+                      disabled={!canPostAction || !canPost(entry) || postMutation.isPending}
+                    >
+                      <Send className="h-3.5 w-3.5 text-primary" />
+                      ترحيل
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="flex-1 gap-1.5 h-8 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => handleReverse(entry)}
+                      disabled={!canReverseAction || !canReverse(entry) || reverseMutation.isPending}
+                    >
+                      <Undo2 className="h-3.5 w-3.5" />
+                      عكس
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-4">
+              <p className="text-xs text-muted-foreground">
+                صفحة <strong className="text-foreground">{pagination?.page ?? 1}</strong> من <strong className="text-foreground">{pagination?.totalPages ?? 1}</strong>
+              </p>
+              <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleApprove(entry)}
-                  disabled={!canApproveAction || !canApprove(entry) || approveMutation.isPending}
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={!pagination || pagination.page <= 1 || journalEntriesQuery.isFetching}
                 >
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  اعتماد
+                  السابق
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-1.5"
-                  onClick={() => handlePost(entry)}
-                  disabled={!canPostAction || !canPost(entry) || postMutation.isPending}
+                  onClick={() =>
+                    setPage((prev) => (pagination ? Math.min(prev + 1, pagination.totalPages) : prev))
+                  }
+                  disabled={!pagination || pagination.page >= pagination.totalPages || journalEntriesQuery.isFetching}
                 >
-                  <Send className="h-3.5 w-3.5" />
-                  ترحيل
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleReverse(entry)}
-                  disabled={!canReverseAction || !canReverse(entry) || reverseMutation.isPending}
-                >
-                  <Undo2 className="h-3.5 w-3.5" />
-                  عكس
+                  التالي
                 </Button>
               </div>
             </div>
-          ))}
+          </CardContent>
+        </Card>
 
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-            <p className="text-xs text-muted-foreground">
-              صفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={!pagination || pagination.page <= 1 || journalEntriesQuery.isFetching}
-              >
-                السابق
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPage((prev) => (pagination ? Math.min(prev + 1, pagination.totalPages) : prev))
-                }
-                disabled={!pagination || pagination.page >= pagination.totalPages || journalEntriesQuery.isFetching}
-              >
-                التالي
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => void journalEntriesQuery.refetch()}
-                disabled={journalEntriesQuery.isFetching}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${journalEntriesQuery.isFetching ? "animate-spin" : ""}`}
-                />
-                تحديث
-              </Button>
+        <Card className="border-border/70 bg-card/80 overflow-hidden">
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm relative">
+            <div className="flex items-center gap-3 text-muted-foreground">
+              <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                <FileText className="h-4 w-4" />
+              </div>
+              <span className="leading-tight">تأكد من مراجعة الحسابات المدينة والدائنة قبل الاعتماد النهائي والترحيل.</span>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-card/80">
-        <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4 text-sm">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <FileText className="h-4 w-4" />
-            <span>راجع القيود بعناية قبل الترحيل النهائي للأستاذ العام.</span>
-          </div>
-          <Badge variant="outline">حالة المراجعة: تشغيل يدوي</Badge>
-        </CardContent>
-      </Card>
-    </div>
+            <Badge variant="outline" className="rounded-lg h-7 border-primary/20 bg-primary/5 text-primary">حالة المراجعة: تشغيل يدوي</Badge>
+          </CardContent>
+        </Card>
+      </div>
+    </PageShell>
   );
 }

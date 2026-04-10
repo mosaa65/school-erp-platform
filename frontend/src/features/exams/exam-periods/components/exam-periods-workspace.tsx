@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
@@ -984,3 +984,4 @@ export function ExamPeriodsWorkspace() {
     </PageShell>
   );
 }
+

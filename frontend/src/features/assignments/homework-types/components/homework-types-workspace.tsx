@@ -10,14 +10,17 @@ import {
   RefreshCw,
   ShieldAlert,
   Trash2,
+  Info,
+  Layout,
+  Layers,
+  Activity,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SearchField } from "@/components/ui/search-field";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
-import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
+import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
 import {
   Card,
   CardContent,
@@ -26,8 +29,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
+import { PageShell } from "@/components/ui/page-shell";
 import { generateAutoCode } from "@/lib/auto-code";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
@@ -78,7 +81,6 @@ function toFormState(item: HomeworkTypeListItem): HomeworkTypeFormState {
   };
 }
 
-
 export function HomeworkTypesWorkspace() {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("homework-types.create");
@@ -88,35 +90,24 @@ export function HomeworkTypesWorkspace() {
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
-  const [systemFilter, setSystemFilter] = React.useState<"all" | "system" | "custom">(
-    "all",
-  );
-  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
-    "all",
-  );
-  const [filterDraft, setFilterDraft] = React.useState<{
-    system: "all" | "system" | "custom";
-    active: "all" | "active" | "inactive";
-  }>({
-    system: "all",
-    active: "all",
+  const [systemFilter, setSystemFilter] = React.useState<"all" | "system" | "custom">("all");
+  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">("all");
+  const [filterDraft, setFilterDraft] = React.useState({
+    system: "all" as "all" | "system" | "custom",
+    active: "all" as "all" | "active" | "inactive",
   });
 
-  const [editingHomeworkTypeId, setEditingHomeworkTypeId] = React.useState<string | null>(
-    null,
-  );
+  const [editingId, setEditingId] = React.useState<string | null>(null);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [formState, setFormState] = React.useState<HomeworkTypeFormState>(DEFAULT_FORM_STATE);
+  const [form, setForm] = React.useState<HomeworkTypeFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
-  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
 
   const homeworkTypesQuery = useHomeworkTypesQuery({
     page,
     limit: PAGE_SIZE,
     search: search || undefined,
-    isSystem:
-      systemFilter === "all" ? undefined : systemFilter === "system",
+    isSystem: systemFilter === "all" ? undefined : systemFilter === "system",
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
   });
 
@@ -124,196 +115,68 @@ export function HomeworkTypesWorkspace() {
   const updateMutation = useUpdateHomeworkTypeMutation();
   const deleteMutation = useDeleteHomeworkTypeMutation();
 
-  const homeworkTypes = React.useMemo(
-    () => homeworkTypesQuery.data?.data ?? [],
-    [homeworkTypesQuery.data?.data],
-  );
+  const records = React.useMemo(() => homeworkTypesQuery.data?.data ?? [], [homeworkTypesQuery.data?.data]);
   const pagination = homeworkTypesQuery.data?.pagination;
-  const isEditing = editingHomeworkTypeId !== null;
-
-  const mutationError =
-    (createMutation.error as Error | null)?.message ??
-    (updateMutation.error as Error | null)?.message ??
-    (deleteMutation.error as Error | null)?.message ??
-    null;
-
-  React.useEffect(() => {
-    if (!isEditing) {
-      return;
-    }
-
-    const stillExists = homeworkTypes.some((item) => item.id === editingHomeworkTypeId);
-    if (!stillExists) {
-      setEditingHomeworkTypeId(null);
-      setFormState(DEFAULT_FORM_STATE);
-      setFormError(null);
-      setIsFormOpen(false);
-    }
-  }, [editingHomeworkTypeId, homeworkTypes, isEditing]);
+  const isEditing = editingId !== null;
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   useDebounceEffect(() => {
-      setPage(1);
-      setSearch(searchInput.trim());
-    }, 400, [searchInput]);
+    setPage(1);
+    setSearch(searchInput.trim());
+  }, 400, [searchInput]);
 
   React.useEffect(() => {
-    if (!isFilterOpen) {
-      return;
-    }
-
-    setFilterDraft({
-      system: systemFilter,
-      active: activeFilter,
-    });
+    if (!isFilterOpen) return;
+    setFilterDraft({ system: systemFilter, active: activeFilter });
   }, [activeFilter, isFilterOpen, systemFilter]);
 
   const resetFormState = () => {
-    setEditingHomeworkTypeId(null);
-    setFormState(DEFAULT_FORM_STATE);
+    setEditingId(null);
+    setForm(DEFAULT_FORM_STATE);
     setFormError(null);
-  };
-
-  const resetForm = () => {
-    resetFormState();
     setIsFormOpen(false);
-    setActionSuccess(null);
   };
 
   const handleStartCreate = () => {
-    if (!canCreate) {
-      return;
-    }
-
+    if (!canCreate) return;
     setFormError(null);
-    setActionSuccess(null);
-    setEditingHomeworkTypeId(null);
-    setFormState(createNewHomeworkTypeFormState());
+    setEditingId(null);
+    setForm(createNewHomeworkTypeFormState());
     setIsFormOpen(true);
   };
 
   const handleStartEdit = (item: HomeworkTypeListItem) => {
-    if (!canUpdate) {
-      return;
-    }
-
-    if (item.isSystem) {
-      setFormError("هذا نوع واجب نظامي. التعديل عليه محجوب من الواجهة.");
-      return;
-    }
-
+    if (!canUpdate || item.isSystem) return;
     setFormError(null);
-    setActionSuccess(null);
-    setEditingHomeworkTypeId(item.id);
-    setFormState(toFormState(item));
+    setEditingId(item.id);
+    setForm(toFormState(item));
     setIsFormOpen(true);
   };
 
-  const validateForm = (): boolean => {
-    const name = formState.name.trim();
-
-    if (!name) {
-      setFormError("الاسم مطلوب.");
-      return false;
-    }
-
-    if (name.length > 120) {
-      setFormError("الاسم يجب ألا يتجاوز 120 حرفًا.");
-      return false;
-    }
-
-    if (formState.description.trim().length > 255) {
-      setFormError("الوصف يجب ألا يتجاوز 255 حرفًا.");
-      return false;
-    }
-
-    setFormError(null);
-    return true;
-  };
-
-  const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setActionSuccess(null);
-
-    if (!validateForm()) {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name.trim()) {
+      setFormError("الاسم مطلوب لتعريف نوع الواجب.");
       return;
     }
 
     const payload = {
-      name: formState.name.trim(),
-      description: toOptionalString(formState.description),
-      isSystem: formState.isSystem,
-      isActive: formState.isActive,
+      name: form.name.trim(),
+      description: toOptionalString(form.description),
+      isSystem: form.isSystem,
+      isActive: form.isActive,
     };
 
-    if (isEditing && editingHomeworkTypeId) {
-      if (!canUpdate) {
-        setFormError("لا تملك الصلاحية المطلوبة: homework-types.update.");
-        return;
-      }
-
-      updateMutation.mutate(
-        {
-          homeworkTypeId: editingHomeworkTypeId,
-          payload,
-        },
-        {
-          onSuccess: () => {
-            resetFormState();
-            setActionSuccess("تم تحديث نوع الواجب بنجاح.");
-          },
-        },
-      );
-      return;
+    if (isEditing && editingId) {
+      updateMutation.mutate({ homeworkTypeId: editingId, payload }, { onSuccess: resetFormState });
+    } else {
+      createMutation.mutate(payload, { onSuccess: resetFormState });
     }
-
-    if (!canCreate) {
-      setFormError("لا تملك الصلاحية المطلوبة: homework-types.create.");
-      return;
-    }
-
-    createMutation.mutate(payload, {
-      onSuccess: () => {
-        resetFormState();
-        setPage(1);
-        setActionSuccess("تم إنشاء نوع الواجب بنجاح.");
-      },
-    });
   };
 
   const handleDelete = (item: HomeworkTypeListItem) => {
-    if (!canDelete) {
-      return;
-    }
-
-    if (item.isSystem) {
-      setFormError("لا يمكن حذف نوع واجب نظامي من الواجهة.");
-      return;
-    }
-
-    const confirmed = window.confirm(`تأكيد حذف نوع الواجب ${item.code}؟`);
-    if (!confirmed) {
-      return;
-    }
-
-    deleteMutation.mutate(item.id, {
-      onSuccess: () => {
-        if (editingHomeworkTypeId === item.id) {
-          resetForm();
-        }
-        setActionSuccess("تم حذف نوع الواجب بنجاح.");
-      },
-    });
-  };
-
-  const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
-
-  const clearFilters = () => {
-    setPage(1);
-    setSearchInput("");
-    setSearch("");
-    setSystemFilter("all");
-    setActiveFilter("all");
-    setIsFilterOpen(false);
+    if (!canDelete || item.isSystem || !window.confirm(`تأكيد حذف نوع الواجب ${item.code}؟`)) return;
+    deleteMutation.mutate(item.id);
   };
 
   const applyFilters = () => {
@@ -323,26 +186,49 @@ export function HomeworkTypesWorkspace() {
     setIsFilterOpen(false);
   };
 
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setSystemFilter("all");
+    setActiveFilter("all");
+    setFilterDraft({ system: "all", active: "all" });
+    setIsFilterOpen(false);
+  };
+
   const activeFiltersCount = React.useMemo(() => {
-    const count = [
+    return [
       searchInput.trim() ? 1 : 0,
       systemFilter !== "all" ? 1 : 0,
       activeFilter !== "all" ? 1 : 0,
-    ].reduce((acc, value) => acc + value, 0);
-    return count;
+    ].reduce((acc, v) => acc + v, 0);
   }, [activeFilter, searchInput, systemFilter]);
 
   return (
-    <>
+    <PageShell
+      title="أنواع الواجبات المدرسية"
+      subtitle="تحديد التصنيفات المختلفة للواجبات المدرسية (مثل: منزلي، بحث، مشروع، تقرير) وأتمتة تصنيفها."
+    >
       <div className="space-y-4">
-                  <ManagementToolbar
-            searchValue={searchInput}
-            onSearchChange={(event) => setSearchInput(event.target.value)}
-            searchPlaceholder="بحث بالاسم..."
-            filterCount={activeFiltersCount}
-            onFilterClick={() => setIsFilterOpen((prev) => !prev)}
-            showFilterButton={true}
-          />
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(e) => setSearchInput(e.target.value)}
+          searchPlaceholder="بحث في الأنواع..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen(true)}
+          actions={
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => void homeworkTypesQuery.refetch()}
+              disabled={homeworkTypesQuery.isFetching}
+            >
+              <RefreshCw className={`h-4 w-4 ${homeworkTypesQuery.isFetching ? "animate-spin" : ""}`} />
+              تحديث
+            </Button>
+          }
+        />
 
         <FilterDrawer
           open={isFilterOpen}
@@ -350,302 +236,211 @@ export function HomeworkTypesWorkspace() {
           title="فلاتر أنواع الواجبات"
           actionButtons={
             <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
+              <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">
                 مسح
               </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
+              <Button type="button" onClick={applyFilters} className="flex-1">
                 تطبيق
               </Button>
             </div>
           }
         >
-          <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.system}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  system: event.target.value as "all" | "system" | "custom",
-                }))
-              }
-            >
-              <option value="all">كل الأنواع</option>
-              <option value="system">النظامية فقط</option>
-              <option value="custom">المخصصة فقط</option>
-            </SelectField>
-
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </SelectField>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">التصنيف</label>
+              <SelectField value={filterDraft.system} onChange={(e) => setFilterDraft(p => ({ ...p, system: e.target.value as any }))}>
+                <option value="all">كل الأنواع</option>
+                <option value="system">أنواع النظام</option>
+                <option value="custom">أنواع مخصصة</option>
+              </SelectField>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الحالة</label>
+              <SelectField value={filterDraft.active} onChange={(e) => setFilterDraft(p => ({ ...p, active: e.target.value as any }))}>
+                <option value="all">كل الحالات</option>
+                <option value="active">نشط فقط</option>
+                <option value="inactive">معطل فقط</option>
+              </SelectField>
+            </div>
           </div>
         </FilterDrawer>
 
-        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-          <CardHeader className="space-y-3">
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm overflow-hidden">
+          <CardHeader className="space-y-3 bg-muted/20 border-b border-border/60 pb-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>أنواع الواجبات</CardTitle>
-              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+              <CardTitle className="flex items-center gap-2 text-lg font-bold">
+                <Layers className="h-5 w-5 text-primary" />
+                قائمة تصنيفات الواجبات
+              </CardTitle>
+              <Badge variant="secondary" className="rounded-full px-3">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
-            <CardDescription>إدارة أنواع الواجبات مع حماية الأنواع النظامية.</CardDescription>
+            <CardDescription>
+              يتم استخدام هذه الأنواع لتنظيم الواجبات وتسهيل مراجعتها من قبل الطلاب وأولياء الأمور.
+            </CardDescription>
           </CardHeader>
-
-          <CardContent className="space-y-3">
-          {homeworkTypesQuery.isPending ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ تحميل البيانات...
-            </div>
-          ) : null}
-
-          {homeworkTypesQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {homeworkTypesQuery.error instanceof Error
-                ? homeworkTypesQuery.error.message
-                : "تعذّر تحميل البيانات."}
-            </div>
-          ) : null}
-
-          {!homeworkTypesQuery.isPending && homeworkTypes.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              لا توجد نتائج مطابقة.
-            </div>
-          ) : null}
-
-          {homeworkTypes.map((item) => (
-            <div
-              key={item.id}
-              className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <p className="font-medium">
-                    {item.name} (<code>{item.code}</code>)
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {item.description ?? "-"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    عدد الواجبات المرتبطة: {item._count.homeworks}
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {item.isSystem ? (
-                    <Badge variant="outline" className="gap-1.5">
-                      <ShieldAlert className="h-3.5 w-3.5" />
-                      نظامي
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary">مخصص</Badge>
-                  )}
-                  <Badge variant={item.isActive ? "default" : "outline"}>
-                    {item.isActive ? "نشط" : "غير نشط"}
-                  </Badge>
-                </div>
+          
+          <CardContent className="space-y-4 pt-6">
+            {homeworkTypesQuery.isPending && (
+              <div className="rounded-2xl border border-dashed border-border/70 p-8 text-sm text-muted-foreground text-center font-medium">
+                جارٍ تحميل تصنيفات الواجبات...
               </div>
+            )}
 
-              <div className="flex flex-wrap items-center gap-2">
+            {!homeworkTypesQuery.isPending && records.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-border/70 p-8 text-sm text-muted-foreground text-center">
+                لا توجد أنواع واجبات مسجلة تتوافق مع البحث.
+              </div>
+            )}
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {records.map((item) => (
+                <div key={item.id} className="group relative space-y-4 rounded-2xl border border-border/70 bg-background/50 p-4 transition-all hover:border-primary/30 hover:shadow-lg">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="space-y-1">
+                      <p className="font-bold text-base leading-tight group-hover:text-primary transition-colors">
+                        {item.name}
+                      </p>
+                      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
+                        <Layout className="h-3 w-3" />
+                        <span>كود: {item.code}</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1.5">
+                      {item.isSystem ? (
+                        <Badge variant="outline" className="h-5 text-[8px] font-bold bg-sky-50 text-sky-700 border-sky-200 gap-1">
+                          <ShieldAlert className="h-2.5 w-2.5" /> نظام
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="h-5 text-[8px] font-bold bg-amber-50 text-amber-700 border-amber-200">مخصص</Badge>
+                      )}
+                      <Badge variant={item.isActive ? "default" : "secondary"} className="h-5 text-[8px] font-bold">
+                        {item.isActive ? "نشط" : "معطل"}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-2">
+                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                      <Info className="h-3 w-3" />
+                      <span className="font-bold uppercase tracking-tight">الوصف</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {item.description || "لا يوجد وصف إضافي لهذا النوع."}
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center justify-between gap-2 pt-1 mt-auto">
+                    <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground">
+                      <Activity className="h-3 w-3" />
+                      الواجبات: {item._count.homeworks}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 rounded-lg px-2 text-[11px] gap-1.5 font-bold"
+                        onClick={() => handleStartEdit(item)}
+                        disabled={!canUpdate || item.isSystem || updateMutation.isPending}
+                      >
+                        <PencilLine className="h-3.5 w-3.5" />
+                        تعديل
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 rounded-lg px-2 text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDelete(item)}
+                        disabled={!canDelete || item.isSystem || deleteMutation.isPending}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-6 mt-2">
+              <p className="text-xs text-muted-foreground">
+                صفحة <strong className="text-foreground">{pagination?.page ?? 1}</strong> من <strong className="text-foreground">{pagination?.totalPages ?? 1}</strong>
+              </p>
+              <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleStartEdit(item)}
-                  disabled={!canUpdate || item.isSystem || updateMutation.isPending}
+                  className="h-9 px-4 rounded-2xl"
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={!pagination || pagination.page <= 1 || homeworkTypesQuery.isFetching}
                 >
-                  <PencilLine className="h-3.5 w-3.5" />
-                  تعديل
+                  السابق
                 </Button>
                 <Button
-                  variant="destructive"
+                  variant="outline"
                   size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleDelete(item)}
-                  disabled={!canDelete || item.isSystem || deleteMutation.isPending}
+                  className="h-9 px-4 rounded-2xl"
+                  onClick={() =>
+                    setPage((prev) => (pagination ? Math.min(prev + 1, pagination.totalPages) : prev))
+                  }
+                  disabled={!pagination || pagination.page >= pagination.totalPages || homeworkTypesQuery.isFetching}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  حذف
+                  التالي
                 </Button>
               </div>
             </div>
-          ))}
-
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-            <p className="text-xs text-muted-foreground">
-              الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-            </p>
-
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={!pagination || pagination.page <= 1 || homeworkTypesQuery.isFetching}
-              >
-                السابق
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPage((prev) =>
-                    pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                  )
-                }
-                disabled={
-                  !pagination ||
-                  pagination.page >= pagination.totalPages ||
-                  homeworkTypesQuery.isFetching
-                }
-              >
-                التالي
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => void homeworkTypesQuery.refetch()}
-                disabled={homeworkTypesQuery.isFetching}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${homeworkTypesQuery.isFetching ? "animate-spin" : ""}`}
-                />
-                تحديث
-              </Button>
-            </div>
-          </div>
-        </CardContent>
+          </CardContent>
         </Card>
       </div>
 
       <Fab
-        icon={<Plus className="h-4 w-4" />}
-        label="إنشاء"
-        ariaLabel="إنشاء نوع واجب"
+        icon={<Plus className="h-5 w-5" />}
+        label="إضافة نوع"
         onClick={handleStartCreate}
         disabled={!canCreate}
       />
 
-      <BottomSheetForm
+      <CrudFormSheet
         open={isFormOpen}
-        title={isEditing ? "تعديل نوع واجب" : "إنشاء نوع واجب"}
-        onClose={resetForm}
-        onSubmit={() => undefined}
-        isSubmitting={isFormSubmitting}
-        submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء نوع واجب"}
-        showFooter={false}
+        onClose={resetFormState}
+        title={isEditing ? "تعديل نوع الواجب" : "إضافة نوع واجب جديد"}
+        isEditing={isEditing}
+        isSubmitting={isSubmitting}
+        onSubmit={handleSubmit}
       >
-        {!canCreate && !isEditing ? (
-          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            لا تملك الصلاحية المطلوبة: <code>homework-types.create</code>.
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5">
+              <BookOpenText className="h-3.5 w-3.5" /> اسم تصنيف الواجب *
+            </label>
+            <Input value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))} placeholder="مثال: واجب منزلي أسبوعي" />
           </div>
-        ) : (
-          <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
-              <Input
-                value={formState.name}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, name: event.target.value }))
-                }
-                placeholder="واجب منزلي"
-                required
-              />
-            </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الوصف</label>
-              <Input
-                value={formState.description}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, description: event.target.value }))
-                }
-                placeholder="واجب منزلي قياسي"
-              />
-            </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground uppercase">وصف التصنيف</label>
+            <Input value={form.description} onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))} placeholder="أضف وصفاً مختصراً لاستخدامه في التقارير" />
+          </div>
 
-            <div className="grid gap-2 md:grid-cols-2">
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نوع نظامي</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isSystem}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isSystem: event.target.checked }))
-                  }
-                />
-              </label>
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشط</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                />
-              </label>
-            </div>
-
-            {formError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                {formError}
+          <div className="grid gap-3 pt-2">
+            <label className="flex items-center justify-between rounded-2xl border border-border/70 bg-muted/20 px-4 py-3 text-sm transition-all hover:bg-muted/30">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className={`h-4 w-4 ${form.isSystem ? 'text-sky-500' : 'text-muted-foreground'}`} />
+                <span className="font-bold">تعيين كنوع نظامي (محمي)</span>
               </div>
-            ) : null}
+              <input type="checkbox" className="h-5 w-5 rounded-lg border-primary/30 text-primary" checked={form.isSystem} onChange={(e) => setForm(p => ({ ...p, isSystem: e.target.checked }))} />
+            </label>
+            
+            <label className="flex items-center justify-between rounded-2xl border border-border/70 bg-muted/20 px-4 py-3 text-sm transition-all hover:bg-muted/30">
+              <span className="font-bold text-foreground">تفعيل النوع للاستخدام العام</span>
+              <input type="checkbox" className="h-5 w-5 rounded-lg border-primary/30 text-primary" checked={form.isActive} onChange={(e) => setForm(p => ({ ...p, isActive: e.target.checked }))} />
+            </label>
+          </div>
 
-            {mutationError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                {mutationError}
-              </div>
-            ) : null}
-            {actionSuccess ? (
-              <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
-                {actionSuccess}
-              </div>
-            ) : null}
-
-            <div className="flex gap-2">
-              <Button
-                type="submit"
-                className="flex-1 gap-2"
-                disabled={isFormSubmitting || (!canCreate && !isEditing)}
-              >
-                {isFormSubmitting ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : (
-                  <BookOpenText className="h-4 w-4" />
-                )}
-                {isEditing ? "حفظ التعديلات" : "إنشاء نوع واجب"}
-              </Button>
-              {isEditing ? (
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  إلغاء
-                </Button>
-              ) : null}
+          {formError && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive font-bold text-center">
+              {formError}
             </div>
-          </form>
-        )}
-      </BottomSheetForm>
-    </>
+          )}
+        </div>
+      </CrudFormSheet>
+    </PageShell>
   );
 }
-
-
-
-
-
-

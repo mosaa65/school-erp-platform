@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
@@ -15,7 +15,6 @@ import {
   Plus,
   RefreshCw,
   ShieldAlert,
-  SlidersHorizontal,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +23,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { Input } from "@/components/ui/input";
-import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
@@ -287,33 +285,13 @@ export function PromotionDecisionsWorkspace() {
     <PageShell title="قرارات الترقية">
 
       <div className="space-y-4">
-        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
-          <div className="min-w-0">
-            <SearchField
-              containerClassName="min-w-0"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="ابحث بالاسم..."
-            />
-          </div>
-          <div className="flex items-center gap-2 md:justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-              className="relative h-11 w-11 shrink-0 rounded-full border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] px-0 text-[color:var(--app-accent-color)] shadow-[0_14px_34px_-22px_rgba(15,23,42,0.55)] md:w-auto md:px-4"
-              aria-label="فلترة"
-            >
-              <SlidersHorizontal className="h-4 w-4 md:hidden" />
-              <span className="hidden md:inline">فلترة</span>
-              {activeFiltersCount > 0 ? (
-                <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[color:var(--app-accent-color)] px-1 text-[10px] font-bold text-white shadow-sm">
-                  {activeFiltersCount}
-                </span>
-              ) : null}
-            </Button>
-          </div>
-        </div>
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="ابحث بالاسم..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen(true)}
+        />
 
         <FilterDrawer
           open={isFilterOpen}

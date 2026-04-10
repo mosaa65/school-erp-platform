@@ -4,7 +4,6 @@ import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   CalendarClock,
-  Filter,
   LoaderCircle,
   PencilLine,
   Plus,
@@ -14,9 +13,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SearchField } from "@/components/ui/search-field";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
+import { PageShell } from "@/components/ui/page-shell";
 import { SelectField } from "@/components/ui/select-field";
-import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
+import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
 import {
   Card,
   CardContent,
@@ -469,34 +469,15 @@ export function TimetableEntriesWorkspace() {
   }, [activeFilter, dayFilter, offeringFilter, searchInput, sectionFilter, termFilter]);
 
   return (
-    <>
+    <PageShell title="الجدول الدراسي">
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-1 flex-wrap items-center gap-2 min-w-0 sm:min-w-[240px] max-w-lg">
-            <SearchField
-              containerClassName="flex-1"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="بحث بالمادة أو الشعبة أو القاعة..."
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              className="gap-2"
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-            >
-              <Filter className="h-4 w-4" />
-              فلترة
-              {activeFiltersCount > 0 ? (
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
-                  {activeFiltersCount}
-                </span>
-              ) : null}
-            </Button>
-          </div>
-        </div>
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="بحث بالمادة أو الشعبة أو القاعة..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen(true)}
+        />
 
         <FilterDrawer
           open={isFilterOpen}
@@ -757,14 +738,13 @@ export function TimetableEntriesWorkspace() {
         disabled={!canCreate}
       />
 
-      <BottomSheetForm
+      <CrudFormSheet
         open={isFormOpen}
         title={isEditing ? "تعديل حصة جدول" : "إنشاء حصة جدول"}
         onClose={resetForm}
         onSubmit={() => handleSubmitForm()}
         isSubmitting={isFormSubmitting}
         submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء حصة"}
-        showFooter={false}
       >
         {!canCreate && !isEditing ? (
           <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
@@ -951,7 +931,7 @@ export function TimetableEntriesWorkspace() {
             </div>
           </form>
         )}
-      </BottomSheetForm>
-    </>
+      </CrudFormSheet>
+    </PageShell>
   );
 }

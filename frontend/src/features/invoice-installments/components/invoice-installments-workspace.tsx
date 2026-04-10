@@ -13,13 +13,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Input } from "@/components/ui/input";
 import { PageShell } from "@/components/ui/page-shell";
 import { SelectField } from "@/components/ui/select-field";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   FinanceAlert,
@@ -332,16 +332,13 @@ export function InvoiceInstallmentsWorkspace() {
   };
 
   const clearFilters = () => {
-    setFilters({
+    const resetFilters = {
       invoiceId: "",
       dueDateFrom: "",
       dueDateTo: "",
-    });
-    setFilterDraft({
-      invoiceId: "",
-      dueDateFrom: "",
-      dueDateTo: "",
-    });
+    };
+    setFilters(resetFilters);
+    setFilterDraft(resetFilters);
     setIsFilterOpen(false);
   };
 
@@ -358,249 +355,250 @@ export function InvoiceInstallmentsWorkspace() {
     <PageShell
       title="تقسيط الفواتير"
       subtitle="لوحة متابعة أقساط الفواتير ومواعيد الاستحقاق لكل طالب."
-      actions={
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1.5"
-          onClick={() => void installmentsQuery.refetch()}
-          disabled={installmentsQuery.isFetching}
-        >
-          <RefreshCw className="h-4 w-4" />
-          تحديث
-        </Button>
-      }
     >
-      <Card className="border-emerald-500/20 bg-emerald-500/5">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle className="flex items-center gap-2">
-              <CalendarClock className="h-5 w-5 text-emerald-600" />
-              ملخص التقسيط
-            </CardTitle>
-            <Badge variant="outline" className="border-emerald-500/30 text-emerald-700">
-              {helperText}
-            </Badge>
-          </div>
-          <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-            <span>الإجمالي: {summary.totalCount}</span>
-            <span>معلق: {summary.counts.PENDING}</span>
-            <span>جزئي: {summary.counts.PARTIAL}</span>
-            <span>مسدد: {summary.counts.PAID}</span>
-            <span>متأخر: {summary.counts.OVERDUE}</span>
-            <span>ملغى: {summary.counts.CANCELLED}</span>
-          </div>
-        </CardHeader>
-      </Card>
-
-      <div className="flex justify-end">
-        <FilterTriggerButton
-          count={activeFiltersCount}
-          onClick={() => setIsFilterOpen((prev) => !prev)}
-        />
-      </div>
-
-      <FilterDrawer
-        open={isFilterOpen}
-        onClose={() => setIsFilterOpen(false)}
-        title="فلاتر الأقساط"
-        actionButtons={
-          <div className="flex w-full gap-2">
-            <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">
-              مسح
-            </Button>
-            <Button type="button" onClick={applyFilters} className="flex-1">
-              تطبيق
-            </Button>
-          </div>
-        }
-      >
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Input
-            value={filterDraft.invoiceId}
-            onChange={(event) =>
-              setFilterDraft((prev) => ({ ...prev, invoiceId: event.target.value }))
-            }
-            placeholder="معرّف الفاتورة"
-          />
-          <Input
-            type="date"
-            value={filterDraft.dueDateFrom}
-            onChange={(event) =>
-              setFilterDraft((prev) => ({ ...prev, dueDateFrom: event.target.value }))
-            }
-            placeholder="من تاريخ"
-          />
-          <Input
-            type="date"
-            value={filterDraft.dueDateTo}
-            onChange={(event) =>
-              setFilterDraft((prev) => ({ ...prev, dueDateTo: event.target.value }))
-            }
-            placeholder="إلى تاريخ"
-          />
-        </div>
-      </FilterDrawer>
-
-      <Card className="border-border/70 bg-card/80">
-        <CardContent className="flex flex-wrap items-center gap-2 py-4">
-          <span className="text-sm text-muted-foreground">تصنيف سريع:</span>
-          {(["all", "PENDING", "PARTIAL", "PAID", "OVERDUE", "CANCELLED"] as const).map(
-            (status) => (
+      <div className="space-y-4">
+        <ManagementToolbar
+          searchValue={filters.invoiceId}
+          onSearchChange={(event) => setFilters((prev) => ({ ...prev, invoiceId: event.target.value }))}
+          searchPlaceholder="بحث بمعرف الفاتورة..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen(true)}
+          actions={
             <Button
-              key={status}
+              variant="outline"
               size="sm"
-              variant={filter === status ? "default" : "outline"}
-              onClick={() => setFilter(status)}
+              className="gap-1.5"
+              onClick={() => void installmentsQuery.refetch()}
+              disabled={installmentsQuery.isFetching}
             >
-              {status === "all" ? "الكل" : STATUS_LABELS[status as InstallmentStatus]}
+              <RefreshCw className={`h-4 w-4 ${installmentsQuery.isFetching ? "animate-spin" : ""}`} />
+              تحديث
             </Button>
-            ),
-          )}
-        </CardContent>
-      </Card>
+          }
+        />
 
-      {installmentsQuery.isPending ? (
-        <FinanceEmptyState>جارٍ تحميل البيانات...</FinanceEmptyState>
-      ) : null}
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card className="md:col-span-3 border-emerald-500/20 bg-emerald-500/5">
+            <CardHeader className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <CardTitle className="flex items-center gap-2">
+                  <CalendarClock className="h-5 w-5 text-emerald-600" />
+                  ملخص التقسيط
+                </CardTitle>
+                <Badge variant="outline" className="border-emerald-500/30 text-emerald-700">
+                  {helperText}
+                </Badge>
+              </div>
+              <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                <span>الإجمالي: <strong className="text-foreground">{summary.totalCount}</strong></span>
+                <span>معلق: <strong className="text-foreground">{summary.counts.PENDING}</strong></span>
+                <span>جزئي: <strong className="text-foreground">{summary.counts.PARTIAL}</strong></span>
+                <span>مسدد: <strong className="text-foreground">{summary.counts.PAID}</strong></span>
+                <span>متأخر: <strong className="text-foreground">{summary.counts.OVERDUE}</strong></span>
+                <span>ملغى: <strong className="text-foreground">{summary.counts.CANCELLED}</strong></span>
+              </div>
+            </CardHeader>
+          </Card>
 
-      {installmentsQuery.error ? (
-        <FinanceAlert tone="error">
-          {installmentsQuery.error instanceof Error
-            ? installmentsQuery.error.message
-            : "تعذّر تحميل البيانات."}
-        </FinanceAlert>
-      ) : null}
+          <Card className="border-border/70 bg-card/80">
+            <CardHeader className="p-4">
+              <CardTitle className="text-sm font-medium">تصنيف سريع</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <SelectField
+                value={filter}
+                onChange={(event) => setFilter(event.target.value as any)}
+                className="h-9 text-xs"
+              >
+                <option value="all">الكل</option>
+                {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </SelectField>
+            </CardContent>
+          </Card>
+        </div>
 
-      {!installmentsQuery.isPending && installments.length === 0 ? (
-        <FinanceEmptyState>لا توجد أقساط مطابقة.</FinanceEmptyState>
-      ) : null}
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="فلاتر الأقساط"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">
+                مسح
+              </Button>
+              <Button type="button" onClick={applyFilters} className="flex-1">
+                تطبيق
+              </Button>
+            </div>
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">من تاريخ الاستحقاق</label>
+              <Input
+                type="date"
+                value={filterDraft.dueDateFrom}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, dueDateFrom: event.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">إلى تاريخ الاستحقاق</label>
+              <Input
+                type="date"
+                value={filterDraft.dueDateTo}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, dueDateTo: event.target.value }))
+                }
+              />
+            </div>
+          </div>
+        </FilterDrawer>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {installments.map((installment: InvoiceInstallmentListItem) => {
-          const amount = toNumber(installment.amount);
-          const paidAmount = toNumber(installment.paidAmount);
-          const remainingAmount = Math.max(amount - paidAmount, 0);
-          const progressPercent = amount > 0 ? Math.round((paidAmount / amount) * 100) : 0;
-          const invoiceNumber = installment.invoice?.invoiceNumber ?? "غير محددة";
+        {installmentsQuery.isPending ? (
+          <FinanceEmptyState>جارٍ تحميل البيانات...</FinanceEmptyState>
+        ) : null}
 
-          return (
-            <Card key={installment.id} className="border-border/70 bg-card/80">
-              <CardHeader className="space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <CardTitle className="text-base">
-                    قسط رقم {installment.installmentNumber}
-                  </CardTitle>
-                  <Badge variant={STATUS_VARIANTS[installment.status]}>
-                    {STATUS_LABELS[installment.status]}
-                  </Badge>
-                </div>
-                <div className="space-y-1 text-sm text-muted-foreground">
-                  <p>الفاتورة: {invoiceNumber}</p>
-                  <p>تاريخ الاستحقاق: {installment.dueDate}</p>
-                  {installment.paymentDate ? (
-                    <p>تاريخ السداد: {installment.paymentDate}</p>
-                  ) : null}
-                </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <div className="rounded-md border border-dashed px-3 py-2 text-sm">
-                    <span className="text-muted-foreground">الإجمالي</span>
-                    <div className="font-semibold text-emerald-700">
-                      {amount.toLocaleString("ar-SA")} ريال
+        {installmentsQuery.error ? (
+          <FinanceAlert tone="error">
+            {installmentsQuery.error instanceof Error
+              ? installmentsQuery.error.message
+              : "تعذّر تحميل البيانات."}
+          </FinanceAlert>
+        ) : null}
+
+        {!installmentsQuery.isPending && installments.length === 0 ? (
+          <FinanceEmptyState>لا توجد أقساط مطابقة.</FinanceEmptyState>
+        ) : null}
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {installments.map((installment: InvoiceInstallmentListItem) => {
+            const amount = toNumber(installment.amount);
+            const paidAmount = toNumber(installment.paidAmount);
+            const remainingAmount = Math.max(amount - paidAmount, 0);
+            const progressPercent = amount > 0 ? Math.round((paidAmount / amount) * 100) : 0;
+            const invoiceNumber = installment.invoice?.invoiceNumber ?? "غير محددة";
+
+            return (
+              <Card key={installment.id} className="border-border/70 bg-card/80 transition-all hover:border-emerald-500/30">
+                <CardHeader className="space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <CardTitle className="text-base font-bold">
+                      قسط رقم {installment.installmentNumber}
+                    </CardTitle>
+                    <Badge variant={STATUS_VARIANTS[installment.status]}>
+                      {STATUS_LABELS[installment.status]}
+                    </Badge>
+                  </div>
+                  <div className="space-y-1 text-sm text-muted-foreground">
+                    <p className="flex items-center justify-between font-medium text-foreground">
+                      <span>الفاتورة:</span>
+                      <span className="text-primary">{invoiceNumber}</span>
+                    </p>
+                    <p className="flex items-center justify-between">
+                      <span>الاستحقاق:</span>
+                      <span>{installment.dueDate}</span>
+                    </p>
+                    {installment.paymentDate ? (
+                      <p className="flex items-center justify-between">
+                        <span>السداد:</span>
+                        <span>{installment.paymentDate}</span>
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="grid gap-2 grid-cols-2">
+                    <div className="rounded-2xl border border-dashed border-border/70 bg-background/50 px-3 py-1.5 text-center">
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">الإجمالي</span>
+                      <div className="font-bold text-emerald-700">
+                        {amount.toLocaleString("ar-SA")}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-dashed border-border/70 bg-background/50 px-3 py-1.5 text-center">
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">المتبقي</span>
+                      <div className="font-bold text-amber-700">
+                        {remainingAmount.toLocaleString("ar-SA")}
+                      </div>
                     </div>
                   </div>
-                  <div className="rounded-md border border-dashed px-3 py-2 text-sm">
-                    <span className="text-muted-foreground">المتبقي</span>
-                    <div className="font-semibold text-amber-700">
-                      {remainingAmount.toLocaleString("ar-SA")} ريال
+                  
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs font-medium">
+                      <span className="text-muted-foreground">نسبة السداد</span>
+                      <span>{progressPercent}%</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-500 transition-all duration-500"
+                        style={{ width: `${progressPercent}%` }}
+                      />
                     </div>
                   </div>
-                </div>
-                <div className="rounded-md border border-dashed px-3 py-2 text-sm">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-muted-foreground">التقدم</span>
-                    <span className="font-medium">{progressPercent}%</span>
-                  </div>
-                  <div className="mt-2 h-2 w-full rounded-full bg-muted">
-                    <div
-                      className="h-2 rounded-full bg-emerald-500"
-                      style={{ width: `${progressPercent}%` }}
-                    />
-                  </div>
-                  <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                    <Timer className="h-3.5 w-3.5" />
-                    المسدد: {paidAmount.toLocaleString("ar-SA")} ريال
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => handleStartEdit(installment)}
-                    disabled={!canUpdate || updateMutation.isPending}
-                  >
-                    <PencilLine className="h-3.5 w-3.5" />
-                    تعديل
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => {
-                      if (!canDelete) {
-                        return;
-                      }
-                      if (
-                        !confirmFinanceAction(
-                          `تأكيد حذف القسط رقم ${installment.installmentNumber}?`,
-                        )
-                      ) {
-                        return;
-                      }
-                      deleteMutation.mutate(installment.id);
-                    }}
-                    disabled={!canDelete || deleteMutation.isPending}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    حذف
-                  </Button>
-                </div>
-              </CardHeader>
-            </Card>
-          );
-        })}
-      </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-        <p className="text-xs text-muted-foreground">
-          الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-        </p>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-            disabled={!pagination || pagination.page <= 1 || installmentsQuery.isFetching}
-          >
-            السابق
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              setPage((prev) =>
-                pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-              )
-            }
-            disabled={
-              !pagination ||
-              pagination.page >= pagination.totalPages ||
-              installmentsQuery.isFetching
-            }
-          >
-            التالي
-          </Button>
+                  <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 gap-1.5"
+                      onClick={() => handleStartEdit(installment)}
+                      disabled={!canUpdate || updateMutation.isPending}
+                    >
+                      <PencilLine className="h-3.5 w-3.5" />
+                      تعديل
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="flex-1 gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => {
+                        if (!canDelete) return;
+                        if (!confirmFinanceAction(`تأكيد حذف القسط رقم ${installment.installmentNumber}?`)) return;
+                        deleteMutation.mutate(installment.id);
+                      }}
+                      disabled={!canDelete || deleteMutation.isPending}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      حذف
+                    </Button>
+                  </div>
+                </CardHeader>
+              </Card>
+            );
+          })}
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-4">
+          <p className="text-xs text-muted-foreground">
+            الصفحة <strong className="text-foreground">{pagination?.page ?? 1}</strong> من <strong className="text-foreground">{pagination?.totalPages ?? 1}</strong>
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+              disabled={!pagination || pagination.page <= 1 || installmentsQuery.isFetching}
+            >
+              السابق
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setPage((prev) =>
+                  pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
+                )
+              }
+              disabled={
+                !pagination ||
+                pagination.page >= pagination.totalPages ||
+                installmentsQuery.isFetching
+              }
+            >
+              التالي
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -622,11 +620,11 @@ export function InvoiceInstallmentsWorkspace() {
         showFooter={false}
       >
         {!canCreate && !isEditing ? (
-          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+          <div className="rounded-2xl border border-dashed border-border/70 p-6 text-sm text-muted-foreground text-center">
             لا تملك صلاحية الإضافة: <code>invoice-installments.create</code>.
           </div>
         ) : (
-          <form className="space-y-3" onSubmit={handleSubmitForm}>
+          <form className="space-y-4" onSubmit={handleSubmitForm}>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
                 معرف الفاتورة {!isEditing ? "*" : ""}
@@ -636,7 +634,7 @@ export function InvoiceInstallmentsWorkspace() {
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, invoiceId: event.target.value }))
                 }
-                placeholder="invoiceId"
+                placeholder="مثال: inv-12345"
                 required={!isEditing}
               />
             </div>
@@ -749,33 +747,37 @@ export function InvoiceInstallmentsWorkspace() {
               <Input
                 value={form.notes}
                 onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
-                placeholder="ملاحظات إضافية"
+                placeholder="ملاحظات إضافية بخصوص القسط"
               />
             </div>
 
             {formError ? (
-              <FinanceAlert tone="error" className="p-2 text-xs">
+              <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
                 {formError}
-              </FinanceAlert>
+              </div>
             ) : null}
 
             {mutationError ? (
-              <FinanceAlert tone="error" className="p-2 text-xs">
+              <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
                 {mutationError}
-              </FinanceAlert>
+              </div>
             ) : null}
 
-            <div className="flex gap-2">
-              <Button type="submit" className="flex-1 gap-2" disabled={isSubmitting}>
+            <div className="flex gap-2 pt-2">
+              <button
+                type="submit"
+                className="flex-1 flex items-center justify-center gap-2 bg-primary text-primary-foreground h-10 px-4 py-2 rounded-2xl font-medium transition-colors hover:bg-primary/90 disabled:opacity-50"
+                disabled={isSubmitting}
+              >
                 {isSubmitting ? (
                   <LoaderCircle className="h-4 w-4 animate-spin" />
                 ) : (
                   <CalendarClock className="h-4 w-4" />
                 )}
-                {isEditing ? "حفظ التغييرات" : "إضافة قسط"}
-              </Button>
+                {isEditing ? "حفظ التغييرات" : "إضافة قسط جديد"}
+              </button>
               {isEditing ? (
-                <Button type="button" variant="outline" onClick={resetForm}>
+                <Button type="button" variant="outline" onClick={resetForm} className="rounded-2xl h-10">
                   إلغاء
                 </Button>
               ) : null}

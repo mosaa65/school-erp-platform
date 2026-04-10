@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { Gift, RefreshCw, Users } from "lucide-react";
@@ -13,7 +13,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { SelectField } from "@/components/ui/select-field";
 import { useCommunityContributionsQuery } from "@/features/community-contributions/hooks/use-community-contributions-query";
 
@@ -371,3 +370,4 @@ export function CommunityContributionsWorkspace() {
     </div>
   );
 }
+

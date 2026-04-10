@@ -148,8 +148,6 @@ export function StudentHomeworksWorkspace() {
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");  
   const [homeworkFilter, setHomeworkFilter] = React.useState("all");
-  const [enrollmentFilter, setEnrollmentFilter] = React.useState("all");
-  const [studentFilter, setStudentFilter] = React.useState("all");
   const [completedFilter, setCompletedFilter] = React.useState<"all" | "completed" | "pending">("all");
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">("all");
 
@@ -175,8 +173,6 @@ export function StudentHomeworksWorkspace() {
     limit: PAGE_SIZE,
     search: search || undefined,
     homeworkId: homeworkFilter === "all" ? undefined : homeworkFilter,
-    studentEnrollmentId: enrollmentFilter === "all" ? undefined : enrollmentFilter,
-    studentId: studentFilter === "all" ? undefined : studentFilter,
     isCompleted: completedFilter === "all" ? undefined : completedFilter === "completed",
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
   });
@@ -212,11 +208,6 @@ export function StudentHomeworksWorkspace() {
     [selectedEnrollmentForForm],
   );
 
-  const mutationError =
-    (createMutation.error as Error | null)?.message ??
-    (updateMutation.error as Error | null)?.message ??
-    (deleteMutation.error as Error | null)?.message ??
-    null;
 
   React.useEffect(() => {
     if (!isEditing) {

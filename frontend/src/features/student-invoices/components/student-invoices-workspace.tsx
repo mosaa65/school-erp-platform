@@ -12,17 +12,16 @@ import {
 } from "lucide-react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import { Badge } from "@/components/ui/badge";
-import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Input } from "@/components/ui/input";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { PageShell } from "@/components/ui/page-shell";
-import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
+import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   FinanceAppliedFiltersSummary,
@@ -506,18 +505,18 @@ export function StudentInvoicesWorkspace() {
         ثم استخدم البحث برقم الفاتورة للوصول المباشر قبل فتح الفلاتر التفصيلية.
       </FinanceInlineHint>
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <SearchField
-            containerClassName="max-w-md"
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            placeholder="بحث برقم الفاتورة..."
-          />
+      <ManagementToolbar
+        searchValue={searchInput}
+        onSearchChange={(event) => setSearchInput(event.target.value)}
+        searchPlaceholder="بحث برقم الفاتورة..."
+        filterCount={activeFiltersCount}
+        onFilterClick={() => setIsFilterOpen(true)}
+      >
+        <div className="flex items-center gap-2">
           <SelectField
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value as "all" | InvoiceStatus)}
-            className="max-w-[180px]"
+            className="w-[180px]"
           >
             <option value="all">كل الحالات</option>
             <option value="DRAFT">مسودة</option>
@@ -531,11 +530,7 @@ export function StudentInvoicesWorkspace() {
             النتائج: {pagination?.total ?? invoices.length}
           </Badge>
         </div>
-        <FilterTriggerButton
-          count={activeFiltersCount}
-          onClick={() => setIsFilterOpen((prev) => !prev)}
-        />
-      </div>
+      </ManagementToolbar>
 
       <div className="flex flex-wrap gap-2">
         {STATUS_FILTER_OPTIONS.map((option) => {
@@ -738,14 +733,13 @@ export function StudentInvoicesWorkspace() {
         disabled={!canCreate}
       />
 
-      <BottomSheetForm
+      <CrudFormSheet
         open={isFormOpen}
         title={isEditing ? "تعديل فاتورة" : "إضافة فاتورة"}
         onClose={resetForm}
         onSubmit={() => undefined}
         isSubmitting={isSubmitting}
         submitLabel={isEditing ? "حفظ التغييرات" : "إضافة فاتورة"}
-        showFooter={false}
       >
         {!canCreate && !isEditing ? (
           <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
@@ -1004,7 +998,7 @@ export function StudentInvoicesWorkspace() {
             </div>
           </form>
         )}
-      </BottomSheetForm>
+      </CrudFormSheet>
     </PageShell>
   );
 }

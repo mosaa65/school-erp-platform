@@ -9,18 +9,21 @@ import {
   RefreshCw,
   Trash2,
   UsersRound,
+  ShieldCheck,
+  Scale,
+  Calendar,
+  Layers,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Input } from "@/components/ui/input";
 import { PageShell } from "@/components/ui/page-shell";
-import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
+import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   FinanceAlert,
@@ -145,7 +148,7 @@ export function DiscountRulesWorkspace() {
   });
   const [filterDraft, setFilterDraft] = React.useState(filters);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
-  const [editingId, setEditingId] = React.useState<number | null>(null);
+  const [editingItem, setEditingItem] = React.useState<DiscountRuleListItem | null>(null);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [form, setForm] = React.useState<FormState>(DEFAULT_FORM);
   const [formError, setFormError] = React.useState<string | null>(null);
@@ -173,29 +176,17 @@ export function DiscountRulesWorkspace() {
 
   const summary = React.useMemo(() => {
     const activeCount = rules.filter((rule) => rule.isActive).length;
-    const inactiveCount = rules.filter((rule) => !rule.isActive).length;
-
     return {
       totalCount: pagination?.total ?? rules.length,
       activeCount,
-      inactiveCount,
     };
   }, [pagination?.total, rules]);
 
   const categories = React.useMemo(() => {
-    const unique = new Set(rules.map((rule) => rule.discountType));
-    return ["all", ...Array.from(unique)];
-  }, [rules]);
+    return ["all", ...Object.keys(DISCOUNT_TYPE_LABELS)];
+  }, []);
 
-  const filteredRules = React.useMemo(() => {
-    if (activeCategory === "all") {
-      return rules;
-    }
-    return rules.filter((rule) => rule.discountType === activeCategory);
-  }, [activeCategory, rules]);
-
-  const ownerNote = discountRulesQuery.isFetching ? "جارٍ التحديث" : "بيانات مباشرة";
-  const isEditing = editingId !== null;
+  const isEditing = editingItem !== null;
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   const mutationError =
@@ -203,20 +194,6 @@ export function DiscountRulesWorkspace() {
     (updateMutation.error as Error | null)?.message ??
     (deleteMutation.error as Error | null)?.message ??
     null;
-
-  React.useEffect(() => {
-    if (!isEditing) {
-      return;
-    }
-
-    const stillExists = rules.some((item) => item.id === editingId);
-    if (!stillExists) {
-      setEditingId(null);
-      setForm(DEFAULT_FORM);
-      setFormError(null);
-      setIsFormOpen(false);
-    }
-  }, [editingId, isEditing, rules]);
 
   useDebounceEffect(
     () => {
@@ -226,43 +203,25 @@ export function DiscountRulesWorkspace() {
     [searchInput],
   );
 
-  React.useEffect(() => {
-    if (!isFilterOpen) {
-      return;
-    }
-
-    setFilterDraft(filters);
-  }, [filters, isFilterOpen]);
-
-  const resetFormState = () => {
-    setEditingId(null);
+  const resetForm = () => {
+    setEditingItem(null);
     setForm(DEFAULT_FORM);
     setFormError(null);
-  };
-
-  const resetForm = () => {
-    resetFormState();
     setIsFormOpen(false);
   };
 
   const handleStartCreate = () => {
-    if (!canCreate) {
-      return;
-    }
-
+    if (!canCreate) return;
     setFormError(null);
-    setEditingId(null);
+    setEditingItem(null);
     setForm(DEFAULT_FORM);
     setIsFormOpen(true);
   };
 
   const handleStartEdit = (item: DiscountRuleListItem) => {
-    if (!canUpdate) {
-      return;
-    }
-
+    if (!canUpdate) return;
     setFormError(null);
-    setEditingId(item.id);
+    setEditingItem(item);
     setForm(toFormState(item));
     setIsFormOpen(true);
   };
@@ -270,27 +229,16 @@ export function DiscountRulesWorkspace() {
   const validateForm = (): boolean => {
     const nameAr = form.nameAr.trim();
     const value = Number(form.value);
-
     if (!nameAr || Number.isNaN(value)) {
       setFormError("يرجى تعبئة الحقول المطلوبة: الاسم والقيمة.");
       return false;
     }
-
-    if (value < 0) {
-      setFormError("القيمة يجب أن تكون 0 أو أكثر.");
-      return false;
-    }
-
-    setFormError(null);
     return true;
   };
 
-  const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
 
     const payload = {
       nameAr: form.nameAr.trim(),
@@ -298,46 +246,23 @@ export function DiscountRulesWorkspace() {
       calculationMethod: form.calculationMethod,
       value: Number(form.value),
       appliesToFeeType: form.appliesToFeeType,
-      siblingOrderFrom: form.siblingOrderFrom.trim()
-        ? Number(form.siblingOrderFrom)
-        : undefined,
-      maxDiscountPercentage: form.maxDiscountPercentage.trim()
-        ? Number(form.maxDiscountPercentage)
-        : undefined,
+      siblingOrderFrom: form.siblingOrderFrom.trim() ? Number(form.siblingOrderFrom) : undefined,
+      maxDiscountPercentage: form.maxDiscountPercentage.trim() ? Number(form.maxDiscountPercentage) : undefined,
       requiresApproval: form.requiresApproval,
-      discountGlAccountId: form.discountGlAccountId.trim()
-        ? Number(form.discountGlAccountId)
-        : undefined,
-      contraGlAccountId: form.contraGlAccountId.trim()
-        ? Number(form.contraGlAccountId)
-        : undefined,
+      discountGlAccountId: form.discountGlAccountId.trim() ? Number(form.discountGlAccountId) : undefined,
+      contraGlAccountId: form.contraGlAccountId.trim() ? Number(form.contraGlAccountId) : undefined,
       academicYearId: form.academicYearId.trim() || undefined,
       isActive: form.isActive,
     };
 
-    if (isEditing && editingId !== null) {
-      if (!canUpdate) {
-        setFormError("لا تملك صلاحية التحديث: discount-rules.update.");
-        return;
-      }
-
+    if (isEditing && editingItem) {
       updateMutation.mutate(
-        { discountRuleId: editingId, payload },
-        {
-          onSuccess: () => resetFormState(),
-        },
+        { discountRuleId: editingItem.id, payload },
+        { onSuccess: resetForm }
       );
-      return;
+    } else {
+      createMutation.mutate(payload, { onSuccess: resetForm });
     }
-
-    if (!canCreate) {
-      setFormError("لا تملك صلاحية الإضافة: discount-rules.create.");
-      return;
-    }
-
-    createMutation.mutate(payload, {
-      onSuccess: () => resetFormState(),
-    });
   };
 
   const applyFilters = () => {
@@ -346,16 +271,9 @@ export function DiscountRulesWorkspace() {
   };
 
   const clearFilters = () => {
-    setFilters({
-      appliesToFeeType: "all",
-      academicYearId: "",
-      isActive: "all",
-    });
-    setFilterDraft({
-      appliesToFeeType: "all",
-      academicYearId: "",
-      isActive: "all",
-    });
+    const cleared = { appliesToFeeType: "all" as const, academicYearId: "", isActive: "all" as const };
+    setFilters(cleared);
+    setFilterDraft(cleared);
     setIsFilterOpen(false);
   };
 
@@ -372,451 +290,330 @@ export function DiscountRulesWorkspace() {
   return (
     <PageShell
       title="قواعد الخصومات"
-      subtitle="إدارة الخصومات العائلية والتحفيزية والمنح وربطها بالفواتير."
-      actions={
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1.5"
-          onClick={() => void discountRulesQuery.refetch()}
-          disabled={discountRulesQuery.isFetching}
-        >
-          <RefreshCw className="h-4 w-4" />
-          تحديث
-        </Button>
-      }
+      subtitle="إدارة وتخصيص سياسات الخصم للأشقاء والمنح والحالات الخاصة."
     >
-      <Card className="border-emerald-500/20 bg-emerald-500/5">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle className="flex items-center gap-2">
-              <BadgePercent className="h-5 w-5 text-emerald-600" />
-              ملخص الخصومات
-            </CardTitle>
-            <Badge variant="outline" className="border-emerald-500/30 text-emerald-700">
-              {ownerNote}
-            </Badge>
-          </div>
-          <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-            <span>إجمالي القواعد: {summary.totalCount}</span>
-            <span>النشطة: {summary.activeCount}</span>
-            <span>غير النشطة: {summary.inactiveCount}</span>
-          </div>
-        </CardHeader>
-      </Card>
-
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <SearchField
-          containerClassName="max-w-md"
-          value={searchInput}
-          onChange={(event) => setSearchInput(event.target.value)}
-          placeholder="بحث بالاسم..."
-        />
-        <FilterTriggerButton
-          count={activeFiltersCount}
-          onClick={() => setIsFilterOpen((prev) => !prev)}
-        />
-      </div>
-
-      <FilterDrawer
-        open={isFilterOpen}
-        onClose={() => setIsFilterOpen(false)}
-        title="فلاتر قواعد الخصم"
-        actionButtons={
-          <div className="flex w-full gap-2">
-            <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">
-              مسح
-            </Button>
-            <Button type="button" onClick={applyFilters} className="flex-1">
-              تطبيق
-            </Button>
-          </div>
-        }
-      >
-        <div className="grid gap-3 sm:grid-cols-2">
-          <SelectField
-            value={filterDraft.appliesToFeeType}
-            onChange={(event) =>
-              setFilterDraft((prev) => ({
-                ...prev,
-                appliesToFeeType: event.target.value as "all" | DiscountAppliesToFeeType,
-              }))
-            }
-          >
-            <option value="all">كل الرسوم</option>
-            {Object.entries(FEE_SCOPE_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </SelectField>
-          <Input
-            value={filterDraft.academicYearId}
-            onChange={(event) =>
-              setFilterDraft((prev) => ({ ...prev, academicYearId: event.target.value }))
-            }
-            placeholder="معرّف السنة الأكاديمية"
-          />
-          <SelectField
-            value={filterDraft.isActive}
-            onChange={(event) =>
-              setFilterDraft((prev) => ({
-                ...prev,
-                isActive: event.target.value as "all" | "active" | "inactive",
-              }))
-            }
-          >
-            <option value="all">كل الحالات</option>
-            <option value="active">نشط</option>
-            <option value="inactive">غير نشط</option>
-          </SelectField>
-        </div>
-      </FilterDrawer>
-
-      <Card className="border-border/70 bg-card/80">
-        <CardContent className="flex flex-wrap items-center gap-2 py-4">
-          <span className="text-sm text-muted-foreground">تصنيف سريع:</span>
-          {categories.map((category) => (
+      <div className="space-y-4">
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(e) => setSearchInput(e.target.value)}
+          searchPlaceholder="بحث باسم قاعدة الخصم..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen(true)}
+          actions={
             <Button
-              key={category}
+              variant="outline"
               size="sm"
-              variant={activeCategory === category ? "default" : "outline"}
-              onClick={() =>
-                setActiveCategory(category === "all" ? "all" : (category as DiscountType))
-              }
+              className="gap-1.5"
+              onClick={() => void discountRulesQuery.refetch()}
+              disabled={discountRulesQuery.isFetching}
             >
-              {category === "all"
-                ? "الكل"
-                : DISCOUNT_TYPE_LABELS[category as DiscountType] ?? category}
+              <RefreshCw className={`h-4 w-4 ${discountRulesQuery.isFetching ? "animate-spin" : ""}`} />
+              تحديث
+            </Button>
+          }
+        />
+
+        <div className="flex flex-wrap items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          <Button
+            size="sm"
+            variant={activeCategory === "all" ? "default" : "outline"}
+            className="rounded-full px-4"
+            onClick={() => setActiveCategory("all")}
+          >
+            الكل
+            <Badge variant="secondary" className="mr-1.5 h-4 px-1 text-[10px]">{summary.totalCount}</Badge>
+          </Button>
+          {Object.entries(DISCOUNT_TYPE_LABELS).map(([value, label]) => (
+            <Button
+              key={value}
+              size="sm"
+              variant={activeCategory === value ? "default" : "outline"}
+              className="rounded-full px-4"
+              onClick={() => setActiveCategory(value as DiscountType)}
+            >
+              {label}
             </Button>
           ))}
-        </CardContent>
-      </Card>
+        </div>
 
-      {discountRulesQuery.isPending ? (
-        <FinanceEmptyState>جارٍ تحميل البيانات...</FinanceEmptyState>
-      ) : null}
-
-      {discountRulesQuery.error ? (
-        <FinanceAlert tone="error">
-          {discountRulesQuery.error instanceof Error
-            ? discountRulesQuery.error.message
-            : "تعذّر تحميل البيانات."}
-        </FinanceAlert>
-      ) : null}
-
-      {!discountRulesQuery.isPending && filteredRules.length === 0 ? (
-        <FinanceEmptyState>لا توجد قواعد خصم مطابقة.</FinanceEmptyState>
-      ) : null}
-
-      <div className="grid gap-4 md:grid-cols-2">
-        {filteredRules.map((rule: DiscountRuleListItem) => {
-          const value = toNumber(rule.value);
-          const valueLabel =
-            rule.calculationMethod === "PERCENTAGE"
-              ? `${value}%`
-              : `${value.toLocaleString("ar-SA")} ريال`;
-          const scopeLabel =
-            FEE_SCOPE_LABELS[rule.appliesToFeeType] ?? rule.appliesToFeeType;
-          const academicYearLabel = rule.academicYear?.name ?? "جميع السنوات";
-          const requiresApprovalLabel = rule.requiresApproval ? "يتطلب اعتماد" : "آلي";
-
-          return (
-          <Card key={rule.id} className="border-border/70 bg-card/80">
-            <CardHeader className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <CardTitle className="text-base">{rule.nameAr}</CardTitle>
-                <Badge variant={statusBadgeVariant(rule.isActive)}>
-                  {statusLabel(rule.isActive)}
-                </Badge>
-              </div>
-              <div className="space-y-1 text-sm text-muted-foreground">
-                <p>
-                  التصنيف: {DISCOUNT_TYPE_LABELS[rule.discountType] ?? rule.discountType}
-                </p>
-                <p>النطاق: {scopeLabel}</p>
-                <p>
-                  القيمة ({CALCULATION_LABELS[rule.calculationMethod]}): {valueLabel}
-                </p>
-                <p>السنة الأكاديمية: {academicYearLabel}</p>
-              </div>
-              <div className="flex items-center justify-between rounded-md border border-dashed px-3 py-2 text-sm">
-                <span className="text-muted-foreground">سياسة الموافقة</span>
-                <span className="flex items-center gap-2 font-medium">
-                  <UsersRound className="h-4 w-4 text-emerald-600" />
-                  {requiresApprovalLabel}
-                </span>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleStartEdit(rule)}
-                  disabled={!canUpdate || updateMutation.isPending}
-                >
-                  <PencilLine className="h-3.5 w-3.5" />
-                  تعديل
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => {
-                    if (!canDelete) {
-                      return;
-                    }
-                    if (!confirmFinanceAction(`تأكيد حذف قاعدة الخصم ${rule.nameAr}?`)) {
-                      return;
-                    }
-                    deleteMutation.mutate(rule.id);
-                  }}
-                  disabled={!canDelete || deleteMutation.isPending}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  حذف
-                </Button>
-              </div>
-            </CardHeader>
-          </Card>
-          );
-        })}
-      </div>
-
-      <Fab
-        icon={<Plus className="h-4 w-4" />}
-        label="إضافة"
-        ariaLabel="إضافة قاعدة خصم"
-        onClick={handleStartCreate}
-        disabled={!canCreate}
-      />
-
-      <BottomSheetForm
-        open={isFormOpen}
-        title={isEditing ? "تعديل قاعدة خصم" : "إضافة قاعدة خصم"}
-        onClose={resetForm}
-        onSubmit={() => undefined}
-        isSubmitting={isSubmitting}
-        submitLabel={isEditing ? "حفظ التغييرات" : "إضافة قاعدة"}
-        showFooter={false}
-      >
-        {!canCreate && !isEditing ? (
-          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            لا تملك صلاحية الإضافة: <code>discount-rules.create</code>.
-          </div>
-        ) : (
-          <form className="space-y-3" onSubmit={handleSubmitForm}>
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="فلاتر قواعد الخصم"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">
+                مسح
+              </Button>
+              <Button type="button" onClick={applyFilters} className="flex-1">
+                تطبيق
+              </Button>
+            </div>
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
+              <label className="text-xs font-medium text-muted-foreground">نطاق الرسوم</label>
+              <SelectField
+                value={filterDraft.appliesToFeeType}
+                onChange={(e) => setFilterDraft((p) => ({ ...p, appliesToFeeType: e.target.value as any }))}
+              >
+                <option value="all">كل الرسوم</option>
+                {Object.entries(FEE_SCOPE_LABELS).map(([v, l]) => (
+                  <option key={v} value={v}>{l}</option>
+                ))}
+              </SelectField>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">السنة الأكاديمية</label>
+              <Input
+                value={filterDraft.academicYearId}
+                onChange={(e) => setFilterDraft((p) => ({ ...p, academicYearId: e.target.value }))}
+                placeholder="Id"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الحالة</label>
+              <SelectField
+                value={filterDraft.isActive}
+                onChange={(e) => setFilterDraft((p) => ({ ...p, isActive: e.target.value as any }))}
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">نشط</option>
+                <option value="inactive">غير نشط</option>
+              </SelectField>
+            </div>
+          </div>
+        </FilterDrawer>
+
+        {discountRulesQuery.isPending && <FinanceEmptyState>جارٍ تحميل القواعد...</FinanceEmptyState>}
+        
+        {!discountRulesQuery.isPending && rules.length === 0 && (
+          <FinanceEmptyState>لا توجد قواعد خصم مسجلة حتى الآن.</FinanceEmptyState>
+        )}
+
+        <div className="grid gap-4 md:grid-cols-2">
+          {rules.map((rule) => {
+            const valueLabel = rule.calculationMethod === "PERCENTAGE" ? `${rule.value}%` : `${rule.value.toLocaleString()} ريال`;
+            return (
+              <Card key={rule.id} className="group relative overflow-hidden border-border/70 bg-card/80 transition-all hover:border-primary/40 hover:shadow-lg">
+                <CardHeader className="p-4 flex flex-row items-center justify-between space-y-0">
+                  <div className="space-y-1">
+                    <CardTitle className="text-base font-bold group-hover:text-primary transition-colors">
+                      {rule.nameAr}
+                    </CardTitle>
+                    <Badge variant="outline" className="h-5 text-[10px] font-medium bg-muted/50">
+                      {DISCOUNT_TYPE_LABELS[rule.discountType] ?? rule.discountType}
+                    </Badge>
+                  </div>
+                  <Badge variant={rule.isActive ? "default" : "secondary"} className="h-5 text-[9px] uppercase tracking-tighter">
+                    {rule.isActive ? "نشط" : "معطل"}
+                  </Badge>
+                </CardHeader>
+                
+                <CardContent className="p-4 pt-0 space-y-4">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-xl bg-primary/5 border border-primary/10 p-2.5 space-y-1">
+                      <span className="text-[9px] uppercase text-muted-foreground font-bold leading-none">قيمة الخصم</span>
+                      <p className="text-lg font-black text-primary">{valueLabel}</p>
+                    </div>
+                    <div className="rounded-xl bg-muted/20 p-2.5 space-y-1">
+                      <span className="text-[9px] uppercase text-muted-foreground leading-none font-bold">النطاق</span>
+                      <p className="text-sm font-bold truncate">{FEE_SCOPE_LABELS[rule.appliesToFeeType] ?? rule.appliesToFeeType}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2 text-[11px] text-muted-foreground border-t border-border/50 pt-3">
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> الاعتماد:</span>
+                      <span className="font-bold text-foreground">{rule.requiresApproval ? "يدوي (يتطلب موافقة)" : "تلقائي"}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> السنة:</span>
+                      <span className="font-bold text-foreground">{rule.academicYear?.name ?? "عام"}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 h-8 text-[11px] gap-1.5 rounded-lg group-hover:border-primary/50"
+                      onClick={() => handleStartEdit(rule)}
+                      disabled={!canUpdate || updateMutation.isPending}
+                    >
+                      <PencilLine className="h-3.5 w-3.5 text-primary" />
+                      تعديل
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 text-[11px] gap-1.5 rounded-lg text-destructive hover:bg-destructive/10"
+                      onClick={() => {
+                        if (!canDelete) return;
+                        if (!confirmFinanceAction(`تأكيد حذف قاعدة الخصم ${rule.nameAr}?`)) return;
+                        deleteMutation.mutate(rule.id);
+                      }}
+                      disabled={!canDelete || deleteMutation.isPending}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      حذف
+                    </Button>
+                  </div>
+                </CardContent>
+                {!rule.isActive && <div className="absolute inset-0 bg-background/40 backdrop-grayscale pointer-events-none" />}
+              </Card>
+            );
+          })}
+        </div>
+
+        <Fab
+          icon={<Plus className="h-5 w-5" />}
+          label="إضافة قاعدة جديدة"
+          onClick={handleStartCreate}
+          disabled={!canCreate}
+        />
+
+        <CrudFormSheet
+          open={isFormOpen}
+          onClose={resetForm}
+          title={isEditing ? "تحديث قاعدة الخصم" : "إنشاء قاعدة خصم جديدة"}
+          isEditing={isEditing}
+          isSubmitting={isSubmitting}
+          onSubmit={handleSubmit}
+        >
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted-foreground uppercase">اسم القاعدة *</label>
               <Input
                 value={form.nameAr}
-                onChange={(event) => setForm((prev) => ({ ...prev, nameAr: event.target.value }))}
-                placeholder="اسم قاعدة الخصم"
+                onChange={(e) => setForm((p) => ({ ...p, nameAr: e.target.value }))}
+                placeholder="مثال: خصم الأخ الثاني الابتدائي"
                 required
               />
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">التصنيف *</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5">
+                  <Layers className="h-3.5 w-3.5" /> التصنيف الرئيسي *
+                </label>
                 <SelectField
                   value={form.discountType}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      discountType: event.target.value as DiscountType,
-                    }))
-                  }
+                  onChange={(e) => setForm((p) => ({ ...p, discountType: e.target.value as DiscountType }))}
                 >
-                  {Object.entries(DISCOUNT_TYPE_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
+                  {Object.entries(DISCOUNT_TYPE_LABELS).map(([v, l]) => (
+                    <option key={v} value={v}>{l}</option>
                   ))}
                 </SelectField>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">النطاق *</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5">
+                  <Scale className="h-3.5 w-3.5" /> نطاق التطبيق *
+                </label>
                 <SelectField
                   value={form.appliesToFeeType}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      appliesToFeeType: event.target.value as DiscountAppliesToFeeType,
-                    }))
-                  }
+                  onChange={(e) => setForm((p) => ({ ...p, appliesToFeeType: e.target.value as DiscountAppliesToFeeType }))}
                 >
-                  {Object.entries(FEE_SCOPE_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
+                  {Object.entries(FEE_SCOPE_LABELS).map(([v, l]) => (
+                    <option key={v} value={v}>{l}</option>
                   ))}
                 </SelectField>
               </div>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  طريقة الحساب *
+                <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5">
+                  <BadgePercent className="h-3.5 w-3.5" /> طريقة الحساب *
                 </label>
                 <SelectField
                   value={form.calculationMethod}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      calculationMethod: event.target.value as DiscountCalculationMethod,
-                    }))
-                  }
+                  onChange={(e) => setForm((p) => ({ ...p, calculationMethod: e.target.value as DiscountCalculationMethod }))}
                 >
-                  {Object.entries(CALCULATION_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
+                  {Object.entries(CALCULATION_LABELS).map(([v, l]) => (
+                    <option key={v} value={v}>{l}</option>
                   ))}
                 </SelectField>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">القيمة *</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase">القيمة *</label>
                 <Input
                   type="number"
                   min="0"
                   value={form.value}
-                  onChange={(event) => setForm((prev) => ({ ...prev, value: event.target.value }))}
-                  placeholder="0"
+                  onChange={(e) => setForm((p) => ({ ...p, value: e.target.value }))}
+                  placeholder="0.00"
                   required
                 />
               </div>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  ترتيب الأخوة من
-                </label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={form.siblingOrderFrom}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, siblingOrderFrom: event.target.value }))
-                  }
-                  placeholder="اختياري"
-                />
+            {form.discountType === 'SIBLING' && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase">ترتيب الأخ من</label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={form.siblingOrderFrom}
+                    onChange={(e) => setForm((p) => ({ ...p, siblingOrderFrom: e.target.value }))}
+                    placeholder="مثال: 2"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase">الحد الأعلى للخصم %</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={form.maxDiscountPercentage}
+                    onChange={(e) => setForm((p) => ({ ...p, maxDiscountPercentage: e.target.value }))}
+                    placeholder="100"
+                  />
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  الحد الأعلى للنسبة
-                </label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={form.maxDiscountPercentage}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, maxDiscountPercentage: event.target.value }))
-                  }
-                  placeholder="اختياري"
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  حساب الخصم
-                </label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={form.discountGlAccountId}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, discountGlAccountId: event.target.value }))
-                  }
-                  placeholder="معرّف الحساب (اختياري)"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  حساب مقابل
-                </label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={form.contraGlAccountId}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, contraGlAccountId: event.target.value }))
-                  }
-                  placeholder="معرّف الحساب (اختياري)"
-                />
-              </div>
-            </div>
+            )}
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                السنة الأكاديمية
+              <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5" /> السنة الأكاديمية
               </label>
               <Input
                 value={form.academicYearId}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, academicYearId: event.target.value }))
-                }
-                placeholder="معرّف السنة (اختياري)"
+                onChange={(e) => setForm((p) => ({ ...p, academicYearId: e.target.value }))}
+                placeholder="Id للسنة (اختياري)"
               />
             </div>
 
-            <div className="grid gap-2 md:grid-cols-2">
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span className="flex items-center gap-2">يتطلب اعتماد</span>
+            <div className="grid gap-3 pt-2">
+              <label className="flex items-center justify-between rounded-2xl border border-border/70 bg-muted/20 px-4 py-3 text-sm">
+                <span className="font-bold flex items-center gap-2">
+                  <UsersRound className="h-4 w-4 text-emerald-600" /> يتطلب اعتماد مدير النظام
+                </span>
                 <input
                   type="checkbox"
+                  className="h-5 w-5 rounded-lg border-primary/30 text-primary focus:ring-primary"
                   checked={form.requiresApproval}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, requiresApproval: event.target.checked }))
-                  }
+                  onChange={(e) => setForm((p) => ({ ...p, requiresApproval: e.target.checked }))}
                 />
               </label>
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span className="flex items-center gap-2">نشط</span>
+              <label className="flex items-center justify-between rounded-2xl border border-border/70 bg-muted/20 px-4 py-3 text-sm">
+                <span className="font-bold flex items-center gap-2">تفعيل القاعدة</span>
                 <input
                   type="checkbox"
+                  className="h-5 w-5 rounded-lg border-primary/30 text-primary focus:ring-primary"
                   checked={form.isActive}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
+                  onChange={(e) => setForm((p) => ({ ...p, isActive: e.target.checked }))}
                 />
               </label>
             </div>
 
-            {formError ? (
-              <FinanceAlert tone="error" className="p-2 text-xs">
-                {formError}
-              </FinanceAlert>
-            ) : null}
-
-            {mutationError ? (
-              <FinanceAlert tone="error" className="p-2 text-xs">
-                {mutationError}
-              </FinanceAlert>
-            ) : null}
-
-            <div className="flex gap-2">
-              <Button type="submit" className="flex-1 gap-2" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : (
-                  <BadgePercent className="h-4 w-4" />
-                )}
-                {isEditing ? "حفظ التغييرات" : "إضافة قاعدة"}
-              </Button>
-              {isEditing ? (
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  إلغاء
-                </Button>
-              ) : null}
-            </div>
-          </form>
-        )}
-      </BottomSheetForm>
+            {formError && <FinanceAlert tone="error">{formError}</FinanceAlert>}
+            {mutationError && <FinanceAlert tone="error">{mutationError}</FinanceAlert>}
+          </div>
+        </CrudFormSheet>
+      </div>
     </PageShell>
   );
 }

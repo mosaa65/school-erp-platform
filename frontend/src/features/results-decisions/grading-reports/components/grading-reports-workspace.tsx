@@ -20,9 +20,7 @@ import {
 } from "@/components/ui/card";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Input } from "@/components/ui/input";
-import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
 import { useAcademicTermOptionsQuery } from "@/features/results-decisions/grading-reports/hooks/use-academic-term-options-query";
 import { useAcademicYearOptionsQuery } from "@/features/results-decisions/grading-reports/hooks/use-academic-year-options-query";
@@ -399,4 +397,5 @@ export function GradingReportsWorkspace() {
     </PageShell>
   );
 }
+
 

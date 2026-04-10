@@ -8,7 +8,6 @@ import {
   PencilLine,
   Plus,
   RefreshCw,
-  Search,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +23,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
+import { PageShell } from "@/components/ui/page-shell";
 import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
@@ -353,28 +353,15 @@ export function LookupGradeDescriptionsWorkspace() {
   }, [activeFilter, searchInput]);
 
   return (
-    <>
+    <PageShell title="أوصاف التقديرات">
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
-            <div className="relative flex-1">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث بالاسم..."
-                className="pr-8"
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterTriggerButton
-              count={activeFiltersCount}
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-            />
-          </div>
-        </div>
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="بحث بالاسم..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen(true)}
+        />
 
         <FilterDrawer
           open={isFilterOpen}
@@ -420,18 +407,18 @@ export function LookupGradeDescriptionsWorkspace() {
               <CardTitle>أوصاف التقديرات</CardTitle>
               <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
-            <CardDescription>إدارة نطاقات النِّسَب وأوصاف التقدير المرتبطة بها.</CardDescription>
+            <CardDescription>إدارة نطاقات النِّسَب وأوصاف التقدير المرتبطة بها.</CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-3">
             {lookupGradeDescriptionsQuery.isPending ? (
-              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+              <div className="rounded-2xl border border-dashed border-border/70 p-6 text-sm text-muted-foreground text-center">
                 جارٍ تحميل أوصاف التقديرات...
               </div>
             ) : null}
 
             {lookupGradeDescriptionsQuery.error ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
                 {lookupGradeDescriptionsQuery.error instanceof Error
                   ? lookupGradeDescriptionsQuery.error.message
                   : "فشل تحميل أوصاف التقديرات"}
@@ -439,7 +426,7 @@ export function LookupGradeDescriptionsWorkspace() {
             ) : null}
 
             {!lookupGradeDescriptionsQuery.isPending && lookupGradeDescriptions.length === 0 ? (
-              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+              <div className="rounded-2xl border border-dashed border-border/70 p-6 text-sm text-muted-foreground text-center">
                 لا توجد نتائج مطابقة.
               </div>
             ) : null}
@@ -473,7 +460,7 @@ export function LookupGradeDescriptionsWorkspace() {
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
                   <Button
                     variant="outline"
                     size="sm"
@@ -485,9 +472,9 @@ export function LookupGradeDescriptionsWorkspace() {
                     تعديل
                   </Button>
                   <Button
-                    variant="destructive"
+                    variant="ghost"
                     size="sm"
-                    className="gap-1.5"
+                    className="gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
                     onClick={() => handleDelete(item)}
                     disabled={!canDelete || deleteMutation.isPending}
                   >
@@ -565,12 +552,12 @@ export function LookupGradeDescriptionsWorkspace() {
         showFooter={false}
       >
         {!canCreate && !isEditing ? (
-          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+          <div className="rounded-2xl border border-dashed border-border/70 p-6 text-sm text-muted-foreground text-center">
             لا تملك الصلاحية المطلوبة: <code>lookup-grade-descriptions.create</code>.
           </div>
         ) : (
           <form
-            className="space-y-3"
+            className="space-y-4"
             onSubmit={handleSubmitForm}
             data-testid="grade-description-form"
           >
@@ -613,7 +600,7 @@ export function LookupGradeDescriptionsWorkspace() {
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, nameAr: event.target.value }))
                   }
-                  placeholder="ممتاز"
+                  placeholder="مثال: ممتاز"
                   data-testid="grade-description-form-name-ar"
                 />
               </div>
@@ -624,7 +611,7 @@ export function LookupGradeDescriptionsWorkspace() {
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, nameEn: event.target.value }))
                   }
-                  placeholder="Excellent"
+                  placeholder="Example: Excellent"
                   data-testid="grade-description-form-name-en"
                 />
               </div>
@@ -658,7 +645,7 @@ export function LookupGradeDescriptionsWorkspace() {
               </div>
             </div>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+            <label className="flex items-center justify-between rounded-2xl border border-border/70 bg-background/50 px-4 py-2.5 text-sm">
               <span>نشط</span>
               <input
                 type="checkbox"
@@ -666,23 +653,24 @@ export function LookupGradeDescriptionsWorkspace() {
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
                 }
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                 data-testid="grade-description-form-active"
               />
             </label>
 
             {formError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+              <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
                 {formError}
               </div>
             ) : null}
 
             {mutationError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+              <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
                 {mutationError}
               </div>
             ) : null}
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 pt-2">
               <Button
                 type="submit"
                 className="flex-1 gap-2"
@@ -694,7 +682,7 @@ export function LookupGradeDescriptionsWorkspace() {
                 ) : (
                   <BadgeCheck className="h-4 w-4" />
                 )}
-                {isEditing ? "حفظ التعديلات" : "إنشاء وصف تقدير"}
+                {isEditing ? "حفظ التعديلات" : "إسناد وصف التقدير"}
               </Button>
               {isEditing ? (
                 <Button type="button" variant="outline" onClick={resetForm}>
@@ -705,6 +693,6 @@ export function LookupGradeDescriptionsWorkspace() {
           </form>
         )}
       </BottomSheetForm>
-    </>
+    </PageShell>
   );
 }

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { BadgeCheck, ClipboardCheck, Coins, LoaderCircle, ReceiptText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -256,3 +256,4 @@ export function ProcurementIntegrationsWorkspace() {
     </PageShell>
   );
 }
+

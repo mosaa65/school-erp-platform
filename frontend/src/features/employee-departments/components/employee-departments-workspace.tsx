@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { LoaderCircle, PencilLine, Plus, RefreshCw, Shapes, Trash2, Users } from "lucide-react";
@@ -507,3 +507,4 @@ export function EmployeeDepartmentsWorkspace() {
     </>
   );
 }
+

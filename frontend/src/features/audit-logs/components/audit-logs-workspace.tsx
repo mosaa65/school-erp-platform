@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import {
@@ -19,7 +19,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useAuditLogsQuery } from "@/features/audit-logs/hooks/use-audit-logs-query";
 import { useDeleteAuditLogMutation } from "@/features/audit-logs/hooks/use-audit-logs-mutations";
@@ -390,3 +389,4 @@ export function AuditLogsWorkspace() {
     </div>
   );
 }
+
