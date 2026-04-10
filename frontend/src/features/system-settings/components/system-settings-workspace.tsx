@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchField } from "@/components/ui/search-field";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
@@ -306,23 +307,14 @@ export function SystemSettingsWorkspace() {
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
-            <SearchField
-              containerClassName="flex-1"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="ابحث بالمفتاح أو الفئة..."
-              data-testid="setting-filter-search"
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterTriggerButton
-              count={activeFiltersCount}
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-            />
-          </div>
-        </div>
+                  <ManagementToolbar
+            searchValue={searchInput}
+            onSearchChange={(event) => setSearchInput(event.target.value)}
+            searchPlaceholder="ابحث بالمفتاح أو الفئة..."
+            filterCount={activeFiltersCount}
+            onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+            showFilterButton={true}
+          />
 
         <FilterDrawer
           open={isFilterOpen}

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
@@ -8,6 +8,7 @@ import {
   PencilLine,
   RefreshCw,
   Trash2,
+  Plus
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { PageShell } from "@/components/ui/page-shell";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
+import { Fab } from "@/components/ui/fab";
+import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
+import { Label } from "@/components/ui/label";
+import { SelectField } from "@/components/ui/select-field";
+
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateStudentHomeworkMutation,
@@ -73,7 +83,8 @@ function toDateTimeLocalInput(isoDateTime: string | null): string {
     return "";
   }
 
-  return date.toISOString().slice(0, 16);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return \\-\-\T\:\\;
 }
 
 function toDateTimeIso(dateTimeLocalInput: string): string {
@@ -134,37 +145,27 @@ export function StudentHomeworksWorkspace() {
   const canReadStudents = hasPermission("students.read");
 
   const [page, setPage] = React.useState(1);
-  const [searchInput] = React.useState("");
-  const [search, setSearch] = React.useState("");  const [homeworkFilter] = React.useState("all");
-  const [enrollmentFilter] = React.useState("all");
-  const [studentFilter] = React.useState("all");
-  const [completedFilter] = React.useState<"all" | "completed" | "pending">("all");
-  const [activeFilter] = React.useState<"all" | "active" | "inactive">("all");
-  const [fromSubmittedAtFilter] = React.useState("");
-  const [toSubmittedAtFilter] = React.useState("");
-  const [, setFilterDraft] = React.useState<{
+  const [searchInput, setSearchInput] = React.useState("");
+  const [search, setSearch] = React.useState("");  
+  const [homeworkFilter, setHomeworkFilter] = React.useState("all");
+  const [enrollmentFilter, setEnrollmentFilter] = React.useState("all");
+  const [studentFilter, setStudentFilter] = React.useState("all");
+  const [completedFilter, setCompletedFilter] = React.useState<"all" | "completed" | "pending">("all");
+  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">("all");
+
+  const [filterDraft, setFilterDraft] = React.useState<{
     homework: string;
-    enrollment: string;
-    student: string;
     completed: "all" | "completed" | "pending";
     active: "all" | "active" | "inactive";
-    fromSubmittedAt: string;
-    toSubmittedAt: string;
   }>({
     homework: "all",
-    enrollment: "all",
-    student: "all",
     completed: "all",
     active: "all",
-    fromSubmittedAt: "",
-    toSubmittedAt: "",
   });
 
-  const [editingStudentHomeworkId, setEditingStudentHomeworkId] = React.useState<string | null>(
-    null,
-  );
-  const [isFilterOpen] = React.useState(false);
-  const [, setIsFormOpen] = React.useState(false);
+  const [editingStudentHomeworkId, setEditingStudentHomeworkId] = React.useState<string | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<StudentHomeworkFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
@@ -177,10 +178,6 @@ export function StudentHomeworksWorkspace() {
     studentEnrollmentId: enrollmentFilter === "all" ? undefined : enrollmentFilter,
     studentId: studentFilter === "all" ? undefined : studentFilter,
     isCompleted: completedFilter === "all" ? undefined : completedFilter === "completed",
-    fromSubmittedAt: fromSubmittedAtFilter
-      ? toDateTimeIso(`${fromSubmittedAtFilter}T00:00`)
-      : undefined,
-    toSubmittedAt: toSubmittedAtFilter ? toDateTimeIso(`${toSubmittedAtFilter}T23:59`) : undefined,
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
   });
 
@@ -236,9 +233,9 @@ export function StudentHomeworksWorkspace() {
   }, [editingStudentHomeworkId, isEditing, records]);
 
   useDebounceEffect(() => {
-      setPage(1);
-      setSearch(searchInput.trim());
-    }, 400, [searchInput]);
+    setPage(1);
+    setSearch(searchInput.trim());
+  }, 400, [searchInput]);
 
   React.useEffect(() => {
     if (!isFilterOpen) {
@@ -247,22 +244,14 @@ export function StudentHomeworksWorkspace() {
 
     setFilterDraft({
       homework: homeworkFilter,
-      enrollment: enrollmentFilter,
-      student: studentFilter,
       completed: completedFilter,
       active: activeFilter,
-      fromSubmittedAt: fromSubmittedAtFilter,
-      toSubmittedAt: toSubmittedAtFilter,
     });
   }, [
     activeFilter,
     completedFilter,
-    enrollmentFilter,
-    fromSubmittedAtFilter,
     homeworkFilter,
     isFilterOpen,
-    studentFilter,
-    toSubmittedAtFilter,
   ]);
 
   const resetFormState = () => {
@@ -271,11 +260,47 @@ export function StudentHomeworksWorkspace() {
     setFormError(null);
   };
 
+  const handleStartCreate = () => {
+    resetFormState();
+    setActionSuccess(null);
+    setIsFormOpen(true);
+  };
+
   const resetForm = () => {
     resetFormState();
     setIsFormOpen(false);
     setActionSuccess(null);
   };
+
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setHomeworkFilter("all");
+    setCompletedFilter("all");
+    setActiveFilter("all");
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    setPage(1);
+    setHomeworkFilter(filterDraft.homework);
+    setCompletedFilter(filterDraft.completed);
+    setActiveFilter(filterDraft.active);
+    setIsFilterOpen(false);
+  };
+
+  const activeFiltersCount = React.useMemo(() => {
+    let count = 0;
+    if (searchInput.trim()) count++;
+    if (homeworkFilter !== "all") count++;
+    if (enrollmentFilter !== "all") count++;
+    if (studentFilter !== "all") count++;
+    if (completedFilter !== "all") count++;
+    if (activeFilter !== "all") count++;
+    return count;
+  }, [activeFilter, completedFilter, enrollmentFilter, homeworkFilter, searchInput, studentFilter]);
+
 
   const validateForm = (): boolean => {
     if (!formState.homeworkId || !formState.studentEnrollmentId) {
@@ -295,7 +320,7 @@ export function StudentHomeworksWorkspace() {
     }
 
     if (score !== null && selectedHomeworkForForm && score > selectedHomeworkForForm.maxScore) {
-      setFormError(`الدرجة اليدوية يجب ألا تتجاوز ${selectedHomeworkForForm.maxScore}.`);
+      setFormError(\الدرجة اليدوية يجب ألا تتجاوز \.\);
       return false;
     }
 
@@ -323,8 +348,8 @@ export function StudentHomeworksWorkspace() {
     return true;
   };
 
-  const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
     setActionSuccess(null);
     if (!validateForm()) {
       return;
@@ -358,8 +383,8 @@ export function StudentHomeworksWorkspace() {
         },
         {
           onSuccess: () => {
-            resetFormState();
-            setActionSuccess("تم تحديث واجب الطالب بنجاح.");
+             resetForm();
+             setActionSuccess("تم تحديث واجب الطالب بنجاح.");
           },
         },
       );
@@ -373,9 +398,9 @@ export function StudentHomeworksWorkspace() {
 
     createMutation.mutate(payload, {
       onSuccess: () => {
-        resetFormState();
-        setPage(1);
-        setActionSuccess("تم إنشاء واجب الطالب بنجاح.");
+         resetForm();
+         setPage(1);
+         setActionSuccess("تم إنشاء واجب الطالب بنجاح.");
       },
     });
   };
@@ -422,7 +447,7 @@ export function StudentHomeworksWorkspace() {
     }
 
     const confirmed = window.confirm(
-      `تأكيد حذف متابعة واجب الطالب ${item.studentEnrollment.student.fullName}؟`,
+      \تأكيد حذف متابعة واجب الطالب \؟\,
     );
     if (!confirmed) {
       return;
@@ -443,24 +468,247 @@ export function StudentHomeworksWorkspace() {
     canReadHomeworks && canReadEnrollments && canReadStudents;
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[440px_1fr]">
-      <Card className="h-fit border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ClipboardCheck className="h-5 w-5 text-primary" />
-            {isEditing ? "تعديل واجب طالب" : "إنشاء واجب طالب"}
-          </CardTitle>
-          <CardDescription>متابعة تسليم الواجبات للطلاب وربط الدرجة اليدوية.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!canCreate && !isEditing ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا تملك الصلاحية المطلوبة: <code>student-homeworks.create</code>.
-            </div>
-          ) : (
-            <form className="space-y-3" onSubmit={handleSubmitForm}>
+    <PageShell 
+      title="متابعة واجبات الطلاب" 
+      subtitle="تسجيل الواجبات المنجزة، التقييم، والملاحظات."
+    >
+      <div className="space-y-4">
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="بحث عن طالب المعني بالواجب..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+          showFilterButton={true}
+        />
+
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="فلاتر متابعة الواجبات"
+          actionButtons={
+            <FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />
+          }
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>الواجب الدراسي</Label>
               <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={filterDraft.homework}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, homework: event.target.value }))
+                }
+              >
+                <option value="all">كل الواجبات</option>
+                {(homeworksQuery.data ?? []).map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label>مكتمل</Label>
+              <SelectField
+                value={filterDraft.completed}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    completed: event.target.value as "all" | "completed" | "pending",
+                  }))
+                }
+              >
+                <option value="all">الكل</option>
+                <option value="completed">مكتمل</option>
+                <option value="pending">غير مكتمل</option>
+              </SelectField>
+            </div>
+            <div className="space-y-1">
+              <Label>الحالة</Label>
+              <SelectField
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">النشطة فقط</option>
+                <option value="inactive">غير النشطة فقط</option>
+              </SelectField>
+            </div>
+          </div>
+        </FilterDrawer>
+
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+          <CardHeader className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>واجبات الطلاب</CardTitle>
+              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-3">
+            {studentHomeworksQuery.isPending ? (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                جارٍ تحميل البيانات...
+              </div>
+            ) : null}
+            {studentHomeworksQuery.error ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                {studentHomeworksQuery.error instanceof Error
+                  ? studentHomeworksQuery.error.message
+                  : "تعذّر تحميل البيانات."}
+              </div>
+            ) : null}
+            {!studentHomeworksQuery.isPending && records.length === 0 ? (
+              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                لا توجد نتائج مطابقة.
+              </div>
+            ) : null}
+
+            {records.map((item) => (
+              <div
+                key={item.id}
+                className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="space-y-1">
+                    <p className="font-medium">
+                      {item.studentEnrollment.student.fullName} - {item.homework.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      الواجب: {formatDate(item.homework.homeworkDate)} | الاستحقاق:{" "}
+                      {formatDate(item.homework.dueDate)} | العظمى: {item.homework.maxScore}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      التسليم: {formatDateTime(item.submittedAt)} | الدرجة:{" "}
+                      {item.manualScore === null ? "-" : item.manualScore}
+                    </p>
+                    {item.teacherNotes ? (
+                      <p className="text-xs text-muted-foreground">ملاحظات: {item.teacherNotes}</p>
+                    ) : null}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge variant={item.isCompleted ? "default" : "secondary"}>
+                      {item.isCompleted ? "مكتمل" : "قيد الإنجاز"}
+                    </Badge>
+                    <Badge variant={item.isActive ? "default" : "outline"}>
+                      {item.isActive ? "نشط" : "غير نشط"}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleStartEdit(item)}
+                    disabled={!canUpdate || updateMutation.isPending}
+                  >
+                    <PencilLine className="h-3.5 w-3.5" />
+                    تعديل
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleToggleActive(item)}
+                    disabled={!canUpdate || updateMutation.isPending}
+                  >
+                    {item.isActive ? "تعطيل" : "تفعيل"}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleDelete(item)}
+                    disabled={!canDelete || deleteMutation.isPending}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    حذف
+                  </Button>
+                </div>
+              </div>
+            ))}
+
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
+              <p className="text-xs text-muted-foreground">
+                الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={!pagination || pagination.page <= 1 || studentHomeworksQuery.isFetching}
+                >
+                  السابق
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setPage((prev) =>
+                      pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
+                    )
+                  }
+                  disabled={
+                    !pagination ||
+                    pagination.page >= pagination.totalPages ||
+                    studentHomeworksQuery.isFetching
+                  }
+                >
+                  التالي
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => void studentHomeworksQuery.refetch()}
+                  disabled={studentHomeworksQuery.isFetching}
+                >
+                  <RefreshCw
+                    className={\h-4 w-4 \\}
+                  />
+                  تحديث
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Fab
+        icon={<Plus className="h-4 w-4" />}
+        label="إنشاء"
+        ariaLabel="إنشاء متابعة واجب"
+        onClick={handleStartCreate}
+        disabled={!canCreate}
+      />
+
+      <CrudFormSheet
+        open={isFormOpen}
+        title={isEditing ? "تعديل واجب طالب" : "إنشاء متابعة طالب لواجب"}
+        onClose={resetForm}
+        onSubmit={() => handleSubmitForm()}
+        isSubmitting={isFormSubmitting}
+        submitLabel={isEditing ? "حفظ التعديلات" : "تأكيد"}
+      >
+        {!hasDependenciesReadPermissions ? (
+          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+            يتطلب الصلاحيات: homeworks.read, student-enrollments.read, students.read
+          </div>
+        ) : (
+          <form className="space-y-4" onSubmit={handleSubmitForm}>
+            <div className="space-y-1">
+              <Label required>الواجب الدراسي</Label>
+              <select
+                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 value={formState.homeworkId}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -478,7 +726,10 @@ export function StudentHomeworksWorkspace() {
                   </option>
                 ))}
               </select>
+            </div>
 
+            <div className="space-y-1">
+              <Label required>قيد الطالب</Label>
               <StudentEnrollmentPickerSheet
                 value={formState.studentEnrollmentId}
                 selectedOption={selectedEnrollmentOptionForForm}
@@ -496,39 +747,44 @@ export function StudentHomeworksWorkspace() {
                 allowEmptySelection={false}
                 disabled={!canReadEnrollments || !selectedHomeworkForForm}
               />
+            </div>
 
-              <div className="grid gap-3 md:grid-cols-2">
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>مكتمل</span>
-                  <input
-                    type="checkbox"
-                    checked={formState.isCompleted}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, isCompleted: event.target.checked }))
-                    }
-                  />
-                </label>
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>نشط</span>
-                  <input
-                    type="checkbox"
-                    checked={formState.isActive}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                    }
-                  />
-                </label>
-              </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                <span>مكتمل</span>
+                <input
+                  type="checkbox"
+                  checked={formState.isCompleted}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, isCompleted: event.target.checked }))
+                  }
+                />
+              </label>
+              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                <span>نشط</span>
+                <input
+                  type="checkbox"
+                  checked={formState.isActive}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                  }
+                />
+              </label>
+            </div>
 
-              <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <Label>وقت التسليم</Label>
                 <Input
                   type="datetime-local"
                   value={formState.submittedAt}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, submittedAt: event.target.value }))
                   }
-                  placeholder="وقت التسليم"
                 />
+              </div>
+              <div className="space-y-1">
+                <Label>الدرجة اليدوية</Label>
                 <Input
                   type="number"
                   min={0}
@@ -537,214 +793,33 @@ export function StudentHomeworksWorkspace() {
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, manualScore: event.target.value }))
                   }
-                  placeholder="الدرجة اليدوية"
                 />
               </div>
+            </div>
 
+            <div className="space-y-1">
+              <Label>ملاحظات المعلم</Label>
               <Input
                 value={formState.teacherNotes}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, teacherNotes: event.target.value }))
                 }
-                placeholder="ملاحظات المعلم"
               />
+            </div>
 
-              {formError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {formError}
-                </div>
-              ) : null}
-              {mutationError ? (
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                  {mutationError}
-                </div>
-              ) : null}
-              {actionSuccess ? (
-                <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
-                  {actionSuccess}
-                </div>
-              ) : null}
-              {!hasDependenciesReadPermissions ? (
-                <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                  يتطلب هذا الجزء صلاحيات القراءة: <code>homeworks.read</code>,{" "}
-                  <code>student-enrollments.read</code>, <code>students.read</code>.
-                </div>
-              ) : null}
-
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  className="flex-1 gap-2"
-                  disabled={
-                    isFormSubmitting ||
-                    (!canCreate && !isEditing) ||
-                    !hasDependenciesReadPermissions
-                  }
-                >
-                  {isFormSubmitting ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <ClipboardCheck className="h-4 w-4" />
-                  )}
-                  {isEditing ? "حفظ التعديلات" : "إنشاء واجب طالب"}
-                </Button>
-                {isEditing ? (
-                  <Button type="button" variant="outline" onClick={resetForm}>
-                    إلغاء
-                  </Button>
-                ) : null}
+            {formError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                {formError}
               </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>واجبات الطلاب</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
-          </div>
-          <CardDescription>فلترة ومراجعة حالة إنجاز الواجب لكل طالب.</CardDescription>
-
-        </CardHeader>
-
-        <CardContent className="space-y-3">
-          {studentHomeworksQuery.isPending ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ تحميل البيانات...
-            </div>
-          ) : null}
-          {studentHomeworksQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {studentHomeworksQuery.error instanceof Error
-                ? studentHomeworksQuery.error.message
-                : "تعذّر تحميل البيانات."}
-            </div>
-          ) : null}
-          {!studentHomeworksQuery.isPending && records.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              لا توجد نتائج مطابقة.
-            </div>
-          ) : null}
-
-          {records.map((item) => (
-            <div
-              key={item.id}
-              className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <p className="font-medium">
-                    {item.studentEnrollment.student.fullName} - {item.homework.title}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    الواجب: {formatDate(item.homework.homeworkDate)} | الاستحقاق:{" "}
-                    {formatDate(item.homework.dueDate)} | العظمى: {item.homework.maxScore}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    التسليم: {formatDateTime(item.submittedAt)} | الدرجة:{" "}
-                    {item.manualScore === null ? "-" : item.manualScore}
-                  </p>
-                  {item.teacherNotes ? (
-                    <p className="text-xs text-muted-foreground">ملاحظات: {item.teacherNotes}</p>
-                  ) : null}
-                </div>
-
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant={item.isCompleted ? "default" : "secondary"}>
-                    {item.isCompleted ? "مكتمل" : "قيد الإنجاز"}
-                  </Badge>
-                  <Badge variant={item.isActive ? "default" : "outline"}>
-                    {item.isActive ? "نشط" : "غير نشط"}
-                  </Badge>
-                </div>
+            ) : null}
+            {actionSuccess ? (
+              <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
+                {actionSuccess}
               </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleStartEdit(item)}
-                  disabled={!canUpdate || updateMutation.isPending}
-                >
-                  <PencilLine className="h-3.5 w-3.5" />
-                  تعديل
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleToggleActive(item)}
-                  disabled={!canUpdate || updateMutation.isPending}
-                >
-                  {item.isActive ? "تعطيل" : "تفعيل"}
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleDelete(item)}
-                  disabled={!canDelete || deleteMutation.isPending}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  حذف
-                </Button>
-              </div>
-            </div>
-          ))}
-
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-            <p className="text-xs text-muted-foreground">
-              الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={!pagination || pagination.page <= 1 || studentHomeworksQuery.isFetching}
-              >
-                السابق
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPage((prev) =>
-                    pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                  )
-                }
-                disabled={
-                  !pagination ||
-                  pagination.page >= pagination.totalPages ||
-                  studentHomeworksQuery.isFetching
-                }
-              >
-                التالي
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => void studentHomeworksQuery.refetch()}
-                disabled={studentHomeworksQuery.isFetching}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${studentHomeworksQuery.isFetching ? "animate-spin" : ""}`}
-                />
-                تحديث
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+            ) : null}
+          </form>
+        )}
+      </CrudFormSheet>
+    </PageShell>
   );
 }
-
-
-
-
-
-
