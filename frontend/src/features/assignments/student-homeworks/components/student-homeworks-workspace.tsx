@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
@@ -84,7 +84,7 @@ function toDateTimeLocalInput(isoDateTime: string | null): string {
   }
 
   const pad = (n: number) => String(n).padStart(2, '0');
-  return \\-\-\T\:\\;
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 function toDateTimeIso(dateTimeLocalInput: string): string {
