@@ -212,6 +212,8 @@ async function bootstrap() {
 
   app.useGlobalFilters(new HttpExceptionFilter());
 
+  const isProduction = process.env.NODE_ENV === 'production';
+
   const swaggerConfig = new DocumentBuilder()
     .setTitle('School ERP Backend API')
     .setDescription(
@@ -231,6 +233,14 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, swaggerConfig);
 
   const corsOriginRaw = configService.get<string>('CORS_ORIGIN')?.trim() ?? '';
+
+  if (isProduction && (!corsOriginRaw || corsOriginRaw === '*')) {
+    logger.warn(
+      'CORS_ORIGIN is not set or is wildcard (*) in production. ' +
+        'All origins will be allowed. Set CORS_ORIGIN to your frontend URL.',
+    );
+  }
+
   const corsOrigin =
     !corsOriginRaw || corsOriginRaw === '*'
       ? true
@@ -252,12 +262,15 @@ async function bootstrap() {
   const swaggerPath = (
     configService.get<string>('SWAGGER_PATH') ?? 'api/docs'
   ).replace(/^\/+/, '');
-  SwaggerModule.setup(swaggerPath, app, document, {
-    swaggerOptions: {
-      persistAuthorization: true,
-      docExpansion: 'none',
-    },
-  });
+
+  if (!isProduction) {
+    SwaggerModule.setup(swaggerPath, app, document, {
+      swaggerOptions: {
+        persistAuthorization: true,
+        docExpansion: 'none',
+      },
+    });
+  }
 
   const portRaw = configService.get<string>('PORT') ?? '3000';
   const parsedPort = Number.parseInt(portRaw, 10);
@@ -266,9 +279,11 @@ async function bootstrap() {
   await app.listen(port, '0.0.0.0');
 
   logger.log(`API is running on http://localhost:${port}`);
-  logger.log(
-    `Swagger docs available at http://localhost:${port}/${swaggerPath}`,
-  );
+  if (!isProduction) {
+    logger.log(
+      `Swagger docs available at http://localhost:${port}/${swaggerPath}`,
+    );
+  }
 }
 
 void bootstrap();
