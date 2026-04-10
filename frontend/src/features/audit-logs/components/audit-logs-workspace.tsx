@@ -11,6 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SelectField } from "@/components/ui/select-field";
 import {
   Card,
   CardContent,
@@ -210,8 +211,8 @@ export function AuditLogsWorkspace() {
               setDraftFilters((prev) => ({ ...prev, actorUserId: event.target.value }))
             }
           />
-          <select
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+          <SelectField
+            
             value={draftFilters.status}
             onChange={(event) =>
               setDraftFilters((prev) => ({
@@ -223,7 +224,7 @@ export function AuditLogsWorkspace() {
             <option value="all">كل الحالات</option>
             <option value="SUCCESS">نجاح</option>
             <option value="FAILURE">فشل</option>
-          </select>
+          </SelectField>
           <Input
             type="datetime-local"
             value={draftFilters.fromLocal}

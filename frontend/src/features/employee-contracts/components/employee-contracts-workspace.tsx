@@ -819,9 +819,9 @@ export function EmployeeContractsWorkspace() {
             ) : null}
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الموظف *</label>
+              <SelectField
+                
                 value={formState.employeeId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
@@ -835,11 +835,11 @@ export function EmployeeContractsWorkspace() {
                     {employee.fullName} ({employee.jobNumber ?? "غير متوفر"})
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">عنوان العقد *</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">عنوان العقد *</label>
               <Input
                 value={formState.contractTitle}
                 onChange={(event) =>
@@ -852,7 +852,7 @@ export function EmployeeContractsWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">رقم العقد</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">رقم العقد</label>
               <Input
                 value={formState.contractNumber}
                 onChange={(event) =>
@@ -865,7 +865,7 @@ export function EmployeeContractsWorkspace() {
 
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">تاريخ البداية *</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">تاريخ البداية *</label>
                 <Input
                   type="date"
                   value={formState.contractStartDate}
@@ -876,7 +876,7 @@ export function EmployeeContractsWorkspace() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">تاريخ النهاية</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">تاريخ النهاية</label>
                 <Input
                   type="date"
                   value={formState.contractEndDate}
@@ -889,7 +889,7 @@ export function EmployeeContractsWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الراتب المرجعي</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الراتب المرجعي</label>
               <Input
                 type="number"
                 min={0}
@@ -904,7 +904,7 @@ export function EmployeeContractsWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">ملاحظات</label>
               <Input
                 value={formState.notes}
                 onChange={(event) =>

@@ -607,7 +607,7 @@ export function FiscalPeriodsWorkspace() {
           <form className="space-y-3" onSubmit={handleSubmitForm}>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">رقم الفترة *</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">رقم الفترة *</label>
                 <Input
                   type="number"
                   min={1}
@@ -622,7 +622,7 @@ export function FiscalPeriodsWorkspace() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">الاسم *</label>
                 <Input
                   value={form.nameAr}
                   onChange={(event) =>
@@ -636,7 +636,7 @@ export function FiscalPeriodsWorkspace() {
 
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">السنة المالية *</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">السنة المالية *</label>
                 <SelectField
                   value={form.fiscalYearId || ""}
                   onChange={(event) =>
@@ -655,9 +655,9 @@ export function FiscalPeriodsWorkspace() {
                 </SelectField>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">نوع الفترة</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">نوع الفترة</label>
+                <SelectField
+                  
                   value={form.periodType}
                   onChange={(event) =>
                     setForm((prev) => ({
@@ -669,13 +669,13 @@ export function FiscalPeriodsWorkspace() {
                   <option value="MONTHLY">شهرية</option>
                   <option value="QUARTERLY">ربع سنوية</option>
                   <option value="CUSTOM">مخصصة</option>
-                </select>
+                </SelectField>
               </div>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">
                   تاريخ البداية *
                 </label>
                 <Input
@@ -688,7 +688,7 @@ export function FiscalPeriodsWorkspace() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">تاريخ النهاية *</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">تاريخ النهاية *</label>
                 <Input
                   type="date"
                   value={form.endDate}
@@ -702,9 +702,9 @@ export function FiscalPeriodsWorkspace() {
 
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الحالة *</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">الحالة *</label>
+                <SelectField
+                  
                   value={form.status}
                   onChange={(event) =>
                     setForm((prev) => ({
@@ -717,7 +717,7 @@ export function FiscalPeriodsWorkspace() {
                   <option value="CLOSING">قيد الإغلاق</option>
                   <option value="CLOSED">مغلقة</option>
                   <option value="REOPENED">أعيد فتحها</option>
-                </select>
+                </SelectField>
               </div>
               <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
                 <span className="flex items-center gap-2">
@@ -736,7 +736,7 @@ export function FiscalPeriodsWorkspace() {
 
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">ملاحظات الإغلاق</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">ملاحظات الإغلاق</label>
                 <Input
                   value={form.closeNotes ?? ""}
                   onChange={(event) =>
@@ -746,7 +746,7 @@ export function FiscalPeriodsWorkspace() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">
                   سبب إعادة الفتح
                 </label>
                 <Input
@@ -760,7 +760,7 @@ export function FiscalPeriodsWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">
                 مهلة إعادة الفتح
               </label>
               <Input

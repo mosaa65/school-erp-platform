@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SelectField } from "@/components/ui/select-field";
 import { StudentPickerSheet } from "@/components/ui/student-picker-sheet";
 import {
   Card,
@@ -387,7 +388,7 @@ export function ParentNotificationsWorkspace() {
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الطالب *</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">الطالب *</label>
                 <StudentPickerSheet
                   scope="parent-notifications"
                   variant="form"
@@ -404,10 +405,10 @@ export function ParentNotificationsWorkspace() {
 
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">نوع الإشعار *</label>
-                  <select
+                  <label className="text-xs font-bold text-muted-foreground uppercase px-1">نوع الإشعار *</label>
+                  <SelectField
                     data-testid="parent-notification-form-type"
-                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    
                     value={formState.notificationType}
                     onChange={(event) =>
                       setFormState((prev) => ({
@@ -423,14 +424,14 @@ export function ParentNotificationsWorkspace() {
                         </option>
                       ),
                     )}
-                  </select>
+                  </SelectField>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">صفة ولي الأمر</label>
-                  <select
+                  <label className="text-xs font-bold text-muted-foreground uppercase px-1">صفة ولي الأمر</label>
+                  <SelectField
                     data-testid="parent-notification-form-guardian-title"
-                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    
                     value={formState.guardianTitleId}
                     onChange={(event) =>
                       setFormState((prev) => ({ ...prev, guardianTitleId: event.target.value }))
@@ -443,12 +444,12 @@ export function ParentNotificationsWorkspace() {
                         {item.nameAr ?? item.code ?? item.id}
                       </option>
                     ))}
-                  </select>
+                  </SelectField>
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">نوع السلوك</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">نوع السلوك</label>
                 <Input
                   data-testid="parent-notification-form-behavior-type"
                   value={formState.behaviorType}
@@ -460,7 +461,7 @@ export function ParentNotificationsWorkspace() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">وصف السلوك</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">وصف السلوك</label>
                 <textarea
                   data-testid="parent-notification-form-behavior-description"
                   className="min-h-[90px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -475,7 +476,7 @@ export function ParentNotificationsWorkspace() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">المطلوب من ولي الأمر</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">المطلوب من ولي الأمر</label>
                 <textarea
                   data-testid="parent-notification-form-required-action"
                   className="min-h-[90px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -488,10 +489,10 @@ export function ParentNotificationsWorkspace() {
 
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">طريقة الإرسال</label>
-                  <select
+                  <label className="text-xs font-bold text-muted-foreground uppercase px-1">طريقة الإرسال</label>
+                  <SelectField
                     data-testid="parent-notification-form-send-method"
-                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    
                     value={formState.sendMethod}
                     onChange={(event) =>
                       setFormState((prev) => ({
@@ -507,11 +508,11 @@ export function ParentNotificationsWorkspace() {
                         </option>
                       ),
                     )}
-                  </select>
+                  </SelectField>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">اسم الرسول</label>
+                  <label className="text-xs font-bold text-muted-foreground uppercase px-1">اسم الرسول</label>
                   <Input
                     data-testid="parent-notification-form-messenger-name"
                     value={formState.messengerName}
@@ -535,7 +536,7 @@ export function ParentNotificationsWorkspace() {
                   />
                 </label>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">تاريخ الإرسال</label>
+                  <label className="text-xs font-bold text-muted-foreground uppercase px-1">تاريخ الإرسال</label>
                   <Input
                     data-testid="parent-notification-form-sent-date"
                     type="date"
@@ -549,7 +550,7 @@ export function ParentNotificationsWorkspace() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">النتائج</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">النتائج</label>
                 <textarea
                   data-testid="parent-notification-form-results"
                   className="min-h-[90px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -646,8 +647,8 @@ export function ParentNotificationsWorkspace() {
               disabled={!canReadStudents}
             />
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            <SelectField
+              
               value={typeFilter}
               onChange={(event) => {
                 setPage(1);
@@ -662,10 +663,10 @@ export function ParentNotificationsWorkspace() {
                   </option>
                 ),
               )}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            <SelectField
+              
               value={sentFilter}
               onChange={(event) => {
                 setPage(1);
@@ -675,10 +676,10 @@ export function ParentNotificationsWorkspace() {
               <option value="all">كل الحالات</option>
               <option value="sent">مرسل</option>
               <option value="not-sent">غير مرسل</option>
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            <SelectField
+              
               value={activeFilter}
               onChange={(event) => {
                 setPage(1);
@@ -688,7 +689,7 @@ export function ParentNotificationsWorkspace() {
               <option value="all">كل الحالات</option>
               <option value="active">النشطة فقط</option>
               <option value="inactive">غير النشطة فقط</option>
-            </select>
+            </SelectField>
 
             <Button type="submit" variant="outline" className="gap-2">
               <Search className="h-4 w-4" />

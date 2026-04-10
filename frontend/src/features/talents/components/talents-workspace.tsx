@@ -13,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SelectField } from "@/components/ui/select-field";
 import {
   Card,
   CardContent,
@@ -243,7 +244,7 @@ export function TalentsWorkspace() {
               data-testid="talent-catalog-form"
             >
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">الاسم *</label>
                 <Input
                   value={formState.name}
                   onChange={(event) =>
@@ -256,7 +257,7 @@ export function TalentsWorkspace() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الوصف</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">الوصف</label>
                 <Input
                   value={formState.description}
                   onChange={(event) =>
@@ -340,8 +341,8 @@ export function TalentsWorkspace() {
               />
             </div>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            <SelectField
+              
               value={activeFilter}
               onChange={(event) => {
                 setPage(1);
@@ -352,7 +353,7 @@ export function TalentsWorkspace() {
               <option value="all">كل الحالات</option>
               <option value="active">النشطة فقط</option>
               <option value="inactive">غير النشطة فقط</option>
-            </select>
+            </SelectField>
 
             <Button
               type="submit"

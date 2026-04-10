@@ -595,7 +595,7 @@ export function GlobalSettingsManagementWorkspace() {
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">المفتاح *</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">المفتاح *</label>
               <Input
                 value={formState.key}
                 onChange={(event) =>
@@ -608,9 +608,9 @@ export function GlobalSettingsManagementWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">نوع القيمة</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">نوع القيمة</label>
+              <SelectField
+                
                 value={formState.valueType}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -625,11 +625,11 @@ export function GlobalSettingsManagementWorkspace() {
                     {option.label}
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">القيمة *</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">القيمة *</label>
               {formState.valueType === "JSON" ? (
                 <textarea
                   className="min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -640,8 +640,8 @@ export function GlobalSettingsManagementWorkspace() {
                   placeholder='{ "primary": "#2563eb" }'
                 />
               ) : formState.valueType === "BOOLEAN" ? (
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                <SelectField
+                  
                   value={formState.valueInput.toLowerCase() === "true" ? "true" : "false"}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, valueInput: event.target.value }))
@@ -649,7 +649,7 @@ export function GlobalSettingsManagementWorkspace() {
                 >
                   <option value="true">نعم</option>
                   <option value="false">لا</option>
-                </select>
+                </SelectField>
               ) : (
                 <Input
                   value={formState.valueInput}
@@ -663,7 +663,7 @@ export function GlobalSettingsManagementWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الوصف</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الوصف</label>
               <Input
                 value={formState.description}
                 onChange={(event) =>

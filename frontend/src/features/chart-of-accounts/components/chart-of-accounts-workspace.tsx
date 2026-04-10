@@ -560,7 +560,7 @@ export function ChartOfAccountsWorkspace() {
           <form className="space-y-3" onSubmit={handleSubmitForm}>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الاسم العربي *</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">الاسم العربي *</label>
                 <Input
                   value={form.nameAr}
                   onChange={(event) =>
@@ -574,7 +574,7 @@ export function ChartOfAccountsWorkspace() {
 
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الاسم الإنجليزي</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">الاسم الإنجليزي</label>
                 <Input
                   value={form.nameEn ?? ""}
                   onChange={(event) =>
@@ -584,9 +584,9 @@ export function ChartOfAccountsWorkspace() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">نوع الحساب *</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">نوع الحساب *</label>
+                <SelectField
+                  
                   value={form.accountType}
                   onChange={(event) =>
                     setForm((prev) => ({
@@ -600,12 +600,12 @@ export function ChartOfAccountsWorkspace() {
                   <option value="EQUITY">حقوق ملكية</option>
                   <option value="REVENUE">إيرادات</option>
                   <option value="EXPENSE">مصروفات</option>
-                </select>
+                </SelectField>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الحساب الأب</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الحساب الأب</label>
               <SelectField
                 value={form.parentId ?? ""}
                 onChange={(event) =>

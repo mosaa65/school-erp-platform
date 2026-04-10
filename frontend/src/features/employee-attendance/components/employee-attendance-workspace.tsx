@@ -669,9 +669,9 @@ export function EmployeeAttendanceWorkspace() {
               {isEditing ? "تحديث سجل حضور الموظف." : "إضافة سجل حضور جديد ضمن الموارد البشرية."}
             </p>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الموظف *</label>
+              <SelectField
+                
                 value={formState.employeeId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
@@ -685,11 +685,11 @@ export function EmployeeAttendanceWorkspace() {
                     {employee.fullName} ({employee.jobNumber ?? "غير متوفر"})
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">
                 تاريخ الحضور *
               </label>
               <Input
@@ -707,9 +707,9 @@ export function EmployeeAttendanceWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الحالة *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الحالة *</label>
+              <SelectField
+                
                 value={formState.status}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -724,12 +724,12 @@ export function EmployeeAttendanceWorkspace() {
                     {translateAttendanceStatus(status)}
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">وقت الدخول</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">وقت الدخول</label>
                 <Input
                   type="datetime-local"
                   value={formState.checkInAt}
@@ -740,7 +740,7 @@ export function EmployeeAttendanceWorkspace() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">وقت الخروج</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">وقت الخروج</label>
                 <Input
                   type="datetime-local"
                   value={formState.checkOutAt}
@@ -753,7 +753,7 @@ export function EmployeeAttendanceWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">ملاحظات</label>
               <Input
                 value={formState.notes}
                 onChange={(event) =>

@@ -621,7 +621,7 @@ export function StudentSiblingsWorkspace() {
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الطالب *</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الطالب *</label>
               <StudentPickerSheet
               scope="student-siblings"
               variant="form"
@@ -637,7 +637,7 @@ export function StudentSiblingsWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الأخ/الأخت *</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الأخ/الأخت *</label>
               <StudentPickerSheet
               scope="student-siblings"
               variant="form"
@@ -653,10 +653,10 @@ export function StudentSiblingsWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">نوع العلاقة *</label>
-              <select
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">نوع العلاقة *</label>
+              <SelectField
                 data-testid="student-sibling-form-relationship"
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                
                 value={formState.relationship}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -672,11 +672,11 @@ export function StudentSiblingsWorkspace() {
                     </option>
                   ),
                 )}
-              </select>
+              </SelectField>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">ملاحظات</label>
               <Input
                 data-testid="student-sibling-form-notes"
                 value={formState.notes}

@@ -639,7 +639,7 @@ export function StudentBooksWorkspace() {
             </SelectField>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">من تاريخ التسليم</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">من تاريخ التسليم</label>
               <Input
                 type="date"
                 value={filterDraft.fromIssuedDate}
@@ -653,7 +653,7 @@ export function StudentBooksWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">إلى تاريخ التسليم</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">إلى تاريخ التسليم</label>
               <Input
                 type="date"
                 value={filterDraft.toIssuedDate}
@@ -850,7 +850,7 @@ export function StudentBooksWorkspace() {
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الطالب</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الطالب</label>
               <StudentPickerSheet
                 scope="student-books"
                 variant="narrow"
@@ -876,11 +876,11 @@ export function StudentBooksWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">
                 القيد الطلابي *
               </label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <SelectField
+                
                 value={formState.studentEnrollmentId}
                 onChange={(event) => {
                   const nextEnrollmentId = event.target.value;
@@ -913,7 +913,7 @@ export function StudentBooksWorkspace() {
                     {item.displayLabel}
                   </option>
                 ))}
-              </select>
+              </SelectField>
               {selectedFormStudent ? (
                 <p className="text-[11px] text-muted-foreground">
                   تم تقليص القيود بحسب الطالب المحدد.
@@ -922,9 +922,9 @@ export function StudentBooksWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">المادة *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">المادة *</label>
+              <SelectField
+                
                 value={formState.subjectId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, subjectId: event.target.value }))
@@ -937,11 +937,11 @@ export function StudentBooksWorkspace() {
                     {subject.name} ({subject.code})
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">جزء الكتاب</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">جزء الكتاب</label>
               <Input
                 value={formState.bookPart}
                 onChange={(event) =>
@@ -953,7 +953,7 @@ export function StudentBooksWorkspace() {
 
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">
                   تاريخ التسليم *
                 </label>
                 <Input
@@ -966,7 +966,7 @@ export function StudentBooksWorkspace() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">
                   تاريخ الاستحقاق
                 </label>
                 <Input
@@ -981,7 +981,7 @@ export function StudentBooksWorkspace() {
 
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">
                   تاريخ الإرجاع
                 </label>
                 <Input
@@ -993,9 +993,9 @@ export function StudentBooksWorkspace() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الحالة *</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">الحالة *</label>
+                <SelectField
+                  
                   value={formState.status}
                   onChange={(event) =>
                     setFormState((prev) => ({
@@ -1009,12 +1009,12 @@ export function StudentBooksWorkspace() {
                       {translateStudentBookStatus(status)}
                     </option>
                   ))}
-                </select>
+                </SelectField>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">ملاحظات</label>
               <Input
                 value={formState.notes}
                 onChange={(event) =>

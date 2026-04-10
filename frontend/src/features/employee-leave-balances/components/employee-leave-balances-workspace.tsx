@@ -448,7 +448,7 @@ export function EmployeeLeaveBalancesWorkspace() {
         >
           <div className="grid gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الموظف</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الموظف</label>
               <SelectField
                 value={filterDraft.employee}
                 onChange={(event) =>
@@ -465,7 +465,7 @@ export function EmployeeLeaveBalancesWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">نوع الإجازة</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">نوع الإجازة</label>
               <SelectField
                 value={filterDraft.leaveType}
                 onChange={(event) =>
@@ -485,7 +485,7 @@ export function EmployeeLeaveBalancesWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">السنة</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">السنة</label>
               <Input
                 type="number"
                 value={filterDraft.year}
@@ -497,7 +497,7 @@ export function EmployeeLeaveBalancesWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الحالة</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الحالة</label>
               <SelectField
                 value={filterDraft.active}
                 onChange={(event) =>
@@ -701,9 +701,9 @@ export function EmployeeLeaveBalancesWorkspace() {
             </p>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الموظف *</label>
+              <SelectField
+                
                 value={formState.employeeId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
@@ -717,12 +717,12 @@ export function EmployeeLeaveBalancesWorkspace() {
                     {employee.fullName} ({employee.jobNumber ?? "غير متوفر"})
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">نوع الإجازة</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">نوع الإجازة</label>
                 <SelectField
                   value={formState.leaveType}
                   onChange={(event) =>
@@ -741,7 +741,7 @@ export function EmployeeLeaveBalancesWorkspace() {
                 </SelectField>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">سنة الرصيد *</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">سنة الرصيد *</label>
                 <Input
                   type="number"
                   value={formState.balanceYear}
@@ -755,7 +755,7 @@ export function EmployeeLeaveBalancesWorkspace() {
 
             <div className="grid gap-3 md:grid-cols-3">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">
                   الأيام المخصصة *
                 </label>
                 <Input
@@ -769,7 +769,7 @@ export function EmployeeLeaveBalancesWorkspace() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الأيام المرحلة</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">الأيام المرحلة</label>
                 <Input
                   type="number"
                   min="0"
@@ -784,7 +784,7 @@ export function EmployeeLeaveBalancesWorkspace() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">تعديل يدوي</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">تعديل يدوي</label>
                 <Input
                   type="number"
                   value={formState.manualAdjustmentDays}
@@ -800,7 +800,7 @@ export function EmployeeLeaveBalancesWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">ملاحظات</label>
               <Input
                 value={formState.notes}
                 onChange={(event) =>

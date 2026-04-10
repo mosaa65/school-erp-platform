@@ -482,8 +482,7 @@ export function StudentHomeworksWorkspace() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1">
               <Label>الواجب الدراسي</Label>
-              <select
-                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              <SelectField
                 value={filterDraft.homework}
                 onChange={(event) =>
                   setFilterDraft((prev) => ({ ...prev, homework: event.target.value }))
@@ -495,7 +494,7 @@ export function StudentHomeworksWorkspace() {
                     {item.title}
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
             <div className="space-y-1">
               <Label>مكتمل</Label>
@@ -696,8 +695,7 @@ export function StudentHomeworksWorkspace() {
           <form className="space-y-4" onSubmit={handleSubmitForm}>
             <div className="space-y-1">
               <Label required>الواجب الدراسي</Label>
-              <select
-                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              <SelectField
                 value={formState.homeworkId}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -714,7 +712,7 @@ export function StudentHomeworksWorkspace() {
                     {item.title} ({formatSectionWithGradeLabel(item.section)} / {formatNameCodeLabel(item.subject.name, item.subject.code)})
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
 
             <div className="space-y-1">

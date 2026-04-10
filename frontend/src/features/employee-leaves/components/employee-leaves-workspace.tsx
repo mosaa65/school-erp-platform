@@ -808,9 +808,9 @@ export function EmployeeLeavesWorkspace() {
             </p>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الموظف *</label>
+              <SelectField
+                
                 value={formState.employeeId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
@@ -824,12 +824,12 @@ export function EmployeeLeavesWorkspace() {
                     {employee.fullName} ({employee.jobNumber ?? "غير متوفر"})
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">نوع الإجازة</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">نوع الإجازة</label>
                 <SelectField
                   value={formState.leaveType}
                   onChange={(event) =>
@@ -854,7 +854,7 @@ export function EmployeeLeavesWorkspace() {
 
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">تاريخ البداية *</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">تاريخ البداية *</label>
                 <Input
                   type="date"
                   value={formState.startDate}
@@ -865,7 +865,7 @@ export function EmployeeLeavesWorkspace() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">تاريخ النهاية *</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">تاريخ النهاية *</label>
                 <Input
                   type="date"
                   value={formState.endDate}
@@ -878,7 +878,7 @@ export function EmployeeLeavesWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">سبب الإجازة</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">سبب الإجازة</label>
               <Input
                 value={formState.reason}
                 onChange={(event) =>
@@ -890,7 +890,7 @@ export function EmployeeLeavesWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">ملاحظات</label>
               <Input
                 value={formState.notes}
                 onChange={(event) =>

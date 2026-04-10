@@ -597,11 +597,11 @@ export function EmployeeSectionSupervisionsWorkspace() {
             data-testid="employee-section-supervision-form"
           >
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">
                 الموظف *
               </label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <SelectField
+                
                 value={formState.employeeId}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -617,7 +617,7 @@ export function EmployeeSectionSupervisionsWorkspace() {
                     {employee.fullName} ({employee.jobNumber})
                   </option>
                 ))}
-              </select>
+              </SelectField>
               {selectedEmployee && !selectedEmployee.userAccount ? (
                 <p className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-300">
                   الموظف المختار لا يملك حساب مستخدم مرتبط. سيُحفظ الإشراف، لكن
@@ -634,11 +634,11 @@ export function EmployeeSectionSupervisionsWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">
                 الشعبة *
               </label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <SelectField
+                
                 value={formState.sectionId}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -654,15 +654,15 @@ export function EmployeeSectionSupervisionsWorkspace() {
                     {section.name} ({section.code})
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">
                 السنة الأكاديمية *
               </label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <SelectField
+                
                 value={formState.academicYearId}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -678,11 +678,11 @@ export function EmployeeSectionSupervisionsWorkspace() {
                     {year.name} ({year.code})
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
 
             <div className="space-y-2 rounded-md border border-border/70 p-3">
-              <p className="text-xs font-medium text-muted-foreground">
+              <p className="text-xs font-bold text-muted-foreground uppercase px-1">
                 الصلاحيات
               </p>
               <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">

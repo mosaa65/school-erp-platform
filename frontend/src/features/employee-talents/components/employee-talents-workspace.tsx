@@ -526,9 +526,9 @@ export function EmployeeTalentsWorkspace() {
               {isEditing ? "تحديث ربط الموظف بالموهبة." : "إضافة موهبة جديدة لموظف ضمن الموارد البشرية."}
             </p>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الموظف *</label>
+              <SelectField
+                
                 value={formState.employeeId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
@@ -542,13 +542,13 @@ export function EmployeeTalentsWorkspace() {
                     {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الموهبة *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الموهبة *</label>
+              <SelectField
+                
                 value={formState.talentId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, talentId: event.target.value }))
@@ -562,11 +562,11 @@ export function EmployeeTalentsWorkspace() {
                     {talent.name} ({talent.code})
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">ملاحظات</label>
               <Input
                 value={formState.notes}
                 onChange={(event) =>

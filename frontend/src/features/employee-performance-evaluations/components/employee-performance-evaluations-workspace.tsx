@@ -697,10 +697,10 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                   : "أدخل بيانات التقييم لإنشاء سجل جديد."}
               </p>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
-                <select
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">الموظف *</label>
+                <SelectField
                   data-testid="evaluation-form-employee"
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  
                   value={formState.employeeId}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
@@ -713,16 +713,16 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                       {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
                     </option>
                   ))}
-                </select>
+                </SelectField>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">
                   السنة الأكاديمية *
                 </label>
-                <select
+                <SelectField
                   data-testid="evaluation-form-academic-year"
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  
                   value={formState.academicYearId}
                   onChange={(event) =>
                     setFormState((prev) => ({
@@ -738,12 +738,12 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                       {year.name} ({year.code})
                     </option>
                   ))}
-                </select>
+                </SelectField>
               </div>
 
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">
+                  <label className="text-xs font-bold text-muted-foreground uppercase px-1">
                     تاريخ التقييم *
                   </label>
                   <Input
@@ -760,7 +760,7 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">الدرجة *</label>
+                  <label className="text-xs font-bold text-muted-foreground uppercase px-1">الدرجة *</label>
                   <Input
                     data-testid="evaluation-form-score"
                     type="number"
@@ -786,10 +786,10 @@ export function EmployeePerformanceEvaluationsWorkspace() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">مستوى التقييم</label>
-                <select
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">مستوى التقييم</label>
+                <SelectField
                   data-testid="evaluation-form-rating-level"
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  
                   value={formState.ratingLevel}
                   onChange={(event) =>
                     setFormState((prev) => ({
@@ -804,7 +804,7 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                       {translatePerformanceRatingLevel(rating)}
                     </option>
                   ))}
-                </select>
+                </SelectField>
                 {hasRatingMismatch && computedRating ? (
                   <p className="text-xs text-destructive">
                     مستوى التقييم الحالي لا يطابق الدرجة. المتوقع:{" "}
@@ -814,12 +814,12 @@ export function EmployeePerformanceEvaluationsWorkspace() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">
                   الموظف المقيّم
                 </label>
-                <select
+                <SelectField
                   data-testid="evaluation-form-evaluator"
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  
                   value={formState.evaluatorEmployeeId}
                   onChange={(event) =>
                     setFormState((prev) => ({
@@ -835,11 +835,11 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                       {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
                     </option>
                   ))}
-                </select>
+                </SelectField>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">نقاط القوة</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">نقاط القوة</label>
                 <Input
                   data-testid="evaluation-form-strengths"
                   value={formState.strengths}
@@ -851,7 +851,7 @@ export function EmployeePerformanceEvaluationsWorkspace() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">نقاط التحسين</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">نقاط التحسين</label>
                 <Input
                   data-testid="evaluation-form-weaknesses"
                   value={formState.weaknesses}
@@ -863,7 +863,7 @@ export function EmployeePerformanceEvaluationsWorkspace() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">
                   التوصيات
                 </label>
                 <Input

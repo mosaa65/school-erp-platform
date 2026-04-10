@@ -702,10 +702,10 @@ export function EmployeeViolationsWorkspace() {
                   : "أدخل بيانات المخالفة الجديدة لإنشاء سجل جديد."}
               </p>
               <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
-              <select
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الموظف *</label>
+              <SelectField
                 data-testid="violation-form-employee"
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                
                 value={formState.employeeId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
@@ -718,11 +718,11 @@ export function EmployeeViolationsWorkspace() {
                     {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">
                 تاريخ المخالفة *
               </label>
               <Input
@@ -740,7 +740,7 @@ export function EmployeeViolationsWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">
                 نوع المخالفة *
               </label>
               <Input
@@ -758,7 +758,7 @@ export function EmployeeViolationsWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">
                 وصف المخالفة *
               </label>
               <Input
@@ -776,7 +776,7 @@ export function EmployeeViolationsWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الإجراء المتخذ</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الإجراء المتخذ</label>
               <Input
                 data-testid="violation-form-action-taken"
                 value={formState.actionTaken}
@@ -788,10 +788,10 @@ export function EmployeeViolationsWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الدرجة</label>
-              <select
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الدرجة</label>
+              <SelectField
                 data-testid="violation-form-severity"
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                
                 value={formState.severity}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -805,7 +805,7 @@ export function EmployeeViolationsWorkspace() {
                     {translateViolationSeverity(severity)}
                   </option>
                 ))}
-              </select>
+              </SelectField>
               {formState.severity === "HIGH" || formState.severity === "CRITICAL" ? (
                 <p className="text-xs text-destructive">
                   المخالفات الشديدة تتطلب متابعة فورية من الإدارة.
@@ -814,12 +814,12 @@ export function EmployeeViolationsWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">
                 المبلّغ
               </label>
-              <select
+              <SelectField
                 data-testid="violation-form-reporter"
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                
                 value={formState.reportedByEmployeeId}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -835,7 +835,7 @@ export function EmployeeViolationsWorkspace() {
                     {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
 
             <div className="grid gap-2 md:grid-cols-3">

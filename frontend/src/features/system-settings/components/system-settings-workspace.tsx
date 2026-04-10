@@ -503,7 +503,7 @@ export function SystemSettingsWorkspace() {
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="setting-form">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">مفتاح الإعداد *</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">مفتاح الإعداد *</label>
               <Input
                 value={formState.settingKey}
                 onChange={(event) =>
@@ -517,9 +517,9 @@ export function SystemSettingsWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">نوع القيمة</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">نوع القيمة</label>
+              <SelectField
+                
                 value={formState.settingType}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -534,11 +534,11 @@ export function SystemSettingsWorkspace() {
                     {option.label}
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">القيمة</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">القيمة</label>
               <Input
                 value={formState.settingValue}
                 onChange={(event) =>
@@ -550,7 +550,7 @@ export function SystemSettingsWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الفئة</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الفئة</label>
               <Input
                 value={formState.category}
                 onChange={(event) =>
@@ -562,7 +562,7 @@ export function SystemSettingsWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الوصف</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الوصف</label>
               <Input
                 value={formState.description}
                 onChange={(event) =>

@@ -692,9 +692,9 @@ export function EmployeeDocumentsWorkspace() {
             </p>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الموظف *</label>
+              <SelectField
+                
                 value={formState.employeeId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
@@ -708,11 +708,11 @@ export function EmployeeDocumentsWorkspace() {
                     {employee.fullName} ({employee.jobNumber ?? "غير متوفر"})
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">اسم المستند *</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">اسم المستند *</label>
               <Input
                 value={formState.fileName}
                 onChange={(event) =>
@@ -724,7 +724,7 @@ export function EmployeeDocumentsWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">مسار الملف أو رابطه *</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">مسار الملف أو رابطه *</label>
               <Input
                 value={formState.filePath}
                 onChange={(event) =>
@@ -737,7 +737,7 @@ export function EmployeeDocumentsWorkspace() {
 
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">تصنيف المستند</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">تصنيف المستند</label>
                 <Input
                   value={formState.fileCategory}
                   onChange={(event) =>
@@ -754,7 +754,7 @@ export function EmployeeDocumentsWorkspace() {
                 </datalist>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">نوع الملف</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">نوع الملف</label>
                 <Input
                   value={formState.fileType}
                   onChange={(event) =>
@@ -767,7 +767,7 @@ export function EmployeeDocumentsWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">حجم الملف بالبايت</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">حجم الملف بالبايت</label>
               <Input
                 type="number"
                 min={0}
@@ -781,7 +781,7 @@ export function EmployeeDocumentsWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الوصف</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الوصف</label>
               <Input
                 value={formState.description}
                 onChange={(event) =>
@@ -793,7 +793,7 @@ export function EmployeeDocumentsWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">تاريخ الصلاحية</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">تاريخ الصلاحية</label>
               <Input
                 type="date"
                 value={formState.expiresAt}

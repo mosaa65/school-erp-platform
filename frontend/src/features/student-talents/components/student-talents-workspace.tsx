@@ -567,7 +567,7 @@ export function StudentTalentsWorkspace() {
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الطالب *</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الطالب *</label>
               <StudentPickerSheet
                 triggerTestId="student-talent-form-student"
                 scope="student-talents"
@@ -583,10 +583,10 @@ export function StudentTalentsWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الموهبة *</label>
-              <select
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الموهبة *</label>
+              <SelectField
                 data-testid="student-talent-form-talent"
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                
                 value={formState.talentId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, talentId: event.target.value }))
@@ -599,11 +599,11 @@ export function StudentTalentsWorkspace() {
                     {talent.name} ({talent.code})
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">ملاحظات</label>
               <Input
                 data-testid="student-talent-form-notes"
                 value={formState.notes}

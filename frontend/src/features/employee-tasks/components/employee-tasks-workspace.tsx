@@ -619,9 +619,9 @@ export function EmployeeTasksWorkspace() {
               {isEditing ? "تحديث المهمة." : "إضافة مهمة جديدة مرتبطة بموظف."}
             </p>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الموظف *</label>
+              <SelectField
+                
                 value={formState.employeeId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
@@ -635,11 +635,11 @@ export function EmployeeTasksWorkspace() {
                     {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">اسم المهمة *</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">اسم المهمة *</label>
               <Input
                 value={formState.taskName}
                 onChange={(event) =>
@@ -652,11 +652,11 @@ export function EmployeeTasksWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">
                 السنة الأكاديمية
               </label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <SelectField
+                
                 value={formState.academicYearId}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -673,14 +673,14 @@ export function EmployeeTasksWorkspace() {
                     {year.name} ({year.code})
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">اليوم</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">اليوم</label>
+                <SelectField
+                  
                   value={formState.dayOfWeek}
                   onChange={(event) =>
                     setFormState((prev) => ({
@@ -696,10 +696,10 @@ export function EmployeeTasksWorkspace() {
                       {translateTimetableDay(day)}
                     </option>
                   ))}
-                </select>
+                </SelectField>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">
                   تاريخ الإسناد
                 </label>
                 <Input
@@ -717,7 +717,7 @@ export function EmployeeTasksWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">ملاحظات</label>
               <Input
                 value={formState.notes}
                 onChange={(event) =>

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SelectField } from "@/components/ui/select-field";
 import { Switch } from "@/components/ui/switch";
 import { StudentPickerSheet } from "@/components/ui/student-picker-sheet";
 import { useHealthSummaryQuery } from "@/features/health-visits/hooks/use-health-summary-query";
@@ -120,10 +121,9 @@ export function HealthVisitsWorkspace() {
                 }}
               />
             </label>
-            <label className="flex flex-col text-sm font-medium text-muted-foreground">
-              الحالة الصحية
-              <select
-                className="mt-1 rounded-md border border-input bg-card px-3 py-2 text-sm outline-none"
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الحالة الصحية</label>
+              <SelectField
                 value={formState.healthStatusId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, healthStatusId: event.target.value }))
@@ -139,20 +139,19 @@ export function HealthVisitsWorkspace() {
                     </option>
                   ))
                 )}
-              </select>
-            </label>
-            <label className="flex flex-col text-sm font-medium text-muted-foreground">
-              تاريخ الزيارة
+              </SelectField>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">تاريخ الزيارة</label>
               <Input
                 type="datetime-local"
                 value={formState.visitDate}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, visitDate: event.target.value }))
                 }
-                className="mt-1"
               />
-            </label>
-            <label className="flex items-center gap-3 text-sm font-medium text-muted-foreground">
+            </div>
+            <label className="flex items-center gap-3 text-xs font-bold text-muted-foreground uppercase px-1">
               <span>متابعة مطلوبة</span>
               <Switch
                 checked={formState.followUpRequired}
@@ -164,28 +163,28 @@ export function HealthVisitsWorkspace() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <label className="flex flex-col text-sm font-medium text-muted-foreground">
-              ملاحظات
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">ملاحظات</label>
               <textarea
                 rows={3}
                 value={formState.notes}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, notes: event.target.value }))
                 }
-                className="mt-1 min-h-[90px] rounded-md border border-input bg-card px-3 py-2 text-sm outline-none"
+                className="min-h-[90px] rounded-md border border-input bg-card px-3 py-2 text-sm outline-none"
               />
-            </label>
-            <label className="flex flex-col text-sm font-medium text-muted-foreground">
-              ملاحظات المتابعة
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">ملاحظات المتابعة</label>
               <textarea
                 rows={3}
                 value={formState.followUpNotes}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, followUpNotes: event.target.value }))
                 }
-                className="mt-1 min-h-[90px] rounded-md border border-input bg-card px-3 py-2 text-sm outline-none"
+                className="min-h-[90px] rounded-md border border-input bg-card px-3 py-2 text-sm outline-none"
               />
-            </label>
+            </div>
           </div>
 
           <div className="flex flex-col gap-2 text-sm text-muted-foreground">

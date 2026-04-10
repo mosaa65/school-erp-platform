@@ -585,9 +585,9 @@ export function EmployeeCoursesWorkspace() {
               {isEditing ? "تحديث بيانات الدورة التدريبية." : "إضافة دورة تدريبية جديدة للموظف."}
             </p>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الموظف *</label>
+              <SelectField
+                
                 value={formState.employeeId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
@@ -601,11 +601,11 @@ export function EmployeeCoursesWorkspace() {
                     {employee.fullName} ({employee.jobNumber ?? "غير متوفر"})
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">اسم الدورة *</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">اسم الدورة *</label>
               <Input
                 value={formState.courseName}
                 onChange={(event) =>
@@ -618,7 +618,7 @@ export function EmployeeCoursesWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">جهة التدريب</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">جهة التدريب</label>
               <Input
                 value={formState.courseProvider}
                 onChange={(event) =>
@@ -634,7 +634,7 @@ export function EmployeeCoursesWorkspace() {
 
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">تاريخ الدورة</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">تاريخ الدورة</label>
                 <Input
                   type="date"
                   value={formState.courseDate}
@@ -645,7 +645,7 @@ export function EmployeeCoursesWorkspace() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">
                   المدة (بالأيام)
                 </label>
                 <Input
@@ -666,7 +666,7 @@ export function EmployeeCoursesWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">رقم الشهادة</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">رقم الشهادة</label>
               <Input
                 value={formState.certificateNumber}
                 onChange={(event) =>
@@ -681,7 +681,7 @@ export function EmployeeCoursesWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">ملاحظات</label>
               <Input
                 value={formState.notes}
                 onChange={(event) =>

@@ -913,7 +913,7 @@ export function StudentGuardiansWorkspace() {
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الطالب *</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">الطالب *</label>
               <StudentPickerSheet
                 scope="student-guardians"
                 variant="form"
@@ -928,7 +928,7 @@ export function StudentGuardiansWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ولي الأمر *</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">ولي الأمر *</label>
               <GuardianPickerSheet
                 scope="student-guardians"
                 variant="form"
@@ -943,9 +943,9 @@ export function StudentGuardiansWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">صلة القرابة *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">صلة القرابة *</label>
+              <SelectField
+                
                 value={formState.relationshipTypeId}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -966,12 +966,12 @@ export function StudentGuardiansWorkspace() {
                         : String(value.id))}
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">تاريخ البداية</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">تاريخ البداية</label>
                 <Input
                   type="date"
                   value={formState.startDate}
@@ -982,7 +982,7 @@ export function StudentGuardiansWorkspace() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">تاريخ النهاية</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">تاريخ النهاية</label>
                 <Input
                   type="date"
                   value={formState.endDate}
@@ -994,7 +994,7 @@ export function StudentGuardiansWorkspace() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase px-1">ملاحظات</label>
               <Input
                 value={formState.notes}
                 onChange={(event) =>
