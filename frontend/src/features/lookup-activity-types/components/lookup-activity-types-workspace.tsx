@@ -8,7 +8,6 @@ import {
   PencilLine,
   Plus,
   RefreshCw,
-  Search,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +23,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
+import { PageShell } from "@/components/ui/page-shell";
 import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
@@ -57,7 +57,6 @@ function toFormState(item: LookupActivityTypeListItem): LookupActivityTypeFormSt
   };
 }
 
-
 export function LookupActivityTypesWorkspace() {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("lookup-activity-types.create");
@@ -69,14 +68,10 @@ export function LookupActivityTypesWorkspace() {
   const [search, setSearch] = React.useState("");
   const [activeFilter, setActiveFilter] = React.useState<
     "all" | "active" | "inactive" | "deleted"
-  >(
-    "all",
-  );
+  >("all");
   const [filterDraft, setFilterDraft] = React.useState<
     "all" | "active" | "inactive" | "deleted"
-  >(
-    "all",
-  );
+  >("all");
   const [editingLookupActivityTypeId, setEditingLookupActivityTypeId] = React.useState<
     number | null
   >(null);
@@ -130,10 +125,14 @@ export function LookupActivityTypesWorkspace() {
     }
   }, [editingLookupActivityTypeId, isEditing, lookupActivityTypes]);
 
-  useDebounceEffect(() => {
+  useDebounceEffect(
+    () => {
       setPage(1);
       setSearch(searchInput.trim());
-    }, 400, [searchInput]);
+    },
+    400,
+    [searchInput],
+  );
 
   React.useEffect(() => {
     if (!isFilterOpen) {
@@ -276,28 +275,15 @@ export function LookupActivityTypesWorkspace() {
   }, [activeFilter, searchInput]);
 
   return (
-    <>
+    <PageShell title="أنواع الأنشطة">
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
-            <div className="relative flex-1">
-              <Search className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث..."
-                className="pr-8"
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterTriggerButton
-              count={activeFiltersCount}
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-            />
-          </div>
-        </div>
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="بحث..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen(true)}
+        />
 
         <FilterDrawer
           open={isFilterOpen}
@@ -348,13 +334,13 @@ export function LookupActivityTypesWorkspace() {
 
           <CardContent className="space-y-3">
             {lookupActivityTypesQuery.isPending ? (
-              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+              <div className="rounded-2xl border border-dashed border-border/70 p-6 text-sm text-muted-foreground text-center">
                 جارٍ تحميل أنواع الأنشطة...
               </div>
             ) : null}
 
             {lookupActivityTypesQuery.error ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
                 {lookupActivityTypesQuery.error instanceof Error
                   ? lookupActivityTypesQuery.error.message
                   : "فشل تحميل أنواع الأنشطة"}
@@ -362,7 +348,7 @@ export function LookupActivityTypesWorkspace() {
             ) : null}
 
             {!lookupActivityTypesQuery.isPending && lookupActivityTypes.length === 0 ? (
-              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+              <div className="rounded-2xl border border-dashed border-border/70 p-6 text-sm text-muted-foreground text-center">
                 لا توجد نتائج مطابقة.
               </div>
             ) : null}
@@ -383,7 +369,7 @@ export function LookupActivityTypesWorkspace() {
                   </Badge>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
                   <Button
                     variant="outline"
                     size="sm"
@@ -395,9 +381,9 @@ export function LookupActivityTypesWorkspace() {
                     تعديل
                   </Button>
                   <Button
-                    variant="destructive"
+                    variant="ghost"
                     size="sm"
-                    className="gap-1.5"
+                    className="gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
                     onClick={() => handleDelete(item)}
                     disabled={!canDelete || deleteMutation.isPending}
                   >
@@ -475,11 +461,11 @@ export function LookupActivityTypesWorkspace() {
         showFooter={false}
       >
         {!canCreate && !isEditing ? (
-          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+          <div className="rounded-2xl border border-dashed border-border/70 p-6 text-sm text-muted-foreground text-center">
             لا تملك الصلاحية المطلوبة: <code>lookup-activity-types.create</code>.
           </div>
         ) : (
-          <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="activity-type-form">
+          <form className="space-y-4" onSubmit={handleSubmitForm} data-testid="activity-type-form">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">الاسم بالعربية *</label>
               <Input
@@ -487,13 +473,13 @@ export function LookupActivityTypesWorkspace() {
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, nameAr: event.target.value }))
                 }
-                placeholder="نشاط رياضي"
+                placeholder="مثال: نشاط رياضي"
                 required
                 data-testid="activity-type-form-name-ar"
               />
             </div>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+            <label className="flex items-center justify-between rounded-2xl border border-border/70 bg-background/50 px-4 py-2.5 text-sm">
               <span>نشط</span>
               <input
                 type="checkbox"
@@ -501,23 +487,24 @@ export function LookupActivityTypesWorkspace() {
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
                 }
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                 data-testid="activity-type-form-active"
               />
             </label>
 
             {formError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+              <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
                 {formError}
               </div>
             ) : null}
 
             {mutationError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+              <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
                 {mutationError}
               </div>
             ) : null}
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 pt-2">
               <Button
                 type="submit"
                 className="flex-1 gap-2"
@@ -529,7 +516,7 @@ export function LookupActivityTypesWorkspace() {
                 ) : (
                   <BadgeCheck className="h-4 w-4" />
                 )}
-                {isEditing ? "حفظ التعديلات" : "إنشاء نوع نشاط"}
+                {isEditing ? "حفظ التعديلات" : "إسناد نوع النشاط"}
               </Button>
               {isEditing ? (
                 <Button type="button" variant="outline" onClick={resetForm}>
@@ -540,6 +527,6 @@ export function LookupActivityTypesWorkspace() {
           </form>
         )}
       </BottomSheetForm>
-    </>
+    </PageShell>
   );
 }

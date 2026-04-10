@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { Lock, RefreshCw, Unlock } from "lucide-react";
@@ -293,3 +293,4 @@ export function BankReconciliationsWorkspace() {
     </div>
   );
 }
+

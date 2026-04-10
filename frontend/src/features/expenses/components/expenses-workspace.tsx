@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { BadgeCheck, Receipt, RefreshCw, Wallet } from "lucide-react";
+import { BadgeCheck, Receipt, RefreshCw, Wallet, Calendar, Tag, UserCheck, Hash } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PageShell } from "@/components/ui/page-shell";
 import {
   Card,
   CardContent,
@@ -13,8 +14,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { SelectField } from "@/components/ui/select-field";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useExpensesQuery } from "@/features/expenses/hooks/use-expenses-query";
 import { useApproveExpenseMutation } from "@/features/expenses/hooks/use-expenses-mutations";
@@ -137,223 +138,273 @@ export function ExpensesWorkspace() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <FilterTriggerButton
-          count={activeFiltersCount}
-          onClick={() => setIsFilterOpen((prev) => !prev)}
-        />
-      </div>
-
-      <FilterDrawer
-        open={isFilterOpen}
-        onClose={() => setIsFilterOpen(false)}
-        title="فلترة المصروفات"
-        actionButtons={
-          <div className="flex w-full gap-2">
+    <PageShell
+      title="المصروفات التشغيلية"
+      subtitle="تتبع واعتماد المصروفات المالية وربطها بالصناديق والفئات."
+    >
+      <div className="space-y-4">
+        <ManagementToolbar
+          searchValue={draftFilters.search}
+          onSearchChange={(event) => setDraftFilters((prev) => ({ ...prev, search: event.target.value }))}
+          searchPlaceholder="بحث بالوصف أو رقم الفاتورة..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen(true)}
+          actions={
             <Button
-              type="button"
               variant="outline"
-              onClick={clearFilters}
-              className="flex-1 gap-1.5"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => void expensesQuery.refetch()}
+              disabled={expensesQuery.isFetching}
             >
-              مسح
+              <RefreshCw className={`h-4 w-4 ${expensesQuery.isFetching ? "animate-spin" : ""}`} />
+              تحديث
             </Button>
-            <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-              تطبيق
-            </Button>
-          </div>
-        }
-      >
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Input
-            placeholder="بحث بالوصف أو رقم الفاتورة"
-            value={draftFilters.search}
-            onChange={(event) =>
-              setDraftFilters((prev) => ({ ...prev, search: event.target.value }))
-            }
-          />
-          <Input
-            type="number"
-            placeholder="معرف الصندوق"
-            value={draftFilters.fundId}
-            onChange={(event) =>
-              setDraftFilters((prev) => ({ ...prev, fundId: event.target.value }))
-            }
-          />
-          <Input
-            type="number"
-            placeholder="معرف الفئة"
-            value={draftFilters.categoryId}
-            onChange={(event) =>
-              setDraftFilters((prev) => ({ ...prev, categoryId: event.target.value }))
-            }
-          />
-          <SelectField
-            value={draftFilters.approval}
-            onChange={(event) =>
-              setDraftFilters((prev) => ({
-                ...prev,
-                approval: event.target.value as DraftFilters["approval"],
-              }))
-            }
-          >
-            <option value="all">كل الحالات</option>
-            <option value="approved">معتمد</option>
-            <option value="pending">بانتظار الاعتماد</option>
-          </SelectField>
-          <Input
-            type="date"
-            value={draftFilters.dateFrom}
-            onChange={(event) =>
-              setDraftFilters((prev) => ({ ...prev, dateFrom: event.target.value }))
-            }
-          />
-          <Input
-            type="date"
-            value={draftFilters.dateTo}
-            onChange={(event) =>
-              setDraftFilters((prev) => ({ ...prev, dateTo: event.target.value }))
-            }
-          />
-        </div>
-      </FilterDrawer>
+          }
+        />
 
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle className="flex items-center gap-2">
-              <Wallet className="h-5 w-5 text-primary" />
-              المصروفات
-            </CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
-          </div>
-          <CardDescription>
-            سجل المصروفات التشغيلية مع إمكانية اعتماد المصروفات مباشرة.
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent className="space-y-3">
-          {expensesQuery.isPending ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ تحميل المصروفات...
-            </div>
-          ) : null}
-
-          {expensesQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {expensesQuery.error instanceof Error
-                ? expensesQuery.error.message
-                : "تعذر تحميل المصروفات."}
-            </div>
-          ) : null}
-
-          {!expensesQuery.isPending && expenses.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              لا توجد مصروفات مطابقة.
-            </div>
-          ) : null}
-
-          {expenses.map((expense) => {
-            const isApproved = Boolean(expense.isApproved);
-
-            return (
-              <div
-                key={expense.id}
-                className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="space-y-1">
-                    <p className="font-medium">
-                      {expense.fund?.nameAr ?? "صندوق غير معروف"} · {expense.category?.nameAr ?? "فئة غير محددة"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      التاريخ: {expense.expenseDate ? new Date(expense.expenseDate).toLocaleDateString() : "-"}
-                    </p>
-                  </div>
-                  <Badge variant={isApproved ? "default" : "outline"}>
-                    {isApproved ? "معتمد" : "بانتظار الاعتماد"}
-                  </Badge>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3 text-sm">
-                  <span className="font-semibold">{expense.amount ?? 0}</span>
-                  {expense.invoiceNumber ? (
-                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                      <Receipt className="h-3.5 w-3.5" />
-                      فاتورة: {expense.invoiceNumber}
-                    </span>
-                  ) : null}
-                </div>
-
-                {expense.description ? (
-                  <p className="text-xs text-muted-foreground">{expense.description}</p>
-                ) : null}
-
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-xs text-muted-foreground">
-                    {expense.approvedByUser?.email
-                      ? `المعتمد بواسطة: ${expense.approvedByUser.email}`
-                      : "لم يتم الاعتماد بعد"}
-                  </div>
-                  {canApprove && !isApproved ? (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      className="gap-1.5"
-                      onClick={() => handleApprove(expense.id)}
-                      disabled={approveMutation.isPending}
-                    >
-                      <BadgeCheck className="h-3.5 w-3.5" />
-                      اعتماد
-                    </Button>
-                  ) : null}
-                </div>
-              </div>
-            );
-          })}
-
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-            <p className="text-xs text-muted-foreground">
-              صفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-            </p>
-            <div className="flex items-center gap-2">
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="فلاتر المصروفات"
+          actionButtons={
+            <div className="flex w-full gap-2">
               <Button
+                type="button"
                 variant="outline"
-                size="sm"
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={!pagination || pagination.page <= 1 || expensesQuery.isFetching}
+                onClick={clearFilters}
+                className="flex-1 gap-1.5"
               >
-                السابق
+                مسح
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPage((prev) =>
-                    pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                  )
+              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
+                تطبيق
+              </Button>
+            </div>
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">معرف الصندوق</label>
+              <Input
+                type="number"
+                placeholder="fundId"
+                value={draftFilters.fundId}
+                onChange={(event) =>
+                  setDraftFilters((prev) => ({ ...prev, fundId: event.target.value }))
                 }
-                disabled={!pagination || pagination.page >= pagination.totalPages || expensesQuery.isFetching}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">معرف الفئة</label>
+              <Input
+                type="number"
+                placeholder="categoryId"
+                value={draftFilters.categoryId}
+                onChange={(event) =>
+                  setDraftFilters((prev) => ({ ...prev, categoryId: event.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">حالة الاعتماد</label>
+              <SelectField
+                value={draftFilters.approval}
+                onChange={(event) =>
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    approval: event.target.value as DraftFilters["approval"],
+                  }))
+                }
               >
-                التالي
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => void expensesQuery.refetch()}
-                disabled={expensesQuery.isFetching}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${expensesQuery.isFetching ? "animate-spin" : ""}`}
-                />
-                تحديث
-              </Button>
+                <option value="all">كل الحالات</option>
+                <option value="approved">معتمد</option>
+                <option value="pending">بانتظار الاعتماد</option>
+              </SelectField>
+            </div>
+            <div className="h-[1px] sm:col-span-2 bg-border/40 my-1" />
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">من تاريخ</label>
+              <Input
+                type="date"
+                value={draftFilters.dateFrom}
+                onChange={(event) =>
+                  setDraftFilters((prev) => ({ ...prev, dateFrom: event.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">إلى تاريخ</label>
+              <Input
+                type="date"
+                value={draftFilters.dateTo}
+                onChange={(event) =>
+                  setDraftFilters((prev) => ({ ...prev, dateTo: event.target.value }))
+                }
+              />
             </div>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </FilterDrawer>
+
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm overflow-hidden">
+          <CardHeader className="space-y-3 bg-muted/20 border-b border-border/60 pb-6">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-bold">
+                <Wallet className="h-5 w-5 text-primary" />
+                سجل المصروفات
+              </CardTitle>
+              <Badge variant="secondary" className="rounded-full px-3">الإجمالي: {pagination?.total ?? 0}</Badge>
+            </div>
+            <CardDescription>
+              استعراض المصروفات التشغيلية الموثقة في النظام والموافقة عليها.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-4 pt-6">
+            {expensesQuery.isPending ? (
+              <div className="rounded-2xl border border-dashed border-border/70 p-8 text-sm text-muted-foreground text-center">
+                جارٍ تحميل سجل المصروفات...
+              </div>
+            ) : null}
+
+            {expensesQuery.error ? (
+              <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive font-medium text-center">
+                {expensesQuery.error instanceof Error
+                  ? expensesQuery.error.message
+                  : "حدث خطأ أثناء تحميل سجل المصروفات."}
+              </div>
+            ) : null}
+
+            {!expensesQuery.isPending && expenses.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border/70 p-8 text-sm text-muted-foreground text-center">
+                لم يتم العثور على أي مصروفات مطابقة للبحث.
+              </div>
+            ) : null}
+
+            <div className="grid gap-4 md:grid-cols-2">
+              {expenses.map((expense) => {
+                const isApproved = Boolean(expense.isApproved);
+
+                return (
+                  <div
+                    key={expense.id}
+                    className="group relative space-y-4 rounded-2xl border border-border/70 bg-background/50 p-4 transition-all hover:border-primary/30 hover:shadow-lg overflow-hidden"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="space-y-1.5">
+                        <p className="font-bold text-base leading-tight">
+                          {expense.fund?.nameAr ?? "مركز مالي غير معروف"}
+                        </p>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Tag className="h-3.5 w-3.5" />
+                          <span>{expense.category?.nameAr ?? "فئة عامة"}</span>
+                        </div>
+                      </div>
+                      <Badge variant={isApproved ? "default" : "secondary"} className={`h-6 rounded-full text-[10px] px-2.5 font-bold tracking-tight ${isApproved ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-amber-100 text-amber-800 border-amber-200'}`}>
+                        {isApproved ? "معتمد" : "قيد المراجعة"}
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-xl border border-border/60 bg-muted/20 p-2.5 space-y-1">
+                        <span className="text-[10px] text-muted-foreground uppercase leading-none block">المبلغ الإجمالي</span>
+                        <div className="flex items-baseline gap-1">
+                          <span className="font-bold text-lg text-primary">{expense.amount?.toLocaleString() ?? 0}</span>
+                          <span className="text-[10px] text-muted-foreground">ريال</span>
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border border-border/60 bg-muted/20 p-2.5 space-y-1">
+                        <span className="text-[10px] text-muted-foreground uppercase leading-none block">التاريخ</span>
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="font-medium text-xs">{expense.expenseDate ? new Date(expense.expenseDate).toLocaleDateString("ar-SA") : "-"}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-start gap-2 text-xs">
+                        <Hash className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
+                        <span className="text-muted-foreground leading-tight">{expense.description || "لا يوجد وصف متوفر لهذا المصروف."}</span>
+                      </div>
+                      
+                      {expense.invoiceNumber ? (
+                        <div className="flex items-center gap-2 text-[11px] font-medium bg-primary/5 border border-primary/10 rounded-lg px-2.5 py-1 text-primary w-fit">
+                          <Receipt className="h-3.5 w-3.5" />
+                          <span>رقم الفاتورة: {expense.invoiceNumber}</span>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 border-t border-border/60 pt-4 mt-auto">
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                        <UserCheck className="h-3.5 w-3.5" />
+                        <span className="truncate max-w-[120px]">
+                          {expense.approvedByUser?.email
+                            ? `بواسطة: ${expense.approvedByUser.email.split("@")[0]}`
+                            : "غير معتمد"}
+                        </span>
+                      </div>
+                      
+                      {canApprove && !isApproved ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 rounded-xl gap-1.5 text-[11px] font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 transition-colors"
+                          onClick={() => handleApprove(expense.id)}
+                          disabled={approveMutation.isPending}
+                        >
+                          {approveMutation.isPending ? (
+                            <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <BadgeCheck className="h-3.5 w-3.5" />
+                          )}
+                          اعتماد الآن
+                        </Button>
+                      ) : null}
+                    </div>
+
+                    {!isApproved && (
+                      <div className="absolute top-0 right-0 h-1 rounded-tl-full w-full bg-amber-400 opacity-70" />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-6">
+              <p className="text-xs text-muted-foreground">
+                صفحة <strong className="text-foreground">{pagination?.page ?? 1}</strong> من <strong className="text-foreground">{pagination?.totalPages ?? 1}</strong>
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 px-4 rounded-2xl"
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={!pagination || pagination.page <= 1 || expensesQuery.isFetching}
+                >
+                  السابق
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 px-4 rounded-2xl"
+                  onClick={() =>
+                    setPage((prev) =>
+                      pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
+                    )
+                  }
+                  disabled={!pagination || pagination.page >= pagination.totalPages || expensesQuery.isFetching}
+                >
+                  التالي
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </PageShell>
   );
 }

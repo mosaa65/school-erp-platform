@@ -4,27 +4,35 @@ import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   KeyRound,
-  LoaderCircle,
-  PencilLine,
   RefreshCw,
-  ShieldOff,
+  PencilLine,
   Trash2,
+  ShieldCheck,
+  ShieldOff,
+  User,
+  History,
+  Clock,
+  Shield,
+  Activity,
+  Calendar,
+  Lock,
+  Mail,
+  Fingerprint,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SearchField } from "@/components/ui/search-field";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
+import { PageShell } from "@/components/ui/page-shell";
 import { SelectField } from "@/components/ui/select-field";
-import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
+import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
@@ -51,6 +59,7 @@ type UserPermissionFormState = {
 };
 
 const PAGE_SIZE = 12;
+
 const DEFAULT_FORM_STATE: UserPermissionFormState = {
   userId: "",
   permissionId: "",
@@ -62,10 +71,7 @@ const DEFAULT_FORM_STATE: UserPermissionFormState = {
 };
 
 function toLocalDateTimeInput(value: string | null): string {
-  if (!value) {
-    return "";
-  }
-
+  if (!value) return "";
   const date = new Date(value);
   const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
   return localDate.toISOString().slice(0, 16);
@@ -73,30 +79,8 @@ function toLocalDateTimeInput(value: string | null): string {
 
 function toIsoFromLocal(value: string): string | undefined {
   const normalized = value.trim();
-  if (!normalized) {
-    return undefined;
-  }
-
+  if (!normalized) return undefined;
   return new Date(normalized).toISOString();
-}
-
-function formatLocalDateTime(value: string | null): string {
-  if (!value) {
-    return "-";
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "-";
-  }
-
-  return date.toLocaleString("ar-SA", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 function toFormState(item: UserPermissionListItem): UserPermissionFormState {
@@ -111,30 +95,6 @@ function toFormState(item: UserPermissionListItem): UserPermissionFormState {
   };
 }
 
-function ensureDateRange(validFrom: string, validUntil: string): string | null {
-  if (!validFrom || !validUntil) {
-    return null;
-  }
-
-  if (new Date(validUntil) < new Date(validFrom)) {
-    return "تاريخ الانتهاء يجب أن يكون بعد تاريخ البداية.";
-  }
-
-  return null;
-}
-
-function getPermissionOptionLabel(permissionCode: string): string {
-  return `${translatePermissionCode(permissionCode)} (${permissionCode})`;
-}
-
-function readErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return "حدث خطأ غير متوقع";
-}
-
 export function UserPermissionsWorkspace() {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("user-permissions.create");
@@ -147,247 +107,124 @@ export function UserPermissionsWorkspace() {
   const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<"all" | "current" | "revoked">("all");
   const [userFilter, setUserFilter] = React.useState<string>("all");
-  const [permissionFilter, setPermissionFilter] = React.useState<string>("all");
-  const [statusFilterDraft, setStatusFilterDraft] = React.useState<
-    "all" | "current" | "revoked"
-  >("all");
-  const [userFilterDraft, setUserFilterDraft] = React.useState<string>("all");
-  const [permissionFilterDraft, setPermissionFilterDraft] = React.useState<string>("all");
-  const [isBulkSubmitting, setIsBulkSubmitting] = React.useState(false);
+  const [filterDraft, setFilterDraft] = React.useState<{ status: "all" | "current" | "revoked"; user: string }>({ status: "all", user: "all" });
 
-  const [editingItemId, setEditingItemId] = React.useState<number | null>(null);
+  const [editingId, setEditingId] = React.useState<number | null>(null);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [formState, setFormState] = React.useState<UserPermissionFormState>(DEFAULT_FORM_STATE);
+  const [form, setForm] = React.useState<UserPermissionFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
-
-  const usersOptionsQuery = useUsersOptionsQuery();
-  const permissionsOptionsQuery = usePermissionsOptionsQuery();
+  const [isBulkSubmitting, setIsBulkSubmitting] = React.useState(false);
 
   const userPermissionsQuery = useUserPermissionsQuery({
-    page,
-    limit: PAGE_SIZE,
-    search: search || undefined,
+    page, limit: PAGE_SIZE, search,
     userId: userFilter === "all" ? undefined : userFilter,
-    permissionId: permissionFilter === "all" ? undefined : permissionFilter,
     isRevoked: statusFilter === "revoked" ? true : undefined,
     isCurrent: statusFilter === "current" ? true : undefined,
   });
+
+  const usersOptionsQuery = useUsersOptionsQuery();
+  const permissionsOptionsQuery = usePermissionsOptionsQuery();
 
   const createMutation = useCreateUserPermissionMutation();
   const updateMutation = useUpdateUserPermissionMutation();
   const revokeMutation = useRevokeUserPermissionMutation();
   const deleteMutation = useDeleteUserPermissionMutation();
 
-  const users = React.useMemo(() => usersOptionsQuery.data ?? [], [usersOptionsQuery.data]);
-  const permissions = React.useMemo(() => permissionsOptionsQuery.data ?? [], [permissionsOptionsQuery.data]);
-  const items = React.useMemo(() => userPermissionsQuery.data?.data ?? [], [userPermissionsQuery.data?.data]);
+  const records = React.useMemo(() => userPermissionsQuery.data?.data ?? [], [userPermissionsQuery.data?.data]);
   const pagination = userPermissionsQuery.data?.pagination;
-  const isEditing = editingItemId !== null;
-
-  const mutationError =
-    (createMutation.error as Error | null)?.message ??
-    (updateMutation.error as Error | null)?.message ??
-    (revokeMutation.error as Error | null)?.message ??
-    (deleteMutation.error as Error | null)?.message ??
-    null;
-
-  React.useEffect(() => {
-    if (!isEditing) {
-      return;
-    }
-
-    const stillExists = items.some((item) => item.id === editingItemId);
-    if (!stillExists) {
-      setEditingItemId(null);
-      setFormState(DEFAULT_FORM_STATE);
-      setFormError(null);
-      setIsFormOpen(false);
-    }
-  }, [editingItemId, isEditing, items]);
+  const isEditing = editingId !== null;
+  const isSubmitting = isBulkSubmitting || createMutation.isPending || updateMutation.isPending;
 
   useDebounceEffect(() => {
-      setPage(1);
-      setSearch(searchInput.trim());
-    }, 400, [searchInput]);
+    setPage(1);
+    setSearch(searchInput.trim());
+  }, 400, [searchInput]);
 
   React.useEffect(() => {
-    if (!isFilterOpen) {
-      return;
-    }
+    if (!isFilterOpen) return;
+    setFilterDraft({ status: statusFilter, user: userFilter });
+  }, [isFilterOpen, statusFilter, userFilter]);
 
-    setStatusFilterDraft(statusFilter);
-    setUserFilterDraft(userFilter);
-    setPermissionFilterDraft(permissionFilter);
-  }, [isFilterOpen, permissionFilter, statusFilter, userFilter]);
-
-  const resetForm = () => {
-    setEditingItemId(null);
-    setFormState(DEFAULT_FORM_STATE);
+  const resetFormState = () => {
+    setEditingId(null);
+    setForm(DEFAULT_FORM_STATE);
     setFormError(null);
     setIsFormOpen(false);
   };
 
   const handleStartCreate = () => {
-    if (!canCreate) {
-      return;
-    }
-
-    setFormError(null);
-    setEditingItemId(null);
-    setFormState(DEFAULT_FORM_STATE);
+    if (!canCreate) return;
+    setForm(DEFAULT_FORM_STATE);
     setIsFormOpen(true);
   };
 
   const handleStartEdit = (item: UserPermissionListItem) => {
-    if (!canUpdate) {
-      return;
-    }
-
-    setEditingItemId(item.id);
-    setFormState(toFormState(item));
-    setFormError(null);
+    if (!canUpdate) return;
+    setEditingId(item.id);
+    setForm(toFormState(item));
     setIsFormOpen(true);
   };
 
-  const validateForm = (): boolean => {
-    if (!isEditing) {
-      if (!formState.userId || formState.selectedPermissionIds.length === 0) {
-        setFormError("اختر المستخدم وصلاحية واحدة على الأقل.");
-        return false;
-      }
-    }
-
-    const grantReason = formState.grantReason.trim();
-    if (!grantReason) {
-      setFormError("سبب المنح إلزامي.");
-      return false;
-    }
-
-    const dateRangeError = ensureDateRange(formState.validFrom, formState.validUntil);
-    if (dateRangeError) {
-      setFormError(dateRangeError);
-      return false;
-    }
-
-    setFormError(null);
-    return true;
-  };
-
-  const handleSubmitForm = async (event?: React.FormEvent<HTMLFormElement>) => {
-    event?.preventDefault();
-
-    if (!validateForm()) {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isEditing && (!form.userId || form.selectedPermissionIds.length === 0)) {
+      setFormError("يجب اختيار المستخدم وصلاحية واحدة على الأقل.");
       return;
     }
 
     const payload = {
-      validFrom: toIsoFromLocal(formState.validFrom),
-      validUntil: toIsoFromLocal(formState.validUntil),
-      grantReason: formState.grantReason.trim(),
-      notes: formState.notes.trim() || undefined,
+      validFrom: toIsoFromLocal(form.validFrom),
+      validUntil: toIsoFromLocal(form.validUntil),
+      grantReason: form.grantReason.trim(),
+      notes: form.notes.trim() || undefined,
     };
 
-    if (isEditing && editingItemId !== null) {
-      if (!canUpdate) {
-        setFormError("لا تملك الصلاحية المطلوبة: user-permissions.update.");
-        return;
-      }
-
-      updateMutation.mutate(
-        {
-          userPermissionId: editingItemId,
-          payload,
-        },
-        {
-          onSuccess: () => {
-            resetForm();
-          },
-        },
-      );
+    if (isEditing && editingId) {
+      updateMutation.mutate({ userPermissionId: editingId, payload }, { onSuccess: resetFormState });
       return;
     }
 
-    if (!canCreate) {
-      setFormError("لا تملك الصلاحية المطلوبة: user-permissions.create.");
-      return;
-    }
-
-    const uniquePermissionIds = Array.from(
-      new Set(formState.selectedPermissionIds),
-    );
     setIsBulkSubmitting(true);
-
     try {
-      const results = await Promise.allSettled(
-        uniquePermissionIds.map((permissionId) =>
-          createMutation.mutateAsync({
-            userId: formState.userId,
-            permissionId,
-            grantReason: payload.grantReason,
-            validFrom: payload.validFrom,
-            validUntil: payload.validUntil,
-            notes: payload.notes,
-          }),
-        ),
-      );
-
-      const failedResults = results.filter(
-        (result): result is PromiseRejectedResult => result.status === "rejected",
-      );
-
-      if (failedResults.length > 0) {
-        const successCount = results.length - failedResults.length;
-        const firstError = readErrorMessage(failedResults[0].reason);
-        setFormError(
-          `تم منح ${successCount} من ${results.length}. فشل جزئي: ${firstError}`,
-        );
-        return;
-      }
-
-      resetForm();
-      setPage(1);
+      await Promise.all(form.selectedPermissionIds.map(pid => 
+        createMutation.mutateAsync({
+          userId: form.userId,
+          permissionId: pid,
+          grantReason: payload.grantReason!,
+          validFrom: payload.validFrom,
+          validUntil: payload.validUntil,
+          notes: payload.notes,
+        })
+      ));
+      resetFormState();
+    } catch (err: unknown) {
+      setFormError(err instanceof Error ? err.message : "فشل منح بعض الصلاحيات.");
     } finally {
       setIsBulkSubmitting(false);
     }
   };
 
   const handleToggleRevoke = (item: UserPermissionListItem) => {
-    if (!canRevoke || item.revokedAt) {
-      return;
-    }
-
-    const revokeReason = window.prompt("اكتب سبب سحب الصلاحية (اختياري):") ?? "";
-
+    if (!canRevoke || item.revokedAt) return;
+    const reason = window.prompt("سبب سحب الصلاحية (اختياري):") ?? "";
     revokeMutation.mutate({
       userPermissionId: item.id,
-      payload: {
-        revokeReason: revokeReason.trim() || undefined,
-      },
+      payload: { revokeReason: reason.trim() || undefined },
     });
   };
 
   const handleDelete = (item: UserPermissionListItem) => {
-    if (!canDelete) {
-      return;
-    }
-
-    const confirmed = window.confirm("تأكيد حذف سجل الصلاحية المباشرة؟");
-    if (!confirmed) {
-      return;
-    }
-
-    deleteMutation.mutate(item.id, {
-      onSuccess: () => {
-        if (editingItemId === item.id) {
-          resetForm();
-        }
-      },
-    });
+    if (!canDelete || !window.confirm("تأكيد حذف سجل الصلاحية المباشرة؟")) return;
+    deleteMutation.mutate(item.id);
   };
 
-  const isFormSubmitting =
-    isBulkSubmitting || createMutation.isPending || updateMutation.isPending;
+  const applyFilters = () => {
+    setPage(1);
+    setStatusFilter(filterDraft.status);
+    setUserFilter(filterDraft.user);
+    setIsFilterOpen(false);
+  };
 
   const clearFilters = () => {
     setPage(1);
@@ -395,407 +232,239 @@ export function UserPermissionsWorkspace() {
     setSearch("");
     setStatusFilter("all");
     setUserFilter("all");
-    setPermissionFilter("all");
-    setIsFilterOpen(false);
-  };
-
-  const applyFilters = () => {
-    setPage(1);
-    setStatusFilter(statusFilterDraft);
-    setUserFilter(userFilterDraft);
-    setPermissionFilter(permissionFilterDraft);
+    setFilterDraft({ status: "all", user: "all" });
     setIsFilterOpen(false);
   };
 
   const activeFiltersCount = React.useMemo(() => {
-    const count = [
-      searchInput.trim() ? 1 : 0,
-      statusFilter !== "all" ? 1 : 0,
-      userFilter !== "all" ? 1 : 0,
-      permissionFilter !== "all" ? 1 : 0,
-    ].reduce((a, b) => a + b, 0);
-    return count;
-  }, [permissionFilter, searchInput, statusFilter, userFilter]);
+    return [
+      searchInput.trim() ? 1 : 0, statusFilter !== "all" ? 1 : 0,
+      userFilter !== "all" ? 1 : 0
+    ].reduce((acc, v) => acc + v, 0);
+  }, [searchInput, statusFilter, userFilter]);
 
   return (
-    <>
+    <PageShell
+      title="مصفوفة الصلاحيات المباشرة"
+      subtitle="إدارة الاستثناءات والمنح المباشرة للمستخدمين بعيداً عن الأدوار الافتراضية، مع التحكم في النطاق الزمني."
+    >
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
-            <SearchField
-              containerClassName="flex-1"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="ابحث بالمستخدم أو الصلاحية..."
-              data-testid="user-permission-filter-search"
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterTriggerButton
-              count={activeFiltersCount}
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-            />
-          </div>
-        </div>
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(e) => setSearchInput(e.target.value)}
+          searchPlaceholder="بحث بالمستخدم أو كود الصلاحية..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen(true)}
+          actions={
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => void userPermissionsQuery.refetch()} disabled={userPermissionsQuery.isFetching}>
+              <RefreshCw className={`h-4 w-4 ${userPermissionsQuery.isFetching ? "animate-spin" : ""}`} />
+              تحديث
+            </Button>
+          }
+        />
 
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
-          title="خيارات الفلترة"
+          title="تخصيص العرض"
           actionButtons={
             <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
+              <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">مسح</Button>
+              <Button type="button" onClick={applyFilters} className="flex-1">تطبيق</Button>
             </div>
           }
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={statusFilterDraft}
-              onChange={(event) =>
-                setStatusFilterDraft(event.target.value as "all" | "current" | "revoked")
-              }
-              data-testid="user-permission-filter-status"
-            >
-              <option value="all">كل الحالات</option>
-              <option value="current">سارية</option>
-              <option value="revoked">ملغاة</option>
-            </SelectField>
-
-            <SelectField
-              value={userFilterDraft}
-              onChange={(event) => setUserFilterDraft(event.target.value)}
-              data-testid="user-permission-filter-user"
-            >
-              <option value="all">كل المستخدمين</option>
-              {users.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.firstName} {user.lastName}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField
-              value={permissionFilterDraft}
-              onChange={(event) => setPermissionFilterDraft(event.target.value)}
-              data-testid="user-permission-filter-permission"
-            >
-              <option value="all">كل الصلاحيات</option>
-              {permissions.map((permission) => (
-                <option key={permission.id} value={permission.id}>
-                  {getPermissionOptionLabel(permission.code)}
-                </option>
-              ))}
-            </SelectField>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">حالة الصلاحية</label>
+              <SelectField value={filterDraft.status} onChange={(e) => setFilterDraft(p => ({ ...p, status: e.target.value as "all" | "current" | "revoked" }))}>
+                <option value="all">كل السجلات</option>
+                <option value="current">سارية حالياً</option>
+                <option value="revoked">مسحوبة / ملغاة</option>
+              </SelectField>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">المستخدم الممنوح</label>
+              <SelectField value={filterDraft.user} onChange={(e) => setFilterDraft(p => ({ ...p, user: e.target.value }))}>
+                <option value="all">كافة المستخدمين</option>
+                {(usersOptionsQuery.data ?? []).map(u => <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>)}
+              </SelectField>
+            </div>
           </div>
         </FilterDrawer>
 
-        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-          <CardHeader className="space-y-3">
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm overflow-hidden">
+          <CardHeader className="space-y-3 bg-muted/30 border-b border-border/60 pb-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>صلاحيات المستخدمين</CardTitle>
-              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+              <CardTitle className="flex items-center gap-2 text-lg font-bold">
+                <ShieldCheck className="h-5 w-5 text-primary" />
+                سجل المنح الاستثنائي
+              </CardTitle>
+              <Badge variant="secondary" className="rounded-full px-3">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
-            <CardDescription>
-              إدارة الصلاحيات الخاصة بالمستخدمين (منح وتحديث وسحب).
-            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {userPermissionsQuery.isPending ? (
-              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                جارٍ تحميل الصلاحيات...
-              </div>
-            ) : null}
+          
+          <CardContent className="p-0">
+            {userPermissionsQuery.isPending && (
+              <div className="p-12 text-center text-sm text-muted-foreground font-medium animate-pulse">جارٍ استرجاع بيانات الأمان...</div>
+            )}
 
-            {userPermissionsQuery.error ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                {userPermissionsQuery.error instanceof Error
-                  ? userPermissionsQuery.error.message
-                  : "تعذر تحميل الصلاحيات"}
-              </div>
-            ) : null}
+            <div className="divide-y divide-border/40">
+              {records.map((item) => (
+                <div key={item.id} className="p-4 hover:bg-muted/10 transition-colors group">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="flex gap-4 flex-1">
+                      <div className="flex flex-col items-center justify-center h-12 w-12 rounded-2xl bg-secondary/5 border border-secondary/10 group-hover:bg-secondary/10 transition-colors shadow-sm">
+                         <Fingerprint className={`h-6 w-6 ${item.revokedAt ? 'text-muted-foreground' : 'text-primary/60'}`} />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-base">{item.user?.firstName} {item.user?.lastName}</p>
+                          <Badge variant={item.revokedAt ? "outline" : "default"} className={`h-5 text-[8px] font-black uppercase ${item.revokedAt ? 'border-destructive/30 text-destructive' : 'bg-emerald-500 hover:bg-emerald-600 border-none'}`}>
+                            {item.revokedAt ? "Revoked" : "Authorized"}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-bold uppercase tracking-tight">
+                          <Lock className="h-3.5 w-3.5" /> <span>{translatePermissionCode(item.permission.code)}</span>
+                          <span className="mx-1 opacity-30">•</span>
+                          <Mail className="h-3.5 w-3.5" /> <span>{item.user?.email || "N/A"}</span>
+                        </div>
+                      </div>
+                    </div>
 
-            {!userPermissionsQuery.isPending && items.length === 0 ? (
-              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                لا توجد نتائج مطابقة.
-              </div>
-            ) : null}
-
-            {items.map((item) => (
-              <div
-                key={item.id}
-                className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-                data-testid="user-permission-card"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="space-y-1">
-                    <p className="font-medium">
-                      {item.user?.firstName} {item.user?.lastName}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{item.user?.email ?? "-"}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {getPermissionOptionLabel(item.permission.code)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {item.validFrom ? `من ${formatLocalDateTime(item.validFrom)}` : "بدون بداية"}
-                      {item.validUntil ? ` إلى ${formatLocalDateTime(item.validUntil)}` : ""}
-                    </p>
+                    <div className="flex flex-col items-end gap-3">
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" className="h-8 rounded-lg px-3 text-[11px] font-bold gap-1.5" onClick={() => handleStartEdit(item)} disabled={!canUpdate}>
+                          <PencilLine className="h-3.5 w-3.5" /> تعديل
+                        </Button>
+                        <Button variant="outline" size="sm" className="h-8 rounded-lg px-3 text-[11px] font-bold gap-1.5 text-amber-600 hover:bg-amber-50" onClick={() => handleToggleRevoke(item)} disabled={!canRevoke || !!item.revokedAt}>
+                          <ShieldOff className="h-3.5 w-3.5" /> سحب
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 rounded-lg px-2 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(item)} disabled={!canDelete}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                  <Badge variant={item.revokedAt ? "outline" : "default"}>
-                    {item.revokedAt ? "ملغاة" : "سارية"}
-                  </Badge>
-                </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => handleStartEdit(item)}
-                    disabled={!canUpdate || updateMutation.isPending}
-                  >
-                    <PencilLine className="h-3.5 w-3.5" />
-                    تعديل
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => handleToggleRevoke(item)}
-                    disabled={!canRevoke || revokeMutation.isPending}
-                  >
-                    <ShieldOff className="h-3.5 w-3.5" />
-                    {item.revokedAt ? "إعادة تفعيل" : "سحب"}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => handleDelete(item)}
-                    disabled={!canDelete || deleteMutation.isPending}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    حذف
-                  </Button>
+                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                     <div className="flex items-start gap-2 px-3 py-2 rounded-xl border border-border/40 bg-background/50 group-hover:bg-background transition-colors">
+                        <Activity className="h-4 w-4 text-primary/60 mt-0.5 shrink-0" />
+                        <div className="flex flex-col overflow-hidden">
+                           <span className="text-[7px] uppercase font-bold text-muted-foreground leading-none mb-1">سبب المنح (Reason)</span>
+                           <span className="text-[10px] font-bold truncate tracking-tight">{item.grantReason}</span>
+                        </div>
+                     </div>
+                     <div className="flex items-start gap-2 px-3 py-2 rounded-xl border border-border/40 bg-background/50 group-hover:bg-background transition-colors">
+                        <Calendar className="h-4 w-4 text-emerald-500/60 mt-0.5 shrink-0" />
+                        <div className="flex flex-col overflow-hidden">
+                           <span className="text-[7px] uppercase font-bold text-muted-foreground leading-none mb-1">نطاق السريان (Validity)</span>
+                           <span className="text-[10px] font-bold truncate tracking-tight">
+                              {item.validFrom ? `من: ${new Date(item.validFrom).toLocaleDateString()}` : "دائمة"}
+                           </span>
+                        </div>
+                     </div>
+                     <div className="flex items-start gap-2 px-3 py-2 rounded-xl border border-border/40 bg-background/50 group-hover:bg-background transition-colors">
+                        <History className="h-4 w-4 text-amber-500/60 mt-0.5 shrink-0" />
+                        <div className="flex flex-col overflow-hidden">
+                           <span className="text-[7px] uppercase font-bold text-muted-foreground leading-none mb-1">تاريخ الانتهاء</span>
+                           <span className="text-[10px] font-bold truncate tracking-tight">
+                              {item.validUntil ? `إلى: ${new Date(item.validUntil).toLocaleDateString()}` : "مفتوحة"}
+                           </span>
+                        </div>
+                     </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-              <p className="text-xs text-muted-foreground">
-                صفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-              </p>
+            {!userPermissionsQuery.isPending && records.length === 0 && (
+              <div className="p-12 text-center text-sm text-muted-foreground opacity-50">لا توجد سجلات منح مباشرة حالياً.</div>
+            )}
+
+            <div className="p-4 flex flex-wrap items-center justify-between gap-4 border-t border-border/60 bg-muted/10">
+              <p className="text-[10px] text-muted-foreground font-bold italic tracking-wide font-mono">ENCRYPTION-LEVEL: DIRECT-GRANT-PROTOCOL</p>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={!pagination || pagination.page <= 1 || userPermissionsQuery.isFetching}
-                >
-                  السابق
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setPage((prev) =>
-                      pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                    )
-                  }
-                  disabled={
-                    !pagination ||
-                    pagination.page >= pagination.totalPages ||
-                    userPermissionsQuery.isFetching
-                  }
-                >
-                  التالي
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => void userPermissionsQuery.refetch()}
-                  disabled={userPermissionsQuery.isFetching}
-                >
-                  <RefreshCw
-                    className={`h-4 w-4 ${userPermissionsQuery.isFetching ? "animate-spin" : ""}`}
-                  />
-                  تحديث
-                </Button>
+                <Button variant="outline" size="sm" className="h-8 rounded-xl px-4 font-bold" onClick={() => setPage(p => Math.max(p - 1, 1))} disabled={!pagination || pagination.page <= 1}>السابق</Button>
+                <div className="text-[10px] font-bold px-2">Page {pagination?.page ?? 1} / {pagination?.totalPages ?? 1}</div>
+                <Button variant="outline" size="sm" className="h-8 rounded-xl px-4 font-bold" onClick={() => setPage(p => (pagination ? Math.min(p + 1, pagination.totalPages || 1) : p))} disabled={!pagination || pagination.page >= pagination.totalPages}>التالي</Button>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Fab
-        icon={<KeyRound className="h-4 w-4" />}
-        label="منح"
-        ariaLabel="منح صلاحية لمستخدم"
-        onClick={handleStartCreate}
-        disabled={!canCreate}
-      />
+      <Fab icon={<KeyRound className="h-5 w-5" />} label="منح صلاحية" onClick={handleStartCreate} disabled={!canCreate} />
 
-      <BottomSheetForm
+      <CrudFormSheet
         open={isFormOpen}
-        title={isEditing ? "تعديل صلاحية مستخدم" : "منح صلاحية لمستخدم"}
-        onClose={resetForm}
-        onSubmit={() => handleSubmitForm()}
-        isSubmitting={isFormSubmitting}
-        submitLabel={isEditing ? "حفظ التعديلات" : "منح الصلاحيات المحددة"}
-        showFooter={false}
+        onClose={resetFormState}
+        title={isEditing ? "تحديث سجل الصلاحية" : "إجراء منح صلاحية مباشر"}
+        isEditing={isEditing}
+        isSubmitting={isSubmitting}
+        onSubmit={handleSubmit}
       >
-        {!canCreate && !isEditing ? (
-          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            ليس لديك الصلاحية المطلوبة: <code>user-permissions.create</code>.
-          </div>
-        ) : (
-          <form
-            className="space-y-3"
-            onSubmit={handleSubmitForm}
-            data-testid="user-permission-form"
-          >
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><User className="h-3.5 w-3.5" /> اختيار المستفيد</h4>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">المستخدم *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={formState.userId}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, userId: event.target.value }))
-                }
-                disabled={isEditing}
-                data-testid="user-permission-form-user"
-              >
-                <option value="">اختر مستخدمًا</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.firstName} {user.lastName} ({user.email})
-                  </option>
-                ))}
-              </select>
+              <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">المستخدم الممنوح *</label>
+              <SelectField value={form.userId} onChange={(e) => setForm(p => ({ ...p, userId: e.target.value }))} disabled={isEditing}>
+                <option value="">اختر المستخدم</option>
+                {(usersOptionsQuery.data ?? []).map(u => <option key={u.id} value={u.id}>{u.firstName} {u.lastName} ({u.email})</option>)}
+              </SelectField>
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">
-                {isEditing ? "الصلاحية" : "الصلاحيات *"}
-              </label>
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><Shield className="h-3.5 w-3.5" /> الصلاحيات المحددة</h4>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">قائمة الصلاحيات *</label>
               {isEditing ? (
-                <div className="rounded-md border border-input bg-muted/30 px-3 py-2 text-sm">
-                  {formState.permissionId
-                    ? (() => {
-                        const currentPermission = permissions.find(
-                          (permission) => permission.id === formState.permissionId,
-                        );
-                        return currentPermission
-                          ? getPermissionOptionLabel(currentPermission.code)
-                          : formState.permissionId;
-                      })()
-                    : "لم يتم اختيار صلاحية"}
-                </div>
+                 <div className="p-3 rounded-xl border border-border/30 bg-background/50 font-bold text-xs uppercase">
+                    {translatePermissionCode((permissionsOptionsQuery.data ?? []).find(p => p.id === form.permissionId)?.code || "N/A")}
+                 </div>
               ) : (
                 <PermissionsSelector
-                  permissions={permissions}
-                  selectedIds={formState.selectedPermissionIds}
-                  onChange={(ids) => setFormState(prev => ({ ...prev, selectedPermissionIds: ids }))}
+                  permissions={permissionsOptionsQuery.data ?? []}
+                  selectedIds={form.selectedPermissionIds}
+                  onChange={(ids) => setForm(p => ({ ...p, selectedPermissionIds: ids }))}
                 />
               )}
             </div>
+          </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">بداية الصلاحية</label>
-                <Input
-                  type="datetime-local"
-                  value={formState.validFrom}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, validFrom: event.target.value }))
-                  }
-                  data-testid="user-permission-form-valid-from"
-                />
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> النطاق الزمني والسبب</h4>
+            <div className="grid gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                 <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">تاريخ البدء</label>
+                    <Input type="datetime-local" value={form.validFrom} onChange={(e) => setForm(p => ({ ...p, validFrom: e.target.value }))} />
+                 </div>
+                 <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">تاريخ الانتهاء</label>
+                    <Input type="datetime-local" value={form.validUntil} onChange={(e) => setForm(p => ({ ...p, validUntil: e.target.value }))} />
+                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">نهاية الصلاحية</label>
-                <Input
-                  type="datetime-local"
-                  value={formState.validUntil}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, validUntil: event.target.value }))
-                  }
-                  data-testid="user-permission-form-valid-until"
-                />
+                 <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">سبب المنح (Grant Reason) *</label>
+                 <Input value={form.grantReason} onChange={(e) => setForm(p => ({ ...p, grantReason: e.target.value }))} placeholder="مثال: ترقية مؤقتة للموظف" />
+              </div>
+              <div className="space-y-1.5">
+                 <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">ملاحظات إضافية</label>
+                 <Input value={form.notes} onChange={(e) => setForm(p => ({ ...p, notes: e.target.value }))} placeholder="اختياري..." />
               </div>
             </div>
+          </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">سبب المنح *</label>
-              <Input
-                value={formState.grantReason}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, grantReason: event.target.value }))
-                }
-                placeholder="مثال: صلاحية مؤقتة"
-                required
-                data-testid="user-permission-form-grant-reason"
-              />
+          {formError && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive font-bold text-center">
+              {formError}
             </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
-              <Input
-                value={formState.notes}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, notes: event.target.value }))
-                }
-                placeholder="ملاحظات إضافية"
-                data-testid="user-permission-form-notes"
-              />
-            </div>
-
-            {formError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                {formError}
-              </div>
-            ) : null}
-
-            {mutationError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                {mutationError}
-              </div>
-            ) : null}
-
-            <div className="flex gap-2">
-              <Button
-                type="submit"
-                className="flex-1 gap-2"
-                disabled={isFormSubmitting || (!canCreate && !isEditing)}
-                data-testid="user-permission-form-submit"
-              >
-                {isFormSubmitting ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : (
-                  <KeyRound className="h-4 w-4" />
-                )}
-                {isEditing ? "حفظ التعديلات" : "منح الصلاحيات المحددة"}
-              </Button>
-              {isEditing ? (
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  إلغاء
-                </Button>
-              ) : null}
-            </div>
-          </form>
-        )}
-      </BottomSheetForm>
-    </>
+          )}
+        </div>
+      </CrudFormSheet>
+    </PageShell>
   );
 }

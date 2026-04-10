@@ -391,8 +391,12 @@ export async function seedSuperAdmin(
   permissions: SeedPermission[],
 ) {
   const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'mousa.mc13@gmail.com';
-  const adminPassword =
-    process.env.SEED_ADMIN_PASSWORD ?? 'M0usa!Awdi#2026$Secure';
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  if (!adminPassword) {
+    throw new Error(
+      'SEED_ADMIN_PASSWORD environment variable is required but not set.',
+    );
+  }
   const adminUsername = process.env.SEED_ADMIN_USERNAME ?? 'eng_mousa';
   const adminPhoneCountryCode =
     process.env.SEED_ADMIN_PHONE_COUNTRY_CODE ?? '+967';

@@ -1,15 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { Power, RefreshCw } from "lucide-react";
+import { Power, RefreshCw, Landmark, User, Workflow, Building2 } from "lucide-react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
-import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
+import { PageShell } from "@/components/ui/page-shell";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useToggleCostCenterMutation } from "@/features/cost-centers/hooks/use-cost-centers-mutations";
 import { useCostCentersQuery } from "@/features/cost-centers/hooks/use-cost-centers-query";
@@ -43,9 +43,9 @@ export function CostCentersWorkspace() {
   const pagination = costCentersQuery.data?.pagination;
 
   useDebounceEffect(() => {
-      setPage(1);
-      setSearch(searchInput.trim());
-    }, 350, [searchInput]);
+    setPage(1);
+    setSearch(searchInput.trim());
+  }, 350, [searchInput]);
 
   React.useEffect(() => {
     if (!isFilterOpen) return;
@@ -79,155 +79,168 @@ export function CostCentersWorkspace() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
-          <SearchField
-            containerClassName="flex-1"
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            placeholder="ابحث بالاسم..."
-          />
-        </div>
-        <FilterTriggerButton count={activeFiltersCount} onClick={() => setIsFilterOpen((prev) => !prev)} />
-      </div>
-
-      <FilterDrawer
-        open={isFilterOpen}
-        onClose={() => setIsFilterOpen(false)}
-        title="فلاتر مراكز التكلفة"
-        actionButtons={
-          <div className="flex w-full gap-2">
-            <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">
-              مسح
+    <PageShell
+      title="مراكز التكلفة"
+      subtitle="إدارة الهيكل التنظيمي للمراكز المالية وربطها بالفروع والموظفين."
+    >
+      <div className="space-y-4">
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(e) => setSearchInput(e.target.value)}
+          searchPlaceholder="بحث باسم المركز..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen(true)}
+          actions={
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => void costCentersQuery.refetch()}
+              disabled={costCentersQuery.isFetching}
+            >
+              <RefreshCw className={`h-4 w-4 ${costCentersQuery.isFetching ? "animate-spin" : ""}`} />
+              تحديث
             </Button>
-            <Button type="button" onClick={applyFilters} className="flex-1">
-              تطبيق
-            </Button>
+          }
+        />
+
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="فلاتر مراكز التكلفة"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">
+                مسح
+              </Button>
+              <Button type="button" onClick={applyFilters} className="flex-1">
+                تطبيق
+              </Button>
+            </div>
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الحالة التشغيلية</label>
+              <SelectField
+                value={filterDraft}
+                onChange={(event) => setFilterDraft(event.target.value as any)}
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">نشط فقط</option>
+                <option value="inactive">غير نشط فقط</option>
+              </SelectField>
+            </div>
           </div>
-        }
-      >
-        <div className="grid gap-3 sm:grid-cols-2">
-          <SelectField
-            value={filterDraft}
-            onChange={(event) => setFilterDraft(event.target.value as "all" | "active" | "inactive")}
-          >
-            <option value="all">كل الحالات</option>
-            <option value="active">نشط فقط</option>
-            <option value="inactive">غير نشط فقط</option>
-          </SelectField>
-        </div>
-      </FilterDrawer>
+        </FilterDrawer>
 
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>مراكز التكلفة</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
-          </div>
-          <CardDescription>متابعة المراكز التشغيلية وربطها بالفروع والمديرين.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {costCentersQuery.isPending ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ تحميل المراكز...
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm overflow-hidden">
+          <CardHeader className="space-y-3 bg-muted/20 border-b border-border/60 pb-6">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-bold">
+                <Landmark className="h-5 w-5 text-primary" />
+                المراكز التشغيلية
+              </CardTitle>
+              <Badge variant="secondary" className="rounded-full px-3">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
-          ) : null}
-
-          {costCentersQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {costCentersQuery.error instanceof Error
-                ? costCentersQuery.error.message
-                : "فشل تحميل المراكز"}
-            </div>
-          ) : null}
-
-          {!costCentersQuery.isPending && costCenters.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              لا توجد مراكز تكلفة.
-            </div>
-          ) : null}
-
-          {costCenters.map((center) => (
-            <div key={center.id} className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <p className="font-medium">{center.nameAr}</p>
-                  {center.nameEn ? (
-                    <p className="text-xs text-muted-foreground">{center.nameEn}</p>
-                  ) : null}
-                  <p className="text-xs text-muted-foreground">المعرّف: {center.id}</p>
-                  <p className="text-xs text-muted-foreground">
-                    الفرع: {center.branch?.nameAr ?? "كافة الفروع"} • المدير:{" "}
-                    {center.managerEmployee?.fullNameAr ?? "غير محدد"}
-                  </p>
-                </div>
-                <div className="space-y-2 text-right">
-                  <Badge variant={center.isActive ? "default" : "outline"}>
-                    {center.isActive ? "نشط" : "غير نشط"}
-                  </Badge>
-                  {center.parent ? (
-                    <p className="text-xs text-muted-foreground">
-                      يتبع: {center.parent.nameAr}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">مستوى رئيسي</p>
-                  )}
-                </div>
+            <CardDescription>
+              متابعة الهيكل المالي للمراكز التنظيمية وتفعيلها أو تعطيلها حسب الحاجة.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-6">
+            {costCentersQuery.isPending && (
+              <div className="rounded-2xl border border-dashed border-border/70 p-8 text-sm text-muted-foreground text-center">
+                جارٍ تحميل بيانات مراكز التكلفة...
               </div>
+            )}
 
-              <div className="flex flex-wrap items-center gap-2">
+            {costCentersQuery.error && (
+              <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive font-medium text-center">
+                {costCentersQuery.error instanceof Error ? costCentersQuery.error.message : "فشل تحميل المراكز"}
+              </div>
+            )}
+
+            {!costCentersQuery.isPending && costCenters.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-border/70 p-8 text-sm text-muted-foreground text-center">
+                لا توجد مراكز تكلفة مسجلة حالياً.
+              </div>
+            )}
+
+            <div className="grid gap-4 md:grid-cols-2">
+              {costCenters.map((center) => (
+                <div key={center.id} className="group relative space-y-4 rounded-2xl border border-border/70 bg-background/50 p-4 transition-all hover:border-primary/30 hover:shadow-lg">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="space-y-1">
+                      <p className="font-bold text-base leading-tight group-hover:text-primary transition-colors">{center.nameAr}</p>
+                      {center.nameEn && <p className="text-[10px] text-muted-foreground uppercase font-medium">{center.nameEn}</p>}
+                      <p className="text-[10px] font-mono text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded-md inline-block mt-1">ID: {center.id}</p>
+                    </div>
+                    <Badge variant={center.isActive ? "default" : "secondary"} className={`h-5 text-[9px] uppercase tracking-tighter ${center.isActive ? 'bg-emerald-500 hover:bg-emerald-600' : ''}`}>
+                      {center.isActive ? "نشط" : "معطل"}
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-[11px]">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Building2 className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{center.branch?.nameAr ?? "كافة الفروع"}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <User className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{center.managerEmployee?.fullNameAr ?? "بدون مدير"}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3 border-t border-border/50 pt-3">
+                    <div className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground bg-muted/40 px-2 py-1 rounded-lg">
+                      <Workflow className="h-3 w-3" />
+                      <span>{center.parent ? `تابع لـ: ${center.parent.nameAr}` : "مستوى رئيسي"}</span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant={center.isActive ? "ghost" : "default"}
+                      className={`h-8 rounded-xl gap-1.5 px-3 text-[11px] font-bold ${center.isActive ? 'text-destructive hover:bg-destructive/10 hover:text-destructive' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                      onClick={() => handleToggle(center.id, !center.isActive)}
+                      disabled={!canUpdate || toggleMutation.isPending}
+                    >
+                      <Power className="h-3.5 w-3.5" />
+                      {center.isActive ? "إيقاف التشغيل" : "تفعيل المركز"}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-6 mt-2">
+              <p className="text-xs text-muted-foreground">
+                صفحة <strong className="text-foreground">{pagination?.page ?? 1}</strong> من <strong className="text-foreground">{pagination?.totalPages ?? 1}</strong>
+              </p>
+              <div className="flex items-center gap-2">
                 <Button
+                  variant="outline"
                   size="sm"
-                  variant={center.isActive ? "outline" : "default"}
-                  className="gap-1.5"
-                  onClick={() => handleToggle(center.id, !center.isActive)}
-                  disabled={!canUpdate || toggleMutation.isPending}
+                  className="h-9 px-4 rounded-2xl"
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={!pagination || pagination.page <= 1 || costCentersQuery.isFetching}
                 >
-                  <Power className="h-3.5 w-3.5" />
-                  {center.isActive ? "إيقاف" : "تفعيل"}
+                  السابق
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 px-4 rounded-2xl"
+                  onClick={() =>
+                    setPage((prev) => (pagination ? Math.min(prev + 1, pagination.totalPages) : prev))
+                  }
+                  disabled={!pagination || pagination.page >= pagination.totalPages || costCentersQuery.isFetching}
+                >
+                  التالي
                 </Button>
               </div>
             </div>
-          ))}
-
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-            <p className="text-xs text-muted-foreground">
-              صفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={!pagination || pagination.page <= 1 || costCentersQuery.isFetching}
-              >
-                السابق
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPage((prev) => (pagination ? Math.min(prev + 1, pagination.totalPages) : prev))
-                }
-                disabled={!pagination || pagination.page >= pagination.totalPages || costCentersQuery.isFetching}
-              >
-                التالي
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => void costCentersQuery.refetch()}
-                disabled={costCentersQuery.isFetching}
-              >
-                <RefreshCw className={`h-4 w-4 ${costCentersQuery.isFetching ? "animate-spin" : ""}`} />
-                تحديث
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+          </CardContent>
+        </Card>
+      </div>
+    </PageShell>
   );
 }

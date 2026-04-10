@@ -4,10 +4,21 @@ import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import Link from "next/link";
 import {
-  LoaderCircle,
-  PencilLine,
+  Briefcase,
   RefreshCw,
+  Plus,
+  PencilLine,
   Trash2,
+  GraduationCap,
+  BookOpen,
+  Calendar,
+  Layers,
+  Star,
+  UserCheck,
+  Settings2,
+  Clock,
+  Layout,
+  ExternalLink,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,9 +33,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { SelectField } from "@/components/ui/select-field";
 import { Fab } from "@/components/ui/fab";
+import { PageShell } from "@/components/ui/page-shell";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateEmployeeTeachingAssignmentMutation,
@@ -61,9 +72,7 @@ const DEFAULT_FORM_STATE: AssignmentFormState = {
   isActive: true,
 };
 
-function toFormState(
-  assignment: EmployeeTeachingAssignmentListItem,
-): AssignmentFormState {
+function toFormState(assignment: EmployeeTeachingAssignmentListItem): AssignmentFormState {
   return {
     employeeId: assignment.employeeId,
     sectionId: assignment.sectionId,
@@ -80,54 +89,25 @@ export function EmployeeTeachingAssignmentsWorkspace() {
   const canCreate = hasPermission("employee-teaching-assignments.create");
   const canUpdate = hasPermission("employee-teaching-assignments.update");
   const canDelete = hasPermission("employee-teaching-assignments.delete");
-  const canReadEmployees = hasPermission("employees.read");
-  const canReadSections = hasPermission("sections.read");
-  const canReadSubjects = hasPermission("subjects.read");
-  const canReadAcademicYears = hasPermission("academic-years.read");
-  const canReadGradeLevelSubjects = hasPermission("grade-level-subjects.read");
 
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
   const [employeeFilter, setEmployeeFilter] = React.useState("all");
   const [sectionFilter, setSectionFilter] = React.useState("all");
-  const [subjectFilter, setSubjectFilter] = React.useState("all");
-  const [academicYearFilter, setAcademicYearFilter] = React.useState("all");
-  const [activeFilter, setActiveFilter] = React.useState<
-    "all" | "active" | "inactive"
-  >("all");
-  const [filterDraft, setFilterDraft] = React.useState<{
-    employee: string;
-    section: string;
-    subject: string;
-    academicYear: string;
-    active: "all" | "active" | "inactive";
-  }>({
-    employee: "all",
-    section: "all",
-    subject: "all",
-    academicYear: "all",
-    active: "all",
-  });
-  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">("all");
+  const [filterDraft, setFilterDraft] = React.useState({ employee: "all", section: "all", active: "all" as any });
 
-  const [editingAssignmentId, setEditingAssignmentId] = React.useState<
-    string | null
-  >(null);
-  const [formState, setFormState] =
-    React.useState<AssignmentFormState>(DEFAULT_FORM_STATE);
-  const [formError, setFormError] = React.useState<string | null>(null);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
+  const [form, setForm] = React.useState<AssignmentFormState>(DEFAULT_FORM_STATE);
+  const [formError, setFormError] = React.useState<string | null>(null);
 
   const assignmentsQuery = useEmployeeTeachingAssignmentsQuery({
-    page,
-    limit: PAGE_SIZE,
-    search: search || undefined,
+    page, limit: PAGE_SIZE, search,
     employeeId: employeeFilter === "all" ? undefined : employeeFilter,
     sectionId: sectionFilter === "all" ? undefined : sectionFilter,
-    subjectId: subjectFilter === "all" ? undefined : subjectFilter,
-    academicYearId:
-      academicYearFilter === "all" ? undefined : academicYearFilter,
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
   });
 
@@ -136,44 +116,19 @@ export function EmployeeTeachingAssignmentsWorkspace() {
   const subjectsQuery = useSubjectOptionsQuery();
   const academicYearsQuery = useAcademicYearOptionsQuery();
 
-  const selectedSection = React.useMemo(
-    () =>
-      (sectionsQuery.data ?? []).find(
-        (section) => section.id === formState.sectionId,
-      ),
-    [formState.sectionId, sectionsQuery.data],
+  const selectedSection = React.useMemo(() => 
+    (sectionsQuery.data ?? []).find(s => s.id === form.sectionId),
+    [sectionsQuery.data, form.sectionId]
   );
-  const selectedEmployee = React.useMemo(
-    () =>
-      (employeesQuery.data ?? []).find(
-        (employee) => employee.id === formState.employeeId,
-      ),
-    [employeesQuery.data, formState.employeeId],
-  );
-
-  const mappingCheckQuery = useGradeLevelSubjectMappingOptionsQuery({
-    academicYearId: formState.academicYearId || undefined,
-    gradeLevelId: selectedSection?.gradeLevelId,
-    subjectId: formState.subjectId || undefined,
-    enabled: canReadGradeLevelSubjects,
-  });
 
   const createMutation = useCreateEmployeeTeachingAssignmentMutation();
   const updateMutation = useUpdateEmployeeTeachingAssignmentMutation();
   const deleteMutation = useDeleteEmployeeTeachingAssignmentMutation();
 
-  const assignments = React.useMemo(
-    () => assignmentsQuery.data?.data ?? [],
-    [assignmentsQuery.data?.data],
-  );
+  const records = React.useMemo(() => assignmentsQuery.data?.data ?? [], [assignmentsQuery.data?.data]);
   const pagination = assignmentsQuery.data?.pagination;
-  const isEditing = editingAssignmentId !== null;
-
-  const mutationError =
-    (createMutation.error as Error | null)?.message ??
-    (updateMutation.error as Error | null)?.message ??
-    (deleteMutation.error as Error | null)?.message ??
-    null;
+  const isEditing = editingId !== null;
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   useDebounceEffect(() => {
     setPage(1);
@@ -181,715 +136,337 @@ export function EmployeeTeachingAssignmentsWorkspace() {
   }, 400, [searchInput]);
 
   React.useEffect(() => {
-    if (!isFilterOpen) {
-      return;
-    }
+    if (!isFilterOpen) return;
+    setFilterDraft({ employee: employeeFilter, section: sectionFilter, active: activeFilter });
+  }, [activeFilter, employeeFilter, isFilterOpen, sectionFilter]);
 
-    setFilterDraft({
-      employee: employeeFilter,
-      section: sectionFilter,
-      subject: subjectFilter,
-      academicYear: academicYearFilter,
-      active: activeFilter,
-    });
-  }, [
-    academicYearFilter,
-    activeFilter,
-    employeeFilter,
-    isFilterOpen,
-    sectionFilter,
-    subjectFilter,
-  ]);
-
-  React.useEffect(() => {
-    if (!isEditing) {
-      return;
-    }
-
-    const stillExists = assignments.some(
-      (item) => item.id === editingAssignmentId,
-    );
-    if (!stillExists) {
-      setEditingAssignmentId(null);
-      setFormState(DEFAULT_FORM_STATE);
-      setFormError(null);
-    }
-  }, [assignments, editingAssignmentId, isEditing]);
-
-  const resetForm = () => {
-    setEditingAssignmentId(null);
-    setFormState(DEFAULT_FORM_STATE);
+  const resetFormState = () => {
+    setEditingId(null);
+    setForm(DEFAULT_FORM_STATE);
     setFormError(null);
     setIsFormOpen(false);
   };
 
   const handleStartCreate = () => {
-    if (!canCreate) {
-      return;
-    }
-
-    setFormError(null);
-    setEditingAssignmentId(null);
-    setFormState(DEFAULT_FORM_STATE);
+    if (!canCreate) return;
+    setForm(DEFAULT_FORM_STATE);
     setIsFormOpen(true);
   };
 
-  const validateForm = (): boolean => {
-    if (
-      !formState.employeeId ||
-      !formState.sectionId ||
-      !formState.subjectId ||
-      !formState.academicYearId
-    ) {
-      setFormError(
-        "الحقول الأساسية مطلوبة: الموظف، الشعبة، المادة، والسنة الأكاديمية.",
-      );
-      return false;
-    }
-
-    const weeklyPeriods = Number(formState.weeklyPeriods);
-    if (
-      !Number.isInteger(weeklyPeriods) ||
-      weeklyPeriods < 1 ||
-      weeklyPeriods > 60
-    ) {
-      setFormError("الحصص الأسبوعية يجب أن تكون رقمًا صحيحًا بين 1 و60.");
-      return false;
-    }
-
-    if (canReadGradeLevelSubjects && selectedSection) {
-      if (mappingCheckQuery.isFetching) {
-        setFormError("جاري التحقق من ربط الصف بالمادة في السنة المحددة...");
-        return false;
-      }
-
-      if ((mappingCheckQuery.data ?? []).length === 0) {
-        setFormError(
-          "لا يوجد ربط نشط بين الصف والمادة في هذه السنة الأكاديمية. أنشئ ربط الصف مع المادة أولًا.",
-        );
-        return false;
-      }
-    }
-
-    setFormError(null);
-    return true;
+  const handleStartEdit = (item: EmployeeTeachingAssignmentListItem) => {
+    if (!canUpdate) return;
+    setEditingId(item.id);
+    setForm(toFormState(item));
+    setIsFormOpen(true);
   };
 
-  const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!validateForm()) {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.employeeId || !form.sectionId || !form.subjectId || !form.academicYearId) {
+      setFormError("الموظف، المادة، الشعبة، والسنة مقتضيات أساسية.");
       return;
     }
 
     const payload = {
-      employeeId: formState.employeeId,
-      sectionId: formState.sectionId,
-      subjectId: formState.subjectId,
-      academicYearId: formState.academicYearId,
-      weeklyPeriods: Number(formState.weeklyPeriods),
-      isPrimary: formState.isPrimary,
-      isActive: formState.isActive,
+      employeeId: form.employeeId,
+      sectionId: form.sectionId,
+      subjectId: form.subjectId,
+      academicYearId: form.academicYearId,
+      weeklyPeriods: Number(form.weeklyPeriods) || 1,
+      isPrimary: form.isPrimary,
+      isActive: form.isActive,
     };
 
-    if (isEditing && editingAssignmentId) {
-      if (!canUpdate) {
-        setFormError("لا تملك الصلاحية المطلوبة: employee-teaching-assignments.update.");
-        return;
-      }
-
-      updateMutation.mutate(
-        {
-          assignmentId: editingAssignmentId,
-          payload,
-        },
-        {
-          onSuccess: () => {
-            resetForm();
-          },
-        },
-      );
-      return;
+    if (isEditing && editingId) {
+      updateMutation.mutate({ assignmentId: editingId, payload }, { onSuccess: resetFormState });
+    } else {
+      createMutation.mutate(payload, { onSuccess: resetFormState });
     }
-
-    if (!canCreate) {
-      setFormError("لا تملك الصلاحية المطلوبة: employee-teaching-assignments.create.");
-      return;
-    }
-
-    createMutation.mutate(payload, {
-      onSuccess: () => {
-        resetForm();
-        setPage(1);
-      },
-    });
   };
 
-  const handleStartEdit = (assignment: EmployeeTeachingAssignmentListItem) => {
-    if (!canUpdate) {
-      return;
-    }
-
-    setFormError(null);
-    setEditingAssignmentId(assignment.id);
-    setFormState(toFormState(assignment));
-    setIsFormOpen(true);
-  };
-
-  const handleDelete = (assignment: EmployeeTeachingAssignmentListItem) => {
-    if (!canDelete) {
-      return;
-    }
-
-    const confirmed = window.confirm(
-      `تأكيد حذف إسناد ${assignment.subject.name} للشعبة ${assignment.section.name}؟`,
-    );
-    if (!confirmed) {
-      return;
-    }
-
-    deleteMutation.mutate(assignment.id, {
-      onSuccess: () => {
-        if (editingAssignmentId === assignment.id) {
-          resetForm();
-        }
-      },
-    });
-  };
-
-  const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
-  const hasDependenciesReadPermissions =
-    canReadEmployees &&
-    canReadSections &&
-    canReadSubjects &&
-    canReadAcademicYears;
-  const clearFilters = () => {
-    setPage(1);
-    setSearchInput("");
-    setSearch("");
-    setEmployeeFilter("all");
-    setSectionFilter("all");
-    setSubjectFilter("all");
-    setAcademicYearFilter("all");
-    setActiveFilter("all");
-    setIsFilterOpen(false);
+  const handleDelete = (item: EmployeeTeachingAssignmentListItem) => {
+    if (!canDelete || !window.confirm(`تأكيد حذف إسناد التدريس لـ ${item.employee.fullName}؟`)) return;
+    deleteMutation.mutate(item.id);
   };
 
   const applyFilters = () => {
     setPage(1);
     setEmployeeFilter(filterDraft.employee);
     setSectionFilter(filterDraft.section);
-    setSubjectFilter(filterDraft.subject);
-    setAcademicYearFilter(filterDraft.academicYear);
     setActiveFilter(filterDraft.active);
     setIsFilterOpen(false);
   };
 
-  const activeFiltersCount = React.useMemo(
-    () =>
-      [
-        searchInput.trim() ? 1 : 0,
-        employeeFilter !== "all" ? 1 : 0,
-        sectionFilter !== "all" ? 1 : 0,
-        subjectFilter !== "all" ? 1 : 0,
-        academicYearFilter !== "all" ? 1 : 0,
-        activeFilter !== "all" ? 1 : 0,
-      ].reduce((total, value) => total + value, 0),
-    [
-      academicYearFilter,
-      activeFilter,
-      employeeFilter,
-      searchInput,
-      sectionFilter,
-      subjectFilter,
-    ],
-  );
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setEmployeeFilter("all");
+    setSectionFilter("all");
+    setActiveFilter("all");
+    setFilterDraft({ employee: "all", section: "all", active: "all" });
+    setIsFilterOpen(false);
+  };
+
+  const activeFiltersCount = React.useMemo(() => {
+    return [
+      searchInput.trim() ? 1 : 0, employeeFilter !== "all" ? 1 : 0,
+      sectionFilter !== "all" ? 1 : 0, activeFilter !== "all" ? 1 : 0
+    ].reduce((acc, v) => acc + v, 0);
+  }, [activeFilter, employeeFilter, searchInput, sectionFilter]);
 
   return (
-    <>
+    <PageShell
+      title="مصفوفة إسناد التدريس"
+      subtitle="توزيع المهام التعليمية على الكادر الأكاديمي، وتحديد الكثافة الدراسية لكل معلم حسب الشعب والمواد."
+    >
       <div className="space-y-4">
         <ManagementToolbar
           searchValue={searchInput}
-          onSearchChange={(event) => setSearchInput(event.target.value)}
-          searchPlaceholder="بحث بالمعلم أو الشعبة أو المادة..."
+          onSearchChange={(e) => setSearchInput(e.target.value)}
+          searchPlaceholder="بحث بالمعلم، المادة، أو الشعبة..."
           filterCount={activeFiltersCount}
-          onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+          onFilterClick={() => setIsFilterOpen(true)}
+          actions={
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => void assignmentsQuery.refetch()} disabled={assignmentsQuery.isFetching}>
+              <RefreshCw className={`h-4 w-4 ${assignmentsQuery.isFetching ? "animate-spin" : ""}`} />
+              تحديث
+            </Button>
+          }
         />
 
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
-          title="فلاتر إسناد التدريس"
-          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
+          title="معايير فرز الإسناد"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">مسح</Button>
+              <Button type="button" onClick={applyFilters} className="flex-1">تطبيق</Button>
+            </div>
+          }
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.employee}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  employee: event.target.value,
-                }))
-              }
-            >
-              <option value="all">كل الموظفين</option>
-              {(employeesQuery.data ?? []).map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.jobNumber ?? employee.fullName}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField
-              value={filterDraft.section}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  section: event.target.value,
-                }))
-              }
-            >
-              <option value="all">كل الشعب</option>
-              {(sectionsQuery.data ?? []).map((section) => (
-                <option key={section.id} value={section.id}>
-                  {section.code}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField
-              value={filterDraft.subject}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  subject: event.target.value,
-                }))
-              }
-            >
-              <option value="all">كل المواد</option>
-              {(subjectsQuery.data ?? []).map((subject) => (
-                <option key={subject.id} value={subject.id}>
-                  {subject.code}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField
-              value={filterDraft.academicYear}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  academicYear: event.target.value,
-                }))
-              }
-            >
-              <option value="all">كل السنوات</option>
-              {(academicYearsQuery.data ?? []).map((year) => (
-                <option key={year.id} value={year.id}>
-                  {year.code}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField
-              containerClassName="sm:col-span-2"
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </SelectField>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">الموظف (المعلم)</label>
+              <SelectField value={filterDraft.employee} onChange={(e) => setFilterDraft(p => ({ ...p, employee: e.target.value }))}>
+                <option value="all">كافة المعلمين</option>
+                {(employeesQuery.data ?? []).map(e => <option key={e.id} value={e.id}>{e.fullName}</option>)}
+              </SelectField>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">الشعبة الدراسية</label>
+              <SelectField value={filterDraft.section} onChange={(e) => setFilterDraft(p => ({ ...p, section: e.target.value }))}>
+                <option value="all">كافة الشعب</option>
+                {(sectionsQuery.data ?? []).map(s => <option key={s.id} value={s.id}>{s.name} ({s.code})</option>)}
+              </SelectField>
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">الحالة</label>
+              <SelectField value={filterDraft.active} onChange={(e) => setFilterDraft(p => ({ ...p, active: e.target.value as any }))}>
+                <option value="all">كل السجلات</option>
+                <option value="active">الإسناد النشط</option>
+                <option value="inactive">الإسناد المؤرشف</option>
+              </SelectField>
+            </div>
           </div>
         </FilterDrawer>
 
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>قائمة إسناد التدريس</CardTitle>
-            <Badge variant="secondary">
-              الإجمالي: {pagination?.total ?? 0}
-            </Badge>
-          </div>
-          <CardDescription>
-            إدارة إسناد المواد للمعلمين حسب الشعبة والسنة الأكاديمية. صلاحية
-            الدخول تبقى عبر المستخدم + الدور، بينما الإسناد يضبط نطاق البيانات
-            داخل الصفحات الأكاديمية.
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent className="space-y-3">
-          {assignmentsQuery.isPending ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ تحميل البيانات...
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm overflow-hidden">
+          <CardHeader className="space-y-3 bg-muted/30 border-b border-border/60 pb-6">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-bold">
+                <Briefcase className="h-5 w-5 text-primary" />
+                سجل التكاليف الأكاديمية
+              </CardTitle>
+              <Badge variant="secondary" className="rounded-full px-3">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
-          ) : null}
+          </CardHeader>
+          
+          <CardContent className="p-0">
+            {assignmentsQuery.isPending && (
+              <div className="p-12 text-center text-sm text-muted-foreground font-medium animate-pulse">جارٍ استرجاع بيانات الإسناد...</div>
+            )}
 
-          {assignmentsQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {assignmentsQuery.error instanceof Error
-                ? assignmentsQuery.error.message
-                : "تعذّر تحميل البيانات."}
-            </div>
-          ) : null}
+            <div className="divide-y divide-border/40">
+              {records.map((item) => (
+                <div key={item.id} className="p-4 hover:bg-muted/10 transition-colors group">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="flex gap-4 flex-1">
+                      <div className="flex flex-col items-center justify-center h-12 w-12 rounded-2xl bg-secondary/5 border border-secondary/10 group-hover:bg-secondary/10 transition-colors shadow-sm">
+                         <UserCheck className="h-6 w-6 text-primary/60" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-base">{item.employee.fullName}</p>
+                          {item.isPrimary && (
+                            <Badge variant="default" className="h-5 text-[8px] font-black uppercase bg-amber-500 hover:bg-amber-600 border-none">Primary Teacher</Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-bold uppercase tracking-tight">
+                          <BookOpen className="h-3.5 w-3.5" /> <span>{item.subject.name}</span>
+                          <span className="mx-1 opacity-30">•</span>
+                          <Layout className="h-3.5 w-3.5" /> <span>{item.section.name} ({item.section.code})</span>
+                        </div>
+                      </div>
+                    </div>
 
-          {!assignmentsQuery.isPending && assignments.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              لا توجد نتائج مطابقة.
-            </div>
-          ) : null}
+                    <div className="flex flex-col items-end gap-3">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge variant={item.isActive ? "default" : "outline"} className={`h-5 text-[8px] font-black uppercase ${item.isActive ? 'bg-primary/10 text-primary border-primary/20' : ''}`}>
+                          {item.isActive ? "Authorized" : "Suspended"}
+                        </Badge>
+                        <Badge variant="outline" className="h-5 text-[8px] font-black uppercase border-border/70 text-emerald-600 bg-emerald-50">
+                          <Clock className="h-2.5 w-2.5 mr-1 inline" /> {item.weeklyPeriods} periods
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" className="h-8 rounded-lg px-3 text-[11px] font-bold gap-1.5" onClick={() => handleStartEdit(item)} disabled={!canUpdate}>
+                          <PencilLine className="h-3.5 w-3.5" /> تعديل
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 rounded-lg px-2 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(item)} disabled={!canDelete}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
 
-          {assignments.map((assignment) => (
-            <div
-              key={assignment.id}
-              className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-              data-testid="employee-teaching-assignment-card"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <p className="font-medium">
-                    {assignment.employee.fullName} - {assignment.subject.name}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    الشعبة: {assignment.section.name} ({assignment.section.code}
-                    )
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    السنة: {assignment.academicYear.name} (
-                    {assignment.academicYear.code})
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    الحصص الأسبوعية: {assignment.weeklyPeriods}
-                  </p>
+                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                     <div className="flex items-start gap-2 px-3 py-2 rounded-xl border border-border/40 bg-background/50 group-hover:bg-background transition-colors">
+                        <GraduationCap className="h-4 w-4 text-primary/60 mt-0.5 shrink-0" />
+                        <div className="flex flex-col overflow-hidden">
+                           <span className="text-[7px] uppercase font-bold text-muted-foreground leading-none mb-1">المرحلة والصف</span>
+                           <span className="text-[10px] font-bold truncate tracking-tight">{item.section.gradeLevel.name}</span>
+                        </div>
+                     </div>
+                     <div className="flex items-start gap-2 px-3 py-2 rounded-xl border border-border/40 bg-background/50 group-hover:bg-background transition-colors">
+                        <Calendar className="h-4 w-4 text-emerald-500/60 mt-0.5 shrink-0" />
+                        <div className="flex flex-col overflow-hidden">
+                           <span className="text-[7px] uppercase font-bold text-muted-foreground leading-none mb-1">الدورة الأكاديمية</span>
+                           <span className="text-[10px] font-bold truncate tracking-tight">{item.academicYear.name} ({item.academicYear.code})</span>
+                        </div>
+                     </div>
+                     <div className="flex items-start gap-2 px-3 py-2 rounded-xl border border-border/40 bg-background/50 group-hover:bg-background transition-colors">
+                        <Layers className="h-4 w-4 text-amber-500/60 mt-0.5 shrink-0" />
+                        <div className="flex flex-col overflow-hidden">
+                           <span className="text-[7px] uppercase font-bold text-muted-foreground leading-none mb-1">حساب المستخدم</span>
+                           <span className="text-[10px] font-bold truncate tracking-tight">
+                              {item.employee.userAccount ? "مرتبط بحساب" : "بدون حساب دخول"}
+                           </span>
+                        </div>
+                     </div>
+                  </div>
                 </div>
+              ))}
+            </div>
 
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge
-                    variant={assignment.isPrimary ? "default" : "secondary"}
-                  >
-                    {assignment.isPrimary ? "أساسي" : "مساند"}
-                  </Badge>
-                  <Badge variant={assignment.isActive ? "default" : "outline"}>
-                    {assignment.isActive ? "نشط" : "غير نشط"}
-                  </Badge>
-                </div>
-              </div>
+            {!assignmentsQuery.isPending && records.length === 0 && (
+              <div className="p-12 text-center text-sm text-muted-foreground opacity-50">لا توجد تكاليف تدريس مسجلة حالياً.</div>
+            )}
 
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleStartEdit(assignment)}
-                  disabled={!canUpdate || updateMutation.isPending}
-                >
-                  <PencilLine className="h-3.5 w-3.5" />
-                  تعديل
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleDelete(assignment)}
-                  disabled={!canDelete || deleteMutation.isPending}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  حذف
-                </Button>
+            <div className="p-4 flex flex-wrap items-center justify-between gap-4 border-t border-border/60 bg-muted/10">
+              <p className="text-[10px] text-muted-foreground font-bold italic tracking-wide">نظام التوزيع: مصفوفة الكادر الأكاديمي</p>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" className="h-8 rounded-xl px-4 font-bold" onClick={() => setPage(p => Math.max(p - 1, 1))} disabled={!pagination || pagination.page <= 1}>السابق</Button>
+                <div className="text-[10px] font-bold px-2">Page {pagination?.page ?? 1} / {pagination?.totalPages ?? 1}</div>
+                <Button variant="outline" size="sm" className="h-8 rounded-xl px-4 font-bold" onClick={() => setPage(p => (pagination ? Math.min(p + 1, pagination.totalPages || 1) : p))} disabled={!pagination || pagination.page >= pagination.totalPages}>التالي</Button>
               </div>
             </div>
-          ))}
-
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-            <p className="text-xs text-muted-foreground">
-              الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={
-                  !pagination ||
-                  pagination.page <= 1 ||
-                  assignmentsQuery.isFetching
-                }
-              >
-                السابق
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPage((prev) =>
-                    pagination
-                      ? Math.min(prev + 1, pagination.totalPages)
-                      : prev,
-                  )
-                }
-                disabled={
-                  !pagination ||
-                  pagination.page >= pagination.totalPages ||
-                  assignmentsQuery.isFetching
-                }
-              >
-                التالي
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => void assignmentsQuery.refetch()}
-                disabled={assignmentsQuery.isFetching}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${assignmentsQuery.isFetching ? "animate-spin" : ""}`}
-                />
-                تحديث
-              </Button>
-            </div>
-          </div>
-        </CardContent>
+          </CardContent>
         </Card>
       </div>
 
-      <Fab
-        onClick={handleStartCreate}
-        label="إضافة"
-        ariaLabel="إضافة إسناد تدريس"
-        disabled={!canCreate}
-      />
+      <Fab icon={<Plus className="h-5 w-5" />} label="إسناد جديد" onClick={handleStartCreate} disabled={!canCreate} />
 
       <CrudFormSheet
         open={isFormOpen}
-        title={isEditing ? "تعديل إسناد تدريس" : "إضافة إسناد تدريس"}
-        submitLabel={isEditing ? "حفظ التعديلات" : "حفظ إسناد التدريس"}
-        onClose={resetForm}
-        onSubmit={() => undefined}
-        isSubmitting={isFormSubmitting}
+        onClose={resetFormState}
+        title={isEditing ? "تحديث بيانات التكليف" : "إصدار قرار إسناد تدريس"}
+        isEditing={isEditing}
+        isSubmitting={isSubmitting}
+        onSubmit={handleSubmit}
       >
-        {!canCreate && !isEditing ? (
-          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            لا تملك الصلاحية المطلوبة: <code>employee-teaching-assignments.create</code>.
-          </div>
-        ) : (
-          <form
-            className="space-y-3"
-            onSubmit={handleSubmitForm}
-            data-testid="employee-teaching-assignment-form"
-          >
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><UserCheck className="h-3.5 w-3.5" /> الطرف الأول: المعلم</h4>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                الموظف *
-              </label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={formState.employeeId}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    employeeId: event.target.value,
-                  }))
-                }
-                disabled={!canReadEmployees}
-                data-testid="employee-teaching-assignment-form-employee"
-              >
+              <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">اختيار الموظف *</label>
+              <SelectField value={form.employeeId} onChange={(e) => setForm(p => ({ ...p, employeeId: e.target.value }))}>
                 <option value="">اختر الموظف</option>
-                {(employeesQuery.data ?? []).map((employee) => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
-                  </option>
-                ))}
-              </select>
-              {selectedEmployee && !selectedEmployee.userAccount ? (
-                <p className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-300">
-                  الموظف المختار لا يملك حساب مستخدم مرتبط. الإسناد سيُحفظ، لكن
-                  لن يتمكن من الدخول والتنفيذ إلا بعد إنشاء أو ربط الحساب من{" "}
-                  <Link
-                    href={`/app/users?q=${encodeURIComponent(selectedEmployee.fullName)}`}
-                    className="underline underline-offset-2"
-                  >
-                    إدارة المستخدمين
-                  </Link>
-                  .
-                </p>
-              ) : null}
+                {(employeesQuery.data ?? []).map(e => <option key={e.id} value={e.id}>{e.fullName} ({e.jobNumber || "N/A"})</option>)}
+              </SelectField>
+              {form.employeeId && !(employeesQuery.data ?? []).find(e => e.id === form.employeeId)?.userAccount && (
+                <div className="mt-2 p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[10px] font-bold text-amber-600 flex items-center gap-2">
+                   <Settings2 className="h-3 w-3" /> هذا الموظف ليس لديه حساب دخول للنظام حالياً.
+                </div>
+              )}
             </div>
+          </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                الشعبة *
-              </label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={formState.sectionId}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    sectionId: event.target.value,
-                  }))
-                }
-                disabled={!canReadSections}
-                data-testid="employee-teaching-assignment-form-section"
-              >
-                <option value="">اختر الشعبة</option>
-                {(sectionsQuery.data ?? []).map((section) => (
-                  <option key={section.id} value={section.id}>
-                    {section.name} ({section.code})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                المادة *
-              </label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={formState.subjectId}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    subjectId: event.target.value,
-                  }))
-                }
-                disabled={!canReadSubjects}
-                data-testid="employee-teaching-assignment-form-subject"
-              >
-                <option value="">اختر المادة</option>
-                {(subjectsQuery.data ?? []).map((subject) => (
-                  <option key={subject.id} value={subject.id}>
-                    {subject.name} ({subject.code})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                السنة الأكاديمية *
-              </label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={formState.academicYearId}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    academicYearId: event.target.value,
-                  }))
-                }
-                disabled={!canReadAcademicYears}
-                data-testid="employee-teaching-assignment-form-academic-year"
-              >
-                <option value="">اختر السنة الدراسية</option>
-                {(academicYearsQuery.data ?? []).map((year) => (
-                  <option key={year.id} value={year.id}>
-                    {year.name} ({year.code})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                الحصص الأسبوعية *
-              </label>
-              <Input
-                type="number"
-                min={1}
-                max={60}
-                value={formState.weeklyPeriods}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    weeklyPeriods: event.target.value,
-                  }))
-                }
-                required
-                data-testid="employee-teaching-assignment-form-weekly-periods"
-              />
-            </div>
-
-            <div className="grid gap-2 md:grid-cols-2">
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>مدرس أساسي</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isPrimary}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      isPrimary: event.target.checked,
-                    }))
-                  }
-                />
-              </label>
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشط</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      isActive: event.target.checked,
-                    }))
-                  }
-                />
-              </label>
-            </div>
-
-            {formError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                {formError}
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><Layout className="h-3.5 w-3.5" /> الطرف الثاني: الشعبة والمادة</h4>
+            <div className="grid gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">السنة الأكاديمية *</label>
+                <SelectField value={form.academicYearId} onChange={(e) => setForm(p => ({ ...p, academicYearId: e.target.value }))}>
+                  <option value="">اختر السنة</option>
+                  {(academicYearsQuery.data ?? []).map(y => <option key={y.id} value={y.id}>{y.name} ({y.code})</option>)}
+                </SelectField>
               </div>
-            ) : null}
-
-            {mutationError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                {mutationError}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">الشعبة *</label>
+                  <SelectField value={form.sectionId} onChange={(e) => setForm(p => ({ ...p, sectionId: e.target.value }))}>
+                    <option value="">اختر الشعبة</option>
+                    {(sectionsQuery.data ?? []).map(s => <option key={s.id} value={s.id}>{s.name} ({s.code})</option>)}
+                  </SelectField>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">المادة *</label>
+                  <SelectField value={form.subjectId} onChange={(e) => setForm(p => ({ ...p, subjectId: e.target.value }))}>
+                    <option value="">اختر المادة</option>
+                    {(subjectsQuery.data ?? []).map(s => <option key={s.id} value={s.id}>{s.name} ({s.code})</option>)}
+                  </SelectField>
+                </div>
               </div>
-            ) : null}
-
-            {!hasDependenciesReadPermissions ? (
-              <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                يتطلب هذا الجزء صلاحيات القراءة: <code>employees.read</code>,{" "}
-                <code>sections.read</code>, <code>subjects.read</code>,{" "}
-                <code>academic-years.read</code>.
-              </div>
-            ) : null}
-
-            <div className="flex gap-2">
-              <Button
-                type="submit"
-                className="flex-1 gap-2"
-                disabled={
-                  isFormSubmitting ||
-                  (!canCreate && !isEditing) ||
-                  !hasDependenciesReadPermissions
-                }
-                data-testid="employee-teaching-assignment-form-submit"
-              >
-                {isFormSubmitting ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : null}
-                {isEditing ? "حفظ التعديلات" : "حفظ إسناد التدريس"}
-              </Button>
-              {isEditing ? (
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  إلغاء
-                </Button>
-              ) : null}
             </div>
-          </form>
-        )}
+          </div>
+
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> تفاصيل التكليف</h4>
+            <div className="grid gap-4 sm:grid-cols-2">
+               <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">نصاب الحصص الأسبوعي *</label>
+                  <Input type="number" min={1} max={60} value={form.weeklyPeriods} onChange={(e) => setForm(p => ({ ...p, weeklyPeriods: e.target.value }))} placeholder="1" />
+               </div>
+               <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">دور المعلم</label>
+                  <label className="flex h-10 items-center justify-between px-3 rounded-lg border border-border/30 bg-background/50 cursor-pointer">
+                    <span className="text-[10px] font-bold uppercase">معلم أساسي للمادة</span>
+                    <input type="checkbox" className="h-4 w-4 rounded text-primary" checked={form.isPrimary} onChange={(e) => setForm(p => ({ ...p, isPrimary: e.target.checked }))} />
+                  </label>
+               </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-3">
+             <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><Settings2 className="h-3.5 w-3.5" /> الحالة التشغيلية</h4>
+            <label className="flex items-center justify-between cursor-pointer transition-colors group">
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-foreground group-hover:text-primary">إسناد نشط (Effective)</span>
+                <p className="text-[10px] text-muted-foreground">تفعيل ظهور المادة في سجلات هذا المعلم</p>
+              </div>
+              <input type="checkbox" className="h-5 w-5 rounded text-primary" checked={form.isActive} onChange={(e) => setForm(p => ({ ...p, isActive: e.target.checked }))} />
+            </label>
+          </div>
+
+          {formError && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive font-bold text-center">
+              {formError}
+            </div>
+          )}
+        </div>
       </CrudFormSheet>
-    </>
+    </PageShell>
   );
 }

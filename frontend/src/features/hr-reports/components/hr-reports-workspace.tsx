@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { BarChart3, RefreshCw } from "lucide-react";
@@ -388,6 +388,7 @@ export function HrReportsWorkspace() {
     </div>
   );
 }
+
 
 
 

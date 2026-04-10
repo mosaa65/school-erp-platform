@@ -3,12 +3,11 @@
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
-  LoaderCircle,
-  PencilLine,
-  Plus,
-  RefreshCw,
-  Trash2,
   Users,
+  RefreshCw,
+  Plus,
+  PencilLine,
+  Trash2,
   User,
   CalendarDays,
   MapPin,
@@ -17,14 +16,20 @@ import {
   Heart,
   Activity,
   UserCheck,
+  Building,
+  GraduationCap,
+  Layout,
+  Target,
+  Settings2,
+  Stethoscope,
+  ShieldCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { SearchField } from "@/components/ui/search-field";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
-import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
+import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
 import {
   Card,
   CardContent,
@@ -33,13 +38,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
+import { PageShell } from "@/components/ui/page-shell";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useGeographyOptionsQuery } from "@/features/lookup-catalog/hooks/use-geography-options-query";
 import {
   buildGeographyMaps,
-  formatLocalityHierarchyLabel,
   resolveSelectionFromLocality,
 } from "@/features/lookup-catalog/lib/geography";
 import { useLookupOrphanStatusesQuery } from "@/features/lookup-orphan-statuses/hooks/use-lookup-orphan-statuses-query";
@@ -53,12 +57,10 @@ import { useStudentGenderOptionsQuery } from "@/features/students/hooks/use-gend
 import { useHealthStatusOptionsQuery } from "@/features/students/hooks/use-health-status-options-query";
 import { useStudentsQuery } from "@/features/students/hooks/use-students-query";
 import {
-  translateStudentEnrollmentStatus,
   translateStudentGender,
   translateStudentHealthStatus,
   translateStudentOrphanStatus,
 } from "@/lib/i18n/ar";
-import { formatNameCodeLabel } from "@/lib/option-labels";
 import type {
   StudentGender,
   StudentHealthStatus,
@@ -81,36 +83,6 @@ type StudentFormState = {
 
 const PAGE_SIZE = 12;
 
-const STUDENT_GENDER_CODES: StudentGender[] = ["MALE", "FEMALE", "OTHER"];
-const STUDENT_HEALTH_STATUS_CODES: StudentHealthStatus[] = [
-  "HEALTHY",
-  "CHRONIC_DISEASE",
-  "SPECIAL_NEEDS",
-  "DISABILITY",
-  "OTHER",
-];
-const ORPHAN_OPTIONS: StudentOrphanStatus[] = [
-  "NONE",
-  "FATHER_DECEASED",
-  "MOTHER_DECEASED",
-  "BOTH_DECEASED",
-];
-
-const ORPHAN_STATUS_FALLBACK_OPTIONS: Array<{
-  id: number;
-  code: StudentOrphanStatus;
-  nameAr: string;
-}> = [
-    { id: -1, code: "NONE", nameAr: "غير يتيم" },
-    { id: -2, code: "FATHER_DECEASED", nameAr: "يتيم الأب" },
-    { id: -3, code: "MOTHER_DECEASED", nameAr: "يتيم الأم" },
-    { id: -4, code: "BOTH_DECEASED", nameAr: "يتيم الأبوين" },
-  ];
-
-function isStudentOrphanStatus(value: string): value is StudentOrphanStatus {
-  return ORPHAN_OPTIONS.includes(value as StudentOrphanStatus);
-}
-
 const DEFAULT_FORM_STATE: StudentFormState = {
   admissionNo: "",
   fullName: "",
@@ -124,96 +96,21 @@ const DEFAULT_FORM_STATE: StudentFormState = {
   isActive: true,
 };
 
-function isStudentGenderCode(value: string): value is StudentGender {
-  return STUDENT_GENDER_CODES.includes(value as StudentGender);
-}
-
-function isStudentHealthStatusCode(value: string): value is StudentHealthStatus {
-  return STUDENT_HEALTH_STATUS_CODES.includes(value as StudentHealthStatus);
-}
-
 function toDateInput(isoDate: string | null): string {
-  if (!isoDate) {
-    return "";
-  }
-
+  if (!isoDate) return "";
   const date = new Date(isoDate);
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-
-  return date.toISOString().slice(0, 10);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
 }
 
 function toDateIso(dateInput: string): string {
   return `${dateInput}T00:00:00.000Z`;
 }
 
-function toOptionalString(value: string): string | undefined {
-  const normalized = value.trim();
-  return normalized.length > 0 ? normalized : undefined;
-}
-
 function formatDate(isoDate: string | null): string {
-  if (!isoDate) {
-    return "-";
-  }
-
+  if (!isoDate) return "-";
   const date = new Date(isoDate);
-  if (Number.isNaN(date.getTime())) {
-    return "-";
-  }
-
-  return date.toLocaleDateString();
+  return Number.isNaN(date.getTime()) ? "-" : date.toLocaleDateString("ar-SA");
 }
-
-type StudentEnrollmentLabelInput = {
-  academicYear: {
-    name: string;
-    code: string;
-  };
-  gradeLevel?: {
-    name: string;
-    code: string;
-  } | null;
-  section?: {
-    name?: string | null;
-    code?: string | null;
-    gradeLevel?: {
-      name: string;
-      code: string;
-    } | null;
-  } | null;
-};
-
-function formatStudentEnrollmentPlacementLabel(
-  enrollment: StudentEnrollmentLabelInput,
-): string {
-  const yearLabel = formatNameCodeLabel(enrollment.academicYear.name, enrollment.academicYear.code);
-  const gradeLabel = enrollment.gradeLevel
-    ? formatNameCodeLabel(enrollment.gradeLevel.name, enrollment.gradeLevel.code)
-    : enrollment.section?.gradeLevel
-      ? formatNameCodeLabel(
-        enrollment.section.gradeLevel.name,
-        enrollment.section.gradeLevel.code,
-      )
-      : "";
-
-  if (enrollment.section) {
-    return `${yearLabel} / ${gradeLabel || "غير موزع"} / ${formatNameCodeLabel(enrollment.section.name, enrollment.section.code)}`;
-  }
-
-  return gradeLabel ? `${yearLabel} / ${gradeLabel} / غير موزع` : `${yearLabel} / غير موزع`;
-}
-
-type LocalityLabelInput = {
-  id: number;
-  nameAr?: string;
-  name?: string;
-  localityType?: "RURAL" | "URBAN";
-  directorateId?: number;
-  villageId?: number;
-};
 
 function toFormState(student: StudentListItem): StudentFormState {
   return {
@@ -230,246 +127,72 @@ function toFormState(student: StudentListItem): StudentFormState {
   };
 }
 
-function orphanBadgeVariant(
-  orphanStatus: StudentOrphanStatus,
-): "default" | "secondary" | "outline" {
-  if (orphanStatus === "NONE") {
-    return "outline";
-  }
-
-  if (orphanStatus === "BOTH_DECEASED") {
-    return "default";
-  }
-
-  return "secondary";
-}
-
-function healthBadgeVariant(
-  healthStatus: StudentHealthStatus | null,
-): "default" | "secondary" | "outline" {
-  if (!healthStatus) {
-    return "outline";
-  }
-
-  if (healthStatus === "HEALTHY") {
-    return "secondary";
-  }
-
-  return "default";
-}
-
 export function StudentsWorkspace() {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("students.create");
   const canUpdate = hasPermission("students.update");
   const canDelete = hasPermission("students.delete");
-  const canReadGenders = hasPermission("lookup-genders.read");
-  const canReadBloodTypes = hasPermission("lookup-blood-types.read");
-  const canReadLocalities = hasPermission("localities.read");
-  const canReadHealthStatuses = hasPermission("lookup-health-statuses.read");
-  const canReadOrphanStatuses = hasPermission("lookup-orphan-statuses.read");
 
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
-  const [genderFilter, setGenderFilter] = React.useState<string>("all");
-  const [bloodTypeFilter, setBloodTypeFilter] = React.useState<string>("all");
-  const [localityFilter, setLocalityFilter] = React.useState<string>("all");
-  const [orphanFilter, setOrphanFilter] = React.useState<string>("all");
-  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
-    "all",
-  );
-  const [filterDraft, setFilterDraft] = React.useState<{
-    gender: string;
-    bloodType: string;
-    locality: string;
-    orphan: string;
-    active: "all" | "active" | "inactive";
-  }>({
-    gender: "all",
-    bloodType: "all",
-    locality: "all",
-    orphan: "all",
-    active: "all",
-  });
+  const [genderFilter, setGenderFilter] = React.useState("all");
+  const [bloodFilter, setBloodFilter] = React.useState("all");
+  const [orphanFilter, setOrphanFilter] = React.useState("all");
+  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">("all");
+  const [filterDraft, setFilterDraft] = React.useState({ gender: "all", blood: "all", orphan: "all", active: "all" as any });
 
-  const [editingStudentId, setEditingStudentId] = React.useState<string | null>(null);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [formState, setFormState] = React.useState<StudentFormState>(DEFAULT_FORM_STATE);
+  const [form, setForm] = React.useState<StudentFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
-  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
-  const [formGovernorateId, setFormGovernorateId] = React.useState<string>("");
-  const [formDirectorateId, setFormDirectorateId] = React.useState<string>("");
-  const [formSubDistrictId, setFormSubDistrictId] = React.useState<string>("");
-  const [formVillageId, setFormVillageId] = React.useState<string>("");
+
+  const [fGovId, setFGovId] = React.useState("");
+  const [fDirId, setFDirId] = React.useState("");
+  const [fSubId, setFSubId] = React.useState("");
+  const [fVilId, setFVilId] = React.useState("");
 
   const studentsQuery = useStudentsQuery({
-    page,
-    limit: PAGE_SIZE,
-    search: search || undefined,
+    page, limit: PAGE_SIZE, search,
     genderId: genderFilter === "all" ? undefined : Number(genderFilter),
-    bloodTypeId: bloodTypeFilter === "all" ? undefined : Number(bloodTypeFilter),
-    localityId: localityFilter === "all" ? undefined : Number(localityFilter),
+    bloodTypeId: bloodFilter === "all" ? undefined : Number(bloodFilter),
     orphanStatusId: orphanFilter === "all" ? undefined : Number(orphanFilter),
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
   });
+
   const genderOptionsQuery = useStudentGenderOptionsQuery();
   const bloodTypeOptionsQuery = useBloodTypeOptionsQuery();
-  const geographyOptionsQuery = useGeographyOptionsQuery("students");
-  const healthStatusOptionsQuery = useHealthStatusOptionsQuery();
-  const orphanStatusesQuery = useLookupOrphanStatusesQuery({
-    page: 1,
-    limit: 100,
-    isActive: true,
-    enabled: canReadOrphanStatuses,
-  });
+  const geoQuery = useGeographyOptionsQuery("students");
+  const healthQuery = useHealthStatusOptionsQuery();
+  const orphanQuery = useLookupOrphanStatusesQuery({ page: 1, limit: 100, isActive: true });
 
   const createMutation = useCreateStudentMutation();
   const updateMutation = useUpdateStudentMutation();
   const deleteMutation = useDeleteStudentMutation();
 
-  const students = React.useMemo(() => studentsQuery.data?.data ?? [], [studentsQuery.data?.data]);
-  const genderOptions = React.useMemo(
-    () => genderOptionsQuery.data ?? [],
-    [genderOptionsQuery.data],
-  );
-  const bloodTypeOptions = React.useMemo(
-    () => bloodTypeOptionsQuery.data ?? [],
-    [bloodTypeOptionsQuery.data],
-  );
-  const governorateOptions = React.useMemo(
-    () => geographyOptionsQuery.data?.governorates ?? [],
-    [geographyOptionsQuery.data?.governorates],
-  );
-  const directorateOptions = React.useMemo(
-    () => geographyOptionsQuery.data?.directorates ?? [],
-    [geographyOptionsQuery.data?.directorates],
-  );
-  const subDistrictOptions = React.useMemo(
-    () => geographyOptionsQuery.data?.subDistricts ?? [],
-    [geographyOptionsQuery.data?.subDistricts],
-  );
-  const villageOptions = React.useMemo(
-    () => geographyOptionsQuery.data?.villages ?? [],
-    [geographyOptionsQuery.data?.villages],
-  );
-  const localityOptions = React.useMemo(
-    () => geographyOptionsQuery.data?.localities ?? [],
-    [geographyOptionsQuery.data?.localities],
-  );
-  const geographyMaps = React.useMemo(
-    () =>
-      buildGeographyMaps({
-        governorates: governorateOptions,
-        directorates: directorateOptions,
-        subDistricts: subDistrictOptions,
-        villages: villageOptions,
-        localities: localityOptions,
-      }),
-    [
-      directorateOptions,
-      governorateOptions,
-      localityOptions,
-      subDistrictOptions,
-      villageOptions,
-    ],
-  );
-  const hasGeographyHierarchy = React.useMemo(
-    () => governorateOptions.length > 0 && directorateOptions.length > 0,
-    [directorateOptions.length, governorateOptions.length],
-  );
-  const filteredDirectorates = React.useMemo(() => {
-    if (!formGovernorateId) {
-      return [];
-    }
-
-    const governorateId = Number(formGovernorateId);
-    return directorateOptions.filter((item) => item.governorateId === governorateId);
-  }, [directorateOptions, formGovernorateId]);
-  const filteredSubDistricts = React.useMemo(() => {
-    if (!formDirectorateId) {
-      return [];
-    }
-
-    const directorateId = Number(formDirectorateId);
-    return subDistrictOptions.filter((item) => item.directorateId === directorateId);
-  }, [formDirectorateId, subDistrictOptions]);
-  const filteredVillages = React.useMemo(() => {
-    if (!formSubDistrictId) {
-      return [];
-    }
-
-    const subDistrictId = Number(formSubDistrictId);
-    return villageOptions.filter((item) => item.subDistrictId === subDistrictId);
-  }, [formSubDistrictId, villageOptions]);
-  const filteredLocalities = React.useMemo(() => {
-    if (!formDirectorateId) {
-      return [];
-    }
-
-    const directorateId = Number(formDirectorateId);
-    const selectedVillageId = formVillageId ? Number(formVillageId) : null;
-
-    return localityOptions.filter((item) => {
-      if (item.localityType === "URBAN") {
-        return item.directorateId === directorateId;
-      }
-
-      if (!selectedVillageId) {
-        return false;
-      }
-
-      return item.villageId === selectedVillageId;
-    });
-  }, [formDirectorateId, formVillageId, localityOptions]);
-  const formSelectedLocality = React.useMemo(
-    () =>
-      formState.localityId
-        ? geographyMaps.localityById.get(Number(formState.localityId))
-        : undefined,
-    [formState.localityId, geographyMaps],
-  );
-  const healthStatusOptions = React.useMemo(
-    () => healthStatusOptionsQuery.data ?? [],
-    [healthStatusOptionsQuery.data],
-  );
-  const orphanStatusOptions = React.useMemo(() => {
-    const items = orphanStatusesQuery.data?.data ?? [];
-    const normalized = items.filter((item) => isStudentOrphanStatus(item.code));
-
-    return normalized.length > 0 ? normalized : ORPHAN_STATUS_FALLBACK_OPTIONS;
-  }, [orphanStatusesQuery.data?.data]);
-  const orphanStatusOptionsById = React.useMemo(
-    () => new Map(orphanStatusOptions.map((item) => [item.id, item])),
-    [orphanStatusOptions],
-  );
-  const orphanStatusLabels = React.useMemo(
-    () => new Map(orphanStatusOptions.map((item) => [item.code, item.nameAr])),
-    [orphanStatusOptions],
-  );
+  const records = React.useMemo(() => studentsQuery.data?.data ?? [], [studentsQuery.data?.data]);
   const pagination = studentsQuery.data?.pagination;
-  const isEditing = editingStudentId !== null;
+  const isEditing = editingId !== null;
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
-  const mutationError =
-    (createMutation.error as Error | null)?.message ??
-    (updateMutation.error as Error | null)?.message ??
-    (deleteMutation.error as Error | null)?.message ??
-    null;
+  const geoMaps = React.useMemo(() => buildGeographyMaps({
+    governorates: geoQuery.data?.governorates ?? [],
+    directorates: geoQuery.data?.directorates ?? [],
+    subDistricts: geoQuery.data?.subDistricts ?? [],
+    villages: geoQuery.data?.villages ?? [],
+    localities: geoQuery.data?.localities ?? [],
+  }), [geoQuery.data]);
 
-  React.useEffect(() => {
-    if (!isEditing) {
-      return;
-    }
-
-    const stillExists = students.some((student) => student.id === editingStudentId);
-    if (!stillExists) {
-      setEditingStudentId(null);
-      setFormState(DEFAULT_FORM_STATE);
-      setFormError(null);
-      setIsFormOpen(false);
-    }
-  }, [editingStudentId, isEditing, students]);
+  const filteredDirs = React.useMemo(() => fGovId ? (geoQuery.data?.directorates ?? []).filter(d => d.governorateId === Number(fGovId)) : [], [fGovId, geoQuery.data]);
+  const filteredSubs = React.useMemo(() => fDirId ? (geoQuery.data?.subDistricts ?? []).filter(s => s.directorateId === Number(fDirId)) : [], [fDirId, geoQuery.data]);
+  const filteredVils = React.useMemo(() => fSubId ? (geoQuery.data?.villages ?? []).filter(v => v.subDistrictId === Number(fSubId)) : [], [fSubId, geoQuery.data]);
+  const filteredLocs = React.useMemo(() => {
+    if (!fDirId) return [];
+    const dirId = Number(fDirId);
+    const selVilId = fVilId ? Number(fVilId) : null;
+    return (geoQuery.data?.localities ?? []).filter(l => l.localityType === "URBAN" ? l.directorateId === dirId : l.villageId === selVilId);
+  }, [fDirId, fVilId, geoQuery.data]);
 
   useDebounceEffect(() => {
     setPage(1);
@@ -477,1090 +200,402 @@ export function StudentsWorkspace() {
   }, 400, [searchInput]);
 
   React.useEffect(() => {
-    if (!isFilterOpen) {
-      return;
-    }
+    if (!isFilterOpen) return;
+    setFilterDraft({ gender: genderFilter, blood: bloodFilter, orphan: orphanFilter, active: activeFilter });
+  }, [activeFilter, bloodFilter, genderFilter, isFilterOpen, orphanFilter]);
 
-    setFilterDraft({
-      gender: genderFilter,
-      bloodType: bloodTypeFilter,
-      locality: localityFilter,
-      orphan: orphanFilter,
-      active: activeFilter,
-    });
-  }, [activeFilter, bloodTypeFilter, genderFilter, isFilterOpen, localityFilter, orphanFilter]);
-
-  React.useEffect(() => {
-    if (isEditing || formState.genderId || !canReadGenders) {
-      return;
-    }
-
-    if (genderOptions.length === 0) {
-      return;
-    }
-
-    const preferred = genderOptions.find((option) => option.code === "MALE");
-    const defaultGender = preferred ?? genderOptions[0];
-    setFormState((prev) =>
-      prev.genderId
-        ? prev
-        : {
-          ...prev,
-          genderId: String(defaultGender.id),
-        },
-    );
-  }, [canReadGenders, formState.genderId, genderOptions, isEditing]);
-
-  React.useEffect(() => {
-    if (isEditing || formState.orphanStatusId) {
-      return;
-    }
-
-    if (orphanStatusOptions.length === 0) {
-      return;
-    }
-
-    const preferred = orphanStatusOptions.find((item) => item.code === "NONE");
-    const defaultOrphan = preferred ?? orphanStatusOptions[0];
-    setFormState((prev) =>
-      prev.orphanStatusId
-        ? prev
-        : {
-          ...prev,
-          orphanStatusId: String(defaultOrphan.id),
-        },
-    );
-  }, [formState.orphanStatusId, isEditing, orphanStatusOptions]);
-
-  React.useEffect(() => {
-    if (!formState.localityId) {
-      return;
-    }
-
-    const locality = geographyMaps.localityById.get(Number(formState.localityId));
-    const selection = resolveSelectionFromLocality(locality, geographyMaps);
-
-    if (selection.governorateId !== formGovernorateId) {
-      setFormGovernorateId(selection.governorateId);
-    }
-
-    if (selection.directorateId !== formDirectorateId) {
-      setFormDirectorateId(selection.directorateId);
-    }
-
-    if (selection.subDistrictId !== formSubDistrictId) {
-      setFormSubDistrictId(selection.subDistrictId);
-    }
-
-    if (selection.villageId !== formVillageId) {
-      setFormVillageId(selection.villageId);
-    }
-  }, [
-    formDirectorateId,
-    formGovernorateId,
-    formState.localityId,
-    formSubDistrictId,
-    formVillageId,
-    geographyMaps,
-  ]);
-
-  const resetForm = () => {
-    setEditingStudentId(null);
-    setFormState(DEFAULT_FORM_STATE);
+  const resetFormState = () => {
+    setEditingId(null);
+    setForm(DEFAULT_FORM_STATE);
+    setFGovId(""); setFDirId(""); setFSubId(""); setFVilId("");
     setFormError(null);
-    setFormGovernorateId("");
-    setFormDirectorateId("");
-    setFormSubDistrictId("");
-    setFormVillageId("");
     setIsFormOpen(false);
   };
 
   const handleStartCreate = () => {
-    if (!canCreate) {
-      return;
-    }
-
-    setActionSuccess(null);
-    setFormError(null);
-    setEditingStudentId(null);
-    setFormState(DEFAULT_FORM_STATE);
-    setFormGovernorateId("");
-    setFormDirectorateId("");
-    setFormSubDistrictId("");
-    setFormVillageId("");
+    if (!canCreate) return;
+    setForm(DEFAULT_FORM_STATE);
     setIsFormOpen(true);
   };
 
-  const handleGovernorateChange = (value: string) => {
-    setFormGovernorateId(value);
-    setFormDirectorateId("");
-    setFormSubDistrictId("");
-    setFormVillageId("");
-    setFormState((prev) => ({ ...prev, localityId: "" }));
-  };
-
-  const handleDirectorateChange = (value: string) => {
-    setFormDirectorateId(value);
-    setFormSubDistrictId("");
-    setFormVillageId("");
-    setFormState((prev) => ({ ...prev, localityId: "" }));
-  };
-
-  const handleSubDistrictChange = (value: string) => {
-    setFormSubDistrictId(value);
-    setFormVillageId("");
-    setFormState((prev) => ({ ...prev, localityId: "" }));
-  };
-
-  const handleVillageChange = (value: string) => {
-    setFormVillageId(value);
-    setFormState((prev) => ({ ...prev, localityId: "" }));
-  };
-
-  const handleLocalityChange = (value: string) => {
-    setFormState((prev) => ({ ...prev, localityId: value }));
-  };
-
-  const validateForm = (): boolean => {
-    if (!formState.fullName.trim()) {
-      setFormError("الاسم الكامل مطلوب.");
-      return false;
+  const handleStartEdit = (item: StudentListItem) => {
+    if (!canUpdate) return;
+    setEditingId(item.id);
+    const fs = toFormState(item);
+    setForm(fs);
+    if (fs.localityId) {
+      const loc = geoMaps.localityById.get(Number(fs.localityId));
+      const sel = resolveSelectionFromLocality(loc, geoMaps);
+      setFGovId(sel.governorateId); setFDirId(sel.directorateId); setFSubId(sel.subDistrictId); setFVilId(sel.villageId);
     }
-
-    if (!formState.genderId) {
-      setFormError("الجنس مطلوب.");
-      return false;
-    }
-
-    if (!formState.orphanStatusId) {
-      setFormError("حالة اليتم مطلوبة.");
-      return false;
-    }
-
-    if (formState.fullName.trim().length > 150) {
-      setFormError("الاسم الكامل يجب ألا يتجاوز 150 حرفًا.");
-      return false;
-    }
-
-    if (formState.healthNotes.trim().length > 1000) {
-      setFormError("الملاحظات الصحية يجب ألا تتجاوز 1000 حرف.");
-      return false;
-    }
-
-    setFormError(null);
-    return true;
+    setIsFormOpen(true);
   };
 
-  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
-    event?.preventDefault();
-    setActionSuccess(null);
-
-    if (!validateForm()) {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.fullName.trim() || !form.genderId) {
+      setFormError("الاسم الكامل والجنس حقول مطلوبة.");
       return;
     }
-
-    const selectedGender = genderOptions.find(
-      (option) => option.id === Number(formState.genderId),
-    );
-    const selectedOrphanStatus = orphanStatusOptionsById.get(
-      Number(formState.orphanStatusId),
-    );
-    const selectedHealthStatus = healthStatusOptions.find(
-      (option) => option.id === Number(formState.healthStatusId),
-    );
-    const orphanStatusIdNumeric = Number(formState.orphanStatusId);
-    const mappedGender =
-      selectedGender?.code && isStudentGenderCode(selectedGender.code)
-        ? selectedGender.code
-        : undefined;
-    const mappedOrphanStatus =
-      selectedOrphanStatus?.code && isStudentOrphanStatus(selectedOrphanStatus.code)
-        ? selectedOrphanStatus.code
-        : undefined;
-    const mappedHealthStatus =
-      selectedHealthStatus?.code &&
-        isStudentHealthStatusCode(selectedHealthStatus.code)
-        ? selectedHealthStatus.code
-        : undefined;
 
     const payload = {
-      fullName: formState.fullName.trim(),
-      gender: mappedGender,
-      genderId: formState.genderId ? Number(formState.genderId) : undefined,
-      birthDate: formState.birthDate ? toDateIso(formState.birthDate) : undefined,
-      bloodTypeId: formState.bloodTypeId ? Number(formState.bloodTypeId) : null,
-      localityId: formState.localityId ? Number(formState.localityId) : null,
-      healthStatus: mappedHealthStatus,
-      healthStatusId: formState.healthStatusId
-        ? Number(formState.healthStatusId)
-        : undefined,
-      healthNotes: toOptionalString(formState.healthNotes),
-      orphanStatus: mappedOrphanStatus,
-      orphanStatusId:
-        formState.orphanStatusId && orphanStatusIdNumeric > 0
-          ? orphanStatusIdNumeric
-          : undefined,
-      isActive: formState.isActive,
+      admissionNo: form.admissionNo.trim() || undefined,
+      fullName: form.fullName.trim(),
+      genderId: Number(form.genderId),
+      birthDate: form.birthDate ? toDateIso(form.birthDate) : undefined,
+      bloodTypeId: form.bloodTypeId ? Number(form.bloodTypeId) : null,
+      localityId: form.localityId ? Number(form.localityId) : null,
+      healthStatusId: form.healthStatusId ? Number(form.healthStatusId) : undefined,
+      healthNotes: form.healthNotes.trim() || undefined,
+      orphanStatusId: form.orphanStatusId ? Number(form.orphanStatusId) : undefined,
+      isActive: form.isActive,
     };
 
-    if (isEditing && editingStudentId) {
-      if (!canUpdate) {
-        setFormError("لا تملك الصلاحية المطلوبة: students.update.");
-        return;
-      }
-
-      updateMutation.mutate(
-        {
-          studentId: editingStudentId,
-          payload,
-        },
-        {
-          onSuccess: () => {
-            resetForm();
-            setActionSuccess("تم تحديث الطالب بنجاح.");
-          },
-        },
-      );
-      return;
-    }
-
-    if (!canCreate) {
-      setFormError("لا تملك الصلاحية المطلوبة: students.create.");
-      return;
-    }
-
-    createMutation.mutate(payload, {
-      onSuccess: () => {
-        resetForm();
-        setPage(1);
-        setActionSuccess("تم إنشاء الطالب بنجاح.");
-      },
-    });
-  };
-
-  const handleStartEdit = (student: StudentListItem) => {
-    if (!canUpdate) {
-      return;
-    }
-
-    setFormError(null);
-    setActionSuccess(null);
-    setEditingStudentId(student.id);
-    const nextState = toFormState(student);
-    if (!nextState.genderId) {
-      const mapped = genderOptions.find((option) => option.code === student.gender);
-      if (mapped) {
-        nextState.genderId = String(mapped.id);
-      }
-    }
-    if (!nextState.orphanStatusId) {
-      const mapped = orphanStatusOptions.find(
-        (option) => option.code === student.orphanStatus,
-      );
-      if (mapped) {
-        nextState.orphanStatusId = String(mapped.id);
-      }
-    }
-    if (!nextState.healthStatusId && student.healthStatus) {
-      const mapped = healthStatusOptions.find((option) => {
-        const code = option.code?.toUpperCase();
-
-        if (!code) {
-          return false;
-        }
-
-        if (code === student.healthStatus) {
-          return true;
-        }
-
-        if (student.healthStatus === "CHRONIC_DISEASE" && code === "SICK") {
-          return true;
-        }
-
-        if (student.healthStatus === "DISABILITY" && code === "DISABLED") {
-          return true;
-        }
-
-        return false;
-      });
-      if (mapped) {
-        nextState.healthStatusId = String(mapped.id);
-      }
-    }
-
-    if (!nextState.localityId) {
-      setFormGovernorateId("");
-      setFormDirectorateId("");
-      setFormSubDistrictId("");
-      setFormVillageId("");
+    if (isEditing && editingId) {
+      updateMutation.mutate({ studentId: editingId, payload }, { onSuccess: resetFormState });
     } else {
-      const locality = geographyMaps.localityById.get(Number(nextState.localityId));
-      const selection = resolveSelectionFromLocality(locality, geographyMaps);
-      setFormGovernorateId(selection.governorateId);
-      setFormDirectorateId(selection.directorateId);
-      setFormSubDistrictId(selection.subDistrictId);
-      setFormVillageId(selection.villageId);
+      createMutation.mutate(payload, { onSuccess: resetFormState });
     }
-
-    setFormState(nextState);
-    setIsFormOpen(true);
   };
 
-  const handleToggleActive = (student: StudentListItem) => {
-    if (!canUpdate) {
-      return;
-    }
-
-    updateMutation.mutate(
-      {
-        studentId: student.id,
-        payload: {
-          isActive: !student.isActive,
-        },
-      },
-      {
-        onSuccess: () => {
-          setActionSuccess(
-            student.isActive
-              ? "تم تعطيل الطالب بنجاح."
-              : "تم تفعيل الطالب بنجاح.",
-          );
-        },
-      },
-    );
+  const handleDelete = (item: StudentListItem) => {
+    if (!canDelete || !window.confirm(`تأكيد حذف بيانات الطالب ${item.fullName}؟`)) return;
+    deleteMutation.mutate(item.id);
   };
 
-  const handleDelete = (student: StudentListItem) => {
-    if (!canDelete) {
-      return;
-    }
-
-    const confirmed = window.confirm(`تأكيد حذف الطالب ${student.fullName}؟`);
-    if (!confirmed) {
-      return;
-    }
-
-    deleteMutation.mutate(student.id, {
-      onSuccess: () => {
-        if (editingStudentId === student.id) {
-          resetForm();
-        }
-        setActionSuccess("تم حذف الطالب بنجاح.");
-      },
-    });
+  const applyFilters = () => {
+    setPage(1);
+    setGenderFilter(filterDraft.gender);
+    setBloodFilter(filterDraft.blood);
+    setOrphanFilter(filterDraft.orphan);
+    setActiveFilter(filterDraft.active);
+    setIsFilterOpen(false);
   };
-
-  const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
-  const getOrphanStatusLabel = (value: StudentOrphanStatus) =>
-    orphanStatusLabels.get(value) ?? translateStudentOrphanStatus(value);
 
   const clearFilters = () => {
     setPage(1);
     setSearchInput("");
     setSearch("");
     setGenderFilter("all");
-    setBloodTypeFilter("all");
-    setLocalityFilter("all");
+    setBloodFilter("all");
     setOrphanFilter("all");
     setActiveFilter("all");
-    setIsFilterOpen(false);
-  };
-
-  const applyFilters = () => {
-    setPage(1);
-    setGenderFilter(filterDraft.gender);
-    setBloodTypeFilter(filterDraft.bloodType);
-    setLocalityFilter(filterDraft.locality);
-    setOrphanFilter(filterDraft.orphan);
-    setActiveFilter(filterDraft.active);
+    setFilterDraft({ gender: "all", blood: "all", orphan: "all", active: "all" });
     setIsFilterOpen(false);
   };
 
   const activeFiltersCount = React.useMemo(() => {
     return [
-      searchInput.trim() ? 1 : 0,
-      genderFilter !== "all" ? 1 : 0,
-      bloodTypeFilter !== "all" ? 1 : 0,
-      localityFilter !== "all" ? 1 : 0,
-      orphanFilter !== "all" ? 1 : 0,
-      activeFilter !== "all" ? 1 : 0,
-    ].reduce((acc, value) => acc + value, 0);
-  }, [
-    activeFilter,
-    bloodTypeFilter,
-    genderFilter,
-    localityFilter,
-    orphanFilter,
-    searchInput,
-  ]);
+      searchInput.trim() ? 1 : 0, genderFilter !== "all" ? 1 : 0, bloodFilter !== "all" ? 1 : 0, orphanFilter !== "all" ? 1 : 0, activeFilter !== "all" ? 1 : 0
+    ].reduce((acc, v) => acc + v, 0);
+  }, [activeFilter, bloodFilter, genderFilter, orphanFilter, searchInput]);
 
   return (
-    <>
+    <PageShell
+      title="إدارة شؤون الطلاب"
+      subtitle="تنظيم البيانات الشخصية للطلاب، السجلات الصحية، والتوزيعات الحغرافية للوصول الأمثل للخدمات."
+    >
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
-            <SearchField
-              containerClassName="flex-1"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="بحث بالاسم أو رقم الطالب..."
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterTriggerButton
-              count={activeFiltersCount}
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-            />
-          </div>
-        </div>
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(e) => setSearchInput(e.target.value)}
+          searchPlaceholder="بحث باسم الطالب أو رقم القبول..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen(true)}
+          actions={
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => void studentsQuery.refetch()} disabled={studentsQuery.isFetching}>
+              <RefreshCw className={`h-4 w-4 ${studentsQuery.isFetching ? "animate-spin" : ""}`} />
+              تحديث
+            </Button>
+          }
+        />
 
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
-          title="فلاتر الطلاب"
+          title="معايير البحث المتقدم"
           actionButtons={
             <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
+              <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">مسح</Button>
+              <Button type="button" onClick={applyFilters} className="flex-1">تطبيق</Button>
             </div>
           }
         >
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1">
-              <Label>النوع الاجتماعي</Label>
-              <SelectField
-                value={filterDraft.gender}
-                onChange={(event) =>
-                  setFilterDraft((prev) => ({ ...prev, gender: event.target.value }))
-                }
-                disabled={!canReadGenders || genderOptionsQuery.isLoading}
-                icon={<User className="h-4 w-4" />}
-              >
-                <option value="all">كل الأجناس</option>
-                {genderOptions.map((option) => {
-                  const translated =
-                    option.code && isStudentGenderCode(option.code)
-                      ? translateStudentGender(option.code)
-                      : option.nameAr ?? option.name ?? option.code ?? String(option.id);
-
-                  return (
-                    <option key={option.id} value={option.id}>
-                      {option.nameAr ?? translated}
-                    </option>
-                  );
-                })}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">الجنس</label>
+              <SelectField value={filterDraft.gender} onChange={(e) => setFilterDraft(p => ({ ...p, gender: e.target.value }))}>
+                <option value="all">الكل</option>
+                {(genderOptionsQuery.data ?? []).map(g => <option key={g.id} value={g.id}>{g.nameAr}</option>)}
               </SelectField>
             </div>
-
-            <div className="space-y-1">
-              <Label>فصيلة الدم</Label>
-              <SelectField
-                value={filterDraft.bloodType}
-                onChange={(event) =>
-                  setFilterDraft((prev) => ({ ...prev, bloodType: event.target.value }))
-                }
-                disabled={!canReadBloodTypes || bloodTypeOptionsQuery.isLoading}
-                icon={<Droplets className="h-4 w-4" />}
-              >
-                <option value="all">كل الفصائل</option>
-                {bloodTypeOptions.map((bloodType) => (
-                  <option key={bloodType.id} value={bloodType.id}>
-                    {bloodType.name}
-                  </option>
-                ))}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">فصيلة الدم</label>
+              <SelectField value={filterDraft.blood} onChange={(e) => setFilterDraft(p => ({ ...p, blood: e.target.value }))}>
+                <option value="all">الكل</option>
+                {(bloodTypeOptionsQuery.data ?? []).map(b => <option key={b.id} value={b.id}>{b.nameAr}</option>)}
               </SelectField>
             </div>
-
-            <div className="space-y-1">
-              <Label>المحلّة</Label>
-              <SelectField
-                value={filterDraft.locality}
-                onChange={(event) =>
-                  setFilterDraft((prev) => ({ ...prev, locality: event.target.value }))
-                }
-                disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
-                icon={<MapPin className="h-4 w-4" />}
-              >
-                <option value="all">كل المحلات</option>
-                {localityOptions.map((locality) => (
-                  <option key={locality.id} value={locality.id}>
-                    {formatLocalityHierarchyLabel(locality, geographyMaps)}
-                  </option>
-                ))}
-              </SelectField>
-            </div>
-
-            <div className="space-y-1">
-              <Label>حالة اليتم</Label>
-              <SelectField
-                value={filterDraft.orphan}
-                onChange={(event) =>
-                  setFilterDraft((prev) => ({ ...prev, orphan: event.target.value }))
-                }
-                disabled={!canReadOrphanStatuses || orphanStatusesQuery.isLoading}
-                icon={<Heart className="h-4 w-4" />}
-              >
-                <option value="all">كل حالات اليتم</option>
-                {orphanStatusOptions.map((orphanStatus) => (
-                  <option key={orphanStatus.id} value={orphanStatus.id}>
-                    {orphanStatus.nameAr}
-                  </option>
-                ))}
-              </SelectField>
-            </div>
-
-            <div className="space-y-1">
-              <Label>الحالة</Label>
-              <SelectField
-                value={filterDraft.active}
-                onChange={(event) =>
-                  setFilterDraft((prev) => ({
-                    ...prev,
-                    active: event.target.value as "all" | "active" | "inactive",
-                  }))
-                }
-                icon={<Activity className="h-4 w-4" />}
-              >
+            <div className="space-y-1.5 sm:col-span-2">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">حالة اليتم</label>
+              <SelectField value={filterDraft.orphan} onChange={(e) => setFilterDraft(p => ({ ...p, orphan: e.target.value }))}>
                 <option value="all">كل الحالات</option>
-                <option value="active">نشط فقط</option>
-                <option value="inactive">غير نشط فقط</option>
+                {(orphanQuery.data?.data ?? []).map(o => <option key={o.id} value={o.id}>{o.nameAr}</option>)}
+              </SelectField>
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">الحالة</label>
+              <SelectField value={filterDraft.active} onChange={(e) => setFilterDraft(p => ({ ...p, active: e.target.value as any }))}>
+                <option value="all">كل الحالات</option>
+                <option value="active">النشطين فقط</option>
+                <option value="inactive">المكتومين فقط</option>
               </SelectField>
             </div>
           </div>
         </FilterDrawer>
 
-        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-          <CardHeader className="space-y-3">
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm overflow-hidden">
+          <CardHeader className="space-y-3 bg-muted/30 border-b border-border/60 pb-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>قائمة الطلاب</CardTitle>
-              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+              <CardTitle className="flex items-center gap-2 text-lg font-bold">
+                <Users className="h-5 w-5 text-primary" />
+                سجل بيانات الطلاب
+              </CardTitle>
+              <Badge variant="secondary" className="rounded-full px-3">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
-            <CardDescription>إدارة الطلاب مع الفلترة حسب النوع الاجتماعي وحالة اليتم.</CardDescription>
           </CardHeader>
+          
+          <CardContent className="p-0">
+            {studentsQuery.isPending && (
+              <div className="p-12 text-center text-sm text-muted-foreground font-medium animate-pulse">جارٍ تحميل بيانات الطلاب...</div>
+            )}
 
-          <CardContent className="space-y-3">
-            {studentsQuery.isPending ? (
-              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                جارٍ تحميل قائمة الطلاب...
-              </div>
-            ) : null}
-
-            {studentsQuery.error ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                {studentsQuery.error instanceof Error
-                  ? studentsQuery.error.message
-                  : "فشل تحميل قائمة الطلاب"}
-              </div>
-            ) : null}
-
-            {!studentsQuery.isPending && students.length === 0 ? (
-              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                لا توجد سجلات مطابقة.
-              </div>
-            ) : null}
-
-            {students.map((student) => {
-              const latestEnrollment = student.enrollments[0];
-
-              return (
-                <div
-                  key={student.id}
-                  className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div className="space-y-1">
-                      <p className="font-medium">{student.fullName}</p>
-                      <p className="text-xs text-muted-foreground">
-                        رقم الطالب: {student.admissionNo ?? "-"} | الميلاد: {formatDate(student.birthDate)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        أولياء الأمور: {student.guardians.length} | القيود: {student.enrollments.length}
-                      </p>
-                      {latestEnrollment ? (
-                        <p className="text-xs text-muted-foreground">
-                          آخر قيد: {formatStudentEnrollmentPlacementLabel(latestEnrollment)} (
-                          {translateStudentEnrollmentStatus(latestEnrollment.status)})
-                        </p>
-                      ) : null}
-                      <p className="text-xs text-muted-foreground">
-                        الموقع:{" "}
-                        {student.locality
-                          ? formatLocalityHierarchyLabel(
-                            (geographyMaps.localityById.get(student.locality.id) ??
-                              student.locality) as LocalityLabelInput,
-                            geographyMaps,
-                          )
-                          : "غير محدد"}
-                      </p>
+            <div className="divide-y divide-border/40">
+              {records.map((item) => (
+                <div key={item.id} className="p-4 hover:bg-muted/10 transition-colors group">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="flex gap-4 flex-1">
+                      <div className="flex flex-col items-center justify-center h-12 w-12 rounded-2xl bg-secondary/5 border border-secondary/10 group-hover:bg-secondary/10 transition-colors">
+                         {item.gender === 'FEMALE' ? <User className="h-6 w-6 text-pink-500/60" /> : <User className="h-6 w-6 text-blue-500/60" />}
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-base">{item.fullName}</p>
+                          <Badge variant="outline" className="h-5 text-[8px] font-black uppercase text-muted-foreground border-border/70">
+                             {item.admissionNo || "NO-ADM"}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-bold uppercase tracking-tight">
+                          <CalendarDays className="h-3.5 w-3.5" /> <span>{formatDate(item.birthDate)}</span>
+                          <span className="mx-1 opacity-30">•</span>
+                          <Badge variant="outline" className="h-4 text-[7px] border-border/70 bg-stone-50 text-stone-600 font-black">
+                            {translateStudentGender(item.gender)}
+                          </Badge>
+                          {item.bloodType && (
+                            <>
+                              <span className="mx-1 opacity-30">•</span>
+                              <Badge variant="outline" className="h-4 text-[7px] border-rose-500/20 text-rose-600 bg-rose-500/5"><Droplets className="h-2 w-2 mr-0.5" /> {item.bloodType.code}</Badge>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <Badge variant="outline">
-                        {student.genderLookup?.nameAr ?? translateStudentGender(student.gender)}
-                      </Badge>
-                      <Badge variant="outline">
-                        {student.bloodType ? student.bloodType.name : "بدون فصيلة"}
-                      </Badge>
-                      <Badge variant={orphanBadgeVariant(student.orphanStatus)}>
-                        {student.orphanStatusLookup?.nameAr ?? getOrphanStatusLabel(student.orphanStatus)}
-                      </Badge>
-                      <Badge variant={healthBadgeVariant(student.healthStatus)}>
-                        {student.healthStatusLookup?.nameAr ??
-                          (student.healthStatus
-                            ? translateStudentHealthStatus(student.healthStatus)
-                            : "غير محدد")}
-                      </Badge>
-                      <Badge variant={student.isActive ? "default" : "outline"}>
-                        {student.isActive ? "نشط" : "غير نشط"}
-                      </Badge>
+                    <div className="flex flex-col items-end gap-3">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge variant={item.isActive ? "default" : "outline"} className={`h-5 text-[8px] font-black uppercase ${item.isActive ? 'bg-primary/10 text-primary border-primary/20' : ''}`}>
+                          {item.isActive ? "Active Student" : "Inactive"}
+                        </Badge>
+                        <Badge variant="outline" className="h-5 text-[8px] font-black uppercase border-border/70 text-emerald-600 bg-emerald-50">
+                          {translateStudentOrphanStatus(item.orphanStatus)}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" className="h-8 rounded-lg px-3 text-[11px] font-bold gap-1.5" onClick={() => handleStartEdit(item)} disabled={!canUpdate}>
+                          <PencilLine className="h-3.5 w-3.5" /> تعديل
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 rounded-lg px-2 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(item)} disabled={!canDelete}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5"
-                      onClick={() => handleStartEdit(student)}
-                      disabled={!canUpdate || updateMutation.isPending}
-                    >
-                      <PencilLine className="h-3.5 w-3.5" />
-                      تعديل
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleToggleActive(student)}
-                      disabled={!canUpdate || updateMutation.isPending}
-                    >
-                      {student.isActive ? "تعطيل" : "تفعيل"}
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="gap-1.5"
-                      onClick={() => handleDelete(student)}
-                      disabled={!canDelete || deleteMutation.isPending}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      حذف
-                    </Button>
+                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                     <div className="flex items-start gap-2 px-3 py-2 rounded-xl border border-border/40 bg-background/50 group-hover:bg-background transition-colors">
+                        <MapPin className="h-4 w-4 text-primary/60 mt-0.5 shrink-0" />
+                        <div className="flex flex-col overflow-hidden">
+                           <span className="text-[7px] uppercase font-bold text-muted-foreground leading-none mb-1">الموقع الجغرافي</span>
+                           <span className="text-[10px] font-bold truncate leading-tight">
+                              {item.locality ? `${item.locality.governorate?.nameAr || ''} / ${item.locality.directorate?.nameAr || ''} / ${item.locality.nameAr || ''}` : "غير محدد"}
+                           </span>
+                        </div>
+                     </div>
+                     <div className="flex items-start gap-2 px-3 py-2 rounded-xl border border-border/40 bg-background/50 group-hover:bg-background transition-colors">
+                        <HeartPulse className="h-4 w-4 text-rose-500/60 mt-0.5 shrink-0" />
+                        <div className="flex flex-col overflow-hidden">
+                           <span className="text-[7px] uppercase font-bold text-muted-foreground leading-none mb-1">الحالة الصحية</span>
+                           <span className="text-[10px] font-bold leading-tight">
+                              {translateStudentHealthStatus(item.healthStatus)}
+                              {item.healthNotes && <span className="text-[9px] font-normal text-muted-foreground block mt-0.5 truncate">{item.healthNotes}</span>}
+                           </span>
+                        </div>
+                     </div>
+                     <div className="hidden lg:flex items-start gap-2 px-3 py-2 rounded-xl border border-border/40 bg-background/50 group-hover:bg-background transition-colors">
+                        <UserCheck className="h-4 w-4 text-blue-500/60 mt-0.5 shrink-0" />
+                        <div className="flex flex-col overflow-hidden">
+                           <span className="text-[7px] uppercase font-bold text-muted-foreground leading-none mb-1">رقم الطالب الأكاديمي</span>
+                           <span className="text-[10px] font-black leading-tight tracking-wider">{item.admissionNo || "-"}</span>
+                        </div>
+                     </div>
                   </div>
                 </div>
-              );
-            })}
+              ))}
+            </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-              <p className="text-xs text-muted-foreground">
-                صفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-              </p>
+            {!studentsQuery.isPending && records.length === 0 && (
+              <div className="p-12 text-center text-sm text-muted-foreground opacity-50">لا يوجد طلاب متطابقين مع معايير البحث.</div>
+            )}
+
+            <div className="p-4 flex flex-wrap items-center justify-between gap-4 border-t border-border/60 bg-muted/10">
+              <p className="text-[10px] text-muted-foreground font-bold italic tracking-wide">نمط العرض: سجل الطالب الرقمي الموحد</p>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={!pagination || pagination.page <= 1 || studentsQuery.isFetching}
-                >
-                  السابق
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setPage((prev) =>
-                      pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                    )
-                  }
-                  disabled={
-                    !pagination ||
-                    pagination.page >= pagination.totalPages ||
-                    studentsQuery.isFetching
-                  }
-                >
-                  التالي
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => void studentsQuery.refetch()}
-                  disabled={studentsQuery.isFetching}
-                >
-                  <RefreshCw
-                    className={`h-4 w-4 ${studentsQuery.isFetching ? "animate-spin" : ""}`}
-                  />
-                  تحديث
-                </Button>
+                <Button variant="outline" size="sm" className="h-8 rounded-xl px-4 font-bold" onClick={() => setPage(p => Math.max(p - 1, 1))} disabled={!pagination || pagination.page <= 1}>السابق</Button>
+                <div className="text-[10px] font-bold px-2">Page {pagination?.page ?? 1} / {pagination?.totalPages ?? 1}</div>
+                <Button variant="outline" size="sm" className="h-8 rounded-xl px-4 font-bold" onClick={() => setPage(p => (pagination ? Math.min(p + 1, pagination.totalPages || 1) : p))} disabled={!pagination || pagination.page >= pagination.totalPages}>التالي</Button>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Fab
-        icon={<Plus className="h-4 w-4" />}
-        label="إنشاء"
-        ariaLabel="إنشاء طالب"
-        onClick={handleStartCreate}
-        disabled={!canCreate}
-      />
+      <Fab icon={<Plus className="h-5 w-5" />} label="إضافة طالب" onClick={handleStartCreate} disabled={!canCreate} />
 
-      <BottomSheetForm
+      <CrudFormSheet
         open={isFormOpen}
-        title={isEditing ? "تعديل طالب" : "إنشاء طالب"}
-        onClose={resetForm}
-        onSubmit={() => handleSubmitForm()}
-        isSubmitting={isFormSubmitting}
-        submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء طالب"}
-        showFooter={false}
+        onClose={resetFormState}
+        title={isEditing ? "تحديث ملف الطالب" : "تسجيل طالب جديد"}
+        isEditing={isEditing}
+        isSubmitting={isSubmitting}
+        onSubmit={handleSubmit}
       >
-        {!canCreate && !isEditing ? (
-          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            لا تملك الصلاحية المطلوبة: <code>students.create</code>.
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><UserCheck className="h-3.5 w-3.5" /> الهوية الشخصية</h4>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">الاسم الكامل للطالب *</label>
+                <Input value={form.fullName} onChange={(e) => setForm(p => ({ ...p, fullName: e.target.value }))} placeholder="أدخل اسم الطالب رباعياً" />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase leading-none">رقم القبول</label>
+                  <Input value={form.admissionNo} onChange={(e) => setForm(p => ({ ...p, admissionNo: e.target.value }))} placeholder="2024-XXXX" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase leading-none">تاريخ الميلاد</label>
+                  <Input type="date" value={form.birthDate} onChange={(e) => setForm(p => ({ ...p, birthDate: e.target.value }))} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase leading-none">الجنس *</label>
+                  <SelectField value={form.genderId} onChange={(e) => setForm(p => ({ ...p, genderId: e.target.value }))}>
+                    <option value="">اختر الجنس</option>
+                    {(genderOptionsQuery.data ?? []).map(g => <option key={g.id} value={g.id}>{g.nameAr}</option>)}
+                  </SelectField>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">حالة اليتم *</label>
+                  <SelectField value={form.orphanStatusId} onChange={(e) => setForm(p => ({ ...p, orphanStatusId: e.target.value }))}>
+                    <option value="">اختر الحالة</option>
+                    {(orphanQuery.data?.data ?? []).map(o => <option key={o.id} value={o.id}>{o.nameAr}</option>)}
+                  </SelectField>
+                </div>
+              </div>
+            </div>
           </div>
-        ) : (
-          <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1">
-              <Label>رقم الطالب</Label>
-              {isEditing ? (
-                <Input
-                  value={formState.admissionNo}
-                  readOnly
-                  placeholder="سيتم توليده تلقائيًا"
-                  icon={<UserCheck className="h-4 w-4" />}
-                />
-              ) : (
-                <div className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                  سيُولد رقم الطالب تلقائيًا بعد الحفظ.
-                </div>
-              )}
-            </div>
 
-            <div className="space-y-1">
-              <Label required>الاسم الكامل</Label>
-              <Input
-                value={formState.fullName}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, fullName: event.target.value }))
-                }
-                placeholder="محمد أحمد علي"
-                icon={<User className="h-4 w-4" />}
-                required
-              />
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-1">
-                <Label required>الجنس</Label>
-                <SelectField
-                  value={formState.genderId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      genderId: event.target.value,
-                    }))
-                  }
-                  disabled={!canReadGenders || genderOptionsQuery.isLoading}
-                  icon={<User className="h-4 w-4" />}
-                  required
-                >
-                  <option value="">اختر الجنس</option>
-                  {genderOptions.map((option) => {
-                    const translated =
-                      option.code && isStudentGenderCode(option.code)
-                        ? translateStudentGender(option.code)
-                        : option.nameAr ?? option.name ?? option.code ?? String(option.id);
-
-                    return (
-                      <option key={option.id} value={option.id}>
-                        {option.nameAr ?? translated}
-                      </option>
-                    );
-                  })}
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> الموضع الجغرافي</h4>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase">المحافظة</label>
+                <SelectField value={fGovId} onChange={(e) => { setFGovId(e.target.value); setFDirId(""); setFSubId(""); setFVilId(""); setForm(p => ({ ...p, localityId: "" })); }}>
+                  <option value="">اختر المحافظة</option>
+                  {(geoQuery.data?.governorates ?? []).map(g => <option key={g.id} value={g.id}>{g.nameAr}</option>)}
                 </SelectField>
               </div>
-
-              <div className="space-y-1">
-                <Label>تاريخ الميلاد</Label>
-                <Input
-                  type="date"
-                  value={formState.birthDate}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, birthDate: event.target.value }))
-                  }
-                  icon={<CalendarDays className="h-4 w-4" />}
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="space-y-1">
-                <Label>فصيلة الدم</Label>
-                <SelectField
-                  value={formState.bloodTypeId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      bloodTypeId: event.target.value,
-                    }))
-                  }
-                  disabled={!canReadBloodTypes || bloodTypeOptionsQuery.isLoading}
-                  icon={<Droplets className="h-4 w-4" />}
-                >
-                  <option value="">غير محدد</option>
-                  {bloodTypeOptions.map((bloodType) => (
-                    <option key={bloodType.id} value={bloodType.id}>
-                      {bloodType.name}
-                    </option>
-                  ))}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase">المديرية</label>
+                <SelectField value={fDirId} onChange={(e) => { setFDirId(e.target.value); setFSubId(""); setFVilId(""); setForm(p => ({ ...p, localityId: "" })); }}>
+                  <option value="">اختر المديرية</option>
+                  {filteredDirs.map(d => <option key={d.id} value={d.id}>{d.nameAr}</option>)}
                 </SelectField>
               </div>
-
-              <div className="space-y-1">
-                <Label>الحالة الصحية</Label>
-                <SelectField
-                  value={formState.healthStatusId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      healthStatusId: event.target.value,
-                    }))
-                  }
-                  disabled={!canReadHealthStatuses || healthStatusOptionsQuery.isLoading}
-                  icon={<HeartPulse className="h-4 w-4" />}
-                >
-                  <option value="">غير محدد</option>
-                  {healthStatusOptions.map((status) => (
-                    <option key={status.id} value={status.id}>
-                      {status.nameAr ??
-                        (status.code && isStudentHealthStatusCode(status.code)
-                          ? translateStudentHealthStatus(status.code)
-                          : status.code ?? String(status.id))}
-                    </option>
-                  ))}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase">العزلة / المنطقة</label>
+                <SelectField value={fSubId} onChange={(e) => { setFSubId(e.target.value); setFVilId(""); setForm(p => ({ ...p, localityId: "" })); }}>
+                  <option value="">اختر المنطقة</option>
+                  {filteredSubs.map(s => <option key={s.id} value={s.id}>{s.nameAr}</option>)}
                 </SelectField>
               </div>
-
-              <div className="space-y-1">
-                <Label required>حالة اليتم</Label>
-                <SelectField
-                  value={formState.orphanStatusId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      orphanStatusId: event.target.value,
-                    }))
-                  }
-                  disabled={!canReadOrphanStatuses || orphanStatusesQuery.isLoading}
-                  icon={<Heart className="h-4 w-4" />}
-                  required
-                >
-                  <option value="">اختر حالة اليتم</option>
-                  {orphanStatusOptions.map((orphanStatus) => (
-                    <option key={orphanStatus.id} value={orphanStatus.id}>
-                      {orphanStatus.nameAr}
-                    </option>
-                  ))}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase">القرية</label>
+                <SelectField value={fVilId} onChange={(e) => { setFVilId(e.target.value); setForm(p => ({ ...p, localityId: "" })); }}>
+                  <option value="">لا يوجد قرية</option>
+                  {filteredVils.map(v => <option key={v.id} value={v.id}>{v.nameAr}</option>)}
+                </SelectField>
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="text-xs font-bold text-muted-foreground uppercase font-black text-primary">المحلية (Locality)</label>
+                <SelectField value={form.localityId} onChange={(e) => setForm(p => ({ ...p, localityId: e.target.value }))}>
+                  <option value="">اختر المحلية المحددة</option>
+                  {filteredLocs.map(l => <option key={l.id} value={l.id}>{l.nameAr} ({l.localityType})</option>)}
                 </SelectField>
               </div>
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <Label>الموقع الجغرافي (هرمي)</Label>
-              {hasGeographyHierarchy ? (
-                <div className="grid gap-3 md:grid-cols-2">
-                  <SelectField
-                    value={formGovernorateId}
-                    onChange={(event) => handleGovernorateChange(event.target.value)}
-                    disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
-                    icon={<MapPin className="h-4 w-4" />}
-                  >
-                    <option value="">اختر المحافظة</option>
-                    {governorateOptions.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.nameAr ?? item.name ?? `محافظة #${item.id}`}
-                      </option>
-                    ))}
-                  </SelectField>
-
-                  <SelectField
-                    value={formDirectorateId}
-                    onChange={(event) => handleDirectorateChange(event.target.value)}
-                    disabled={
-                      !canReadLocalities ||
-                      geographyOptionsQuery.isLoading ||
-                      !formGovernorateId
-                    }
-                    icon={<MapPin className="h-4 w-4" />}
-                  >
-                    <option value="">اختر المديرية</option>
-                    {filteredDirectorates.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.nameAr ?? item.name ?? `مديرية #${item.id}`}
-                      </option>
-                    ))}
-                  </SelectField>
-
-                  <SelectField
-                    value={formSubDistrictId}
-                    onChange={(event) => handleSubDistrictChange(event.target.value)}
-                    disabled={
-                      !canReadLocalities ||
-                      geographyOptionsQuery.isLoading ||
-                      !formDirectorateId
-                    }
-                    icon={<MapPin className="h-4 w-4" />}
-                  >
-                    <option value="">اختر العزلة</option>
-                    {filteredSubDistricts.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.nameAr ?? item.name ?? `عزلة #${item.id}`}
-                      </option>
-                    ))}
-                  </SelectField>
-
-                  <SelectField
-                    value={formVillageId}
-                    onChange={(event) => handleVillageChange(event.target.value)}
-                    disabled={
-                      !canReadLocalities ||
-                      geographyOptionsQuery.isLoading ||
-                      !formSubDistrictId
-                    }
-                    icon={<MapPin className="h-4 w-4" />}
-                  >
-                    <option value="">اختر القرية</option>
-                    {filteredVillages.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.nameAr ?? item.name ?? `قرية #${item.id}`}
-                      </option>
-                    ))}
-                  </SelectField>
-
-                  <div className="md:col-span-2">
-                    <SelectField
-                      value={formState.localityId}
-                      onChange={(event) => handleLocalityChange(event.target.value)}
-                      disabled={
-                        !canReadLocalities ||
-                        geographyOptionsQuery.isLoading ||
-                        !formDirectorateId
-                      }
-                      icon={<MapPin className="h-4 w-4" />}
-                    >
-                      <option value="">اختر المحلة</option>
-                      {filteredLocalities.map((locality) => (
-                        <option key={locality.id} value={locality.id}>
-                          {formatLocalityHierarchyLabel(locality, geographyMaps)}
-                        </option>
-                      ))}
-                    </SelectField>
-                  </div>
-
-                  <p className="text-xs text-muted-foreground md:col-span-2 px-1">
-                    {formSelectedLocality
-                      ? `المحدد: ${formatLocalityHierarchyLabel(
-                        formSelectedLocality,
-                        geographyMaps,
-                      )}`
-                      : "يمكن اختيار محلة حضرية بعد تحديد المديرية، أو محلة ريفية بعد اختيار العزلة والقرية."}
-                  </p>
-                </div>
-              ) : (
-                <SelectField
-                  value={formState.localityId}
-                  onChange={(event) => handleLocalityChange(event.target.value)}
-                  disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
-                  icon={<MapPin className="h-4 w-4" />}
-                >
-                  <option value="">غير محدد</option>
-                  {localityOptions.map((locality) => (
-                    <option key={locality.id} value={locality.id}>
-                      {formatLocalityHierarchyLabel(locality, geographyMaps)}
-                    </option>
-                  ))}
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><Stethoscope className="h-3.5 w-3.5" /> سجل الحالة الصحية</h4>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5"><Droplets className="h-3.5 w-3.5 text-rose-500" /> فصيلة الدم</label>
+                <SelectField value={form.bloodTypeId} onChange={(e) => setForm(p => ({ ...p, bloodTypeId: e.target.value }))}>
+                  <option value="">غير متاح</option>
+                  {(bloodTypeOptionsQuery.data ?? []).map(b => <option key={b.id} value={b.id}>{b.nameAr}</option>)}
                 </SelectField>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <Label>ملاحظات صحية</Label>
-              <textarea
-                className="min-h-20 w-full rounded-2xl border border-input bg-background/50 px-3 py-2 text-sm backdrop-blur-sm transition-all duration-300 focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
-                value={formState.healthNotes}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, healthNotes: event.target.value }))
-                }
-                placeholder="ملاحظات صحية إضافية (اختياري)"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label>الحالة</Label>
-              <SelectField
-                value={formState.isActive ? "active" : "inactive"}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    isActive: event.target.value === "active",
-                  }))
-                }
-                icon={<Activity className="h-4 w-4" />}
-              >
-                <option value="active">نشط</option>
-                <option value="inactive">غير نشط</option>
-              </SelectField>
-            </div>
-
-            {formError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                {formError}
               </div>
-            ) : null}
-
-            {mutationError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                {mutationError}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">التصنيف الصحي</label>
+                <SelectField value={form.healthStatusId} onChange={(e) => setForm(p => ({ ...p, healthStatusId: e.target.value }))}>
+                  <option value="">سليم / عادي</option>
+                  {(healthQuery.data ?? []).map(h => <option key={h.id} value={h.id}>{h.nameAr}</option>)}
+                </SelectField>
               </div>
-            ) : null}
-            {actionSuccess ? (
-              <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
-                {actionSuccess}
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="text-xs font-bold text-muted-foreground uppercase leading-none">ملاحظات طبية خاصة</label>
+                <Input value={form.healthNotes} onChange={(e) => setForm(p => ({ ...p, healthNotes: e.target.value }))} placeholder="أدخل أية حساسيات، أمراض مزمنة أو احتياجات خاصة..." />
               </div>
-            ) : null}
-
-            <div className="flex gap-2 pt-2">
-              <button
-                type="submit"
-                className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/30 active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
-                disabled={isFormSubmitting || (!canCreate && !isEditing)}
-              >
-                {isFormSubmitting ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Users className="h-4 w-4" />
-                )}
-                {isEditing ? "حفظ التعديلات" : "إنشاء طالب"}
-              </button>
-              {isEditing ? (
-                <Button type="button" variant="outline" onClick={resetForm} className="rounded-2xl">
-                  إلغاء
-                </Button>
-              ) : null}
             </div>
-          </form>
-        )}
-      </BottomSheetForm>
-    </>
+          </div>
+
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+            <label className="flex items-center justify-between cursor-pointer transition-colors group">
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-foreground group-hover:text-primary">الحالة المهنية (Active)</span>
+                <p className="text-[10px] text-muted-foreground">تفعيل ملف الطالب للعمليات الأكاديمية</p>
+              </div>
+              <input type="checkbox" className="h-5 w-5 rounded text-primary" checked={form.isActive} onChange={(e) => setForm(p => ({ ...p, isActive: e.target.checked }))} />
+            </label>
+          </div>
+
+          {formError && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive font-bold text-center">
+              {formError}
+            </div>
+          )}
+        </div>
+      </CrudFormSheet>
+    </PageShell>
   );
 }

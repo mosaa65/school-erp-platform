@@ -4,19 +4,28 @@ import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   CalendarClock,
-  Filter,
-  LoaderCircle,
-  PencilLine,
-  Plus,
   RefreshCw,
+  Plus,
+  PencilLine,
   Trash2,
+  Calendar,
+  Layout,
+  Clock,
+  MapPin,
+  Settings2,
+  BookOpen,
+  GraduationCap,
+  History,
+  Grid3X3,
+  FileText,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SearchField } from "@/components/ui/search-field";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
+import { PageShell } from "@/components/ui/page-shell";
 import { SelectField } from "@/components/ui/select-field";
-import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
+import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
 import {
   Card,
   CardContent,
@@ -37,9 +46,6 @@ import { useAcademicTermOptionsQuery } from "@/features/timetable-entries/hooks/
 import { useSectionOptionsQuery } from "@/features/timetable-entries/hooks/use-section-options-query";
 import { useTermSubjectOfferingOptionsQuery } from "@/features/timetable-entries/hooks/use-term-subject-offering-options-query";
 import type {
-  AcademicTermListItem,
-  SectionListItem,
-  TermSubjectOfferingListItem,
   TimetableDay,
   TimetableEntryListItem,
 } from "@/lib/api/client";
@@ -92,348 +98,118 @@ function toFormState(entry: TimetableEntryListItem): TimetableEntryFormState {
   };
 }
 
-function findTermById(terms: AcademicTermListItem[], termId: string): AcademicTermListItem | null {
-  return terms.find((term) => term.id === termId) ?? null;
-}
-
-function findSectionById(sections: SectionListItem[], sectionId: string): SectionListItem | null {
-  return sections.find((section) => section.id === sectionId) ?? null;
-}
-
-function findOfferingById(
-  offerings: TermSubjectOfferingListItem[],
-  offeringId: string,
-): TermSubjectOfferingListItem | null {
-  return offerings.find((offering) => offering.id === offeringId) ?? null;
-}
-
 export function TimetableEntriesWorkspace() {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("timetable-entries.create");
   const canUpdate = hasPermission("timetable-entries.update");
   const canDelete = hasPermission("timetable-entries.delete");
-  const canReadAcademicTerms = hasPermission("academic-terms.read");
-  const canReadSections = hasPermission("sections.read");
-  const canReadTermSubjectOfferings = hasPermission("term-subject-offerings.read");
 
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
-  const [search, setSearch] = React.useState("");  const [termFilter, setTermFilter] = React.useState("all");
+  const [search, setSearch] = React.useState("");
+  const [termFilter, setTermFilter] = React.useState("all");
   const [sectionFilter, setSectionFilter] = React.useState("all");
-  const [offeringFilter, setOfferingFilter] = React.useState("all");
   const [dayFilter, setDayFilter] = React.useState<TimetableDay | "all">("all");
-  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
-    "all",
-  );
-  const [filterDraft, setFilterDraft] = React.useState<{
-    term: string;
-    section: string;
-    offering: string;
-    day: TimetableDay | "all";
-    active: "all" | "active" | "inactive";
-  }>({
-    term: "all",
-    section: "all",
-    offering: "all",
-    day: "all",
-    active: "all",
-  });
+  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">("all");
+  const [filterDraft, setFilterDraft] = React.useState({ term: "all", section: "all", day: "all" as any, active: "all" as any });
 
-  const [editingEntryId, setEditingEntryId] = React.useState<string | null>(null);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [formState, setFormState] = React.useState<TimetableEntryFormState>(DEFAULT_FORM_STATE);
+  const [form, setForm] = React.useState<TimetableEntryFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
 
   const entriesQuery = useTimetableEntriesQuery({
-    page,
-    limit: PAGE_SIZE,
-    search: search || undefined,
+    page, limit: PAGE_SIZE, search,
     academicTermId: termFilter === "all" ? undefined : termFilter,
     sectionId: sectionFilter === "all" ? undefined : sectionFilter,
-    termSubjectOfferingId: offeringFilter === "all" ? undefined : offeringFilter,
     dayOfWeek: dayFilter === "all" ? undefined : dayFilter,
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
   });
 
-  const academicTermOptionsQuery = useAcademicTermOptionsQuery();
-  const filterSectionOptionsQuery = useSectionOptionsQuery();
-  const filterOfferingTermId = isFilterOpen ? filterDraft.term : termFilter;
-  const filterOfferingOptionsQuery = useTermSubjectOfferingOptionsQuery({
-    academicTermId: filterOfferingTermId === "all" ? undefined : filterOfferingTermId,
-  });
-
-  const formOfferingOptionsQuery = useTermSubjectOfferingOptionsQuery({
-    academicTermId: formState.academicTermId || undefined,
-  });
-
-  const formOfferings = React.useMemo(
-    () => formOfferingOptionsQuery.data ?? [],
-    [formOfferingOptionsQuery.data],
-  );
-  const selectedFormOffering = React.useMemo(
-    () => findOfferingById(formOfferings, formState.termSubjectOfferingId),
-    [formOfferings, formState.termSubjectOfferingId],
-  );
-
-  const formSectionOptionsQuery = useSectionOptionsQuery({
-    gradeLevelId: selectedFormOffering?.gradeLevelSubject.gradeLevelId,
+  const termsQuery = useAcademicTermOptionsQuery();
+  const sectionsQuery = useSectionOptionsQuery();
+  const offeringsQuery = useTermSubjectOfferingOptionsQuery({
+    academicTermId: form.academicTermId || undefined,
   });
 
   const createMutation = useCreateTimetableEntryMutation();
   const updateMutation = useUpdateTimetableEntryMutation();
   const deleteMutation = useDeleteTimetableEntryMutation();
 
-  const entries = React.useMemo(() => entriesQuery.data?.data ?? [], [entriesQuery.data?.data]);
+  const records = React.useMemo(() => entriesQuery.data?.data ?? [], [entriesQuery.data?.data]);
   const pagination = entriesQuery.data?.pagination;
-  const termOptions = React.useMemo(
-    () => academicTermOptionsQuery.data ?? [],
-    [academicTermOptionsQuery.data],
-  );
-  const filterSectionOptions = React.useMemo(
-    () => filterSectionOptionsQuery.data ?? [],
-    [filterSectionOptionsQuery.data],
-  );
-  const filterOfferingOptions = React.useMemo(
-    () => filterOfferingOptionsQuery.data ?? [],
-    [filterOfferingOptionsQuery.data],
-  );
-  const formSectionOptions = React.useMemo(
-    () => formSectionOptionsQuery.data ?? [],
-    [formSectionOptionsQuery.data],
-  );
-  const isEditing = editingEntryId !== null;
-
-  const mutationError =
-    (createMutation.error as Error | null)?.message ??
-    (updateMutation.error as Error | null)?.message ??
-    (deleteMutation.error as Error | null)?.message ??
-    null;
-
-  React.useEffect(() => {
-    if (!isEditing) {
-      return;
-    }
-
-    const stillExists = entries.some((entry) => entry.id === editingEntryId);
-    if (!stillExists) {
-      setEditingEntryId(null);
-      setFormState(DEFAULT_FORM_STATE);
-      setFormError(null);
-      setIsFormOpen(false);
-    }
-  }, [editingEntryId, entries, isEditing]);
+  const isEditing = editingId !== null;
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   useDebounceEffect(() => {
-      setPage(1);
-      setSearch(searchInput.trim());
-    }, 400, [searchInput]);
+    setPage(1);
+    setSearch(searchInput.trim());
+  }, 400, [searchInput]);
 
   React.useEffect(() => {
-    if (!isFilterOpen) {
-      return;
-    }
+    if (!isFilterOpen) return;
+    setFilterDraft({ term: termFilter, section: sectionFilter, day: dayFilter, active: activeFilter });
+  }, [activeFilter, dayFilter, isFilterOpen, sectionFilter, termFilter]);
 
-    setFilterDraft({
-      term: termFilter,
-      section: sectionFilter,
-      offering: offeringFilter,
-      day: dayFilter,
-      active: activeFilter,
-    });
-  }, [activeFilter, dayFilter, isFilterOpen, offeringFilter, sectionFilter, termFilter]);
-
-  React.useEffect(() => {
-    if (!formState.termSubjectOfferingId || formOfferingOptionsQuery.isPending) {
-      return;
-    }
-
-    const exists = formOfferings.some((offering) => offering.id === formState.termSubjectOfferingId);
-    if (!exists) {
-      setFormState((prev) => ({
-        ...prev,
-        termSubjectOfferingId: "",
-        sectionId: "",
-      }));
-    }
-  }, [formOfferingOptionsQuery.isPending, formOfferings, formState.termSubjectOfferingId]);
-
-  React.useEffect(() => {
-    if (!formState.sectionId || formSectionOptionsQuery.isPending) {
-      return;
-    }
-
-    const exists = formSectionOptions.some((section) => section.id === formState.sectionId);
-    if (!exists) {
-      setFormState((prev) => ({ ...prev, sectionId: "" }));
-    }
-  }, [formSectionOptions, formSectionOptionsQuery.isPending, formState.sectionId]);
-
-  const resetForm = () => {
-    setEditingEntryId(null);
-    setFormState(DEFAULT_FORM_STATE);
+  const resetFormState = () => {
+    setEditingId(null);
+    setForm(DEFAULT_FORM_STATE);
     setFormError(null);
     setIsFormOpen(false);
   };
 
   const handleStartCreate = () => {
-    if (!canCreate) {
-      return;
-    }
-
-    setFormError(null);
-    setEditingEntryId(null);
-    setFormState(DEFAULT_FORM_STATE);
+    if (!canCreate) return;
+    setForm(DEFAULT_FORM_STATE);
     setIsFormOpen(true);
   };
 
-  const validateForm = (): boolean => {
-    if (!formState.academicTermId || !formState.sectionId || !formState.termSubjectOfferingId) {
-      setFormError("الحقول الأساسية مطلوبة: الفصل الأكاديمي، الشعبة، وعرض المادة.");
-      return false;
-    }
-
-    const periodIndex = Number(formState.periodIndex);
-    if (!Number.isInteger(periodIndex) || periodIndex < 1 || periodIndex > 20) {
-      setFormError("رقم الحصة يجب أن يكون رقمًا صحيحًا بين 1 و20.");
-      return false;
-    }
-
-    if (formState.roomLabel.trim().length > 80) {
-      setFormError("اسم القاعة يجب ألا يتجاوز 80 حرفًا.");
-      return false;
-    }
-
-    if (formState.notes.trim().length > 255) {
-      setFormError("الملاحظات يجب ألا تتجاوز 255 حرفًا.");
-      return false;
-    }
-
-    const selectedTerm = findTermById(termOptions, formState.academicTermId);
-    const selectedSection = findSectionById(formSectionOptions, formState.sectionId);
-    const offering = selectedFormOffering;
-
-    if (formState.termSubjectOfferingId && !offering) {
-      setFormError("عرض المادة المختار غير صالح أو غير متوافق مع الفصل.");
-      return false;
-    }
-
-    if (offering) {
-      if (offering.academicTermId !== formState.academicTermId) {
-        setFormError("الفصل الأكاديمي يجب أن يطابق الفصل المرتبط بعرض المادة.");
-        return false;
-      }
-
-      if (selectedSection) {
-        if (selectedSection.gradeLevelId !== offering.gradeLevelSubject.gradeLevelId) {
-          setFormError("شعبة الصف يجب أن تطابق الصف المرتبط بعرض المادة.");
-          return false;
-        }
-      } else {
-        setFormError("الشعبة المختارة غير متوافقة مع عرض المادة الحالي.");
-        return false;
-      }
-
-      if (selectedTerm) {
-        if (selectedTerm.academicYearId !== offering.gradeLevelSubject.academicYearId) {
-          setFormError(
-            "الفصل الأكاديمي وربط الصف مع المادة يجب أن يكونا ضمن نفس السنة الأكاديمية.",
-          );
-          return false;
-        }
-      }
-    }
-
-    setFormError(null);
-    return true;
+  const handleStartEdit = (item: TimetableEntryListItem) => {
+    if (!canUpdate) return;
+    setEditingId(item.id);
+    setForm(toFormState(item));
+    setIsFormOpen(true);
   };
 
-  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
-    event?.preventDefault();
-
-    if (!validateForm()) {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.academicTermId || !form.sectionId || !form.termSubjectOfferingId) {
+      setFormError("كافة الاختيارات الأكاديمية (فصل، شعبة، مادة) مطلوبة.");
       return;
     }
 
     const payload = {
-      academicTermId: formState.academicTermId,
-      sectionId: formState.sectionId,
-      termSubjectOfferingId: formState.termSubjectOfferingId,
-      dayOfWeek: formState.dayOfWeek,
-      periodIndex: Number(formState.periodIndex),
-      roomLabel: formState.roomLabel.trim() || undefined,
-      notes: formState.notes.trim() || undefined,
-      isActive: formState.isActive,
+      academicTermId: form.academicTermId,
+      sectionId: form.sectionId,
+      termSubjectOfferingId: form.termSubjectOfferingId,
+      dayOfWeek: form.dayOfWeek,
+      periodIndex: Number(form.periodIndex) || 1,
+      roomLabel: form.roomLabel.trim() || undefined,
+      notes: form.notes.trim() || undefined,
+      isActive: form.isActive,
     };
 
-    if (isEditing && editingEntryId) {
-      if (!canUpdate) {
-        setFormError("لا تملك الصلاحية المطلوبة: timetable-entries.update.");
-        return;
-      }
-
-      updateMutation.mutate(
-        {
-          entryId: editingEntryId,
-          payload,
-        },
-        {
-          onSuccess: () => {
-            resetForm();
-          },
-        },
-      );
-      return;
+    if (isEditing && editingId) {
+      updateMutation.mutate({ entryId: editingId, payload }, { onSuccess: resetFormState });
+    } else {
+      createMutation.mutate(payload, { onSuccess: resetFormState });
     }
-
-    if (!canCreate) {
-      setFormError("لا تملك الصلاحية المطلوبة: timetable-entries.create.");
-      return;
-    }
-
-    createMutation.mutate(payload, {
-      onSuccess: () => {
-        resetForm();
-        setPage(1);
-      },
-    });
   };
 
-  const handleStartEdit = (entry: TimetableEntryListItem) => {
-    if (!canUpdate) {
-      return;
-    }
-
-    setFormError(null);
-    setEditingEntryId(entry.id);
-    setFormState(toFormState(entry));
-    setIsFormOpen(true);
+  const handleDelete = (item: TimetableEntryListItem) => {
+    if (!canDelete || !window.confirm(`تأكيد حذف الحصة من الجدول؟`)) return;
+    deleteMutation.mutate(item.id);
   };
 
-  const handleDelete = (entry: TimetableEntryListItem) => {
-    if (!canDelete) {
-      return;
-    }
-
-    const confirmed = window.confirm(
-      `تأكيد حذف حصة الجدول: ${entry.section.name} - ${entry.termSubjectOffering.gradeLevelSubject.subject.name}؟`,
-    );
-    if (!confirmed) {
-      return;
-    }
-
-    deleteMutation.mutate(entry.id, {
-      onSuccess: () => {
-        if (editingEntryId === entry.id) {
-          resetForm();
-        }
-      },
-    });
+  const applyFilters = () => {
+    setPage(1);
+    setTermFilter(filterDraft.term);
+    setSectionFilter(filterDraft.section);
+    setDayFilter(filterDraft.day);
+    setActiveFilter(filterDraft.active);
+    setIsFilterOpen(false);
   };
-
-  const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
-  const hasDependenciesReadPermissions =
-    canReadAcademicTerms && canReadSections && canReadTermSubjectOfferings;
 
   const clearFilters = () => {
     setPage(1);
@@ -441,517 +217,282 @@ export function TimetableEntriesWorkspace() {
     setSearch("");
     setTermFilter("all");
     setSectionFilter("all");
-    setOfferingFilter("all");
     setDayFilter("all");
     setActiveFilter("all");
-    setIsFilterOpen(false);
-  };
-
-  const applyFilters = () => {
-    setPage(1);
-    setTermFilter(filterDraft.term);
-    setSectionFilter(filterDraft.section);
-    setOfferingFilter(filterDraft.offering);
-    setDayFilter(filterDraft.day);
-    setActiveFilter(filterDraft.active);
+    setFilterDraft({ term: "all", section: "all", day: "all", active: "all" });
     setIsFilterOpen(false);
   };
 
   const activeFiltersCount = React.useMemo(() => {
     return [
-      searchInput.trim() ? 1 : 0,
-      termFilter !== "all" ? 1 : 0,
-      sectionFilter !== "all" ? 1 : 0,
-      offeringFilter !== "all" ? 1 : 0,
-      dayFilter !== "all" ? 1 : 0,
-      activeFilter !== "all" ? 1 : 0,
-    ].reduce((acc, value) => acc + value, 0);
-  }, [activeFilter, dayFilter, offeringFilter, searchInput, sectionFilter, termFilter]);
+      searchInput.trim() ? 1 : 0, termFilter !== "all" ? 1 : 0,
+      sectionFilter !== "all" ? 1 : 0, dayFilter !== "all" ? 1 : 0,
+      activeFilter !== "all" ? 1 : 0
+    ].reduce((acc, v) => acc + v, 0);
+  }, [activeFilter, dayFilter, searchInput, sectionFilter, termFilter]);
 
   return (
-    <>
+    <PageShell
+      title="مخطط الجدول الدراسي"
+      subtitle="إدارة الحصص اليومية، توزيع القاعات، وتنظيم السير الزمني للعملية التعليمية لكل شعبة."
+    >
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-1 flex-wrap items-center gap-2 min-w-0 sm:min-w-[240px] max-w-lg">
-            <SearchField
-              containerClassName="flex-1"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="بحث بالمادة أو الشعبة أو القاعة..."
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              className="gap-2"
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-            >
-              <Filter className="h-4 w-4" />
-              فلترة
-              {activeFiltersCount > 0 ? (
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
-                  {activeFiltersCount}
-                </span>
-              ) : null}
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(e) => setSearchInput(e.target.value)}
+          searchPlaceholder="بحث بالمادة، القاعة، أو الملاحظات..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen(true)}
+          actions={
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => void entriesQuery.refetch()} disabled={entriesQuery.isFetching}>
+              <RefreshCw className={`h-4 w-4 ${entriesQuery.isFetching ? "animate-spin" : ""}`} />
+              تحديث
             </Button>
-          </div>
-        </div>
+          }
+        />
 
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
-          title="فلاتر الجدول الدراسي"
+          title="خيارات تصفية الجدول"
           actionButtons={
             <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
+              <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">مسح</Button>
+              <Button type="button" onClick={applyFilters} className="flex-1">تطبيق</Button>
             </div>
           }
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.term}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  term: event.target.value,
-                  offering: "all",
-                }))
-              }
-              disabled={!canReadAcademicTerms}
-            >
-              <option value="all">كل الفصول</option>
-              {termOptions.map((term) => (
-                <option key={term.id} value={term.id}>
-                  {term.code}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField
-              value={filterDraft.section}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  section: event.target.value,
-                }))
-              }
-              disabled={!canReadSections}
-            >
-              <option value="all">كل الشعب</option>
-              {filterSectionOptions.map((section) => (
-                <option key={section.id} value={section.id}>
-                  {section.code}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField
-              value={filterDraft.offering}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  offering: event.target.value,
-                }))
-              }
-              disabled={!canReadTermSubjectOfferings}
-            >
-              <option value="all">كل العروض</option>
-              {filterOfferingOptions.map((offering) => (
-                <option key={offering.id} value={offering.id}>
-                  {offering.gradeLevelSubject.gradeLevel.code} -{" "}
-                  {offering.gradeLevelSubject.subject.code}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField
-              value={filterDraft.day}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  day: event.target.value as TimetableDay | "all",
-                }))
-              }
-            >
-              <option value="all">كل الأيام</option>
-              {DAY_OPTIONS.map((day) => (
-                <option key={day} value={day}>
-                  {translateTimetableDay(day)}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </SelectField>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">الفصل الدراسي</label>
+              <SelectField value={filterDraft.term} onChange={(e) => setFilterDraft(p => ({ ...p, term: e.target.value }))}>
+                <option value="all">كل الفصول</option>
+                {(termsQuery.data ?? []).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </SelectField>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">الشعبة</label>
+              <SelectField value={filterDraft.section} onChange={(e) => setFilterDraft(p => ({ ...p, section: e.target.value }))}>
+                <option value="all">كل الشعب</option>
+                {(sectionsQuery.data ?? []).map(s => <option key={s.id} value={s.id}>{s.name} ({s.code})</option>)}
+              </SelectField>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">اليوم</label>
+              <SelectField value={filterDraft.day} onChange={(e) => setFilterDraft(p => ({ ...p, day: e.target.value as any }))}>
+                <option value="all">كافة الأيام</option>
+                {DAY_OPTIONS.map(d => <option key={d} value={d}>{translateTimetableDay(d)}</option>)}
+              </SelectField>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">الحالة</label>
+              <SelectField value={filterDraft.active} onChange={(e) => setFilterDraft(p => ({ ...p, active: e.target.value as any }))}>
+                <option value="all">كل السجلات</option>
+                <option value="active">نشط فقط</option>
+                <option value="inactive">غير نشط</option>
+              </SelectField>
+            </div>
           </div>
         </FilterDrawer>
 
-        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-          <CardHeader className="space-y-3">
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm overflow-hidden">
+          <CardHeader className="space-y-3 bg-muted/30 border-b border-border/60 pb-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>حصص الجدول الدراسي</CardTitle>
-              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+              <CardTitle className="flex items-center gap-2 text-lg font-bold">
+                <CalendarClock className="h-5 w-5 text-primary" />
+                سجل الحصص المجدولة
+              </CardTitle>
+              <Badge variant="secondary" className="rounded-full px-3">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
-            <CardDescription>
-              إدارة الحصص المجدولة مع بحث موحد وفلاتر واضحة حسب الفصل والشعبة والمادة واليوم.
-            </CardDescription>
           </CardHeader>
+          
+          <CardContent className="p-0">
+            {entriesQuery.isPending && (
+              <div className="p-12 text-center text-sm text-muted-foreground font-medium animate-pulse">جارٍ عرض بيانات الجدول...</div>
+            )}
 
-          <CardContent className="space-y-3">
-            {entriesQuery.isPending ? (
-              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                جارٍ تحميل البيانات...
-              </div>
-            ) : null}
+            <div className="divide-y divide-border/40">
+              {records.map((item) => (
+                <div key={item.id} className="p-4 hover:bg-muted/10 transition-colors group">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="flex gap-4 flex-1">
+                      <div className="flex flex-col items-center justify-center h-12 w-12 rounded-2xl bg-secondary/5 border border-secondary/10 group-hover:bg-secondary/10 transition-colors shadow-sm relative">
+                         <Grid3X3 className="h-6 w-6 text-primary/60" />
+                         <div className="absolute -bottom-1.5 -right-1.5 h-6 w-6 rounded-lg bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-black border-2 border-background shadow-sm">
+                            {item.periodIndex}
+                         </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-base">{item.termSubjectOffering.gradeLevelSubject.subject.name}</p>
+                          <Badge variant="outline" className="h-5 text-[8px] font-black uppercase text-muted-foreground border-border/70">
+                             {translateTimetableDay(item.dayOfWeek)}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-bold uppercase tracking-tight">
+                          <Layout className="h-3.5 w-3.5" /> <span>{item.section.name} ({item.section.code})</span>
+                          <span className="mx-1 opacity-30">•</span>
+                          <MapPin className="h-3.5 w-3.5" /> <span>{item.roomLabel || "بدون قاعة"}</span>
+                        </div>
+                      </div>
+                    </div>
 
-            {entriesQuery.error ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                {entriesQuery.error instanceof Error
-                  ? entriesQuery.error.message
-                  : "تعذّر تحميل البيانات."}
-              </div>
-            ) : null}
-
-            {!entriesQuery.isPending && entries.length === 0 ? (
-              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                لا توجد حصص مطابقة.
-              </div>
-            ) : null}
-
-            {entries.map((entry) => (
-              <div
-                key={entry.id}
-                className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="space-y-1">
-                    <p className="font-medium">
-                      {entry.section.name} - {entry.termSubjectOffering.gradeLevelSubject.subject.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      الفصل: {entry.academicTerm.name} ({entry.academicTerm.code})
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      اليوم: {translateTimetableDay(entry.dayOfWeek)} | الحصة: {entry.periodIndex}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      الشعبة: {entry.section.code}
-                      {entry.roomLabel ? ` | القاعة: ${entry.roomLabel}` : ""}
-                    </p>
-                    {entry.notes ? (
-                      <p className="text-xs text-muted-foreground">ملاحظات: {entry.notes}</p>
-                    ) : null}
+                    <div className="flex flex-col items-end gap-3">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge variant={item.isActive ? "default" : "outline"} className={`h-5 text-[8px] font-black uppercase ${item.isActive ? 'bg-primary/10 text-primary border-primary/20' : ''}`}>
+                          {item.isActive ? "Scheduled" : "On-Hold"}
+                        </Badge>
+                        <Badge variant="outline" className="h-5 text-[8px] font-black uppercase border-border/70 text-blue-600 bg-blue-50">
+                          <Clock className="h-2.5 w-2.5 mr-1 inline" /> Period {item.periodIndex}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" className="h-8 rounded-lg px-3 text-[11px] font-bold gap-1.5" onClick={() => handleStartEdit(item)} disabled={!canUpdate}>
+                          <PencilLine className="h-3.5 w-3.5" /> تعديل
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 rounded-lg px-2 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(item)} disabled={!canDelete}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge variant="outline">{translateTimetableDay(entry.dayOfWeek)}</Badge>
-                    <Badge variant={entry.isActive ? "default" : "outline"}>
-                      {entry.isActive ? "نشط" : "غير نشط"}
-                    </Badge>
+                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                     <div className="flex items-start gap-2 px-3 py-2 rounded-xl border border-border/40 bg-background/50 group-hover:bg-background transition-colors">
+                        <GraduationCap className="h-4 w-4 text-primary/60 mt-0.5 shrink-0" />
+                        <div className="flex flex-col overflow-hidden">
+                           <span className="text-[7px] uppercase font-bold text-muted-foreground leading-none mb-1">الصف الدراسي</span>
+                           <span className="text-[10px] font-bold truncate leading-tight uppercase tracking-tighter">{item.section.gradeLevel.name}</span>
+                        </div>
+                     </div>
+                     <div className="flex items-start gap-2 px-3 py-2 rounded-xl border border-border/40 bg-background/50 group-hover:bg-background transition-colors">
+                        <Calendar className="h-4 w-4 text-emerald-500/60 mt-0.5 shrink-0" />
+                        <div className="flex flex-col overflow-hidden">
+                           <span className="text-[7px] uppercase font-bold text-muted-foreground leading-none mb-1">الفصل الأكاديمي</span>
+                           <span className="text-[10px] font-bold truncate leading-tight tracking-tight">{item.academicTerm.name} ({item.academicTerm.academicYear.code})</span>
+                        </div>
+                     </div>
+                     <div className="flex items-start gap-2 px-3 py-2 rounded-xl border border-border/40 bg-background/50 group-hover:bg-background transition-colors">
+                        <FileText className="h-4 w-4 text-amber-500/60 mt-0.5 shrink-0" />
+                        <div className="flex flex-col overflow-hidden">
+                           <span className="text-[7px] uppercase font-bold text-muted-foreground leading-none mb-1">ملاحظات الحصة</span>
+                           <span className="text-[10px] font-bold truncate leading-tight">
+                              {item.notes || "لا يوجد ملاحظات إضافية"}
+                           </span>
+                        </div>
+                     </div>
                   </div>
                 </div>
+              ))}
+            </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => handleStartEdit(entry)}
-                    disabled={!canUpdate || updateMutation.isPending}
-                  >
-                    <PencilLine className="h-3.5 w-3.5" />
-                    تعديل
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => handleDelete(entry)}
-                    disabled={!canDelete || deleteMutation.isPending}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    حذف
-                  </Button>
-                </div>
-              </div>
-            ))}
+            {!entriesQuery.isPending && records.length === 0 && (
+              <div className="p-12 text-center text-sm text-muted-foreground opacity-50">لا توجد حصص مجدولة حالياً.</div>
+            )}
 
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-              <p className="text-xs text-muted-foreground">
-                الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-              </p>
-
+            <div className="p-4 flex flex-wrap items-center justify-between gap-4 border-t border-border/60 bg-muted/10">
+              <p className="text-[10px] text-muted-foreground font-bold italic tracking-wide">نظام التشغيل: الخطة الدراسية الموحدة</p>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={!pagination || pagination.page <= 1 || entriesQuery.isFetching}
-                >
-                  السابق
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setPage((prev) =>
-                      pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                    )
-                  }
-                  disabled={
-                    !pagination ||
-                    pagination.page >= pagination.totalPages ||
-                    entriesQuery.isFetching
-                  }
-                >
-                  التالي
-                </Button>
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => void entriesQuery.refetch()}
-                  disabled={entriesQuery.isFetching}
-                >
-                  <RefreshCw
-                    className={`h-4 w-4 ${entriesQuery.isFetching ? "animate-spin" : ""}`}
-                  />
-                  تحديث
-                </Button>
+                <Button variant="outline" size="sm" className="h-8 rounded-xl px-4 font-bold" onClick={() => setPage(p => Math.max(p - 1, 1))} disabled={!pagination || pagination.page <= 1}>السابق</Button>
+                <div className="text-[10px] font-bold px-2">Page {pagination?.page ?? 1} / {pagination?.totalPages ?? 1}</div>
+                <Button variant="outline" size="sm" className="h-8 rounded-xl px-4 font-bold" onClick={() => setPage(p => (pagination ? Math.min(p + 1, pagination.totalPages || 1) : p))} disabled={!pagination || pagination.page >= pagination.totalPages}>التالي</Button>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Fab
-        icon={<Plus className="h-4 w-4" />}
-        label="إنشاء"
-        ariaLabel="إنشاء حصة جدول"
-        onClick={handleStartCreate}
-        disabled={!canCreate}
-      />
+      <Fab icon={<Plus className="h-5 w-5" />} label="إضافة حصة" onClick={handleStartCreate} disabled={!canCreate} />
 
-      <BottomSheetForm
+      <CrudFormSheet
         open={isFormOpen}
-        title={isEditing ? "تعديل حصة جدول" : "إنشاء حصة جدول"}
-        onClose={resetForm}
-        onSubmit={() => handleSubmitForm()}
-        isSubmitting={isFormSubmitting}
-        submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء حصة"}
-        showFooter={false}
+        onClose={resetFormState}
+        title={isEditing ? "تحرير بيانات الحصة" : "إضافة حصة للجدول الدراسي"}
+        isEditing={isEditing}
+        isSubmitting={isSubmitting}
+        onSubmit={handleSubmit}
       >
-        {!canCreate && !isEditing ? (
-          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            لا تملك الصلاحية المطلوبة: <code>timetable-entries.create</code>.
-          </div>
-        ) : (
-          <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الفصل الأكاديمي *</label>
-              <SelectField
-                value={formState.academicTermId}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    academicTermId: event.target.value,
-                    termSubjectOfferingId: "",
-                    sectionId: "",
-                  }))
-                }
-                disabled={!canReadAcademicTerms}
-              >
-                <option value="">اختر الفصل الدراسي</option>
-                {termOptions.map((term) => (
-                  <option key={term.id} value={term.id}>
-                    {term.name} ({term.code})
-                  </option>
-                ))}
-              </SelectField>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">عرض المادة *</label>
-              <SelectField
-                value={formState.termSubjectOfferingId}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    termSubjectOfferingId: event.target.value,
-                    sectionId: "",
-                  }))
-                }
-                disabled={!canReadTermSubjectOfferings || !formState.academicTermId}
-              >
-                <option value="">اختر الطرح</option>
-                {formOfferings.map((offering) => (
-                  <option key={offering.id} value={offering.id}>
-                    {offering.gradeLevelSubject.gradeLevel.code} -{" "}
-                    {offering.gradeLevelSubject.subject.code}
-                  </option>
-                ))}
-              </SelectField>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الشعبة *</label>
-              <SelectField
-                value={formState.sectionId}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    sectionId: event.target.value,
-                  }))
-                }
-                disabled={!canReadSections || !formState.termSubjectOfferingId}
-              >
-                <option value="">اختر الشعبة</option>
-                {formSectionOptions.map((section) => (
-                  <option key={section.id} value={section.id}>
-                    {section.name} ({section.code})
-                  </option>
-                ))}
-              </SelectField>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-2">
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> السياق التعليمي</h4>
+            <div className="grid gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">اليوم *</label>
-                <SelectField
-                  value={formState.dayOfWeek}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      dayOfWeek: event.target.value as TimetableDay,
-                    }))
-                  }
-                >
-                  {DAY_OPTIONS.map((day) => (
-                    <option key={day} value={day}>
-                      {translateTimetableDay(day)}
-                    </option>
-                  ))}
+                <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">الفصل الأكاديمي *</label>
+                <SelectField value={form.academicTermId} onChange={(e) => setForm(p => ({ ...p, academicTermId: e.target.value, sectionId: "", termSubjectOfferingId: "" }))}>
+                  <option value="">اختر الفصل</option>
+                  {(termsQuery.data ?? []).map(t => <option key={t.id} value={t.id}>{t.name} ({t.academicYear.code})</option>)}
                 </SelectField>
               </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                 <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">عرض المادة *</label>
+                    <SelectField value={form.termSubjectOfferingId} onChange={(e) => setForm(p => ({ ...p, termSubjectOfferingId: e.target.value, sectionId: "" }))} disabled={!form.academicTermId}>
+                      <option value="">اختر المادة</option>
+                      {(offeringsQuery.data ?? []).map(o => <option key={o.id} value={o.id}>{o.gradeLevelSubject.gradeLevel.code} - {o.gradeLevelSubject.subject.name}</option>)}
+                    </SelectField>
+                 </div>
+                 <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">الشعبة *</label>
+                    <SelectField value={form.sectionId} onChange={(e) => setForm(p => ({ ...p, sectionId: e.target.value }))} disabled={!form.termSubjectOfferingId}>
+                      <option value="">اختر الشعبة</option>
+                      {(sectionsQuery.data ?? []).filter(s => {
+                         const offering = (offeringsQuery.data ?? []).find(o => o.id === form.termSubjectOfferingId);
+                         return !offering || s.gradeLevelId === offering.gradeLevelSubject.gradeLevelId;
+                      }).map(s => <option key={s.id} value={s.id}>{s.name} ({s.code})</option>)}
+                    </SelectField>
+                 </div>
+              </div>
+            </div>
+          </div>
 
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> البرمجة الزمنية</h4>
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">رقم الحصة *</label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={20}
-                  value={formState.periodIndex}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, periodIndex: event.target.value }))
-                  }
-                  required
-                />
+                <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">اليوم *</label>
+                <SelectField value={form.dayOfWeek} onChange={(e) => setForm(p => ({ ...p, dayOfWeek: e.target.value as any }))}>
+                  {DAY_OPTIONS.map(d => <option key={d} value={d}>{translateTimetableDay(d)}</option>)}
+                </SelectField>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">رقم الحصة *</label>
+                <Input type="number" min={1} max={20} value={form.periodIndex} onChange={(e) => setForm(p => ({ ...p, periodIndex: e.target.value }))} />
               </div>
             </div>
+          </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">اسم القاعة</label>
-              <Input
-                value={formState.roomLabel}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, roomLabel: event.target.value }))
-                }
-                placeholder="A-204"
-              />
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> المكان والملاحظات</h4>
+            <div className="grid gap-4">
+               <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">القاعة / المعمل (Room Label)</label>
+                  <Input value={form.roomLabel} onChange={(e) => setForm(p => ({ ...p, roomLabel: e.target.value }))} placeholder="مثال: قاعة 101" />
+               </div>
+               <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">ملاحظات إضافية</label>
+                  <Input value={form.notes} onChange={(e) => setForm(p => ({ ...p, notes: e.target.value }))} placeholder="تنبيهات خاصة بالحصّة..." />
+               </div>
             </div>
+          </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
-              <Input
-                value={formState.notes}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, notes: event.target.value }))
-                }
-                placeholder="ملاحظات اختيارية"
-              />
-            </div>
-
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-              />
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-3">
+             <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><Settings2 className="h-3.5 w-3.5" /> حالة الحصة</h4>
+            <label className="flex items-center justify-between cursor-pointer transition-colors group">
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-foreground group-hover:text-primary">مجدولة (Active Step)</span>
+                <p className="text-[10px] text-muted-foreground">تفعيل ظهور الحصة في تقاويم الطلاب والمعلمين</p>
+              </div>
+              <input type="checkbox" className="h-5 w-5 rounded text-primary" checked={form.isActive} onChange={(e) => setForm(p => ({ ...p, isActive: e.target.checked }))} />
             </label>
+          </div>
 
-            {formError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                {formError}
-              </div>
-            ) : null}
-
-            {mutationError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                {mutationError}
-              </div>
-            ) : null}
-
-            {!hasDependenciesReadPermissions ? (
-              <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                يتطلب هذا الجزء صلاحيات القراءة المرتبطة: <code>academic-terms.read</code>,{" "}
-                <code>sections.read</code>, <code>term-subject-offerings.read</code>.
-              </div>
-            ) : null}
-
-            <div className="flex gap-2">
-              <Button
-                type="submit"
-                className="flex-1 gap-2"
-                disabled={
-                  isFormSubmitting ||
-                  (!canCreate && !isEditing) ||
-                  !hasDependenciesReadPermissions
-                }
-              >
-                {isFormSubmitting ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : (
-                  <CalendarClock className="h-4 w-4" />
-                )}
-                {isEditing ? "حفظ التعديلات" : "إنشاء حصة"}
-              </Button>
-              {isEditing ? (
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  إلغاء
-                </Button>
-              ) : null}
+          {formError && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive font-bold text-center">
+              {formError}
             </div>
-          </form>
-        )}
-      </BottomSheetForm>
-    </>
+          )}
+        </div>
+      </CrudFormSheet>
+    </PageShell>
   );
 }

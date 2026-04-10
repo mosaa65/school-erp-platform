@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { ClipboardList, RefreshCw, Trash2 } from "lucide-react";
@@ -350,3 +350,4 @@ export function AuditTrailWorkspace() {
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import {
@@ -384,3 +384,4 @@ export function FinanceWorkspace() {
     </PageShell>
   );
 }
+

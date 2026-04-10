@@ -1,15 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, RefreshCw, Send } from "lucide-react";
+import { CheckCircle2, RefreshCw, Send, FileText, Calendar, Receipt, MessageCircle, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
-import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
+import { PageShell } from "@/components/ui/page-shell";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useApproveCreditDebitNoteMutation,
@@ -77,10 +77,12 @@ export function CreditDebitNotesWorkspace() {
   const notes = React.useMemo(() => notesQuery.data?.data ?? [], [notesQuery.data?.data]);
   const pagination = notesQuery.data?.pagination;
 
+  const helperText = notesQuery.isFetching ? "جارٍ تحديث الإشعارات" : "إدارة الإشعارات المالية";
+
   useDebounceEffect(() => {
-      setPage(1);
-      setSearch(searchInput.trim());
-    }, 350, [searchInput]);
+    setPage(1);
+    setSearch(searchInput.trim());
+  }, 350, [searchInput]);
 
   React.useEffect(() => {
     if (!isFilterOpen) return;
@@ -122,177 +124,224 @@ export function CreditDebitNotesWorkspace() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
-          <SearchField
-            containerClassName="flex-1"
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            placeholder="ابحث برقم الإشعار..."
-          />
-        </div>
-        <FilterTriggerButton count={activeFiltersCount} onClick={() => setIsFilterOpen((prev) => !prev)} />
-      </div>
-
-      <FilterDrawer
-        open={isFilterOpen}
-        onClose={() => setIsFilterOpen(false)}
-        title="فلاتر الإشعارات"
-        actionButtons={
-          <div className="flex w-full gap-2">
-            <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">
-              مسح
+    <PageShell
+      title="الإشعارات المدينة والدائنة"
+      subtitle="إصدار واعتماد وتسوية الإشعارات المالية المرتبطة بحسابات الطلاب والفواتير."
+    >
+      <div className="space-y-4">
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(e) => setSearchInput(e.target.value)}
+          searchPlaceholder="بحث برقم الإشعار..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen(true)}
+          actions={
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => void notesQuery.refetch()}
+              disabled={notesQuery.isFetching}
+            >
+              <RefreshCw className={`h-4 w-4 ${notesQuery.isFetching ? "animate-spin" : ""}`} />
+              تحديث
             </Button>
-            <Button type="button" onClick={applyFilters} className="flex-1">
-              تطبيق
-            </Button>
-          </div>
-        }
-      >
-        <div className="grid gap-3 sm:grid-cols-2">
-          <SelectField
-            value={filterDraft.status}
-            onChange={(event) =>
-              setFilterDraft((prev) => ({
-                ...prev,
-                status: event.target.value as CreditDebitNoteStatus | "all",
-              }))
-            }
-          >
-            <option value="all">كل الحالات</option>
-            <option value="DRAFT">مسودة</option>
-            <option value="APPROVED">معتمدة</option>
-            <option value="APPLIED">مطبقة</option>
-            <option value="CANCELLED">ملغاة</option>
-          </SelectField>
-          <SelectField
-            value={filterDraft.type}
-            onChange={(event) =>
-              setFilterDraft((prev) => ({
-                ...prev,
-                type: event.target.value as CreditDebitNoteType | "all",
-              }))
-            }
-          >
-            <option value="all">كل الأنواع</option>
-            <option value="CREDIT">إشعار دائن</option>
-            <option value="DEBIT">إشعار مدين</option>
-          </SelectField>
-        </div>
-      </FilterDrawer>
+          }
+        />
 
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>إشعارات دائن/مدين</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
-          </div>
-          <CardDescription>اعتماد الإشعارات وتطبيقها على الحسابات المرتبطة.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {notesQuery.isPending ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ تحميل الإشعارات...
-            </div>
-          ) : null}
-
-          {notesQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {notesQuery.error instanceof Error ? notesQuery.error.message : "فشل تحميل الإشعارات"}
-            </div>
-          ) : null}
-
-          {!notesQuery.isPending && notes.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              لا توجد إشعارات مطابقة.
-            </div>
-          ) : null}
-
-          {notes.map((note) => (
-            <div key={note.id} className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <p className="font-medium">{note.noteNumber}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {note.enrollment?.student.fullName ?? `فاتورة ${note.originalInvoice.invoiceNumber}`}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {REASON_LABELS[note.reason]}{note.reasonDetails ? ` • ${note.reasonDetails}` : ""}
-                  </p>
-                  <p className="text-xs text-muted-foreground">تاريخ الإصدار: {note.createdAt}</p>
-                </div>
-                <div className="space-y-2 text-right">
-                  <Badge variant={note.status === "APPLIED" ? "default" : note.status === "APPROVED" ? "secondary" : "outline"}>
-                    {STATUS_LABELS[note.status]}
-                  </Badge>
-                  <p className="text-sm font-medium">{Number(note.totalAmount).toLocaleString()} ر.س</p>
-                  <p className="text-xs text-muted-foreground">{TYPE_LABELS[note.noteType]}</p>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5"
-                  onClick={() => handleApprove(note)}
-                  disabled={!canApprove || note.status !== "DRAFT" || approveMutation.isPending}
-                >
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  اعتماد
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5"
-                  onClick={() => handleApply(note)}
-                  disabled={!canApply || note.status !== "APPROVED" || applyMutation.isPending}
-                >
-                  <Send className="h-3.5 w-3.5" />
-                  تطبيق
-                </Button>
-              </div>
-            </div>
-          ))}
-
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-            <p className="text-xs text-muted-foreground">
-              صفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={!pagination || pagination.page <= 1 || notesQuery.isFetching}
-              >
-                السابق
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="فلاتر الإشعارات"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">
+                مسح
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPage((prev) => (pagination ? Math.min(prev + 1, pagination.totalPages) : prev))
+              <Button type="button" onClick={applyFilters} className="flex-1">
+                تطبيق
+              </Button>
+            </div>
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">حالة الإشعار</label>
+              <SelectField
+                value={filterDraft.status}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    status: event.target.value as any,
+                  }))
                 }
-                disabled={!pagination || pagination.page >= pagination.totalPages || notesQuery.isFetching}
               >
-                التالي
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => void notesQuery.refetch()}
-                disabled={notesQuery.isFetching}
+                <option value="all">كل الحالات</option>
+                <option value="DRAFT">مسودة</option>
+                <option value="APPROVED">معتمدة</option>
+                <option value="APPLIED">مطبقة</option>
+                <option value="CANCELLED">ملغاة</option>
+              </SelectField>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">نوع الإشعار</label>
+              <SelectField
+                value={filterDraft.type}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    type: event.target.value as any,
+                  }))
+                }
               >
-                <RefreshCw className={`h-4 w-4 ${notesQuery.isFetching ? "animate-spin" : ""}`} />
-                تحديث
-              </Button>
+                <option value="all">كل الأنواع</option>
+                <option value="CREDIT">إشعار دائن</option>
+                <option value="DEBIT">إشعار مدين</option>
+              </SelectField>
             </div>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </FilterDrawer>
+
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm overflow-hidden">
+          <CardHeader className="space-y-3 bg-muted/20 border-b border-border/60 pb-6">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-bold">
+                <FileText className="h-5 w-5 text-primary" />
+                قائمة الإشعارات المالية
+              </CardTitle>
+              <Badge variant="secondary" className="rounded-full px-3">الإجمالي: {pagination?.total ?? 0}</Badge>
+            </div>
+            <CardDescription>
+              {helperText} - راجع حالة الإشعار قبل التطبيق النهائي على الرصيد.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-6">
+            {notesQuery.isPending && (
+              <div className="rounded-2xl border border-dashed border-border/70 p-8 text-sm text-muted-foreground text-center">
+                جارٍ تحميل بيانات الإشعارات...
+              </div>
+            )}
+
+            {notesQuery.error && (
+              <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive font-medium text-center">
+                {notesQuery.error instanceof Error ? notesQuery.error.message : "فشل تحميل الإشعارات"}
+              </div>
+            )}
+
+            {!notesQuery.isPending && notes.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-border/70 p-8 text-sm text-muted-foreground text-center">
+                لا توجد إشعارات مالية مسجلة تتوافق مع البحث.
+              </div>
+            )}
+
+            <div className="grid gap-4 md:grid-cols-2">
+              {notes.map((note) => {
+                const isCredit = note.noteType === "CREDIT";
+                return (
+                  <div key={note.id} className="group relative space-y-4 rounded-2xl border border-border/70 bg-background/50 p-4 transition-all hover:border-primary/30 hover:shadow-lg">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-base leading-tight group-hover:text-primary transition-colors">{note.noteNumber}</p>
+                          <Badge variant="outline" className={`h-5 text-[9px] uppercase tracking-tighter ${isCredit ? 'border-emerald-500/30 text-emerald-700 bg-emerald-50/50' : 'border-amber-500/30 text-amber-700 bg-amber-50/50'}`}>
+                            {TYPE_LABELS[note.noteType]}
+                          </Badge>
+                        </div>
+                        <p className="text-xs font-semibold mt-1">
+                          {note.enrollment?.student.fullName ?? `مرتبط بالفاتورة: ${note.originalInvoice.invoiceNumber}`}
+                        </p>
+                      </div>
+                      <Badge variant={note.status === "APPLIED" ? "default" : note.status === "APPROVED" ? "secondary" : "outline"} className="h-6 rounded-full text-[10px] px-2.5">
+                        {STATUS_LABELS[note.status]}
+                      </Badge>
+                    </div>
+
+                    <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-3">
+                      <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                        <span className="text-[10px] uppercase text-muted-foreground font-bold leading-none">القيمة المالية</span>
+                        <div className="flex items-center gap-1.5">
+                          {isCredit ? <ArrowDownCircle className="h-4 w-4 text-emerald-600" /> : <ArrowUpCircle className="h-4 w-4 text-amber-600" />}
+                          <span className={`font-bold text-lg ${isCredit ? 'text-emerald-700' : 'text-amber-700'}`}>{Number(note.totalAmount).toLocaleString()}</span>
+                          <span className="text-[10px] text-muted-foreground">ر.س</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                        <div className="flex items-center gap-1.5">
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          <span>{REASON_LABELS[note.reason]}</span>
+                        </div>
+                        {note.reasonDetails && (
+                          <div className="flex items-center gap-1.5 border-r border-border/60 pr-3">
+                            <span className="truncate max-w-[150px] italic">{note.reasonDetails}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 pt-1">
+                      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                        <Calendar className="h-3.5 w-3.5" />
+                        <span>{note.createdAt}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 rounded-xl gap-1.5 px-3 text-[11px] font-bold"
+                          onClick={() => handleApprove(note)}
+                          disabled={!canApprove || note.status !== "DRAFT" || approveMutation.isPending}
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                          اعتماد
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 rounded-xl gap-1.5 px-3 text-[11px] font-bold"
+                          onClick={() => handleApply(note)}
+                          disabled={!canApply || note.status !== "APPROVED" || applyMutation.isPending}
+                        >
+                          <Send className="h-3.5 w-3.5 text-primary" />
+                          تطبيق
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-6 mt-2">
+              <p className="text-xs text-muted-foreground">
+                صفحة <strong className="text-foreground">{pagination?.page ?? 1}</strong> من <strong className="text-foreground">{pagination?.totalPages ?? 1}</strong>
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 px-4 rounded-2xl"
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={!pagination || pagination.page <= 1 || notesQuery.isFetching}
+                >
+                  السابق
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 px-4 rounded-2xl"
+                  onClick={() =>
+                    setPage((prev) => (pagination ? Math.min(prev + 1, pagination.totalPages) : prev))
+                  }
+                  disabled={!pagination || pagination.page >= pagination.totalPages || notesQuery.isFetching}
+                >
+                  التالي
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </PageShell>
   );
 }

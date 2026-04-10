@@ -10,6 +10,7 @@
     "prestart": "node scripts/swc-workaround.cjs",
     "start": "node scripts/run-next.cjs start",
     "lint": "next lint",
+    "pretypecheck": "node scripts/clear-next-types.cjs",
     "typecheck": "tsc --noEmit --incremental false",
     "e2e": "playwright test",
     "e2e:finance-smoke": "playwright test tests/e2e/finance-smoke.spec.ts",

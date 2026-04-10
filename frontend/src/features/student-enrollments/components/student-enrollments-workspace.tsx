@@ -3,22 +3,32 @@
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
-  ArrowRightLeft,
   GraduationCap,
-  LoaderCircle,
-  PencilLine,
-  Plus,
   RefreshCw,
+  Plus,
+  PencilLine,
   Trash2,
   Undo2,
+  ArrowRightLeft,
+  Users,
+  Calendar,
+  Layers,
+  CheckCircle2,
+  Activity,
+  UserCheck,
+  ClipboardList,
+  Layout,
+  Settings2,
+  Clock,
+  History,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SearchField } from "@/components/ui/search-field";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
-import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
+import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
 import { StudentPickerSheet } from "@/components/ui/student-picker-sheet";
 import {
   Card,
@@ -28,8 +38,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
+import { PageShell } from "@/components/ui/page-shell";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useLookupEnrollmentStatusesQuery } from "@/features/lookup-enrollment-statuses/hooks/use-lookup-enrollment-statuses-query";
 import { useGradeLevelOptionsQuery } from "@/features/student-enrollments/hooks/use-grade-level-options-query";
@@ -63,43 +73,25 @@ type EnrollmentFormState = {
 
 const PAGE_SIZE = 12;
 
-const STATUS_OPTIONS: StudentEnrollmentStatus[] = [
-  "NEW",
-  "TRANSFERRED",
-  "ACTIVE",
-  "PROMOTED",
-  "REPEATED",
-  "WITHDRAWN",
-  "GRADUATED",
-  "SUSPENDED",
-];
-
-const ENROLLMENT_STATUS_FALLBACK_OPTIONS: Array<{
-  code: StudentEnrollmentStatus;
-  nameAr: string;
-}> = [
-  { code: "NEW", nameAr: "مستجد" },
-  { code: "TRANSFERRED", nameAr: "منقول" },
-  { code: "ACTIVE", nameAr: "منتظم" },
-  { code: "PROMOTED", nameAr: "مُرَقّى" },
-  { code: "REPEATED", nameAr: "إعادة" },
-  { code: "WITHDRAWN", nameAr: "منسحب" },
-  { code: "GRADUATED", nameAr: "متخرج" },
-  { code: "SUSPENDED", nameAr: "موقوف" },
-];
+const ENROLLMENT_STATUS_LABELS: Record<StudentEnrollmentStatus, string> = {
+  NEW: "مستجد (New)",
+  TRANSFERRED: "منقول (Transferred)",
+  ACTIVE: "منتظم (Active)",
+  PROMOTED: "مُرَقّى (Promoted)",
+  REPEATED: "إعادة (Repeated)",
+  WITHDRAWN: "منسحب (Withdrawn)",
+  GRADUATED: "متخرج (Graduated)",
+  SUSPENDED: "موقوف (Suspended)",
+};
 
 const DISTRIBUTION_STATUS_OPTIONS: Array<{
   code: StudentEnrollmentDistributionStatus;
   nameAr: string;
 }> = [
   { code: "PENDING_DISTRIBUTION", nameAr: "بانتظار التوزيع" },
-  { code: "ASSIGNED", nameAr: "موزع" },
-  { code: "TRANSFERRED", nameAr: "منقول" },
+  { code: "ASSIGNED", nameAr: "موزع نهائياً" },
+  { code: "TRANSFERRED", nameAr: "تم النقل" },
 ];
-
-function isStudentEnrollmentStatus(value: string): value is StudentEnrollmentStatus {
-  return STATUS_OPTIONS.includes(value as StudentEnrollmentStatus);
-}
 
 const DEFAULT_FORM_STATE: EnrollmentFormState = {
   studentId: "",
@@ -114,22 +106,10 @@ const DEFAULT_FORM_STATE: EnrollmentFormState = {
   isActive: true,
 };
 
-function toOptionalString(value: string): string | undefined {
-  const normalized = value.trim();
-  return normalized.length > 0 ? normalized : undefined;
-}
-
 function toDateInput(isoDate: string | null): string {
-  if (!isoDate) {
-    return "";
-  }
-
+  if (!isoDate) return "";
   const date = new Date(isoDate);
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-
-  return date.toISOString().slice(0, 10);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
 }
 
 function toDateIso(dateInput: string): string {
@@ -137,29 +117,19 @@ function toDateIso(dateInput: string): string {
 }
 
 function formatDate(value: string | null): string {
-  if (!value) {
-    return "-";
-  }
-
+  if (!value) return "-";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "-";
-  }
-
-  return date.toLocaleDateString("ar-SA");
+  return Number.isNaN(date.getTime()) ? "-" : date.toLocaleDateString("ar-SA");
 }
 
 function toFormState(enrollment: StudentEnrollmentListItem): EnrollmentFormState {
   return {
     studentId: enrollment.studentId,
     academicYearId: enrollment.academicYearId,
-    gradeLevelId:
-      enrollment.gradeLevelId ?? enrollment.gradeLevel?.id ?? enrollment.section?.gradeLevel.id ?? "",
+    gradeLevelId: enrollment.gradeLevelId ?? enrollment.gradeLevel?.id ?? enrollment.section?.gradeLevel.id ?? "",
     sectionId: enrollment.sectionId ?? "",
     yearlyEnrollmentNo: enrollment.yearlyEnrollmentNo ?? "",
-    distributionStatus:
-      enrollment.distributionStatus ??
-      (enrollment.sectionId ? "ASSIGNED" : "PENDING_DISTRIBUTION"),
+    distributionStatus: enrollment.distributionStatus ?? (enrollment.sectionId ? "ASSIGNED" : "PENDING_DISTRIBUTION"),
     enrollmentDate: toDateInput(enrollment.enrollmentDate),
     status: enrollment.status,
     notes: enrollment.notes ?? "",
@@ -167,24 +137,12 @@ function toFormState(enrollment: StudentEnrollmentListItem): EnrollmentFormState
   };
 }
 
-function buildStudentPickerOptionFromEnrollment(
-  enrollment: StudentEnrollmentListItem,
-): StudentPickerOption {
-  const gradeLevelName =
-    enrollment.gradeLevel?.name ?? enrollment.section?.gradeLevel.name ?? null;
-  const sectionLabel = enrollment.section?.name ? `شعبة ${enrollment.section.name}` : null;
-  const metaParts = [gradeLevelName, sectionLabel, enrollment.academicYear.name].filter(
-    (part): part is string => Boolean(part),
-  );
-
+function buildStudentPickerOption(enrollment: StudentEnrollmentListItem): StudentPickerOption {
   return {
     id: enrollment.studentId,
     title: enrollment.student.fullName,
-    subtitle: enrollment.student.admissionNo
-      ? `رقم الطالب ${enrollment.student.admissionNo}`
-      : "بدون رقم طالب",
-    meta: metaParts.length > 0 ? metaParts.join(" | ") : null,
-    groupLabel: gradeLevelName ? `الصف: ${gradeLevelName}` : "بدون شعبة حالية",
+    subtitle: enrollment.student.admissionNo ? `رقم قبول ${enrollment.student.admissionNo}` : "بدون رقم قبول",
+    meta: [enrollment.gradeLevel?.name || enrollment.section?.gradeLevel.name, enrollment.section?.name, enrollment.academicYear.name].filter(Boolean).join(" | "),
   };
 }
 
@@ -194,1070 +152,429 @@ export function StudentEnrollmentsWorkspace() {
   const canCreate = hasPermission("student-enrollments.create");
   const canUpdate = hasPermission("student-enrollments.update");
   const canDelete = hasPermission("student-enrollments.delete");
-  const canReadStudents = hasPermission("students.read");
-  const canReadAcademicYears = hasPermission("academic-years.read");
-  const canReadGradeLevels = hasPermission("grade-levels.read");
-  const canReadSections = hasPermission("sections.read");
-  const canReadEnrollmentStatuses = hasPermission("lookup-enrollment-statuses.read");
 
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
-  const [studentFilter, setStudentFilter] = React.useState("all");
   const [academicYearFilter, setAcademicYearFilter] = React.useState("all");
   const [gradeLevelFilter, setGradeLevelFilter] = React.useState("all");
   const [sectionFilter, setSectionFilter] = React.useState("all");
-  const [statusFilter, setStatusFilter] = React.useState<StudentEnrollmentStatus | "all">(
-    "all",
-  );
-  const [distributionStatusFilter, setDistributionStatusFilter] =
-    React.useState<StudentEnrollmentDistributionStatus | "all">("all");
-  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
-    "all",
-  );
-  const [filterDraft, setFilterDraft] = React.useState<{
-    student: string;
-    academicYear: string;
-    gradeLevel: string;
-    section: string;
-    status: StudentEnrollmentStatus | "all";
-    distributionStatus: StudentEnrollmentDistributionStatus | "all";
-    active: "all" | "active" | "inactive";
-  }>({
-    student: "all",
-    academicYear: "all",
-    gradeLevel: "all",
-    section: "all",
-    status: "all",
-    distributionStatus: "all",
-    active: "all",
-  });
+  const [statusFilter, setStatusFilter] = React.useState<StudentEnrollmentStatus | "all">("all");
+  const [distFilter, setDistFilter] = React.useState<StudentEnrollmentDistributionStatus | "all">("all");
+  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">("all");
+  const [filterDraft, setFilterDraft] = React.useState({ year: "all", grade: "all", section: "all", status: "all", dist: "all", active: "all" as any });
 
-  const [editingEnrollmentId, setEditingEnrollmentId] = React.useState<string | null>(null);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [formState, setFormState] = React.useState<EnrollmentFormState>(DEFAULT_FORM_STATE);
+  const [form, setForm] = React.useState<EnrollmentFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
-  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
-  const [selectedFormStudent, setSelectedFormStudent] = React.useState<StudentPickerOption | null>(
-    null,
-  );
-  const [selectedStudentFilterOption, setSelectedStudentFilterOption] =
-    React.useState<StudentPickerOption | null>(null);
-  const [filterDraftStudentOption, setFilterDraftStudentOption] =
-    React.useState<StudentPickerOption | null>(null);
+  const [selectedStudent, setSelectedStudent] = React.useState<StudentPickerOption | null>(null);
 
   const enrollmentsQuery = useStudentEnrollmentsQuery({
-    page,
-    limit: PAGE_SIZE,
-    search: search || undefined,
-    studentId: studentFilter === "all" ? undefined : studentFilter,
+    page, limit: PAGE_SIZE, search,
     academicYearId: academicYearFilter === "all" ? undefined : academicYearFilter,
     gradeLevelId: gradeLevelFilter === "all" ? undefined : gradeLevelFilter,
     sectionId: sectionFilter === "all" ? undefined : sectionFilter,
     status: statusFilter === "all" ? undefined : statusFilter,
-    distributionStatus:
-      distributionStatusFilter === "all" ? undefined : distributionStatusFilter,
+    distributionStatus: distFilter === "all" ? undefined : distFilter,
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
   });
 
   const academicYearsQuery = useAcademicYearOptionsQuery();
   const gradeLevelsQuery = useGradeLevelOptionsQuery();
-  const sectionsQuery = useSectionOptionsQuery({
-    gradeLevelId: filterDraft.gradeLevel === "all" ? undefined : filterDraft.gradeLevel,
-  });
-  const formSectionsQuery = useSectionOptionsQuery({
-    gradeLevelId: formState.gradeLevelId || undefined,
-  });
-  const gradeLevelOptions = React.useMemo(
-    () => gradeLevelsQuery.data ?? [],
-    [gradeLevelsQuery.data],
-  );
-  const formSectionOptions = React.useMemo(
-    () => formSectionsQuery.data ?? [],
-    [formSectionsQuery.data],
-  );
-  const enrollmentStatusesQuery = useLookupEnrollmentStatusesQuery({
-    page: 1,
-    limit: 100,
-    isActive: true,
-    enabled: canReadEnrollmentStatuses,
-  });
+  const sectionsQuery = useSectionOptionsQuery({ gradeLevelId: filterDraft.grade === "all" ? undefined : filterDraft.grade });
+  const formSectionsQuery = useSectionOptionsQuery({ gradeLevelId: form.gradeLevelId || undefined });
 
   const createMutation = useCreateStudentEnrollmentMutation();
   const updateMutation = useUpdateStudentEnrollmentMutation();
   const deleteMutation = useDeleteStudentEnrollmentMutation();
 
-  const enrollments = React.useMemo(
-    () => enrollmentsQuery.data?.data ?? [],
-    [enrollmentsQuery.data?.data],
-  );
-  const enrollmentStatusOptions = React.useMemo(() => {
-    const items = enrollmentStatusesQuery.data?.data ?? [];
-    const normalized = items
-      .filter((item) => isStudentEnrollmentStatus(item.code))
-      .map((item) => ({ code: item.code, nameAr: item.nameAr }));
-
-    return normalized.length > 0 ? normalized : ENROLLMENT_STATUS_FALLBACK_OPTIONS;
-  }, [enrollmentStatusesQuery.data?.data]);
-  const enrollmentStatusLabels = React.useMemo(
-    () => new Map(enrollmentStatusOptions.map((item) => [item.code, item.nameAr])),
-    [enrollmentStatusOptions],
-  );
+  const records = React.useMemo(() => enrollmentsQuery.data?.data ?? [], [enrollmentsQuery.data?.data]);
   const pagination = enrollmentsQuery.data?.pagination;
-  const isEditing = editingEnrollmentId !== null;
-  const hasDependenciesReadPermissions =
-    canReadStudents && canReadAcademicYears && canReadSections && canReadGradeLevels;
-
-  const mutationError =
-    (createMutation.error as Error | null)?.message ??
-    (updateMutation.error as Error | null)?.message ??
-    (deleteMutation.error as Error | null)?.message ??
-    null;
-
-  React.useEffect(() => {
-    if (!isEditing) {
-      return;
-    }
-
-    const stillExists = enrollments.some((item) => item.id === editingEnrollmentId);
-    if (!stillExists) {
-      setEditingEnrollmentId(null);
-      setFormState(DEFAULT_FORM_STATE);
-      setFormError(null);
-      setSelectedFormStudent(null);
-      setIsFormOpen(false);
-    }
-  }, [editingEnrollmentId, enrollments, isEditing]);
+  const isEditing = editingId !== null;
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   useDebounceEffect(() => {
-      setPage(1);
-      setSearch(searchInput.trim());
-    }, 400, [searchInput]);
+    setPage(1);
+    setSearch(searchInput.trim());
+  }, 400, [searchInput]);
 
   React.useEffect(() => {
-    if (!isFilterOpen) {
-      return;
-    }
+    if (!isFilterOpen) return;
+    setFilterDraft({ year: academicYearFilter, grade: gradeLevelFilter, section: sectionFilter, status: statusFilter, dist: distFilter, active: activeFilter });
+  }, [academicYearFilter, activeFilter, distFilter, gradeLevelFilter, isFilterOpen, sectionFilter, statusFilter]);
 
-    setFilterDraft({
-      student: studentFilter,
-      academicYear: academicYearFilter,
-      gradeLevel: gradeLevelFilter,
-      section: sectionFilter,
-      status: statusFilter,
-      distributionStatus: distributionStatusFilter,
-      active: activeFilter,
-    });
-    setFilterDraftStudentOption(selectedStudentFilterOption);
-  }, [
-    academicYearFilter,
-    activeFilter,
-    distributionStatusFilter,
-    gradeLevelFilter,
-    isFilterOpen,
-    sectionFilter,
-    selectedStudentFilterOption,
-    statusFilter,
-    studentFilter,
-  ]);
-
-  const resetForm = () => {
-    setEditingEnrollmentId(null);
-    setFormState(DEFAULT_FORM_STATE);
+  const resetFormState = () => {
+    setEditingId(null);
+    setForm(DEFAULT_FORM_STATE);
     setFormError(null);
-    setSelectedFormStudent(null);
+    setSelectedStudent(null);
     setIsFormOpen(false);
   };
 
   const handleStartCreate = () => {
-    if (!canCreate) {
-      return;
-    }
-
-    setActionSuccess(null);
-    setFormError(null);
-    setEditingEnrollmentId(null);
-    setFormState(DEFAULT_FORM_STATE);
-    setSelectedFormStudent(null);
+    if (!canCreate) return;
+    setForm(DEFAULT_FORM_STATE);
+    setSelectedStudent(null);
     setIsFormOpen(true);
   };
 
-  const validateForm = (): boolean => {
-    const requiresSection = formState.distributionStatus !== "PENDING_DISTRIBUTION";
-
-    if (!formState.studentId || !formState.academicYearId || !formState.gradeLevelId) {
-      setFormError("الطالب والسنة الأكاديمية والصف حقول مطلوبة.");
-      return false;
-    }
-
-    if (requiresSection && !formState.sectionId) {
-      setFormError("الشعبة مطلوبة عندما لا تكون حالة التوزيع بانتظار التوزيع.");
-      return false;
-    }
-
-    if (formState.notes.trim().length > 255) {
-      setFormError("الملاحظات يجب ألا تتجاوز 255 حرفًا.");
-      return false;
-    }
-
-    setFormError(null);
-    return true;
+  const handleStartEdit = (item: StudentEnrollmentListItem) => {
+    if (!canUpdate) return;
+    setEditingId(item.id);
+    setForm(toFormState(item));
+    setSelectedStudent(buildStudentPickerOption(item));
+    setIsFormOpen(true);
   };
 
-  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
-    event?.preventDefault();
-    setActionSuccess(null);
-
-    if (!validateForm()) {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.studentId || !form.academicYearId || !form.gradeLevelId) {
+      setFormError("الطالب، السنة الأكاديمية، والصف حقول إلزامية.");
       return;
     }
 
-    const normalizedSectionId = toOptionalString(formState.sectionId);
     const payload = {
-      studentId: formState.studentId,
-      academicYearId: formState.academicYearId,
-      gradeLevelId: formState.gradeLevelId,
-      distributionStatus: formState.distributionStatus,
-      enrollmentDate: formState.enrollmentDate ? toDateIso(formState.enrollmentDate) : undefined,
-      status: formState.status,
-      notes: toOptionalString(formState.notes),
-      isActive: formState.isActive,
-      ...(isEditing
-        ? { sectionId: normalizedSectionId ?? "" }
-        : normalizedSectionId
-          ? { sectionId: normalizedSectionId }
-          : {}),
+      studentId: form.studentId,
+      academicYearId: form.academicYearId,
+      gradeLevelId: form.gradeLevelId,
+      sectionId: form.sectionId || undefined,
+      distributionStatus: form.distributionStatus,
+      enrollmentDate: form.enrollmentDate ? toDateIso(form.enrollmentDate) : undefined,
+      status: form.status,
+      notes: form.notes.trim() || undefined,
+      isActive: form.isActive,
     };
 
-    if (isEditing && editingEnrollmentId) {
-      if (!canUpdate) {
-        setFormError("لا تملك الصلاحية المطلوبة: student-enrollments.update.");
-        return;
-      }
-
-      updateMutation.mutate(
-        {
-          enrollmentId: editingEnrollmentId,
-          payload,
-        },
-        {
-          onSuccess: () => {
-            resetForm();
-            setActionSuccess("تم تحديث قيد الطالب بنجاح.");
-          },
-        },
-      );
-      return;
+    if (isEditing && editingId) {
+      updateMutation.mutate({ enrollmentId: editingId, payload }, { onSuccess: resetFormState });
+    } else {
+      createMutation.mutate(payload, { onSuccess: resetFormState });
     }
+  };
 
-    if (!canCreate) {
-      setFormError("لا تملك الصلاحية المطلوبة: student-enrollments.create.");
-      return;
-    }
+  const handleDelete = (item: StudentEnrollmentListItem) => {
+    if (!canDelete || !window.confirm(`تأكيد حذف قيد الطالب ${item.student.fullName}؟`)) return;
+    deleteMutation.mutate(item.id);
+  };
 
-    createMutation.mutate(payload, {
-      onSuccess: () => {
-        resetForm();
-        setPage(1);
-        setActionSuccess("تم إنشاء قيد الطالب بنجاح.");
-      },
+  const handleQuickReturnToPending = (item: StudentEnrollmentListItem) => {
+    if (!canUpdate || !window.confirm("إعادة القيد لوضع انتظار التوزيع؟ سيتم حذف ربط الشعبة الحالي.")) return;
+    updateMutation.mutate({
+      enrollmentId: item.id,
+      payload: { sectionId: "", distributionStatus: "PENDING_DISTRIBUTION" }
     });
   };
 
-  const handleStartEdit = (enrollment: StudentEnrollmentListItem) => {
-    if (!canUpdate) {
-      return;
-    }
-
-    setActionSuccess(null);
-    setFormError(null);
-    setEditingEnrollmentId(enrollment.id);
-    setFormState(toFormState(enrollment));
-    setSelectedFormStudent(buildStudentPickerOptionFromEnrollment(enrollment));
-    setIsFormOpen(true);
+  const applyFilters = () => {
+    setPage(1);
+    setAcademicYearFilter(filterDraft.year);
+    setGradeLevelFilter(filterDraft.grade);
+    setSectionFilter(filterDraft.section);
+    setStatusFilter(filterDraft.status as any);
+    setDistFilter(filterDraft.dist as any);
+    setActiveFilter(filterDraft.active);
+    setIsFilterOpen(false);
   };
-
-  const handleToggleActive = (enrollment: StudentEnrollmentListItem) => {
-    if (!canUpdate) {
-      return;
-    }
-
-    updateMutation.mutate(
-      {
-        enrollmentId: enrollment.id,
-        payload: {
-          isActive: !enrollment.isActive,
-        },
-      },
-      {
-        onSuccess: () => {
-          setActionSuccess(
-            enrollment.isActive ? "تم تعطيل القيد بنجاح." : "تم تفعيل القيد بنجاح.",
-          );
-        },
-      },
-    );
-  };
-
-  const handleDelete = (enrollment: StudentEnrollmentListItem) => {
-    if (!canDelete) {
-      return;
-    }
-
-    const confirmed = window.confirm(
-      `تأكيد حذف قيد الطالب ${enrollment.student.fullName} للسنة ${enrollment.academicYear.code}؟`,
-    );
-    if (!confirmed) {
-      return;
-    }
-
-    deleteMutation.mutate(enrollment.id, {
-      onSuccess: () => {
-        if (editingEnrollmentId === enrollment.id) {
-          resetForm();
-        }
-        setActionSuccess("تم حذف قيد الطالب بنجاح.");
-      },
-    });
-  };
-
-  const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
-  const requiresSection = formState.distributionStatus !== "PENDING_DISTRIBUTION";
-  const getStatusLabel = (value: StudentEnrollmentStatus) =>
-    enrollmentStatusLabels.get(value) ?? value;
-  const getDistributionStatusLabel = (
-    value: StudentEnrollmentDistributionStatus,
-  ) =>
-    DISTRIBUTION_STATUS_OPTIONS.find((option) => option.code === value)?.nameAr ??
-    value;
 
   const clearFilters = () => {
     setPage(1);
     setSearchInput("");
     setSearch("");
-    setStudentFilter("all");
     setAcademicYearFilter("all");
     setGradeLevelFilter("all");
     setSectionFilter("all");
     setStatusFilter("all");
-    setDistributionStatusFilter("all");
+    setDistFilter("all");
     setActiveFilter("all");
-    setSelectedStudentFilterOption(null);
-    setFilterDraftStudentOption(null);
-    setIsFilterOpen(false);
-  };
-
-  const handleOpenDistributionBoard = (enrollment: StudentEnrollmentListItem) => {
-    const gradeLevelId =
-      enrollment.gradeLevelId ?? enrollment.gradeLevel?.id ?? enrollment.section?.gradeLevel.id;
-
-    if (!gradeLevelId) {
-      setActionSuccess(null);
-      setFormError("لا يمكن فتح شاشة التوزيع قبل توفر الصف على هذا القيد.");
-      return;
-    }
-
-    const query = new URLSearchParams({
-      academicYearId: enrollment.academicYearId,
-      gradeLevelId,
-    });
-    router.push(`/app/student-distributions?${query.toString()}`);
-  };
-
-  const handleReturnToPendingDistribution = (enrollment: StudentEnrollmentListItem) => {
-    if (!canUpdate) {
-      return;
-    }
-
-    const gradeLevelId =
-      enrollment.gradeLevelId ?? enrollment.gradeLevel?.id ?? enrollment.section?.gradeLevel.id;
-
-    if (!gradeLevelId) {
-      setActionSuccess(null);
-      setFormError("لا يمكن إعادة القيد إلى الانتظار قبل معرفة الصف المرتبط به.");
-      return;
-    }
-
-    updateMutation.mutate(
-      {
-        enrollmentId: enrollment.id,
-        payload: {
-          gradeLevelId,
-          sectionId: "",
-          distributionStatus: "PENDING_DISTRIBUTION",
-        },
-      },
-      {
-        onSuccess: () => {
-          setActionSuccess("تمت إعادة القيد إلى انتظار التوزيع بنجاح.");
-        },
-      },
-    );
-  };
-
-  const applyFilters = () => {
-    setPage(1);
-    setStudentFilter(filterDraft.student);
-    setAcademicYearFilter(filterDraft.academicYear);
-    setGradeLevelFilter(filterDraft.gradeLevel);
-    setSectionFilter(filterDraft.section);
-    setStatusFilter(filterDraft.status);
-    setDistributionStatusFilter(filterDraft.distributionStatus);
-    setActiveFilter(filterDraft.active);
-    setSelectedStudentFilterOption(filterDraftStudentOption);
+    setFilterDraft({ year: "all", grade: "all", section: "all", status: "all", dist: "all", active: "all" });
     setIsFilterOpen(false);
   };
 
   const activeFiltersCount = React.useMemo(() => {
-    const count = [
-      searchInput.trim() ? 1 : 0,
-      studentFilter !== "all" ? 1 : 0,
-      academicYearFilter !== "all" ? 1 : 0,
-      gradeLevelFilter !== "all" ? 1 : 0,
-      sectionFilter !== "all" ? 1 : 0,
-      statusFilter !== "all" ? 1 : 0,
-      distributionStatusFilter !== "all" ? 1 : 0,
-      activeFilter !== "all" ? 1 : 0,
-    ].reduce((acc, value) => acc + value, 0);
-    return count;
-  }, [
-    academicYearFilter,
-    activeFilter,
-    distributionStatusFilter,
-    gradeLevelFilter,
-    searchInput,
-    sectionFilter,
-    statusFilter,
-    studentFilter,
-  ]);
+    return [
+      searchInput.trim() ? 1 : 0, academicYearFilter !== "all" ? 1 : 0, gradeLevelFilter !== "all" ? 1 : 0,
+      sectionFilter !== "all" ? 1 : 0, statusFilter !== "all" ? 1 : 0, distFilter !== "all" ? 1 : 0, activeFilter !== "all" ? 1 : 0
+    ].reduce((acc, v) => acc + v, 0);
+  }, [academicYearFilter, activeFilter, distFilter, gradeLevelFilter, searchInput, sectionFilter, statusFilter]);
 
   return (
-    <>
+    <PageShell
+      title="إدارة قيود الطلاب"
+      subtitle="تتبع الحالة الأكاديمية للطلاب، توزيع الشعب، وعمليات الترفيع والنقل السنوي."
+    >
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
-            <SearchField
-              containerClassName="flex-1"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="بحث بالطالب/رقم الطالب/رقم القيد السنوي/الصف/الشعبة/السنة..."
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterTriggerButton
-              count={activeFiltersCount}
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-            />
-          </div>
-        </div>
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(e) => setSearchInput(e.target.value)}
+          searchPlaceholder="بحث بالطالب، الرقم السنوي، أو الصف..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen(true)}
+          actions={
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => void enrollmentsQuery.refetch()} disabled={enrollmentsQuery.isFetching}>
+              <RefreshCw className={`h-4 w-4 ${enrollmentsQuery.isFetching ? "animate-spin" : ""}`} />
+              تحديث
+            </Button>
+          }
+        />
 
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
-          title="فلاتر القيود"
+          title="خيارات الفلترة المتقدمة"
           actionButtons={
             <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
+              <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">مسح</Button>
+              <Button type="button" onClick={applyFilters} className="flex-1">تطبيق</Button>
             </div>
           }
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <StudentPickerSheet
-              scope="student-enrollments"
-              variant="filter"
-              value={filterDraft.student}
-              selectedOption={filterDraftStudentOption}
-              onSelect={(option) => {
-                setFilterDraft((prev) => ({ ...prev, student: option?.id ?? "all" }));
-                setFilterDraftStudentOption(option);
-              }}
-              disabled={!canReadStudents}
-            />
-
-            <SelectField
-              value={filterDraft.academicYear}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, academicYear: event.target.value }))
-              }
-            >
-              <option value="all">كل السنوات</option>
-              {(academicYearsQuery.data ?? []).map((year) => (
-                <option key={year.id} value={year.id}>
-                  {year.code}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField
-              value={filterDraft.gradeLevel}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  gradeLevel: event.target.value,
-                  section: "all",
-                }))
-              }
-            >
-              <option value="all">كل الصفوف</option>
-              {gradeLevelOptions.map((gradeLevel) => (
-                <option key={gradeLevel.id} value={gradeLevel.id}>
-                  {gradeLevel.name} ({gradeLevel.code})
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField
-              value={filterDraft.section}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, section: event.target.value }))
-              }
-            >
-              <option value="all">كل الشعب</option>
-              {(sectionsQuery.data ?? []).map((section) => (
-                <option key={section.id} value={section.id}>
-                  {section.code} - {section.gradeLevel.name}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField
-              value={filterDraft.status}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  status: event.target.value as StudentEnrollmentStatus | "all",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              {enrollmentStatusOptions.map((status) => (
-                <option key={status.code} value={status.code}>
-                  {status.nameAr}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField
-              value={filterDraft.distributionStatus}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  distributionStatus: event.target.value as
-                    | StudentEnrollmentDistributionStatus
-                    | "all",
-                }))
-              }
-            >
-              <option value="all">كل حالات التوزيع</option>
-              {DISTRIBUTION_STATUS_OPTIONS.map((option) => (
-                <option key={option.code} value={option.code}>
-                  {option.nameAr}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </SelectField>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">السنة الأكاديمية</label>
+              <SelectField value={filterDraft.year} onChange={(e) => setFilterDraft(p => ({ ...p, year: e.target.value }))}>
+                <option value="all">كل السنوات</option>
+                {(academicYearsQuery.data ?? []).map(y => <option key={y.id} value={y.id}>{y.code}</option>)}
+              </SelectField>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">المرحلة / الصف</label>
+              <SelectField value={filterDraft.grade} onChange={(e) => setFilterDraft(p => ({ ...p, grade: e.target.value, section: "all" }))}>
+                <option value="all">كل الصفوف</option>
+                {(gradeLevelsQuery.data ?? []).map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+              </SelectField>
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">الشعبة</label>
+              <SelectField value={filterDraft.section} onChange={(e) => setFilterDraft(p => ({ ...p, section: e.target.value }))}>
+                <option value="all">كل الشعب</option>
+                {(sectionsQuery.data ?? []).map(s => <option key={s.id} value={s.id}>{s.name} - {s.gradeLevel.code}</option>)}
+              </SelectField>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">حالة القيد</label>
+              <SelectField value={filterDraft.status} onChange={(e) => setFilterDraft(p => ({ ...p, status: e.target.value }))}>
+                <option value="all">كل الحالات</option>
+                {Object.entries(ENROLLMENT_STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </SelectField>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">التوزيع</label>
+              <SelectField value={filterDraft.dist} onChange={(e) => setFilterDraft(p => ({ ...p, dist: e.target.value }))}>
+                <option value="all">كل حالات التوزيع</option>
+                {DISTRIBUTION_STATUS_OPTIONS.map(o => <option key={o.code} value={o.code}>{o.nameAr}</option>)}
+              </SelectField>
+            </div>
           </div>
         </FilterDrawer>
 
-        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-          <CardHeader className="space-y-3">
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm overflow-hidden">
+          <CardHeader className="space-y-3 bg-muted/30 border-b border-border/60 pb-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>قيود الطلاب</CardTitle>
-              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+              <CardTitle className="flex items-center gap-2 text-lg font-bold">
+                <UserCheck className="h-5 w-5 text-primary" />
+                سجل قيود الطلاب السنوية
+              </CardTitle>
+              <Badge variant="secondary" className="rounded-full px-3">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
-            <CardDescription>
-              إدارة القيود الدراسية للطلاب حسب السنة والصف والشعبة والحالة.
-            </CardDescription>
           </CardHeader>
+          
+          <CardContent className="p-0">
+            {enrollmentsQuery.isPending && (
+              <div className="p-12 text-center text-sm text-muted-foreground font-medium animate-pulse">جارٍ تحميل القيود...</div>
+            )}
 
-          <CardContent className="space-y-3">
-          {actionSuccess ? (
-            <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">
-              {actionSuccess}
-            </div>
-          ) : null}
+            <div className="divide-y divide-border/40">
+              {records.map((item) => (
+                <div key={item.id} className="p-4 hover:bg-muted/10 transition-colors group">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="flex gap-4 flex-1">
+                      <div className="flex flex-col items-center justify-center h-12 w-12 rounded-2xl bg-primary/5 border border-primary/10 group-hover:bg-primary/10 transition-colors shadow-sm">
+                        <GraduationCap className="h-6 w-6 text-primary/60" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-base">{item.student.fullName}</p>
+                          <Badge variant="outline" className="h-5 text-[8px] font-black uppercase text-secondary-foreground border-border/70 bg-stone-50">
+                             {item.academicYear.code}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-bold uppercase tracking-tight">
+                          <Layers className="h-3.5 w-3.5" /> <span>{item.gradeLevel?.name || item.section?.gradeLevel.name}</span>
+                          <span className="mx-1 opacity-30">•</span>
+                          <Layout className="h-3.5 w-3.5" /> <span>{item.section?.name || "بدون شعبة"}</span>
+                          {item.yearlyEnrollmentNo && (
+                            <>
+                              <span className="mx-1 opacity-30">•</span>
+                              <Badge variant="outline" className="h-4 text-[7px] border-primary/20 bg-primary/5 text-primary">ID: {item.yearlyEnrollmentNo}</Badge>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
 
-          {mutationError && !isFormOpen ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {mutationError}
-            </div>
-          ) : null}
+                    <div className="flex flex-col items-end gap-3">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge variant={item.isActive ? "default" : "outline"} className={`h-5 text-[8px] font-black uppercase ${item.isActive ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : ''}`}>
+                          {item.isActive ? "Active Enrollment" : "Disabled"}
+                        </Badge>
+                        <Badge variant="outline" className="h-5 text-[8px] font-black uppercase border-border/70 text-blue-600 bg-blue-50">
+                          {ENROLLMENT_STATUS_LABELS[item.status]}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {item.distributionStatus === "ASSIGNED" && (
+                           <Button variant="outline" size="sm" className="h-8 rounded-lg px-2 text-stone-500" onClick={() => handleQuickReturnToPending(item)} title="إعادة للانتظار">
+                              <Undo2 className="h-3.5 w-3.5" />
+                           </Button>
+                        )}
+                        <Button variant="outline" size="sm" className="h-8 rounded-lg px-3 text-[11px] font-bold gap-1.5" onClick={() => handleStartEdit(item)} disabled={!canUpdate}>
+                          <PencilLine className="h-3.5 w-3.5" /> تعديل
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 rounded-lg px-2 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(item)} disabled={!canDelete}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
 
-          {formError && !isFormOpen ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {formError}
-            </div>
-          ) : null}
-
-          {enrollmentsQuery.isPending ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ تحميل البيانات...
-            </div>
-          ) : null}
-
-          {enrollmentsQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {enrollmentsQuery.error instanceof Error
-                ? enrollmentsQuery.error.message
-                : "تعذّر تحميل البيانات."}
-            </div>
-          ) : null}
-
-          {!enrollmentsQuery.isPending && enrollments.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              لا توجد نتائج مطابقة.
-            </div>
-          ) : null}
-
-          {enrollments.map((enrollment) => (
-            <div
-              key={enrollment.id}
-              className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <p className="font-medium">
-                    {enrollment.student.fullName} (
-                    {enrollment.student.admissionNo ?? "بدون رقم طالب"})
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    السنة: {enrollment.academicYear.name} ({enrollment.academicYear.code})
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    الصف:{" "}
-                    {enrollment.gradeLevel?.name ??
-                      enrollment.section?.gradeLevel.name ??
-                      "غير محدد"}
-                    {enrollment.section
-                      ? ` | الشعبة: ${enrollment.section.name} (${enrollment.section.code})`
-                      : " | الشعبة: غير موزع"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    رقم القيد السنوي: {enrollment.yearlyEnrollmentNo ?? "سيولد تلقائيًا"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    حالة التوزيع:{" "}
-                    {enrollment.distributionStatus
-                      ? getDistributionStatusLabel(enrollment.distributionStatus)
-                      : "غير محددة"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    تاريخ القيد: {formatDate(enrollment.enrollmentDate)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">ملاحظات: {enrollment.notes ?? "-"}</p>
+                  <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      { label: "تاريخ القيد", val: formatDate(item.enrollmentDate), icon: Calendar },
+                      { label: "حالة التوزيع", val: DISTRIBUTION_STATUS_OPTIONS.find(o => o.code === item.distributionStatus)?.nameAr || "-", icon: ArrowRightLeft },
+                      { label: "رقم الطالب", val: item.student.admissionNo || "غير محدد", icon: UserCheck },
+                      { label: "ملاحظات", val: item.notes || "لا توجد", icon: ClipboardList },
+                    ].map((stat, sIdx) => (
+                      <div key={sIdx} className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/40 bg-background/50 group-hover:bg-background transition-colors">
+                        <stat.icon className="h-3.5 w-3.5 text-muted-foreground/60" />
+                        <div className="flex flex-col overflow-hidden">
+                          <span className="text-[7px] uppercase font-bold text-muted-foreground leading-none">{stat.label}</span>
+                          <span className="text-[10px] font-black mt-0.5 truncate">{stat.val}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
+              ))}
+            </div>
 
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant="secondary">{getStatusLabel(enrollment.status)}</Badge>
-                  <Badge variant={enrollment.isActive ? "default" : "outline"}>
-                    {enrollment.isActive ? "نشط" : "غير نشط"}
-                  </Badge>
-                </div>
-              </div>
+            {!enrollmentsQuery.isPending && records.length === 0 && (
+              <div className="p-12 text-center text-sm text-muted-foreground opacity-50">لا توجد سجلات قيود تتوافق مع البحث.</div>
+            )}
 
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleOpenDistributionBoard(enrollment)}
-                >
-                  <ArrowRightLeft className="h-3.5 w-3.5" />
-                  شاشة التوزيع
-                </Button>
-                {enrollment.sectionId ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => handleReturnToPendingDistribution(enrollment)}
-                    disabled={!canUpdate || updateMutation.isPending}
-                  >
-                    <Undo2 className="h-3.5 w-3.5" />
-                    إرجاع للانتظار
-                  </Button>
-                ) : null}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleStartEdit(enrollment)}
-                  disabled={!canUpdate || updateMutation.isPending}
-                >
-                  <PencilLine className="h-3.5 w-3.5" />
-                  تعديل
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleToggleActive(enrollment)}
-                  disabled={!canUpdate || updateMutation.isPending}
-                >
-                  {enrollment.isActive ? "تعطيل" : "تفعيل"}
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleDelete(enrollment)}
-                  disabled={!canDelete || deleteMutation.isPending}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  حذف
-                </Button>
+            <div className="p-4 flex flex-wrap items-center justify-between gap-4 border-t border-border/60 bg-muted/10">
+              <p className="text-[10px] text-muted-foreground font-bold italic tracking-wide">نمط المعالجة: التحكم المركزي بالقيود</p>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" className="h-8 rounded-xl px-4 font-bold" onClick={() => setPage(p => Math.max(p - 1, 1))} disabled={!pagination || pagination.page <= 1}>السابق</Button>
+                <div className="text-[10px] font-bold px-2">Page {pagination?.page ?? 1} / {pagination?.totalPages ?? 1}</div>
+                <Button variant="outline" size="sm" className="h-8 rounded-xl px-4 font-bold" onClick={() => setPage(p => (pagination ? Math.min(p + 1, pagination.totalPages || 1) : p))} disabled={!pagination || pagination.page >= pagination.totalPages}>التالي</Button>
               </div>
             </div>
-          ))}
-
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-            <p className="text-xs text-muted-foreground">
-              الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-            </p>
-
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={!pagination || pagination.page <= 1 || enrollmentsQuery.isFetching}
-              >
-                السابق
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPage((prev) =>
-                    pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                  )
-                }
-                disabled={
-                  !pagination ||
-                  pagination.page >= pagination.totalPages ||
-                  enrollmentsQuery.isFetching
-                }
-              >
-                التالي
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => void enrollmentsQuery.refetch()}
-                disabled={enrollmentsQuery.isFetching}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${enrollmentsQuery.isFetching ? "animate-spin" : ""}`}
-                />
-                تحديث
-              </Button>
-            </div>
-          </div>
-        </CardContent>
+          </CardContent>
         </Card>
       </div>
 
-      <Fab
-        icon={<Plus className="h-4 w-4" />}
-        label="إنشاء"
-        ariaLabel="إنشاء قيد طالب"
-        onClick={handleStartCreate}
-        disabled={!canCreate}
-      />
+      <Fab icon={<Plus className="h-5 w-5" />} label="إضافة قيد" onClick={handleStartCreate} disabled={!canCreate} />
 
-      <BottomSheetForm
+      <CrudFormSheet
         open={isFormOpen}
-        title={isEditing ? "تعديل قيد طالب" : "إنشاء قيد طالب"}
-        onClose={resetForm}
-        onSubmit={() => handleSubmitForm()}
-        isSubmitting={isFormSubmitting}
-        submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء قيد"}
-        showFooter={false}
+        onClose={resetFormState}
+        title={isEditing ? "تحرير قيد الطالب" : "إنشاء قيد سنوي جديد"}
+        isEditing={isEditing}
+        isSubmitting={isSubmitting}
+        onSubmit={handleSubmit}
       >
-        {!canCreate && !isEditing ? (
-          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            لا تملك الصلاحية المطلوبة: <code>student-enrollments.create</code>.
-          </div>
-        ) : (
-          <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الطالب *</label>
-              <StudentPickerSheet
-                scope="student-enrollments"
-                variant="form"
-                value={formState.studentId}
-                selectedOption={selectedFormStudent}
-                onSelect={(option) => {
-                  setSelectedFormStudent(option);
-                  setFormState((prev) => ({
-                    ...prev,
-                    studentId: option?.id ?? "",
-                  }));
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><UserCheck className="h-3.5 w-3.5" /> تحديد الطالب والوقت</h4>
+            <div className="space-y-3">
+              <StudentPickerSheet 
+                scope="enrollment-form" 
+                value={form.studentId} 
+                selectedOption={selectedStudent}
+                onSelect={(opt) => {
+                  setForm(p => ({ ...p, studentId: opt?.id || "" }));
+                  setSelectedStudent(opt);
                 }}
-                disabled={!canReadStudents}
+                disabled={isEditing}
               />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase leading-none">السنة الأكاديمية *</label>
+                  <SelectField value={form.academicYearId} onChange={(e) => setForm(p => ({ ...p, academicYearId: e.target.value }))} disabled={isEditing}>
+                    <option value="">اختر السنة</option>
+                    {(academicYearsQuery.data ?? []).map(y => <option key={y.id} value={y.id}>{y.name} ({y.code})</option>)}
+                  </SelectField>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase leading-none">تاريخ القيد</label>
+                  <Input type="date" value={form.enrollmentDate} onChange={(e) => setForm(p => ({ ...p, enrollmentDate: e.target.value }))} />
+                </div>
+              </div>
             </div>
+          </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                السنة الأكاديمية *
-              </label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={formState.academicYearId}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, academicYearId: event.target.value }))
-                }
-                disabled={!canReadAcademicYears}
-              >
-                <option value="">اختر السنة الدراسية</option>
-                {(academicYearsQuery.data ?? []).map((year) => (
-                  <option key={year.id} value={year.id}>
-                    {year.name} ({year.code})
-                  </option>
-                ))}
-              </select>
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><Layers className="h-3.5 w-3.5" /> الموضع الأكاديمي</h4>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase leading-none">الصف الدراسي *</label>
+                <SelectField value={form.gradeLevelId} onChange={(e) => setForm(p => ({ ...p, gradeLevelId: e.target.value, sectionId: "" }))}>
+                  <option value="">اختر الصف</option>
+                  {gradeLevelOptions.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                </SelectField>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase leading-none">الشعبة المخصصة</label>
+                <SelectField value={form.sectionId} onChange={(e) => setForm(p => ({ ...p, sectionId: e.target.value }))}>
+                  <option value="">بانتظار التوزيع</option>
+                  {formSectionOptions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </SelectField>
+              </div>
             </div>
+          </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الصف *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={formState.gradeLevelId}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    gradeLevelId: event.target.value,
-                    sectionId: "",
-                  }))
-                }
-                disabled={!canReadGradeLevels || gradeLevelsQuery.isLoading}
-              >
-                <option value="">اختر الصف</option>
-                {gradeLevelOptions.map((gradeLevel) => (
-                  <option key={gradeLevel.id} value={gradeLevel.id}>
-                    {gradeLevel.name} ({gradeLevel.code})
-                  </option>
-                ))}
-              </select>
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><Settings2 className="h-3.5 w-3.5" /> الحالة والتصنيف</h4>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase leading-none">حالة القيد الأكاديمية *</label>
+                <SelectField value={form.status} onChange={(e) => setForm(p => ({ ...p, status: e.target.value as any }))}>
+                  {Object.entries(ENROLLMENT_STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </SelectField>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase leading-none">وضعية التوزيع الحالي</label>
+                <SelectField value={form.distributionStatus} onChange={(e) => setForm(p => ({ ...p, distributionStatus: e.target.value as any }))}>
+                  {DISTRIBUTION_STATUS_OPTIONS.map(o => <option key={o.code} value={o.code}>{o.nameAr}</option>)}
+                </SelectField>
+              </div>
             </div>
+          </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                الشعبة {requiresSection ? "*" : "(اختيارية مع بانتظار التوزيع)"}
-              </label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={formState.sectionId}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    sectionId: event.target.value,
-                    distributionStatus:
-                      event.target.value && prev.distributionStatus === "PENDING_DISTRIBUTION"
-                        ? "ASSIGNED"
-                        : prev.distributionStatus,
-                  }))
-                }
-                disabled={
-                  !canReadSections ||
-                  requiresSection === false ||
-                  formSectionOptions.length === 0
-                }
-              >
-                <option value="">
-                  {requiresSection ? "اختر الشعبة" : "سيتم التوزيع لاحقًا"}
-                </option>
-                {formSectionOptions.map((section) => (
-                  <option key={section.id} value={section.id}>
-                    {section.name} ({section.code})
-                  </option>
-                ))}
-              </select>
-              {!requiresSection ? (
-                <p className="text-[11px] text-muted-foreground">
-                  يمكن ترك الشعبة فارغة عندما تكون حالة التوزيع بانتظار التوزيع.
-                </p>
-              ) : null}
-            </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5"><History className="h-3.5 w-3.5" /> ملاحظات إضافية</label>
+            <Input value={form.notes} onChange={(e) => setForm(p => ({ ...p, notes: e.target.value }))} placeholder="أدخل أية ملاحظات تتعلق بقيد الطالب..." />
+          </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                رقم القيد السنوي
-              </label>
-              <Input
-                value={formState.yearlyEnrollmentNo}
-                readOnly
-                placeholder="سيُولد تلقائيًا عند الحفظ"
-                className="bg-muted/40"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                حالة التوزيع
-              </label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={formState.distributionStatus}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    distributionStatus:
-                      event.target.value as StudentEnrollmentDistributionStatus,
-                    sectionId:
-                      event.target.value === "PENDING_DISTRIBUTION" ? "" : prev.sectionId,
-                  }))
-                }
-              >
-                {DISTRIBUTION_STATUS_OPTIONS.map((option) => (
-                  <option key={option.code} value={option.code}>
-                    {option.nameAr}
-                  </option>
-                ))}
-              </select>
-              <p className="text-[11px] text-muted-foreground">
-                رقم القيد السنوي سيُولد تلقائيًا عند الحفظ. عند اختيار
-                {" "} &quot;بانتظار التوزيع&quot; {" "}سيُحفظ القيد على مستوى الصف فقط بدون شعبة، ويمكن إسناده
-                لاحقًا من شاشة التوزيع.
-              </p>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">تاريخ القيد</label>
-              <Input
-                type="date"
-                value={formState.enrollmentDate}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, enrollmentDate: event.target.value }))
-                }
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الحالة *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={formState.status}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    status: event.target.value as StudentEnrollmentStatus,
-                  }))
-                }
-              >
-                {enrollmentStatusOptions.map((status) => (
-                  <option key={status.code} value={status.code}>
-                    {status.nameAr}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
-              <Input
-                value={formState.notes}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, notes: event.target.value }))
-                }
-                placeholder="منقول من مدرسة أخرى"
-              />
-            </div>
-
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-              />
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+            <label className="flex items-center justify-between cursor-pointer transition-colors group">
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-foreground group-hover:text-primary">القيد نشط (Active)</span>
+                <p className="text-[10px] text-muted-foreground">تفعيل القيد للاستفادة من كافة خدمات النظام الأكاديمية</p>
+              </div>
+              <input type="checkbox" className="h-5 w-5 rounded text-primary" checked={form.isActive} onChange={(e) => setForm(p => ({ ...p, isActive: e.target.checked }))} />
             </label>
+          </div>
 
-            {formError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                {formError}
-              </div>
-            ) : null}
-
-            {mutationError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                {mutationError}
-              </div>
-            ) : null}
-            {actionSuccess ? (
-              <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
-                {actionSuccess}
-              </div>
-            ) : null}
-
-            {!hasDependenciesReadPermissions ? (
-              <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                يتطلب هذا الجزء صلاحيات القراءة: <code>students.read</code>,{" "}
-                <code>academic-years.read</code>, <code>grade-levels.read</code>,{" "}
-                <code>sections.read</code>.
-              </div>
-            ) : null}
-
-            <div className="flex gap-2">
-              <Button
-                type="submit"
-                className="flex-1 gap-2"
-                disabled={
-                  isFormSubmitting ||
-                  (!canCreate && !isEditing) ||
-                  !hasDependenciesReadPermissions
-                }
-              >
-                {isFormSubmitting ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : (
-                  <GraduationCap className="h-4 w-4" />
-                )}
-                {isEditing ? "حفظ التعديلات" : "إنشاء قيد"}
-              </Button>
-              {isEditing ? (
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  إلغاء
-                </Button>
-              ) : null}
+          {formError && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive font-bold text-center">
+              {formError}
             </div>
-          </form>
-        )}
-      </BottomSheetForm>
-    </>
+          )}
+        </div>
+      </CrudFormSheet>
+    </PageShell>
   );
 }
-
-
-
-
-
-

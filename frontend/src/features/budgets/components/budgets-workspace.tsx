@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { CheckCircle2, RefreshCw } from "lucide-react";
@@ -242,3 +242,4 @@ export function BudgetsWorkspace() {
     </div>
   );
 }
+

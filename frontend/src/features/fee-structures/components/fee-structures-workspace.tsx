@@ -9,25 +9,28 @@ import {
   RefreshCw,
   Trash2,
   WalletCards,
+  Calendar,
+  GraduationCap,
+  Banknote,
+  Percent,
 } from "lucide-react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import { Badge } from "@/components/ui/badge";
-import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Input } from "@/components/ui/input";
 import { PageShell } from "@/components/ui/page-shell";
-import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   FinanceAlert,
   FinanceEmptyState,
   confirmFinanceAction,
 } from "@/features/finance/shared/finance-ui";
+import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
 import {
   useCreateFeeStructureMutation,
   useDeleteFeeStructureMutation,
@@ -115,7 +118,7 @@ export function FeeStructuresWorkspace() {
   });
   const [filterDraft, setFilterDraft] = React.useState(filters);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
-  const [editingId, setEditingId] = React.useState<number | null>(null);
+  const [editingItem, setEditingItem] = React.useState<FeeStructureListItem | null>(null);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [form, setForm] = React.useState<FormState>(DEFAULT_FORM);
   const [formError, setFormError] = React.useState<string | null>(null);
@@ -150,14 +153,6 @@ export function FeeStructuresWorkspace() {
     [searchInput],
   );
 
-  React.useEffect(() => {
-    if (!isFilterOpen) {
-      return;
-    }
-
-    setFilterDraft(filters);
-  }, [filters, isFilterOpen]);
-
   const summary = React.useMemo(() => {
     const activeCount = structures.filter((item) => item.isActive).length;
     const inactiveCount = structures.filter((item) => !item.isActive).length;
@@ -174,8 +169,7 @@ export function FeeStructuresWorkspace() {
     };
   }, [pagination?.total, structures]);
 
-  const lastSyncedLabel = feeStructuresQuery.isFetching ? "جارٍ التحديث" : "محدث الآن";
-  const isEditing = editingId !== null;
+  const isEditing = editingItem !== null;
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   const mutationError =
@@ -184,49 +178,25 @@ export function FeeStructuresWorkspace() {
     (deleteMutation.error as Error | null)?.message ??
     null;
 
-  React.useEffect(() => {
-    if (!isEditing) {
-      return;
-    }
-
-    const stillExists = structures.some((item) => item.id === editingId);
-    if (!stillExists) {
-      setEditingId(null);
-      setForm(DEFAULT_FORM);
-      setFormError(null);
-      setIsFormOpen(false);
-    }
-  }, [editingId, isEditing, structures]);
-
-  const resetFormState = () => {
-    setEditingId(null);
+  const resetForm = () => {
+    setEditingItem(null);
     setForm(DEFAULT_FORM);
     setFormError(null);
-  };
-
-  const resetForm = () => {
-    resetFormState();
     setIsFormOpen(false);
   };
 
   const handleStartCreate = () => {
-    if (!canCreate) {
-      return;
-    }
-
+    if (!canCreate) return;
     setFormError(null);
-    setEditingId(null);
+    setEditingItem(null);
     setForm(DEFAULT_FORM);
     setIsFormOpen(true);
   };
 
   const handleStartEdit = (item: FeeStructureListItem) => {
-    if (!canUpdate) {
-      return;
-    }
-
+    if (!canUpdate) return;
     setFormError(null);
-    setEditingId(item.id);
+    setEditingItem(item);
     setForm(toFormState(item));
     setIsFormOpen(true);
   };
@@ -240,22 +210,12 @@ export function FeeStructuresWorkspace() {
       setFormError("يرجى تعبئة الحقول المطلوبة: السنة الأكاديمية، الاسم، والقيمة.");
       return false;
     }
-
-    if (amount < 0) {
-      setFormError("القيمة يجب أن تكون 0 أو أكثر.");
-      return false;
-    }
-
-    setFormError(null);
     return true;
   };
 
-  const handleSubmitForm = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
 
     const payload: CreateFeeStructurePayload = {
       academicYearId: form.academicYearId.trim(),
@@ -268,33 +228,14 @@ export function FeeStructuresWorkspace() {
       isActive: form.isActive,
     };
 
-    if (isEditing && editingId !== null) {
-      if (!canUpdate) {
-        setFormError("لا تملك صلاحية التحديث: fee-structures.update.");
-        return;
-      }
-
+    if (isEditing && editingItem) {
       updateMutation.mutate(
-        { feeStructureId: editingId, payload },
-        {
-          onSuccess: () => {
-            resetFormState();
-          },
-        },
+        { feeStructureId: editingItem.id, payload },
+        { onSuccess: resetForm }
       );
-      return;
+    } else {
+      createMutation.mutate(payload, { onSuccess: resetForm });
     }
-
-    if (!canCreate) {
-      setFormError("لا تملك صلاحية الإضافة: fee-structures.create.");
-      return;
-    }
-
-    createMutation.mutate(payload, {
-      onSuccess: () => {
-        resetFormState();
-      },
-    });
   };
 
   const applyFilters = () => {
@@ -303,20 +244,15 @@ export function FeeStructuresWorkspace() {
   };
 
   const clearFilters = () => {
-    setFilters({
+    const cleared = {
       academicYearId: "",
       gradeLevelId: "",
-      feeType: "all",
+      feeType: "all" as const,
       currencyId: "",
-      isActive: "all",
-    });
-    setFilterDraft({
-      academicYearId: "",
-      gradeLevelId: "",
-      feeType: "all",
-      currencyId: "",
-      isActive: "all",
-    });
+      isActive: "all" as const,
+    };
+    setFilters(cleared);
+    setFilterDraft(cleared);
     setIsFilterOpen(false);
   };
 
@@ -334,370 +270,339 @@ export function FeeStructuresWorkspace() {
   return (
     <PageShell
       title="هياكل الرسوم"
-      subtitle="لوحة تنظيم الرسوم حسب المرحلة والخدمات المساندة وجدولة الاستحقاق."
-      actions={
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1.5"
-          onClick={() => void feeStructuresQuery.refetch()}
-          disabled={feeStructuresQuery.isFetching}
-        >
-          <RefreshCw className="h-4 w-4" />
-          تحديث
-        </Button>
-      }
+      subtitle="إدارة وتنظيم هياكل الرسوم الدراسية والخدمات المساندة."
     >
-      <Card className="border-emerald-500/20 bg-emerald-500/5">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle className="flex items-center gap-2">
-              <WalletCards className="h-5 w-5 text-emerald-600" />
-              ملخص الهياكل
-            </CardTitle>
-            <Badge variant="outline" className="border-emerald-500/30 text-emerald-700">
-              {lastSyncedLabel}
-            </Badge>
-          </div>
-          <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-            <span>إجمالي الهياكل: {summary.totalCount}</span>
-            <span>النشطة: {summary.activeCount}</span>
-            <span>غير النشطة: {summary.inactiveCount}</span>
-            <span>إجمالي القيم: {summary.totalAmount.toLocaleString("ar-SA")} </span>
-          </div>
-        </CardHeader>
-      </Card>
-
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <SearchField
-            containerClassName="max-w-md"
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            placeholder="بحث بالاسم..."
-          />
-          <Badge variant="secondary" className="h-10">
-            النتائج: {pagination?.total ?? structures.length}
-          </Badge>
-        </div>
-        <FilterTriggerButton
-          count={activeFiltersCount}
-          onClick={() => setIsFilterOpen((prev) => !prev)}
+      <div className="space-y-4">
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(e) => setSearchInput(e.target.value)}
+          searchPlaceholder="بحث باسم الهيكل..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen(true)}
+          actions={
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => void feeStructuresQuery.refetch()}
+              disabled={feeStructuresQuery.isFetching}
+            >
+              <RefreshCw className={`h-4 w-4 ${feeStructuresQuery.isFetching ? "animate-spin" : ""}`} />
+              تحديث
+            </Button>
+          }
         />
-      </div>
 
-      <FilterDrawer
-        open={isFilterOpen}
-        onClose={() => setIsFilterOpen(false)}
-        title="فلاتر هياكل الرسوم"
-        actionButtons={
-          <div className="flex w-full gap-2">
-            <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">
-              مسح
-            </Button>
-            <Button type="button" onClick={applyFilters} className="flex-1">
-              تطبيق
-            </Button>
-          </div>
-        }
-      >
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Input
-            value={filterDraft.academicYearId}
-            onChange={(event) =>
-              setFilterDraft((prev) => ({ ...prev, academicYearId: event.target.value }))
-            }
-            placeholder="معرّف السنة الأكاديمية"
-          />
-          <Input
-            value={filterDraft.gradeLevelId}
-            onChange={(event) =>
-              setFilterDraft((prev) => ({ ...prev, gradeLevelId: event.target.value }))
-            }
-            placeholder="معرّف المرحلة"
-          />
-          <SelectField
-            value={filterDraft.feeType}
-            onChange={(event) =>
-              setFilterDraft((prev) => ({
-                ...prev,
-                feeType: event.target.value as "all" | FeeType,
-              }))
-            }
-          >
-            <option value="all">كل الأنواع</option>
-            {Object.entries(FEE_TYPE_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </SelectField>
-          <Input
-            type="number"
-            min="1"
-            value={filterDraft.currencyId}
-            onChange={(event) =>
-              setFilterDraft((prev) => ({ ...prev, currencyId: event.target.value }))
-            }
-            placeholder="معرّف العملة"
-          />
-          <SelectField
-            value={filterDraft.isActive}
-            onChange={(event) =>
-              setFilterDraft((prev) => ({
-                ...prev,
-                isActive: event.target.value as "all" | "active" | "inactive",
-              }))
-            }
-          >
-            <option value="all">كل الحالات</option>
-            <option value="active">نشط</option>
-            <option value="inactive">غير نشط</option>
-          </SelectField>
-        </div>
-      </FilterDrawer>
-
-      {feeStructuresQuery.isPending ? (
-        <FinanceEmptyState>جارٍ تحميل البيانات...</FinanceEmptyState>
-      ) : null}
-
-      {feeStructuresQuery.error ? (
-        <FinanceAlert tone="error">
-          {feeStructuresQuery.error instanceof Error
-            ? feeStructuresQuery.error.message
-            : "تعذّر تحميل البيانات."}
-        </FinanceAlert>
-      ) : null}
-
-      {!feeStructuresQuery.isPending && structures.length === 0 ? (
-        <FinanceEmptyState>لا توجد هياكل رسوم مطابقة.</FinanceEmptyState>
-      ) : null}
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {structures.map((item: FeeStructureListItem) => {
-          const amount = toNumber(item.amount);
-          const vatRate = toNumber(item.vatRate);
-          const currencyLabel = item.currency?.code ?? "SAR";
-
-          return (
-          <Card key={item.id} className="border-border/70 bg-card/80">
-            <CardHeader className="space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <CardTitle className="text-base">{item.nameAr}</CardTitle>
-                <Badge variant={statusBadgeVariant(item.isActive)}>
-                  {statusLabel(item.isActive)}
-                </Badge>
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card className="border-border/60 bg-card/60">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                <WalletCards className="h-5 w-5" />
               </div>
-              <div className="space-y-1 text-sm text-muted-foreground">
-                <p>المرحلة: {item.gradeLevel?.name ?? "جميع المراحل"}</p>
-                <p>نوع الرسوم: {FEE_TYPE_LABELS[item.feeType] ?? item.feeType}</p>
-                <p>السنة الأكاديمية: {item.academicYear?.name ?? "غير محددة"}</p>
-                <p>ضريبة القيمة: {vatRate.toLocaleString("ar-SA")}%</p>
+              <div className="space-y-0.5">
+                <p className="text-[10px] uppercase text-muted-foreground font-bold leading-none">الإجمالي</p>
+                <p className="text-xl font-bold">{summary.totalCount}</p>
               </div>
-              <div className="flex items-center justify-between rounded-md border border-dashed px-3 py-2 text-sm">
-                <span className="text-muted-foreground">القيمة الأساسية</span>
-                <span className="font-semibold text-emerald-700">
-                  {amount.toLocaleString("ar-SA")} {currencyLabel}
-                </span>
-              </div>
-              <Button variant="ghost" size="sm" className="justify-start gap-2">
-                <Layers className="h-4 w-4" />
-                إدارة الشرائح الفرعية
-              </Button>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleStartEdit(item)}
-                  disabled={!canUpdate || updateMutation.isPending}
-                >
-                  <PencilLine className="h-3.5 w-3.5" />
-                  تعديل
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => {
-                    if (!canDelete) {
-                      return;
-                    }
-                    if (!confirmFinanceAction(`تأكيد حذف هيكل الرسوم ${item.nameAr}?`)) {
-                      return;
-                    }
-                    deleteMutation.mutate(item.id);
-                  }}
-                  disabled={!canDelete || deleteMutation.isPending}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  حذف
-                </Button>
-              </div>
-            </CardHeader>
+            </CardContent>
           </Card>
-          );
-        })}
-      </div>
+          <Card className="border-border/60 bg-card/60">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+                <BadgeCheck className="h-5 w-5" />
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-[10px] uppercase text-muted-foreground font-bold leading-none">النشطة</p>
+                <p className="text-xl font-bold text-emerald-600">{summary.activeCount}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-border/60 bg-card/60 md:col-span-2">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                  <Banknote className="h-5 w-5" />
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-[10px] uppercase text-muted-foreground font-bold leading-none">إجمالي القيم المسجلة</p>
+                  <p className="text-xl font-bold">{summary.totalAmount.toLocaleString()} <span className="text-xs font-normal opacity-70">ريال</span></p>
+                </div>
+              </div>
+              <Badge variant="outline" className="h-6 border-primary/20 bg-primary/5 text-primary">تحليل البيانات</Badge>
+            </CardContent>
+          </Card>
+        </div>
 
-      <Fab
-        icon={<Plus className="h-4 w-4" />}
-        label="إضافة"
-        ariaLabel="إضافة هيكل رسوم"
-        onClick={handleStartCreate}
-        disabled={!canCreate}
-      />
-
-      <BottomSheetForm
-        open={isFormOpen}
-        title={isEditing ? "تعديل هيكل رسوم" : "إضافة هيكل رسوم"}
-        onClose={resetForm}
-        onSubmit={() => undefined}
-        isSubmitting={isSubmitting}
-        submitLabel={isEditing ? "حفظ التغييرات" : "إضافة هيكل"}
-        showFooter={false}
-      >
-        {!canCreate && !isEditing ? (
-          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            لا تملك صلاحية الإضافة: <code>fee-structures.create</code>.
-          </div>
-        ) : (
-          <form className="space-y-3" onSubmit={handleSubmitForm}>
+        <FilterDrawer
+          open={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          title="فلاتر هياكل الرسوم"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">
+                مسح
+              </Button>
+              <Button type="button" onClick={applyFilters} className="flex-1">
+                تطبيق
+              </Button>
+            </div>
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                السنة الأكاديمية *
-              </label>
+              <label className="text-xs font-medium text-muted-foreground">السنة الأكاديمية</label>
               <Input
-                value={form.academicYearId}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, academicYearId: event.target.value }))
-                }
-                placeholder="معرّف السنة الأكاديمية"
-                required
+                value={filterDraft.academicYearId}
+                onChange={(e) => setFilterDraft((p) => ({ ...p, academicYearId: e.target.value }))}
+                placeholder="Id"
               />
             </div>
-
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">المرحلة</label>
               <Input
-                value={form.gradeLevelId}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, gradeLevelId: event.target.value }))
-                }
-                placeholder="معرّف المرحلة (اختياري)"
+                value={filterDraft.gradeLevelId}
+                onChange={(e) => setFilterDraft((p) => ({ ...p, gradeLevelId: e.target.value }))}
+                placeholder="Id"
               />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">نوع الرسوم</label>
+              <SelectField
+                value={filterDraft.feeType}
+                onChange={(e) => setFilterDraft((p) => ({ ...p, feeType: e.target.value as any }))}
+              >
+                <option value="all">كل الأنواع</option>
+                {Object.entries(FEE_TYPE_LABELS).map(([v, l]) => (
+                  <option key={v} value={v}>{l}</option>
+                ))}
+              </SelectField>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">الحالة</label>
+              <SelectField
+                value={filterDraft.isActive}
+                onChange={(e) => setFilterDraft((p) => ({ ...p, isActive: e.target.value as any }))}
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">نشط</option>
+                <option value="inactive">غير نشط</option>
+              </SelectField>
+            </div>
+          </div>
+        </FilterDrawer>
+
+        {feeStructuresQuery.isPending && <FinanceEmptyState>جارٍ تحميل هياكل الرسوم...</FinanceEmptyState>}
+        
+        {!feeStructuresQuery.isPending && structures.length === 0 && (
+          <FinanceEmptyState>لا توجد هياكل رسوم مطابقة للبحث.</FinanceEmptyState>
+        )}
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {structures.map((item) => (
+            <Card key={item.id} className="group overflow-hidden border-border/70 bg-card/80 transition-all hover:border-primary/40 hover:shadow-xl">
+              <CardHeader className="p-4 pb-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-1">
+                    <CardTitle className="text-base font-bold group-hover:text-primary transition-colors leading-tight">
+                      {item.nameAr}
+                    </CardTitle>
+                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium">
+                      <GraduationCap className="h-3 w-3" />
+                      <span>{item.gradeLevel?.name ?? "جميع المراحل"}</span>
+                    </div>
+                  </div>
+                  <Badge variant={item.isActive ? "default" : "secondary"} className="h-5 text-[9px] uppercase tracking-tighter">
+                    {item.isActive ? "نشط" : "غير نشط"}
+                  </Badge>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="p-4 space-y-4">
+                <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/20 p-2.5">
+                  <div className="space-y-0.5">
+                    <span className="text-[9px] uppercase text-muted-foreground leading-none font-bold">المبلغ الأساسي</span>
+                    <p className="text-sm font-bold text-emerald-600">{item.amount.toLocaleString()} <span className="text-[10px] font-normal opacity-70">ريال</span></p>
+                  </div>
+                  <div className="space-y-0.5 border-r border-border/60 pr-2">
+                    <span className="text-[9px] uppercase text-muted-foreground leading-none font-bold">الضريبة</span>
+                    <div className="flex items-center gap-1 text-sm font-bold text-amber-600">
+                      <Percent className="h-3 w-3" />
+                      <span>{item.vatRate}%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5 text-[11px] text-muted-foreground border-t border-border/50 pt-3">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5"><Layers className="h-3 w-3" /> نوع الرسوم:</span>
+                    <span className="font-medium text-foreground">{FEE_TYPE_LABELS[item.feeType] ?? item.feeType}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5"><Calendar className="h-3 w-3" /> السنة الأكاديمية:</span>
+                    <span className="font-medium text-foreground">{item.academicYear?.name ?? "N/A"}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 h-8 text-[11px] gap-1.5 rounded-lg font-bold"
+                    onClick={() => handleStartEdit(item)}
+                    disabled={!canUpdate || updateMutation.isPending}
+                  >
+                    <PencilLine className="h-3.5 w-3.5 text-primary" />
+                    تعديل
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-[11px] gap-1.5 rounded-lg font-bold text-destructive hover:bg-destructive/10"
+                    onClick={() => {
+                      if (!canDelete) return;
+                      if (!confirmFinanceAction(`تأكيد حذف هيكل الرسوم ${item.nameAr}?`)) return;
+                      deleteMutation.mutate(item.id);
+                    }}
+                    disabled={!canDelete || deleteMutation.isPending}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    حذف
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <Fab
+          icon={<Plus className="h-5 w-5" />}
+          label="إضافة هيكل جديد"
+          onClick={handleStartCreate}
+          disabled={!canCreate}
+        />
+
+        <CrudFormSheet
+          open={isFormOpen}
+          onClose={resetForm}
+          title={isEditing ? "تعديل هيكل رسوم" : "إضافة هيكل رسوم جديد"}
+          isEditing={isEditing}
+          isSubmitting={isSubmitting}
+          onSubmit={handleSubmit}
+        >
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5" /> السنة الأكاديمية *
+                </label>
+                <Input
+                  value={form.academicYearId}
+                  onChange={(e) => setForm((p) => ({ ...p, academicYearId: e.target.value }))}
+                  placeholder="معرّف السنة"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5">
+                  <GraduationCap className="h-3.5 w-3.5" /> المرحلة
+                </label>
+                <Input
+                  value={form.gradeLevelId}
+                  onChange={(e) => setForm((p) => ({ ...p, gradeLevelId: e.target.value }))}
+                  placeholder="معرّف المرحلة"
+                />
+              </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">نوع الرسوم *</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5">
+                <Layers className="h-3.5 w-3.5" /> نوع الرسوم *
+              </label>
               <SelectField
                 value={form.feeType}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, feeType: event.target.value as FeeType }))
-                }
+                onChange={(e) => setForm((p) => ({ ...p, feeType: e.target.value as FeeType }))}
               >
-                {Object.entries(FEE_TYPE_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
+                {Object.entries(FEE_TYPE_LABELS).map(([v, l]) => (
+                  <option key={v} value={v}>{l}</option>
                 ))}
               </SelectField>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase">الاسم المعتمد للهيكل *</label>
               <Input
                 value={form.nameAr}
-                onChange={(event) => setForm((prev) => ({ ...prev, nameAr: event.target.value }))}
-                placeholder="اسم الهيكل"
+                onChange={(e) => setForm((p) => ({ ...p, nameAr: e.target.value }))}
+                placeholder="مثال: رسوم دراسة المستوى الأول"
                 required
               />
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">القيمة *</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5">
+                  <Banknote className="h-3.5 w-3.5" /> القيمة الأساسية *
+                </label>
                 <Input
                   type="number"
                   min="0"
                   value={form.amount}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, amount: event.target.value }))
-                  }
-                  placeholder="0"
+                  onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))}
+                  placeholder="0.00"
                   required
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">العملة</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5">
+                  <Percent className="h-3.5 w-3.5" /> نسبة الضريبة
+                </label>
                 <Input
                   type="number"
-                  min="1"
-                  value={form.currencyId}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, currencyId: event.target.value }))
-                  }
-                  placeholder="معرّف العملة (اختياري)"
+                  min="0"
+                  max="100"
+                  value={form.vatRate}
+                  onChange={(e) => setForm((p) => ({ ...p, vatRate: e.target.value }))}
+                  placeholder="0"
                 />
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                نسبة الضريبة (اختياري)
-              </label>
-              <Input
-                type="number"
-                min="0"
-                value={form.vatRate}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, vatRate: event.target.value }))
-                }
-                placeholder="0"
-              />
-            </div>
-
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span className="flex items-center gap-2">نشط</span>
+            <label className="flex items-center justify-between rounded-2xl border border-border/70 bg-muted/20 px-4 py-3 text-sm">
+              <span className="font-bold flex items-center gap-2">
+                تفعيل الهيكل
+                {!form.isActive && <Badge variant="outline" className="text-[10px] h-5">معطل</Badge>}
+              </span>
               <input
                 type="checkbox"
+                className="h-5 w-5 rounded-lg border-primary/30 text-primary focus:ring-primary"
                 checked={form.isActive}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
+                onChange={(e) => setForm((p) => ({ ...p, isActive: e.target.checked }))}
               />
             </label>
 
-            {formError ? (
-              <FinanceAlert tone="error" className="p-2 text-xs">
-                {formError}
-              </FinanceAlert>
-            ) : null}
-
-            {mutationError ? (
-              <FinanceAlert tone="error" className="p-2 text-xs">
-                {mutationError}
-              </FinanceAlert>
-            ) : null}
-
-            <div className="flex gap-2">
-              <Button type="submit" className="flex-1 gap-2" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : (
-                  <WalletCards className="h-4 w-4" />
-                )}
-                {isEditing ? "حفظ التغييرات" : "إضافة هيكل"}
-              </Button>
-              {isEditing ? (
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  إلغاء
-                </Button>
-              ) : null}
-            </div>
-          </form>
-        )}
-      </BottomSheetForm>
+            {formError && <FinanceAlert tone="error">{formError}</FinanceAlert>}
+            {mutationError && <FinanceAlert tone="error">{mutationError}</FinanceAlert>}
+          </div>
+        </CrudFormSheet>
+      </div>
     </PageShell>
   );
+}
+function BadgeCheck(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3.85 11.7a1.94 1.94 0 0 0-2.1 2.1 1.94 1.94 0 0 0 2.1 2.1 1.94 1.94 0 0 0 2.1-2.1 1.94 1.94 0 0 0-2.1-2.1z" />
+      <path d="m9 11 3 3 8-8" />
+    </svg>
+  )
 }

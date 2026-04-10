@@ -25,7 +25,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { SearchField } from "@/components/ui/search-field";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
+import { PageShell } from "@/components/ui/page-shell";
 import { SelectField } from "@/components/ui/select-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useAuth } from "@/features/auth/providers/auth-provider";
@@ -605,455 +606,438 @@ export function StudentDistributionsWorkspace() {
     returnToPendingMutation.isPending;
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <Card className="border-border/70 bg-card/85 backdrop-blur-sm">
-          <CardHeader className="space-y-3">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="space-y-1">
-                <CardTitle>إدارة توزيع الطلاب على الشعب</CardTitle>
-                <CardDescription>
-                  اختر السنة والصف، ثم راجع القيود المعلقة أو انقل القيود الموزعة بين الشعب
-                  يدويًا أو عبر التوزيع التلقائي.
-                </CardDescription>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary">الإجمالي: {totalCount}</Badge>
-                <Badge variant="outline">معلّق: {pendingCount}</Badge>
-                <Badge variant="outline">موزع: {assignedCount}</Badge>
-                {selectedAcademicYear ? <Badge variant="outline">{selectedAcademicYear.code}</Badge> : null}
-                {selectedGradeLevel ? <Badge variant="outline">{selectedGradeLevel.name}</Badge> : null}
-              </div>
-            </div>
+    <PageShell title="توزيع الطلاب">
+      <div className="space-y-4">
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="ابحث باسم الطالب..."
+        />
 
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,220px)_minmax(0,220px)_minmax(0,1fr)]">
-              <SelectField
-                value={selectedAcademicYearId}
-                onChange={(event) => {
-                  setSelectedAcademicYearId(event.target.value);
-                  setSelectedAssignedEnrollmentIds([]);
-                  setSourceSectionId("");
-                  setTargetSectionId("");
-                  setSuccessMessage(null);
-                  setErrorMessage(null);
-                }}
-              >
-                <option value="">اختر السنة الأكاديمية</option>
-                {academicYears.map((year) => (
-                  <option key={year.id} value={year.id}>
-                    {year.name} ({year.code})
-                  </option>
-                ))}
-              </SelectField>
-
-              <SelectField
-                value={selectedGradeLevelId}
-                onChange={(event) => {
-                  setSelectedGradeLevelId(event.target.value);
-                  setDistributionDraft({});
-                  setSelectedAssignedEnrollmentIds([]);
-                  setSourceSectionId("");
-                  setTargetSectionId("");
-                  setSuccessMessage(null);
-                  setErrorMessage(null);
-                }}
-              >
-                <option value="">اختر الصف</option>
-                {gradeLevels.map((gradeLevel) => (
-                  <option key={gradeLevel.id} value={gradeLevel.id}>
-                    {gradeLevel.name} ({gradeLevel.code})
-                  </option>
-                ))}
-              </SelectField>
-
-              <SearchField
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="ابحث بالاسم أو رقم الطالب أو رقم القيد السنوي"
-              />
-            </div>
-          </CardHeader>
-
-          <CardContent className="space-y-3">
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-2xl border border-border/70 bg-background/70 p-3">
-                <p className="text-xs text-muted-foreground">إجمالي القيود</p>
-                <p className="mt-1 text-2xl font-semibold">{totalCount}</p>
-              </div>
-              <div className="rounded-2xl border border-border/70 bg-background/70 p-3">
-                <p className="text-xs text-muted-foreground">جاهزة للحفظ</p>
-                <p className="mt-1 text-2xl font-semibold">{stagedAssignments.length}</p>
-              </div>
-              <div className="rounded-2xl border border-border/70 bg-background/70 p-3">
-                <p className="text-xs text-muted-foreground">الشعب المختارة للتلقائي</p>
-                <p className="mt-1 text-2xl font-semibold">{selectedSections.length}</p>
-              </div>
-              <div className="rounded-2xl border border-border/70 bg-background/70 p-3">
-                <p className="text-xs text-muted-foreground">القيود المحددة للنقل الجماعي</p>
-                <p className="mt-1 text-2xl font-semibold">{selectedAssignedEnrollments.length}</p>
-              </div>
-            </div>
-
-            {boardQuery.isPending ? (
-              <div className="rounded-2xl border border-dashed border-border/70 p-6 text-sm text-muted-foreground">
-                جارٍ تحميل لوحة التوزيع...
-              </div>
-            ) : null}
-
-            {boardQuery.error ? (
-              <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-                {boardQuery.error instanceof Error
-                  ? boardQuery.error.message
-                  : "تعذّر تحميل بيانات التوزيع."}
-              </div>
-            ) : null}
-
-            {successMessage ? (
-              <div className="rounded-2xl border border-emerald-300/40 bg-emerald-500/10 p-4 text-sm text-emerald-700 dark:text-emerald-300">
-                {successMessage}
-              </div>
-            ) : null}
-
-            {errorMessage ? (
-              <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-                {errorMessage}
-              </div>
-            ) : null}
-
-            {!selectedAcademicYearId || !selectedGradeLevelId ? (
-              <div className="rounded-2xl border border-dashed border-border/70 p-6 text-sm text-muted-foreground">
-                اختر السنة والصف لتظهر لك لوحة التوزيع الكاملة.
-              </div>
-            ) : null}
-
-            {board ? (
-              <div className="space-y-5">
-                <section className="space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 className="font-medium">القيود بانتظار التوزيع</h3>
-                    <Badge variant="outline">{pendingEnrollments.length}</Badge>
-                  </div>
-                  {pendingEnrollments.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-border/70 p-6 text-sm text-muted-foreground">
-                      لا توجد قيود معلقة لهذا الصف في الوقت الحالي.
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {pendingEnrollments.map((enrollment) => renderEnrollmentCard(enrollment, "pending"))}
-                    </div>
-                  )}
-                </section>
-
-                <section className="space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-medium">القيود الموزعة حاليًا</h3>
-                      <Badge variant="secondary">{assignedEnrollments.length}</Badge>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="outline">محدد: {selectedAssignedEnrollments.length}</Badge>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedAssignedEnrollmentIds(assignedEnrollments.map((item) => item.id))}
-                        disabled={assignedEnrollments.length === 0}
-                      >
-                        تحديد الكل
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedAssignedEnrollmentIds([])}
-                        disabled={selectedAssignedEnrollmentIds.length === 0}
-                      >
-                        إلغاء التحديد
-                      </Button>
-                    </div>
-                  </div>
-                  {assignedEnrollments.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-border/70 p-6 text-sm text-muted-foreground">
-                      لا توجد قيود موزعة بعد.
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {assignedEnrollments.map((enrollment) => renderEnrollmentCard(enrollment, "assigned"))}
-                    </div>
-                  )}
-                </section>
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
-
-        <div className="space-y-3">
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_340px]">
           <Card className="border-border/70 bg-card/85 backdrop-blur-sm">
-            <CardHeader className="space-y-2">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <UsersRound className="h-4 w-4" />
-                الشعب المتاحة للتوزيع
-              </CardTitle>
-              <CardDescription>
-                اختر الشعب التي تريد استخدامها في التوزيع التلقائي، مع عرض الإشغال والسعة
-                الحالية لكل شعبة.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {selectedGradeLevelId ? null : (
-                <div className="rounded-2xl border border-dashed border-border/70 p-4 text-sm text-muted-foreground">
-                  اختر الصف أولًا لعرض الشعب المرتبطة به.
+            <CardHeader className="space-y-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <CardTitle>إدارة توزيع الطلاب على الشعب</CardTitle>
+                  <CardDescription>
+                    اختر السنة والصف، ثم راجع القيود المعلقة أو انقل القيود الموزعة بين الشعب
+                    يدويًا أو عبر التوزيع التلقائي.
+                  </CardDescription>
                 </div>
-              )}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="secondary">الإجمالي: {totalCount}</Badge>
+                  <Badge variant="outline">معلّق: {pendingCount}</Badge>
+                  <Badge variant="outline">موزع: {assignedCount}</Badge>
+                  {selectedAcademicYear ? <Badge variant="outline">{selectedAcademicYear.code}</Badge> : null}
+                  {selectedGradeLevel ? <Badge variant="outline">{selectedGradeLevel.name}</Badge> : null}
+                </div>
+              </div>
 
-              {selectedGradeLevelId && availableSections.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-border/70 p-4 text-sm text-muted-foreground">
-                  لا توجد شعب فعالة لهذا الصف.
+              <div className="grid gap-3 md:grid-cols-2">
+                <SelectField
+                  value={selectedAcademicYearId}
+                  onChange={(event) => {
+                    setSelectedAcademicYearId(event.target.value);
+                    setSelectedAssignedEnrollmentIds([]);
+                    setSourceSectionId("");
+                    setTargetSectionId("");
+                    setSuccessMessage(null);
+                    setErrorMessage(null);
+                  }}
+                >
+                  <option value="">اختر السنة الأكاديمية</option>
+                  {academicYears.map((year) => (
+                    <option key={year.id} value={year.id}>
+                      {year.name} ({year.code})
+                    </option>
+                  ))}
+                </SelectField>
+
+                <SelectField
+                  value={selectedGradeLevelId}
+                  onChange={(event) => {
+                    setSelectedGradeLevelId(event.target.value);
+                    setDistributionDraft({});
+                    setSelectedAssignedEnrollmentIds([]);
+                    setSourceSectionId("");
+                    setTargetSectionId("");
+                    setSuccessMessage(null);
+                    setErrorMessage(null);
+                  }}
+                >
+                  <option value="">اختر الصف</option>
+                  {gradeLevels.map((gradeLevel) => (
+                    <option key={gradeLevel.id} value={gradeLevel.id}>
+                      {gradeLevel.name} ({gradeLevel.code})
+                    </option>
+                  ))}
+                </SelectField>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-3">
+              {boardQuery.isPending ? (
+                <div className="rounded-2xl border border-dashed border-border/70 p-6 text-sm text-muted-foreground">
+                  جارٍ تحميل لوحة التوزيع...
                 </div>
               ) : null}
 
-              {availableSections.map((section) => {
-                const isSelected = selectedSectionIds.includes(section.id);
+              {boardQuery.error ? (
+                <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+                  {boardQuery.error instanceof Error
+                    ? boardQuery.error.message
+                    : "تعذّر تحميل بيانات التوزيع."}
+                </div>
+              ) : null}
 
-                return (
-                  <button
-                    key={section.id}
-                    type="button"
-                    onClick={() => handleSectionToggle(section.id)}
-                    className={`flex w-full items-center justify-between rounded-2xl border px-3 py-3 text-right transition ${
-                      isSelected
-                        ? "border-primary/30 bg-primary/5 shadow-sm"
-                        : "border-border/70 bg-background/70"
-                    }`}
-                  >
-                    <div className="space-y-1 text-right">
-                      <p className="font-medium">{getSectionLabel(section)}</p>
-                      <p className="text-xs text-muted-foreground">
-                        المشغول {section.assignedCount}
-                        {section.capacity !== null ? ` / ${section.capacity}` : " / غير محدود"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {section.availableSeats === null
-                          ? "السعة مفتوحة"
-                          : `المتاح ${section.availableSeats}`}
-                      </p>
+              {successMessage ? (
+                <div className="rounded-2xl border border-emerald-300/40 bg-emerald-500/10 p-4 text-sm text-emerald-700 dark:text-emerald-300">
+                  {successMessage}
+                </div>
+              ) : null}
+
+              {errorMessage ? (
+                <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+                  {errorMessage}
+                </div>
+              ) : null}
+
+              {!selectedAcademicYearId || !selectedGradeLevelId ? (
+                <div className="rounded-2xl border border-dashed border-border/70 p-6 text-sm text-muted-foreground">
+                  اختر السنة والصف لتظهر لك لوحة التوزيع الكاملة.
+                </div>
+              ) : null}
+
+              {board ? (
+                <div className="space-y-5">
+                  <section className="space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="font-medium">القيود بانتظار التوزيع</h3>
+                      <Badge variant="outline">{pendingEnrollments.length}</Badge>
                     </div>
-                    {isSelected ? (
-                      <CheckCircle2 className="h-4 w-4 text-primary" />
+                    {pendingEnrollments.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-border/70 p-6 text-sm text-muted-foreground">
+                        لا توجد قيود معلقة لهذا الصف في الوقت الحالي.
+                      </div>
                     ) : (
-                      <CircleOff className="h-4 w-4 text-muted-foreground" />
+                      <div className="space-y-3">
+                        {pendingEnrollments.map((enrollment) => renderEnrollmentCard(enrollment, "pending"))}
+                      </div>
                     )}
-                  </button>
-                );
-              })}
+                  </section>
+
+                  <section className="space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-medium">القيود الموزعة حاليًا</h3>
+                        <Badge variant="secondary">{assignedEnrollments.length}</Badge>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline">محدد: {selectedAssignedEnrollments.length}</Badge>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedAssignedEnrollmentIds(assignedEnrollments.map((item) => item.id))}
+                          disabled={assignedEnrollments.length === 0}
+                        >
+                          تحديد الكل
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedAssignedEnrollmentIds([])}
+                          disabled={selectedAssignedEnrollmentIds.length === 0}
+                        >
+                          إلغاء التحديد
+                        </Button>
+                      </div>
+                    </div>
+                    {assignedEnrollments.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-border/70 p-6 text-sm text-muted-foreground">
+                        لا توجد قيود موزعة بعد.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {assignedEnrollments.map((enrollment) => renderEnrollmentCard(enrollment, "assigned"))}
+                      </div>
+                    )}
+                  </section>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
 
-          <Card className="border-border/70 bg-card/85 backdrop-blur-sm">
-            <CardHeader className="space-y-2">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <ArrowRightLeft className="h-4 w-4" />
-                أدوات التوزيع
-              </CardTitle>
-              <CardDescription>
-                التوزيع التلقائي هنا يحترم السعة الحالية للشعب، بينما الحفظ اليدوي يطبق
-                النقل أو الإسناد على القيود التي غيّرتها فقط.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button
-                type="button"
-                className="w-full gap-2"
-                onClick={() => {
-                  setSuccessMessage(null);
-                  setErrorMessage(null);
-                  autoDistributeMutation.mutate();
-                }}
-                disabled={
-                  !canUpdate ||
-                  isWorking ||
-                  !selectedAcademicYearId ||
-                  !selectedGradeLevelId ||
-                  selectedSections.length === 0 ||
-                  pendingEnrollments.length === 0
-                }
-              >
-                {autoDistributeMutation.isPending ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Shuffle className="h-4 w-4" />
+          <div className="space-y-3">
+            <Card className="border-border/70 bg-card/85 backdrop-blur-sm">
+              <CardHeader className="space-y-2">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <UsersRound className="h-4 w-4" />
+                  الشعب المتاحة للتوزيع
+                </CardTitle>
+                <CardDescription>
+                  اختر الشعب التي تريد استخدامها في التوزيع التلقائي، مع عرض الإشغال والسعة
+                  الحالية لكل شعبة.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {selectedGradeLevelId ? null : (
+                  <div className="rounded-2xl border border-dashed border-border/70 p-4 text-sm text-muted-foreground">
+                    اختر الصف أولًا لعرض الشعب المرتبطة به.
+                  </div>
                 )}
-                توزيع تلقائي
-              </Button>
 
-              <div className="space-y-2 rounded-2xl border border-border/70 bg-background/70 p-3">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">النقل الجماعي بين الشعب</p>
-                  <p className="text-xs text-muted-foreground">
-                    اختر شعبة مصدر وشعبة هدف. إذا حددت قيودًا من الشعبة المصدر فسينقل المحدد
-                    فقط، وإلا سيتم نقل الشعبة كاملة.
-                  </p>
-                </div>
+                {selectedGradeLevelId && availableSections.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-border/70 p-4 text-sm text-muted-foreground">
+                    لا توجد شعب فعالة لهذا الصف.
+                  </div>
+                ) : null}
 
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <SelectField
-                    value={sourceSectionId}
-                    onChange={(event) => {
-                      setSourceSectionId(event.target.value);
-                      setSuccessMessage(null);
-                      setErrorMessage(null);
-                    }}
-                  >
-                    <option value="">اختر الشعبة المصدر</option>
-                    {availableSections.map((section) => (
-                      <option key={section.id} value={section.id}>
-                        {getSectionLabel(section)}
-                      </option>
-                    ))}
-                  </SelectField>
+                {availableSections.map((section) => {
+                  const isSelected = selectedSectionIds.includes(section.id);
 
-                  <SelectField
-                    value={targetSectionId}
-                    onChange={(event) => {
-                      setTargetSectionId(event.target.value);
-                      setSuccessMessage(null);
-                      setErrorMessage(null);
-                    }}
-                  >
-                    <option value="">اختر الشعبة الهدف</option>
-                    {availableSections
-                      .filter((section) => section.id !== sourceSectionId)
-                      .map((section) => (
+                  return (
+                    <button
+                      key={section.id}
+                      type="button"
+                      onClick={() => handleSectionToggle(section.id)}
+                      className={`flex w-full items-center justify-between rounded-2xl border px-3 py-3 text-right transition ${
+                        isSelected
+                          ? "border-primary/30 bg-primary/5 shadow-sm"
+                          : "border-border/70 bg-background/70"
+                      }`}
+                    >
+                      <div className="space-y-1 text-right">
+                        <p className="font-medium">{getSectionLabel(section)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          المشغول {section.assignedCount}
+                          {section.capacity !== null ? ` / ${section.capacity}` : " / غير محدود"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {section.availableSeats === null
+                            ? "السعة مفتوحة"
+                            : `المتاح ${section.availableSeats}`}
+                        </p>
+                      </div>
+                      {isSelected ? (
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
+                      ) : (
+                        <CircleOff className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </button>
+                  );
+                })}
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/70 bg-card/85 backdrop-blur-sm">
+              <CardHeader className="space-y-2">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <ArrowRightLeft className="h-4 w-4" />
+                  أدوات التوزيع
+                </CardTitle>
+                <CardDescription>
+                  التوزيع التلقائي هنا يحترم السعة الحالية للشعب، بينما الحفظ اليدوي يطبق
+                  النقل أو الإسناد على القيود التي غيّرتها فقط.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button
+                  type="button"
+                  className="w-full gap-2"
+                  onClick={() => {
+                    setSuccessMessage(null);
+                    setErrorMessage(null);
+                    autoDistributeMutation.mutate();
+                  }}
+                  disabled={
+                    !canUpdate ||
+                    isWorking ||
+                    !selectedAcademicYearId ||
+                    !selectedGradeLevelId ||
+                    selectedSections.length === 0 ||
+                    pendingEnrollments.length === 0
+                  }
+                >
+                  {autoDistributeMutation.isPending ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Shuffle className="h-4 w-4" />
+                  )}
+                  توزيع تلقائي
+                </Button>
+
+                <div className="space-y-2 rounded-2xl border border-border/70 bg-background/70 p-3">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">النقل الجماعي بين الشعب</p>
+                    <p className="text-xs text-muted-foreground">
+                      اختر شعبة مصدر وشعبة هدف. إذا حددت قيودًا من الشعبة المصدر فسينقل المحدد
+                      فقط، وإلا سيتم نقل الشعبة كاملة.
+                    </p>
+                  </div>
+
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <SelectField
+                      value={sourceSectionId}
+                      onChange={(event) => {
+                        setSourceSectionId(event.target.value);
+                        setSuccessMessage(null);
+                        setErrorMessage(null);
+                      }}
+                    >
+                      <option value="">اختر الشعبة المصدر</option>
+                      {availableSections.map((section) => (
                         <option key={section.id} value={section.id}>
                           {getSectionLabel(section)}
                         </option>
                       ))}
-                  </SelectField>
-                </div>
+                    </SelectField>
 
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <div className="rounded-xl border border-dashed border-border/70 px-3 py-2 text-xs text-muted-foreground">
-                    {selectedSourceSection
-                      ? `الشعبة المصدر ${selectedSourceSection.name} تضم ${sourceSectionEnrollments.length} قيدًا موزعًا حاليًا.`
-                      : "اختر الشعبة المصدر لعرض عدد القيود القابلة للنقل."}
+                    <SelectField
+                      value={targetSectionId}
+                      onChange={(event) => {
+                        setTargetSectionId(event.target.value);
+                        setSuccessMessage(null);
+                        setErrorMessage(null);
+                      }}
+                    >
+                      <option value="">اختر الشعبة الهدف</option>
+                      {availableSections
+                        .filter((section) => section.id !== sourceSectionId)
+                        .map((section) => (
+                          <option key={section.id} value={section.id}>
+                            {getSectionLabel(section)}
+                          </option>
+                        ))}
+                    </SelectField>
                   </div>
-                  <div className="rounded-xl border border-dashed border-border/70 px-3 py-2 text-xs text-muted-foreground">
-                    {selectedTargetSection
-                      ? `الشعبة الهدف ${selectedTargetSection.name}${selectedTargetSection.availableSeats === null ? " سعتها مفتوحة." : ` متاح فيها ${selectedTargetSection.availableSeats} مقاعد.`}`
-                      : "اختر الشعبة الهدف قبل تنفيذ النقل."}
+
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="rounded-xl border border-dashed border-border/70 px-3 py-2 text-xs text-muted-foreground">
+                      {selectedSourceSection
+                        ? `الشعبة المصدر ${selectedSourceSection.name} تضم ${sourceSectionEnrollments.length} قيدًا موزعًا حاليًا.`
+                        : "اختر الشعبة المصدر لعرض عدد القيود القابلة للنقل."}
+                    </div>
+                    <div className="rounded-xl border border-dashed border-border/70 px-3 py-2 text-xs text-muted-foreground">
+                      {selectedTargetSection
+                        ? `الشعبة الهدف ${selectedTargetSection.name}${selectedTargetSection.availableSeats === null ? " سعتها مفتوحة." : ` متاح فيها ${selectedTargetSection.availableSeats} مقاعد.`}`
+                        : "اختر الشعبة الهدف قبل تنفيذ النقل."}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1 gap-2"
+                      onClick={handleSelectSourceSectionEnrollments}
+                      disabled={!sourceSectionId || sourceSectionEnrollments.length === 0}
+                    >
+                      <UsersRound className="h-4 w-4" />
+                      تحديد طلاب الشعبة المصدر
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1 gap-2"
+                      onClick={handleTransferSection}
+                      disabled={!canUpdate || isWorking || !sourceSectionId || !targetSectionId}
+                    >
+                      {transferSectionMutation.isPending ? (
+                        <LoaderCircle className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <ArrowRightLeft className="h-4 w-4" />
+                      )}
+                      {isWholeSectionTransfer
+                        ? "نقل الشعبة كاملة"
+                        : `نقل المحدد (${selectedTransferCount})`}
+                    </Button>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    {selectedSourceSectionEnrollments.length > 0
+                      ? `سيتم نقل ${selectedSourceSectionEnrollments.length} قيدًا محددًا من الشعبة المصدر.`
+                      : selectedAssignedEnrollments.length > 0 && sourceSectionId
+                        ? "التحديد الحالي يشمل قيودًا من شعب أخرى، لذلك سيُنقل كامل مصدر النقل ما لم تحدد طلاب الشعبة المصدر."
+                        : "عند عدم تحديد قيود من الشعبة المصدر سيتم نقل الشعبة كاملة."}
+                  </p>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={handleSaveManualDistribution}
+                  disabled={!canUpdate || isWorking || stagedAssignments.length === 0}
+                >
+                  {manualDistributeMutation.isPending ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  حفظ التوزيع اليدوي
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={() => handleReturnToPending(selectedAssignedEnrollmentIds)}
+                  disabled={!canUpdate || isWorking || selectedAssignedEnrollmentIds.length === 0}
+                >
+                  {returnToPendingMutation.isPending ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Undo2 className="h-4 w-4" />
+                  )}
+                  إرجاع المحدد إلى انتظار التوزيع
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full gap-2"
+                  onClick={() => {
+                    setDistributionDraft({});
+                    setSelectedAssignedEnrollmentIds([]);
+                    setSuccessMessage(null);
+                    setErrorMessage(null);
+                  }}
+                  disabled={isWorking || allVisibleEnrollments.length === 0}
+                >
+                  <CircleOff className="h-4 w-4" />
+                  تفريغ المسودات
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full gap-2"
+                  onClick={() => void boardQuery.refetch()}
+                  disabled={boardQuery.isFetching}
+                >
+                  <RefreshCw className={`h-4 w-4 ${boardQuery.isFetching ? "animate-spin" : ""}`} />
+                  تحديث البيانات
+                </Button>
+
+                <div className="rounded-2xl border border-dashed border-border/70 p-3 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <LayoutGrid className="h-3.5 w-3.5" />
+                    يتم الاعتماد على السنة + الصف + السعة الحالية في التوزيع التلقائي.
+                  </div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    الشاشة تدعم الآن التوزيع اليدوي، النقل الجماعي، وإرجاع القيد إلى انتظار التوزيع.
                   </div>
                 </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="flex-1 gap-2"
-                    onClick={handleSelectSourceSectionEnrollments}
-                    disabled={!sourceSectionId || sourceSectionEnrollments.length === 0}
-                  >
-                    <UsersRound className="h-4 w-4" />
-                    تحديد طلاب الشعبة المصدر
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="flex-1 gap-2"
-                    onClick={handleTransferSection}
-                    disabled={!canUpdate || isWorking || !sourceSectionId || !targetSectionId}
-                  >
-                    {transferSectionMutation.isPending ? (
-                      <LoaderCircle className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <ArrowRightLeft className="h-4 w-4" />
-                    )}
-                    {isWholeSectionTransfer
-                      ? "نقل الشعبة كاملة"
-                      : `نقل المحدد (${selectedTransferCount})`}
-                  </Button>
-                </div>
-
-                <p className="text-xs text-muted-foreground">
-                  {selectedSourceSectionEnrollments.length > 0
-                    ? `سيتم نقل ${selectedSourceSectionEnrollments.length} قيدًا محددًا من الشعبة المصدر.`
-                    : selectedAssignedEnrollments.length > 0 && sourceSectionId
-                      ? "التحديد الحالي يشمل قيودًا من شعب أخرى، لذلك سيُنقل كامل مصدر النقل ما لم تحدد طلاب الشعبة المصدر."
-                      : "عند عدم تحديد قيود من الشعبة المصدر سيتم نقل الشعبة كاملة."}
-                </p>
-              </div>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full gap-2"
-                onClick={handleSaveManualDistribution}
-                disabled={!canUpdate || isWorking || stagedAssignments.length === 0}
-              >
-                {manualDistributeMutation.isPending ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4" />
-                )}
-                حفظ التوزيع اليدوي
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full gap-2"
-                onClick={() => handleReturnToPending(selectedAssignedEnrollmentIds)}
-                disabled={!canUpdate || isWorking || selectedAssignedEnrollmentIds.length === 0}
-              >
-                {returnToPendingMutation.isPending ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Undo2 className="h-4 w-4" />
-                )}
-                إرجاع المحدد إلى انتظار التوزيع
-              </Button>
-
-              <Button
-                type="button"
-                variant="ghost"
-                className="w-full gap-2"
-                onClick={() => {
-                  setDistributionDraft({});
-                  setSelectedAssignedEnrollmentIds([]);
-                  setSuccessMessage(null);
-                  setErrorMessage(null);
-                }}
-                disabled={isWorking || allVisibleEnrollments.length === 0}
-              >
-                <CircleOff className="h-4 w-4" />
-                تفريغ المسودات
-              </Button>
-
-              <Button
-                type="button"
-                variant="ghost"
-                className="w-full gap-2"
-                onClick={() => void boardQuery.refetch()}
-                disabled={boardQuery.isFetching}
-              >
-                <RefreshCw className={`h-4 w-4 ${boardQuery.isFetching ? "animate-spin" : ""}`} />
-                تحديث البيانات
-              </Button>
-
-              <div className="rounded-2xl border border-dashed border-border/70 p-3 text-xs text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <LayoutGrid className="h-3.5 w-3.5" />
-                  يتم الاعتماد على السنة + الصف + السعة الحالية في التوزيع التلقائي.
-                </div>
-                <div className="mt-2 flex items-center gap-2">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  الشاشة تدعم الآن التوزيع اليدوي، النقل الجماعي، وإرجاع القيد إلى انتظار التوزيع.
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

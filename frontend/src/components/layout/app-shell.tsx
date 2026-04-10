@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import Link from "next/link";
@@ -554,23 +554,25 @@ export function AppShell({ children }: AppShellProps) {
     });
   }, [activeGroupId, isRailMode, visibleNavGroups]);
 
-  React.useLayoutEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
+    const navItemsLength = isRailMode ? visibleNavGroups.length : filteredNavGroups.length;
 
-    scheduleNavScrollRestore();
-    return () => {
-      clearScheduledNavRestore();
-    };
-  }, [
-    clearScheduledNavRestore,
-    expandedGroupIds,
-    isRailMode ? visibleNavGroups.length : filteredNavGroups.length,
-    isSidebarOpen,
-    pathname,
-    scheduleNavScrollRestore,
-  ]);
+    React.useLayoutEffect(() => {
+      if (typeof window === "undefined") {
+        return;
+      }
+
+      scheduleNavScrollRestore();
+      return () => {
+        clearScheduledNavRestore();
+      };
+    }, [
+      clearScheduledNavRestore,
+      expandedGroupIds,
+      navItemsLength,
+      isSidebarOpen,
+      pathname,
+      scheduleNavScrollRestore,
+    ]);
 
   if (!auth.isHydrated || !auth.session) {
     return (

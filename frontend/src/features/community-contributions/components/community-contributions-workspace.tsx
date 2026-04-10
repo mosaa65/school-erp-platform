@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { Gift, RefreshCw, Users } from "lucide-react";
@@ -371,3 +371,4 @@ export function CommunityContributionsWorkspace() {
     </div>
   );
 }
+

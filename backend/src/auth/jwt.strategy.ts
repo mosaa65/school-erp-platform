@@ -20,10 +20,17 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const options: StrategyOptionsWithoutRequest = {
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey:
-        process.env.JWT_ACCESS_SECRET?.trim() ||
-        process.env.JWT_SECRET?.trim() ||
-        'change_me_with_very_strong_secret',
+      secretOrKey: (() => {
+        const secret =
+          process.env.JWT_ACCESS_SECRET?.trim() ||
+          process.env.JWT_SECRET?.trim();
+        if (!secret) {
+          throw new Error(
+            'JWT_ACCESS_SECRET (or JWT_SECRET) environment variable is required but not set.',
+          );
+        }
+        return secret;
+      })(),
     };
 
     super(options);

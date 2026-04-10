@@ -1,11 +1,11 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import { RefreshCw, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { SearchField } from "@/components/ui/search-field";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import {
   Card,
   CardContent,
@@ -42,16 +42,13 @@ export function PermissionsManagementWorkspace() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
-          <SearchField
-            containerClassName="flex-1"
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            placeholder="ابحث بالمورد/الإجراء..."
+                <ManagementToolbar
+            searchValue={searchInput}
+            onSearchChange={(event) => setSearchInput(event.target.value)}
+            searchPlaceholder="ابحث بالمورد/الإجراء..."
+            showFilterButton={false}
+            onFilterClick={() => undefined}
           />
-        </div>
-      </div>
 
       <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
@@ -164,3 +161,4 @@ export function PermissionsManagementWorkspace() {
     </div>
   );
 }
+
