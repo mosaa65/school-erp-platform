@@ -637,7 +637,7 @@ export function EmployeesWorkspace() {
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-muted-foreground uppercase px-1">رقم الهاتف الأساسي</label>
                 <InternationalPhoneField 
-                   value={form.phonePrimary} 
+                   nationalNumber={form.phonePrimaryNationalNumber}
                    countryIso2={form.phonePrimaryCountryIso2}
                    onChange={(next) => setForm(p => ({ ...p, phonePrimary: next.nationalNumber, phonePrimaryNationalNumber: next.nationalNumber, phonePrimaryCountryIso2: next.countryIso2 }))}
                 />

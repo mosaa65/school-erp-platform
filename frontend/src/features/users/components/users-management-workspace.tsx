@@ -406,7 +406,7 @@ export function UsersManagementWorkspace() {
               <div className="space-y-1.5 sm:col-span-2">
                 <label className="text-xs font-bold text-muted-foreground uppercase px-1">رقم الهاتف (رقم الجوال) *</label>
                 <InternationalPhoneField 
-                   value={form.phoneNationalNumber} 
+                   nationalNumber={form.phoneNationalNumber}
                    countryIso2={findCountryDialCodeOptionByDialCode(form.phoneCountryCode)?.iso2 || "YE"}
                    onChange={(next) => setForm(p => ({ ...p, phoneNationalNumber: next.nationalNumber, phoneCountryCode: next.dialCode }))}
                 />
