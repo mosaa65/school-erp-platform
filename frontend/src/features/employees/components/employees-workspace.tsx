@@ -1,32 +1,38 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
-import Link from "next/link";
 import {
-  BadgeDollarSign,
+  Users,
+  RefreshCw,
+  Plus,
+  PencilLine,
+  Trash2,
   Briefcase,
-  Calendar,
-  GitBranch,
+  BadgeDollarSign,
   GraduationCap,
-  Hash,
-  LoaderCircle,
+  Calendar,
   MapPinned,
   Network,
-  PencilLine,
-  Plus,
-  RefreshCw,
-  Trash2,
+  GitBranch,
+  ScrollText,
+  Building,
   User,
-  Users,
+  ShieldCheck,
+  Target,
+  Settings2,
+  Stethoscope,
+  Phone,
+  MessageSquare,
+  Clock,
+  Layout,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InternationalPhoneField } from "@/components/ui/international-phone-field";
-import { Label } from "@/components/ui/label";
 import { SelectField } from "@/components/ui/select-field";
-import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
+import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
 import {
   Card,
   CardContent,
@@ -35,9 +41,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
-import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { Fab } from "@/components/ui/fab";
+import { PageShell } from "@/components/ui/page-shell";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useGeographyOptionsQuery } from "@/features/lookup-catalog/hooks/use-geography-options-query";
 import {
@@ -106,19 +111,6 @@ type EmployeeFormState = {
   isActive: boolean;
 };
 
-type EmployeeFilterDraft = {
-  gender: string;
-  employmentType: EmploymentType | "all";
-  idType: string;
-  locality: string;
-  department: string;
-  branch: string;
-  qualification: string;
-  jobRole: string;
-  active: "all" | "active" | "inactive";
-  operationalReadiness: OperationalReadinessFilter | "all";
-};
-
 const PAGE_SIZE = 12;
 
 const DEFAULT_FORM_STATE: EmployeeFormState = {
@@ -155,41 +147,10 @@ const DEFAULT_FORM_STATE: EmployeeFormState = {
   isActive: true,
 };
 
-const DEFAULT_FILTER_DRAFT: EmployeeFilterDraft = {
-  gender: "all",
-  employmentType: "all",
-  idType: "all",
-  locality: "all",
-  department: "all",
-  branch: "all",
-  qualification: "all",
-  jobRole: "all",
-  active: "all",
-  operationalReadiness: "all",
-};
-
-const EMPLOYEE_GENDER_CODES: EmployeeGender[] = ["MALE", "FEMALE", "OTHER"];
-
-function isEmployeeGenderCode(value: string): value is EmployeeGender {
-  return EMPLOYEE_GENDER_CODES.includes(value as EmployeeGender);
-}
-
-function toOptionalString(value: string): string | undefined {
-  const normalized = value.trim();
-  return normalized.length > 0 ? normalized : undefined;
-}
-
 function toDateInput(isoDate: string | null): string {
-  if (!isoDate) {
-    return "";
-  }
-
+  if (!isoDate) return "";
   const date = new Date(isoDate);
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-
-  return date.toISOString().slice(0, 10);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
 }
 
 function toDateIso(dateInput: string): string {
@@ -202,87 +163,33 @@ function toPhoneFieldState(value: string | null | undefined): {
   nationalNumber: string;
 } {
   const parsed = parseStoredPhoneValue(value, DEFAULT_COUNTRY_ISO2);
-  return {
-    phone: parsed.e164,
-    countryIso2: parsed.countryIso2,
-    nationalNumber: parsed.nationalNumber,
-  };
+  return { phone: parsed.e164, countryIso2: parsed.countryIso2, nationalNumber: parsed.nationalNumber };
 }
 
 function composePhoneValue(countryIso2: string, nationalNumber: string): string | undefined {
-  const normalizedNationalNumber = nationalNumber.trim();
-  if (!normalizedNationalNumber) {
-    return undefined;
-  }
-
-  const normalized = normalizePhoneValue({
-    countryIso2,
-    nationalNumber: normalizedNationalNumber,
-  });
-
-  return normalized.ok ? normalized.e164 : undefined;
+  const normalized = nationalNumber.trim();
+  if (!normalized) return undefined;
+  const result = normalizePhoneValue({ countryIso2, nationalNumber: normalized });
+  return result.ok ? result.e164 : undefined;
 }
-
-function resolveOperationalReadiness(employee: EmployeeListItem): {
-  label: string;
-  variant: "default" | "secondary" | "outline";
-} {
-  if (!employee.userAccount) {
-    return {
-      label: "غير جاهز: بدون حساب",
-      variant: "outline",
-    };
-  }
-
-  const activeRolesCount = employee.userAccount.userRoles.filter(
-    (item) => item.role.isActive,
-  ).length;
-  if (activeRolesCount === 0) {
-    return {
-      label: "غير جاهز: بدون أدوار",
-      variant: "outline",
-    };
-  }
-
-  const hasOperationalScope =
-    employee.operationalScope.activeTeachingAssignments > 0 ||
-    employee.operationalScope.activeSectionSupervisions > 0;
-
-  if (!hasOperationalScope) {
-    return {
-      label: "جاهزية جزئية: بدون نطاق",
-      variant: "secondary",
-    };
-  }
-
-  return {
-    label: "جاهز تشغيليًا",
-    variant: "default",
-  };
-}
-
-
 
 function toFormState(employee: EmployeeListItem): EmployeeFormState {
-  const primaryPhone = toPhoneFieldState(employee.phonePrimary);
-  const secondaryPhone = toPhoneFieldState(employee.phoneSecondary);
-
+  const pPhone = toPhoneFieldState(employee.phonePrimary);
+  const sPhone = toPhoneFieldState(employee.phoneSecondary);
   return {
     jobNumber: employee.jobNumber ?? "",
     financialNumber: employee.financialNumber ?? "",
     fullName: employee.fullName,
     genderId: employee.genderId ? String(employee.genderId) : "",
     birthDate: toDateInput(employee.birthDate),
-    phonePrimary: primaryPhone.phone,
-    phonePrimaryCountryIso2: primaryPhone.countryIso2,
-    phonePrimaryNationalNumber: primaryPhone.nationalNumber,
-    phoneSecondary: secondaryPhone.phone,
-    phoneSecondaryCountryIso2: secondaryPhone.countryIso2,
-    phoneSecondaryNationalNumber: secondaryPhone.nationalNumber,
+    phonePrimary: pPhone.phone,
+    phonePrimaryCountryIso2: pPhone.countryIso2,
+    phonePrimaryNationalNumber: pPhone.nationalNumber,
+    phoneSecondary: sPhone.phone,
+    phoneSecondaryCountryIso2: sPhone.countryIso2,
+    phoneSecondaryNationalNumber: sPhone.nationalNumber,
     hasWhatsapp: employee.hasWhatsapp,
-    qualificationId: employee.qualificationId
-      ? String(employee.qualificationId)
-      : "",
+    qualificationId: employee.qualificationId ? String(employee.qualificationId) : "",
     qualificationDate: toDateInput(employee.qualificationDate),
     specialization: employee.specialization ?? "",
     idNumber: employee.idNumber ?? "",
@@ -309,1216 +216,489 @@ export function EmployeesWorkspace() {
   const canCreate = hasPermission("employees.create");
   const canUpdate = hasPermission("employees.update");
   const canDelete = hasPermission("employees.delete");
-  const canReadGenders = hasPermission("lookup-genders.read");
-  const canReadQualifications = hasPermission("lookup-qualifications.read");
-  const canReadJobRoles = hasPermission("lookup-job-roles.read");
 
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
-  const [genderFilter, setGenderFilter] = React.useState<string>("all");
-  const [employmentTypeFilter, setEmploymentTypeFilter] = React.useState<
-    EmploymentType | "all"
-  >("all");
-  const [idTypeFilter, setIdTypeFilter] = React.useState<string>("all");
-  const [localityFilter, setLocalityFilter] = React.useState<string>("all");
-  const [departmentFilter, setDepartmentFilter] = React.useState<string>("all");
-  const [branchFilter, setBranchFilter] = React.useState<string>("all");
-  const [qualificationFilter, setQualificationFilter] =
-    React.useState<string>("all");
-  const [jobRoleFilter, setJobRoleFilter] = React.useState<string>("all");
-  const [activeFilter, setActiveFilter] = React.useState<
-    "all" | "active" | "inactive"
-  >("all");
-  const [operationalReadinessFilter, setOperationalReadinessFilter] =
-    React.useState<OperationalReadinessFilter | "all">("all");
-  const [filterDraft, setFilterDraft] =
-    React.useState<EmployeeFilterDraft>(DEFAULT_FILTER_DRAFT);
+  const [genderFilter, setGenderFilter] = React.useState("all");
+  const [empTypeFilter, setEmpTypeFilter] = React.useState("all");
+  const [deptFilter, setDeptFilter] = React.useState("all");
+  const [roleFilter, setRoleFilter] = React.useState("all");
+  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">("all");
+  const [filterDraft, setFilterDraft] = React.useState({ gender: "all", empType: "all", dept: "all", role: "all", active: "all" as any });
 
-  const [editingEmployeeId, setEditingEmployeeId] = React.useState<
-    string | null
-  >(null);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [formState, setFormState] =
-    React.useState<EmployeeFormState>(DEFAULT_FORM_STATE);
-  const [formGovernorateId, setFormGovernorateId] = React.useState<string>("");
-  const [formDirectorateId, setFormDirectorateId] = React.useState<string>("");
-  const [formSubDistrictId, setFormSubDistrictId] = React.useState<string>("");
-  const [formVillageId, setFormVillageId] = React.useState<string>("");
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [form, setForm] = React.useState<EmployeeFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
+
+  const [fGovId, setFGovId] = React.useState("");
+  const [fDirId, setFDirId] = React.useState("");
+  const [fSubId, setFSubId] = React.useState("");
+  const [fVilId, setFVilId] = React.useState("");
 
   const employeesQuery = useEmployeesQuery({
-    page,
-    limit: PAGE_SIZE,
-    search: search || undefined,
+    page, limit: PAGE_SIZE, search,
     genderId: genderFilter === "all" ? undefined : Number(genderFilter),
-    employmentType:
-      employmentTypeFilter === "all" ? undefined : employmentTypeFilter,
-    idTypeId: idTypeFilter === "all" ? undefined : Number(idTypeFilter),
-    localityId: localityFilter === "all" ? undefined : Number(localityFilter),
-    departmentId: departmentFilter === "all" ? undefined : departmentFilter,
-    branchId: branchFilter === "all" ? undefined : Number(branchFilter),
-    qualificationId:
-      qualificationFilter === "all" ? undefined : Number(qualificationFilter),
-    jobRoleId: jobRoleFilter === "all" ? undefined : Number(jobRoleFilter),
+    employmentType: empTypeFilter === "all" ? undefined : empTypeFilter as any,
+    departmentId: deptFilter === "all" ? undefined : deptFilter,
+    jobRoleId: roleFilter === "all" ? undefined : Number(roleFilter),
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
-    operationalReadiness:
-      operationalReadinessFilter === "all"
-        ? undefined
-        : operationalReadinessFilter,
   });
-  useIdTypeOptionsQuery();
+
   const genderOptionsQuery = useGenderOptionsQuery();
-  const geographyOptionsQuery = useGeographyOptionsQuery("employees");
-  const organizationOptionsQuery = useEmployeeOrganizationOptionsQuery();
-  const qualificationOptionsQuery = useQualificationOptionsQuery();
-  const jobRoleOptionsQuery = useJobRoleOptionsQuery();
+  const geoQuery = useGeographyOptionsQuery("employees");
+  const orgQuery = useEmployeeOrganizationOptionsQuery();
+  const qualQuery = useQualificationOptionsQuery();
+  const roleQuery = useJobRoleOptionsQuery();
 
   const createMutation = useCreateEmployeeMutation();
   const updateMutation = useUpdateEmployeeMutation();
   const deleteMutation = useDeleteEmployeeMutation();
 
-  const employees = React.useMemo(
-    () => employeesQuery.data?.data ?? [],
-    [employeesQuery.data?.data],
-  );
-
-  const genderOptions = React.useMemo(
-    () => genderOptionsQuery.data ?? [],
-    [genderOptionsQuery.data],
-  );
-  const governorateOptions = React.useMemo(
-    () => geographyOptionsQuery.data?.governorates ?? [],
-    [geographyOptionsQuery.data?.governorates],
-  );
-  const directorateOptions = React.useMemo(
-    () => geographyOptionsQuery.data?.directorates ?? [],
-    [geographyOptionsQuery.data?.directorates],
-  );
-  const subDistrictOptions = React.useMemo(
-    () => geographyOptionsQuery.data?.subDistricts ?? [],
-    [geographyOptionsQuery.data?.subDistricts],
-  );
-  const villageOptions = React.useMemo(
-    () => geographyOptionsQuery.data?.villages ?? [],
-    [geographyOptionsQuery.data?.villages],
-  );
-  const localityOptions = React.useMemo(
-    () => geographyOptionsQuery.data?.localities ?? [],
-    [geographyOptionsQuery.data?.localities],
-  );
-  const departmentOptions = React.useMemo(
-    () => organizationOptionsQuery.data?.departments ?? [],
-    [organizationOptionsQuery.data?.departments],
-  );
-  const branchOptions = React.useMemo(
-    () => organizationOptionsQuery.data?.branches ?? [],
-    [organizationOptionsQuery.data?.branches],
-  );
-  const costCenterOptions = React.useMemo(
-    () => organizationOptionsQuery.data?.costCenters ?? [],
-    [organizationOptionsQuery.data?.costCenters],
-  );
-  const managerOptions = React.useMemo(
-    () => organizationOptionsQuery.data?.managers ?? [],
-    [organizationOptionsQuery.data?.managers],
-  );
-  const visibleCostCenterOptions = React.useMemo(() => {
-    if (!formState.branchId) {
-      return costCenterOptions;
-    }
-
-    return costCenterOptions.filter(
-      (option) => option.branchId === null || option.branchId === Number(formState.branchId),
-    );
-  }, [costCenterOptions, formState.branchId]);
-  const geographyMaps = React.useMemo(
-    () =>
-      buildGeographyMaps({
-        governorates: governorateOptions,
-        directorates: directorateOptions,
-        subDistricts: subDistrictOptions,
-        villages: villageOptions,
-        localities: localityOptions,
-      }),
-    [
-      directorateOptions,
-      governorateOptions,
-      localityOptions,
-      subDistrictOptions,
-      villageOptions,
-    ],
-  );
-
-
-  const qualificationOptions = React.useMemo(
-    () => qualificationOptionsQuery.data ?? [],
-    [qualificationOptionsQuery.data],
-  );
-  const jobRoleOptions = React.useMemo(
-    () => jobRoleOptionsQuery.data ?? [],
-    [jobRoleOptionsQuery.data],
-  );
+  const records = React.useMemo(() => employeesQuery.data?.data ?? [], [employeesQuery.data?.data]);
   const pagination = employeesQuery.data?.pagination;
-  const isEditing = editingEmployeeId !== null;
+  const isEditing = editingId !== null;
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
+  const geoMaps = React.useMemo(() => buildGeographyMaps({
+    governorates: geoQuery.data?.governorates ?? [],
+    directorates: geoQuery.data?.directorates ?? [],
+    subDistricts: geoQuery.data?.subDistricts ?? [],
+    villages: geoQuery.data?.villages ?? [],
+    localities: geoQuery.data?.localities ?? [],
+  }), [geoQuery.data]);
 
+  const filteredDirs = React.useMemo(() => fGovId ? (geoQuery.data?.directorates ?? []).filter(d => d.governorateId === Number(fGovId)) : [], [fGovId, geoQuery.data]);
+  const filteredSubs = React.useMemo(() => fDirId ? (geoQuery.data?.subDistricts ?? []).filter(s => s.directorateId === Number(fDirId)) : [], [fDirId, geoQuery.data]);
+  const filteredVils = React.useMemo(() => fSubId ? (geoQuery.data?.villages ?? []).filter(v => v.subDistrictId === Number(fSubId)) : [], [fSubId, geoQuery.data]);
+  const filteredLocs = React.useMemo(() => {
+    if (!fDirId) return [];
+    const dirId = Number(fDirId);
+    const selVilId = fVilId ? Number(fVilId) : null;
+    return (geoQuery.data?.localities ?? []).filter(l => l.localityType === "URBAN" ? l.directorateId === dirId : l.villageId === selVilId);
+  }, [fDirId, fVilId, geoQuery.data]);
 
   useDebounceEffect(() => {
-      setPage(1);
-      setSearch(searchInput.trim());
-    }, 400, [searchInput]);
+    setPage(1);
+    setSearch(searchInput.trim());
+  }, 400, [searchInput]);
 
   React.useEffect(() => {
-    if (!isFilterOpen) {
-      return;
-    }
+    if (!isFilterOpen) return;
+    setFilterDraft({ gender: genderFilter, empType: empTypeFilter, dept: deptFilter, role: roleFilter, active: activeFilter });
+  }, [activeFilter, deptFilter, empTypeFilter, genderFilter, isFilterOpen, roleFilter]);
 
-    setFilterDraft({
-      gender: genderFilter,
-      employmentType: employmentTypeFilter,
-      idType: idTypeFilter,
-      locality: localityFilter,
-      department: departmentFilter,
-      branch: branchFilter,
-      qualification: qualificationFilter,
-      jobRole: jobRoleFilter,
-      active: activeFilter,
-      operationalReadiness: operationalReadinessFilter,
-    });
-  }, [
-    activeFilter,
-    employmentTypeFilter,
-    genderFilter,
-    idTypeFilter,
-    isFilterOpen,
-    jobRoleFilter,
-    localityFilter,
-    branchFilter,
-    departmentFilter,
-    operationalReadinessFilter,
-    qualificationFilter,
-  ]);
-
-  React.useEffect(() => {
-    if (!isEditing) {
-      return;
-    }
-
-    const stillExists = employees.some(
-      (employee) => employee.id === editingEmployeeId,
-    );
-    if (!stillExists) {
-      setEditingEmployeeId(null);
-      setFormState(DEFAULT_FORM_STATE);
-      setFormError(null);
-      setFormGovernorateId("");
-      setFormDirectorateId("");
-      setFormSubDistrictId("");
-      setFormVillageId("");
-      setIsFormOpen(false);
-    }
-  }, [editingEmployeeId, employees, isEditing]);
-
-  React.useEffect(() => {
-    if (isEditing || formState.genderId || !canReadGenders) {
-      return;
-    }
-
-    if (genderOptions.length === 0) {
-      return;
-    }
-
-    const preferred = genderOptions.find((option) => option.code === "MALE");
-    const defaultGender = preferred ?? genderOptions[0];
-    setFormState((prev) =>
-      prev.genderId
-        ? prev
-        : {
-            ...prev,
-            genderId: String(defaultGender.id),
-          },
-    );
-  }, [canReadGenders, formState.genderId, genderOptions, isEditing]);
-
-  React.useEffect(() => {
-    if (!formState.localityId) {
-      return;
-    }
-
-    const locality = geographyMaps.localityById.get(
-      Number(formState.localityId),
-    );
-    const selection = resolveSelectionFromLocality(locality, geographyMaps);
-
-    if (selection.governorateId !== formGovernorateId) {
-      setFormGovernorateId(selection.governorateId);
-    }
-
-    if (selection.directorateId !== formDirectorateId) {
-      setFormDirectorateId(selection.directorateId);
-    }
-
-    if (selection.subDistrictId !== formSubDistrictId) {
-      setFormSubDistrictId(selection.subDistrictId);
-    }
-
-    if (selection.villageId !== formVillageId) {
-      setFormVillageId(selection.villageId);
-    }
-  }, [
-    formDirectorateId,
-    formGovernorateId,
-    formState.localityId,
-    formSubDistrictId,
-    formVillageId,
-    geographyMaps,
-  ]);
-
-  React.useEffect(() => {
-    if (!formState.costCenterId) {
-      return;
-    }
-
-    const selectedExists = visibleCostCenterOptions.some(
-      (option) => String(option.id) === formState.costCenterId,
-    );
-
-    if (!selectedExists) {
-      setFormState((prev) => ({ ...prev, costCenterId: "" }));
-    }
-  }, [formState.costCenterId, visibleCostCenterOptions]);
-
-  const resetForm = () => {
-    setEditingEmployeeId(null);
-    setFormState(DEFAULT_FORM_STATE);
+  const resetFormState = () => {
+    setEditingId(null);
+    setForm(DEFAULT_FORM_STATE);
+    setFGovId(""); setFDirId(""); setFSubId(""); setFVilId("");
     setFormError(null);
-    setFormGovernorateId("");
-    setFormDirectorateId("");
-    setFormSubDistrictId("");
-    setFormVillageId("");
     setIsFormOpen(false);
   };
 
   const handleStartCreate = () => {
-    if (!canCreate) {
-      return;
-    }
-
-    setActionSuccess(null);
-    setEditingEmployeeId(null);
-    setFormState(DEFAULT_FORM_STATE);
-    setFormError(null);
-    setFormGovernorateId("");
-    setFormDirectorateId("");
-    setFormSubDistrictId("");
-    setFormVillageId("");
+    if (!canCreate) return;
+    setForm(DEFAULT_FORM_STATE);
     setIsFormOpen(true);
   };
 
-  const clearFilters = () => {
-    setFilterDraft(DEFAULT_FILTER_DRAFT);
-    setGenderFilter("all");
-    setEmploymentTypeFilter("all");
-    setIdTypeFilter("all");
-    setLocalityFilter("all");
-    setDepartmentFilter("all");
-    setBranchFilter("all");
-    setQualificationFilter("all");
-    setJobRoleFilter("all");
-    setActiveFilter("all");
-    setOperationalReadinessFilter("all");
-    setPage(1);
-    setIsFilterOpen(false);
+  const handleStartEdit = (item: EmployeeListItem) => {
+    if (!canUpdate) return;
+    setEditingId(item.id);
+    const fs = toFormState(item);
+    setForm(fs);
+    if (fs.localityId) {
+      const loc = geoMaps.localityById.get(Number(fs.localityId));
+      const sel = resolveSelectionFromLocality(loc, geoMaps);
+      setFGovId(sel.governorateId); setFDirId(sel.directorateId); setFSubId(sel.subDistrictId); setFVilId(sel.villageId);
+    }
+    setIsFormOpen(true);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.fullName.trim() || !form.genderId) {
+      setFormError("الاسم الكامل والجنس حقول مطلوبة.");
+      return;
+    }
+
+    const payload = {
+      jobNumber: form.jobNumber.trim() || undefined,
+      financialNumber: form.financialNumber.trim() || undefined,
+      fullName: form.fullName.trim(),
+      genderId: Number(form.genderId),
+      birthDate: form.birthDate ? toDateIso(form.birthDate) : undefined,
+      phonePrimary: composePhoneValue(form.phonePrimaryCountryIso2, form.phonePrimaryNationalNumber),
+      phoneSecondary: composePhoneValue(form.phoneSecondaryCountryIso2, form.phoneSecondaryNationalNumber),
+      hasWhatsapp: form.hasWhatsapp,
+      qualificationId: form.qualificationId ? Number(form.qualificationId) : null,
+      qualificationDate: form.qualificationDate ? toDateIso(form.qualificationDate) : undefined,
+      specialization: form.specialization.trim() || undefined,
+      idNumber: form.idNumber.trim() || undefined,
+      idTypeId: form.idTypeId ? Number(form.idTypeId) : null,
+      localityId: form.localityId ? Number(form.localityId) : null,
+      departmentId: form.departmentId || null,
+      branchId: form.branchId ? Number(form.branchId) : null,
+      directManagerEmployeeId: form.directManagerEmployeeId || null,
+      costCenterId: form.costCenterId ? Number(form.costCenterId) : null,
+      idExpiryDate: form.idExpiryDate ? toDateIso(form.idExpiryDate) : undefined,
+      experienceYears: Number(form.experienceYears) || 0,
+      employmentType: form.employmentType || undefined,
+      jobRoleId: form.jobRoleId ? Number(form.jobRoleId) : null,
+      hireDate: form.hireDate ? toDateIso(form.hireDate) : undefined,
+      previousSchool: form.previousSchool.trim() || undefined,
+      salaryApproved: form.salaryApproved,
+      systemAccessStatus: form.systemAccessStatus,
+      isActive: form.isActive,
+    };
+
+    if (isEditing && editingId) {
+      updateMutation.mutate({ employeeId: editingId, payload }, { onSuccess: resetFormState });
+    } else {
+      createMutation.mutate(payload, { onSuccess: resetFormState });
+    }
+  };
+
+  const handleDelete = (item: EmployeeListItem) => {
+    if (!canDelete || !window.confirm(`تأكيد حذف بيانات الموظف ${item.fullName}؟`)) return;
+    deleteMutation.mutate(item.id);
   };
 
   const applyFilters = () => {
-    setGenderFilter(filterDraft.gender);
-    setEmploymentTypeFilter(filterDraft.employmentType);
-    setIdTypeFilter(filterDraft.idType);
-    setLocalityFilter(filterDraft.locality);
-    setDepartmentFilter(filterDraft.department);
-    setBranchFilter(filterDraft.branch);
-    setQualificationFilter(filterDraft.qualification);
-    setJobRoleFilter(filterDraft.jobRole);
-    setActiveFilter(filterDraft.active);
-    setOperationalReadinessFilter(filterDraft.operationalReadiness);
     setPage(1);
+    setGenderFilter(filterDraft.gender);
+    setEmpTypeFilter(filterDraft.empType);
+    setDeptFilter(filterDraft.dept);
+    setRoleFilter(filterDraft.role);
+    setActiveFilter(filterDraft.active);
     setIsFilterOpen(false);
   };
 
-
-
-  const validateForm = (): boolean => {
-    if (!formState.fullName.trim()) {
-      setFormError("الاسم الكامل مطلوب.");
-      return false;
-    }
-
-    if (!formState.genderId) {
-      setFormError("الجنس مطلوب.");
-      return false;
-    }
-
-    const experienceYears = Number(formState.experienceYears);
-    if (
-      !Number.isInteger(experienceYears) ||
-      experienceYears < 0 ||
-      experienceYears > 80
-    ) {
-      setFormError("سنوات الخبرة يجب أن تكون رقمًا صحيحًا بين 0 و80.");
-      return false;
-    }
-
-    const primaryPhone = formState.phonePrimaryNationalNumber.trim();
-    if (primaryPhone) {
-      const normalizedPrimary = normalizePhoneValue({
-        countryIso2: formState.phonePrimaryCountryIso2,
-        nationalNumber: primaryPhone,
-      });
-
-      if (!normalizedPrimary.ok) {
-        setFormError("رقم الهاتف الأساسي غير صالح.");
-        return false;
-      }
-    }
-
-    const secondaryPhone = formState.phoneSecondaryNationalNumber.trim();
-    if (secondaryPhone) {
-      const normalizedSecondary = normalizePhoneValue({
-        countryIso2: formState.phoneSecondaryCountryIso2,
-        nationalNumber: secondaryPhone,
-      });
-
-      if (!normalizedSecondary.ok) {
-        setFormError("رقم الهاتف الاحتياطي غير صالح.");
-        return false;
-      }
-    }
-
-    setFormError(null);
-    return true;
-  };
-
-  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
-    event?.preventDefault();
-    setActionSuccess(null);
-
-    if (!validateForm()) {
-      return;
-    }
-
-    const selectedGender = genderOptions.find(
-      (option) => option.id === Number(formState.genderId),
-    );
-    const selectedQualification = qualificationOptions.find(
-      (option) => option.id === Number(formState.qualificationId),
-    );
-    const selectedJobRole = jobRoleOptions.find(
-      (option) => option.id === Number(formState.jobRoleId),
-    );
-    const mappedGender =
-      selectedGender?.code && isEmployeeGenderCode(selectedGender.code)
-        ? selectedGender.code
-        : undefined;
-
-    const payload = {
-      jobNumber: toOptionalString(formState.jobNumber),
-      financialNumber: toOptionalString(formState.financialNumber),
-      fullName: formState.fullName.trim(),
-      gender: mappedGender,
-      genderId: formState.genderId ? Number(formState.genderId) : undefined,
-      birthDate: formState.birthDate
-        ? toDateIso(formState.birthDate)
-        : undefined,
-      phonePrimary: composePhoneValue(
-        formState.phonePrimaryCountryIso2,
-        formState.phonePrimaryNationalNumber,
-      ),
-      phoneSecondary: composePhoneValue(
-        formState.phoneSecondaryCountryIso2,
-        formState.phoneSecondaryNationalNumber,
-      ),
-      hasWhatsapp: formState.hasWhatsapp,
-      qualification: toOptionalString(selectedQualification?.nameAr ?? ""),
-      qualificationId: formState.qualificationId
-        ? Number(formState.qualificationId)
-        : null,
-      qualificationDate: formState.qualificationDate
-        ? toDateIso(formState.qualificationDate)
-        : undefined,
-      specialization: toOptionalString(formState.specialization),
-      idNumber: toOptionalString(formState.idNumber),
-      idTypeId: formState.idTypeId ? Number(formState.idTypeId) : null,
-      localityId: formState.localityId ? Number(formState.localityId) : null,
-      departmentId: formState.departmentId || null,
-      branchId: formState.branchId ? Number(formState.branchId) : null,
-      directManagerEmployeeId: formState.directManagerEmployeeId || null,
-      costCenterId: formState.costCenterId ? Number(formState.costCenterId) : null,
-      idExpiryDate: formState.idExpiryDate
-        ? toDateIso(formState.idExpiryDate)
-        : undefined,
-      experienceYears: Number(formState.experienceYears),
-      employmentType: formState.employmentType || undefined,
-      jobTitle: toOptionalString(
-        selectedJobRole?.nameAr ?? selectedJobRole?.name ?? "",
-      ),
-      jobRoleId: formState.jobRoleId ? Number(formState.jobRoleId) : null,
-      hireDate: formState.hireDate ? toDateIso(formState.hireDate) : undefined,
-      previousSchool: toOptionalString(formState.previousSchool),
-      salaryApproved: formState.salaryApproved,
-      systemAccessStatus: formState.systemAccessStatus,
-      isActive: formState.isActive,
-    };
-
-    if (isEditing && editingEmployeeId) {
-      if (!canUpdate) {
-        setFormError("لا تملك الصلاحية المطلوبة: employees.update.");
-        return;
-      }
-
-      updateMutation.mutate(
-        {
-          employeeId: editingEmployeeId,
-          payload,
-        },
-        {
-          onSuccess: () => {
-            resetForm();
-            setActionSuccess("تم تحديث الموظف بنجاح.");
-          },
-        },
-      );
-      return;
-    }
-
-    if (!canCreate) {
-      setFormError("لا تملك الصلاحية المطلوبة: employees.create.");
-      return;
-    }
-
-    createMutation.mutate(payload, {
-      onSuccess: () => {
-        resetForm();
-        setPage(1);
-        setActionSuccess("تم إنشاء الموظف بنجاح.");
-      },
-    });
-  };
-
-  const handleStartEdit = (employee: EmployeeListItem) => {
-    if (!canUpdate) {
-      return;
-    }
-
-    setFormError(null);
-    setActionSuccess(null);
-    setEditingEmployeeId(employee.id);
-
-    const nextState = toFormState(employee);
-    if (!nextState.genderId) {
-      const mapped = genderOptions.find(
-        (option) => option.code === employee.gender,
-      );
-      if (mapped) {
-        nextState.genderId = String(mapped.id);
-      }
-    }
-
-    if (!nextState.localityId) {
-      setFormGovernorateId("");
-      setFormDirectorateId("");
-      setFormSubDistrictId("");
-      setFormVillageId("");
-    } else {
-      const locality = geographyMaps.localityById.get(
-        Number(nextState.localityId),
-      );
-      const selection = resolveSelectionFromLocality(locality, geographyMaps);
-      setFormGovernorateId(selection.governorateId);
-      setFormDirectorateId(selection.directorateId);
-      setFormSubDistrictId(selection.subDistrictId);
-      setFormVillageId(selection.villageId);
-    }
-
-    setFormState(nextState);
-    setIsFormOpen(true);
-  };
-
-
-
-  const handleDelete = (employee: EmployeeListItem) => {
-    if (!canDelete) {
-      return;
-    }
-
-    const confirmed = window.confirm(`تأكيد حذف الموظف ${employee.fullName}؟`);
-    if (!confirmed) {
-      return;
-    }
-
-    deleteMutation.mutate(employee.id, {
-      onSuccess: () => {
-        if (editingEmployeeId === employee.id) {
-          resetForm();
-        }
-        setActionSuccess("تم حذف الموظف بنجاح.");
-      },
-    });
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setGenderFilter("all");
+    setEmpTypeFilter("all");
+    setDeptFilter("all");
+    setRoleFilter("all");
+    setActiveFilter("all");
+    setFilterDraft({ gender: "all", empType: "all", dept: "all", role: "all", active: "all" });
+    setIsFilterOpen(false);
   };
 
   const activeFiltersCount = React.useMemo(() => {
     return [
-      genderFilter,
-      employmentTypeFilter,
-      idTypeFilter,
-      localityFilter,
-      departmentFilter,
-      branchFilter,
-      qualificationFilter,
-      jobRoleFilter,
-      activeFilter,
-      operationalReadinessFilter,
-    ].filter((value) => value !== "all").length;
-  }, [
-    activeFilter,
-    employmentTypeFilter,
-    genderFilter,
-    idTypeFilter,
-    jobRoleFilter,
-    localityFilter,
-    branchFilter,
-    departmentFilter,
-    operationalReadinessFilter,
-    qualificationFilter,
-  ]);
-
-  const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
-  const mutationError =
-    (createMutation.error as Error | null)?.message ??
-    (updateMutation.error as Error | null)?.message ??
-    (deleteMutation.error as Error | null)?.message ??
-    null;
+      searchInput.trim() ? 1 : 0, genderFilter !== "all" ? 1 : 0, empTypeFilter !== "all" ? 1 : 0,
+      deptFilter !== "all" ? 1 : 0, roleFilter !== "all" ? 1 : 0, activeFilter !== "all" ? 1 : 0
+    ].reduce((acc, v) => acc + v, 0);
+  }, [activeFilter, deptFilter, empTypeFilter, genderFilter, roleFilter, searchInput]);
 
   return (
-    <>
+    <PageShell
+      title="بوابـة الكـادر الوظيفي"
+      subtitle="إدارة بيانات الموظفين، العقود، التوزيع الإداري والهيكلية التنظيمية للمؤسسة التعليمية."
+    >
       <div className="space-y-4">
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(e) => setSearchInput(e.target.value)}
+          searchPlaceholder="بحث باسم الموظف أو الرقم الوظيفي..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen(true)}
+          actions={
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => void employeesQuery.refetch()} disabled={employeesQuery.isFetching}>
+              <RefreshCw className={`h-4 w-4 ${employeesQuery.isFetching ? "animate-spin" : ""}`} />
+              تحديث
+            </Button>
+          }
+        />
+
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
-          title="فلترة الموظفين"
-          renderInPortal
-          overlayClassName="z-[70]"
-          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
+          title="معايير الاستعلام"
+          actionButtons={
+            <div className="flex w-full gap-2">
+              <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">مسح</Button>
+              <Button type="button" onClick={applyFilters} className="flex-1">تطبيق</Button>
+            </div>
+          }
         >
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1">
-              <Label>الجنس</Label>
-              <SelectField
-                value={filterDraft.gender}
-                onChange={(event) =>
-                  setFilterDraft((prev) => ({
-                    ...prev,
-                    gender: event.target.value,
-                  }))
-                }
-                disabled={!canReadGenders || genderOptionsQuery.isLoading}
-                icon={<User className="h-4 w-4" />}
-              >
-                <option value="all">كل الأجناس</option>
-                {genderOptions.map((option) => {
-                  const translated =
-                    option.code && isEmployeeGenderCode(option.code)
-                      ? translateEmployeeGender(option.code)
-                      : (option.nameAr ??
-                        option.name ??
-                        option.code ??
-                        String(option.id));
-
-                  return (
-                    <option key={option.id} value={option.id}>
-                      {option.nameAr ?? translated}
-                    </option>
-                  );
-                })}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">الجنس</label>
+              <SelectField value={filterDraft.gender} onChange={(e) => setFilterDraft(p => ({ ...p, gender: e.target.value }))}>
+                <option value="all">الكل</option>
+                {(genderOptionsQuery.data ?? []).map(g => <option key={g.id} value={g.id}>{g.nameAr}</option>)}
               </SelectField>
             </div>
-
-            <div className="space-y-1">
-              <Label>نوع التوظيف</Label>
-              <SelectField
-                value={filterDraft.employmentType}
-                onChange={(event) =>
-                  setFilterDraft((prev) => ({
-                    ...prev,
-                    employmentType: event.target.value as EmploymentType | "all",
-                  }))
-                }
-                icon={<Briefcase className="h-4 w-4" />}
-              >
-                <option value="all">كل أنواع التوظيف</option>
-                <option value="PERMANENT">
-                  {translateEmploymentType("PERMANENT")}
-                </option>
-                <option value="CONTRACT">
-                  {translateEmploymentType("CONTRACT")}
-                </option>
-                <option value="VOLUNTEER">
-                  {translateEmploymentType("VOLUNTEER")}
-                </option>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">نوع التعاقد</label>
+              <SelectField value={filterDraft.empType} onChange={(e) => setFilterDraft(p => ({ ...p, empType: e.target.value as any }))}>
+                <option value="all">كل الأنواع</option>
+                <option value="PERMANENT">دائم / رسمي</option>
+                <option value="CONTRACTOR">متقاعد / تعاقدي</option>
+                <option value="TEMPORARY">مؤقت / متطوع</option>
               </SelectField>
             </div>
-
-            <div className="space-y-1">
-              <Label>القسم</Label>
-              <SelectField
-                value={filterDraft.department}
-                onChange={(event) =>
-                  setFilterDraft((prev) => ({
-                    ...prev,
-                    department: event.target.value,
-                  }))
-                }
-                disabled={organizationOptionsQuery.isLoading}
-                icon={<Network className="h-4 w-4" />}
-              >
+            <div className="space-y-1.5 sm:col-span-2">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">القسم / الإدارة</label>
+              <SelectField value={filterDraft.dept} onChange={(e) => setFilterDraft(p => ({ ...p, dept: e.target.value }))}>
                 <option value="all">كل الأقسام</option>
-                {departmentOptions.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.name}
-                  </option>
-                ))}
-              </SelectField>
-            </div>
-
-            <div className="space-y-1">
-              <Label>الفرع</Label>
-              <SelectField
-                value={filterDraft.branch}
-                onChange={(event) =>
-                  setFilterDraft((prev) => ({
-                    ...prev,
-                    branch: event.target.value,
-                  }))
-                }
-                disabled={organizationOptionsQuery.isLoading}
-                icon={<GitBranch className="h-4 w-4" />}
-              >
-                <option value="all">كل الفروع</option>
-                {branchOptions.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.nameAr}
-                  </option>
-                ))}
-              </SelectField>
-            </div>
-
-            <div className="space-y-1">
-              <Label>الجاهزية التشغيلية</Label>
-              <SelectField
-                value={filterDraft.operationalReadiness}
-                onChange={(event) =>
-                  setFilterDraft((prev) => ({
-                    ...prev,
-                    operationalReadiness: event.target.value as
-                      | OperationalReadinessFilter
-                      | "all",
-                  }))
-                }
-                icon={<PencilLine className="h-4 w-4" />}
-              >
-                <option value="all">كل حالات الجاهزية</option>
-                <option value="READY">جاهز بالكامل</option>
-                <option value="PARTIAL">جاهز جزئيًا</option>
-                <option value="NOT_READY">غير جاهز</option>
-              </SelectField>
-            </div>
-
-            <div className="space-y-1">
-              <Label>الحالة</Label>
-              <SelectField
-                value={filterDraft.active}
-                onChange={(event) =>
-                  setFilterDraft((prev) => ({
-                    ...prev,
-                    active: event.target.value as "all" | "active" | "inactive",
-                  }))
-                }
-                icon={<LoaderCircle className="h-4 w-4" />}
-              >
-                <option value="all">كل الحالات</option>
-                <option value="active">نشط فقط</option>
-                <option value="inactive">غير نشط فقط</option>
+                {(orgQuery.data?.departments ?? []).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
               </SelectField>
             </div>
           </div>
         </FilterDrawer>
 
-        <ManagementToolbar
-          searchValue={searchInput}
-          onSearchChange={(event) => setSearchInput(event.target.value)}
-          searchPlaceholder="ابحث بالاسم، الرقم، الهاتف..."
-          filterCount={activeFiltersCount}
-          onFilterClick={() => setIsFilterOpen((prev) => !prev)}
-          actionsClassName="justify-start lg:justify-end"
-        />
-
-        {actionSuccess ? (
-          <div
-            className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300"
-            data-testid="employee-success-banner"
-          >
-            {actionSuccess}
-          </div>
-        ) : null}
-
-        {mutationError ? (
-          <div
-            className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
-            data-testid="employee-error-banner"
-          >
-            {mutationError}
-          </div>
-        ) : null}
-
-        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-          <CardHeader className="space-y-3 pb-4">
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm overflow-hidden">
+          <CardHeader className="space-y-3 bg-muted/30 border-b border-border/60 pb-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>قائمة الموظفين</CardTitle>
-              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+              <CardTitle className="flex items-center gap-2 text-lg font-bold">
+                <Users className="h-5 w-5 text-primary" />
+                سجل بيانات الموظفين
+              </CardTitle>
+              <Badge variant="secondary" className="rounded-full px-3">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
-            <CardDescription>إدارة بيانات الموظفين وصلاحيات الوصول للنظام.</CardDescription>
           </CardHeader>
+          
+          <CardContent className="p-0">
+            {employeesQuery.isPending && (
+              <div className="p-12 text-center text-sm text-muted-foreground font-medium animate-pulse">جارٍ تحميل بيانات الكادر...</div>
+            )}
 
-
-          <CardContent className="space-y-3">
-            {employeesQuery.isPending ? (
-              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground text-center">
-                جارٍ تحميل البيانات...
-              </div>
-            ) : null}
-
-            {employees.map((employee) => {
-              const readiness = resolveOperationalReadiness(employee);
-              return (
-                <div
-                  key={employee.id}
-                  className="space-y-3 rounded-xl border border-border/70 bg-background/70 p-4 transition-all hover:bg-background/80"
-                  data-testid="employee-card"
-                >
+            <div className="divide-y divide-border/40">
+              {records.map((item) => (
+                <div key={item.id} className="p-4 hover:bg-muted/10 transition-colors group">
                   <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="space-y-1.5 flex-1 min-w-[240px]">
-                      <div className="flex items-center gap-2">
-                        <p className="font-bold text-lg">{employee.fullName}</p>
-                        <Badge variant={readiness.variant} className="text-[10px] h-5">
-                          {readiness.label}
+                    <div className="flex gap-4 flex-1">
+                      <div className="flex flex-col items-center justify-center h-12 w-12 rounded-2xl bg-secondary/5 border border-secondary/10 group-hover:bg-secondary/10 transition-colors shadow-sm">
+                         <User className="h-6 w-6 text-primary/60" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-base">{item.fullName}</p>
+                          <Badge variant="outline" className="h-5 text-[8px] font-black uppercase text-muted-foreground border-border/70 bg-stone-50">
+                             {item.jobNumber || "NO-JOB-NO"}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-bold uppercase tracking-tight">
+                          <Briefcase className="h-3.5 w-3.5" /> <span>{item.jobRole?.nameAr || "غير محدد"}</span>
+                          <span className="mx-1 opacity-30">•</span>
+                          <Network className="h-3.5 w-3.5" /> <span>{item.department?.name || "بدون قسم"}</span>
+                          {item.financialNumber && (
+                            <>
+                              <span className="mx-1 opacity-30">•</span>
+                              <Badge variant="outline" className="h-4 text-[7px] border-emerald-500/20 text-emerald-600 bg-emerald-500/5">FIN: {item.financialNumber}</Badge>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-3">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge variant={item.isActive ? "default" : "outline"} className={`h-5 text-[8px] font-black uppercase ${item.isActive ? 'bg-primary/10 text-primary border-primary/20' : ''}`}>
+                          {item.isActive ? "Active Employee" : "Inactive"}
+                        </Badge>
+                        <Badge variant="outline" className="h-5 text-[8px] font-black uppercase border-border/70 text-blue-600 bg-blue-50">
+                          {translateEmploymentType(item.employmentType)}
                         </Badge>
                       </div>
-                      <div className="grid gap-x-6 gap-y-1 text-xs text-muted-foreground sm:grid-cols-2">
-                        <span className="flex items-center gap-1.5">
-                          <Briefcase className="h-3.5 w-3.5 text-[color:var(--app-accent-color)]/80" />
-                          {employee.jobRoleLookup?.nameAr ?? employee.jobTitle ?? "-"}
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <Users className="h-3.5 w-3.5 text-[color:var(--app-accent-color)]/80" />
-                          الرقم الوظيفي: {employee.jobNumber ?? "-"}
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <BadgeDollarSign className="h-3.5 w-3.5 text-[color:var(--app-accent-color)]/80" />
-                          الرقم المالي: {employee.financialNumber ?? "-"}
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <GraduationCap className="h-3.5 w-3.5 text-[color:var(--app-accent-color)]/80" />
-                          {employee.qualificationLookup?.nameAr ?? "-"}
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <Network className="h-3.5 w-3.5 text-[color:var(--app-accent-color)]/80" />
-                          القسم: {employee.department?.name ?? "-"}
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <GitBranch className="h-3.5 w-3.5 text-[color:var(--app-accent-color)]/80" />
-                          الفرع: {employee.branch?.nameAr ?? "-"}
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <MapPinned className="h-3.5 w-3.5 text-[color:var(--app-accent-color)]/80" />
-                          مركز التكلفة: {employee.costCenter?.nameAr ?? "-"}
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <User className="h-3.5 w-3.5 text-[color:var(--app-accent-color)]/80" />
-                          المدير المباشر: {employee.directManager?.fullName ?? "-"}
-                        </span>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" className="h-8 rounded-lg px-3 text-[11px] font-bold gap-1.5" onClick={() => handleStartEdit(item)} disabled={!canUpdate}>
+                          <PencilLine className="h-3.5 w-3.5" /> تعديل
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 rounded-lg px-2 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(item)} disabled={!canDelete}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
                     </div>
-
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <Badge variant="outline">
-                        {translateEmployeeGender(employee.gender)}
-                      </Badge>
-                      <Badge variant={employee.isActive ? "default" : "outline"}>
-                        {employee.isActive ? "نشط" : "غير نشط"}
-                      </Badge>
-                    </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/40">
-                    <Button
-                      asChild
-                      variant={employee.userAccount ? "secondary" : "default"}
-                      size="sm"
-                      className="rounded-xl h-8 px-4"
-                    >
-                      <Link href={`/app/users?q=${encodeURIComponent(employee.userAccount?.email ?? employee.fullName)}`}>
-                        {employee.userAccount ? "إدارة الحساب" : "إنشاء حساب"}
-                      </Link>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="rounded-xl h-8 px-4 gap-1.5"
-                      onClick={() => handleStartEdit(employee)}
-                      disabled={!canUpdate || updateMutation.isPending}
-                    >
-                      <PencilLine className="h-3.5 w-3.5" />
-                      تعديل
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="rounded-xl h-8 px-4 gap-1.5"
-                      onClick={() => handleDelete(employee)}
-                      disabled={!canDelete || deleteMutation.isPending}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      حذف
-                    </Button>
+                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                     {[
+                        { label: "رقم التواصل", val: item.phonePrimary || "-", icon: Phone, color: "text-blue-500/60" },
+                        { label: "الموقع السكني", val: item.locality?.nameAr || "غير محدد", icon: MapPinned, color: "text-emerald-500/60" },
+                        { label: "المؤهل العلمي", val: item.qualification?.nameAr || "-", icon: GraduationCap, color: "text-amber-500/60" },
+                        { label: "سنوات الخبرة", val: `${item.experienceYears} عام`, icon: Clock, color: "text-rose-500/60" },
+                     ].map((stat, sIdx) => (
+                        <div key={sIdx} className="flex items-start gap-2 px-3 py-2 rounded-xl border border-border/40 bg-background/50 group-hover:bg-background transition-colors">
+                           <stat.icon className={`h-4 w-4 ${stat.color} mt-0.5 shrink-0`} />
+                           <div className="flex flex-col overflow-hidden">
+                              <span className="text-[7px] uppercase font-bold text-muted-foreground leading-none mb-1">{stat.label}</span>
+                              <span className="text-[10px] font-bold truncate tracking-tight">{stat.val}</span>
+                           </div>
+                        </div>
+                     ))}
                   </div>
                 </div>
-              );
-            })}
+              ))}
+            </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-              <p className="text-xs text-muted-foreground">
-                صفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-              </p>
+            {!employeesQuery.isPending && records.length === 0 && (
+              <div className="p-12 text-center text-sm text-muted-foreground opacity-50">لا يوجد موظفون متطابقون مع معايير البحث.</div>
+            )}
+
+            <div className="p-4 flex flex-wrap items-center justify-between gap-4 border-t border-border/60 bg-muted/10">
+              <p className="text-[10px] text-muted-foreground font-bold italic tracking-wide">نمط الإدارة: الأرشفة المركزية للكادر البشرية</p>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={!pagination || pagination.page <= 1 || employeesQuery.isFetching}
-                >
-                  السابق
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((prev) => (pagination ? Math.min(prev + 1, pagination.totalPages) : prev))}
-                  disabled={!pagination || pagination.page >= pagination.totalPages || employeesQuery.isFetching}
-                >
-                  التالي
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => void employeesQuery.refetch()}
-                  disabled={employeesQuery.isFetching}
-                >
-                  <RefreshCw className={`h-4 w-4 ${employeesQuery.isFetching ? "animate-spin" : ""}`} />
-                  تحديث
-                </Button>
+                <Button variant="outline" size="sm" className="h-8 rounded-xl px-4 font-bold" onClick={() => setPage(p => Math.max(p - 1, 1))} disabled={!pagination || pagination.page <= 1}>السابق</Button>
+                <div className="text-[10px] font-bold px-2">Page {pagination?.page ?? 1} / {pagination?.totalPages ?? 1}</div>
+                <Button variant="outline" size="sm" className="h-8 rounded-xl px-4 font-bold" onClick={() => setPage(p => (pagination ? Math.min(p + 1, pagination.totalPages || 1) : p))} disabled={!pagination || pagination.page >= pagination.totalPages}>التالي</Button>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Fab
-        icon={<Plus className="h-4 w-4" />}
-        label="إضافة"
-        ariaLabel="إضافة موظف"
-        onClick={handleStartCreate}
-        disabled={!canCreate}
-      />
+      <Fab icon={<Plus className="h-5 w-5" />} label="إضافة موظف" onClick={handleStartCreate} disabled={!canCreate} />
 
-      <BottomSheetForm
+      <CrudFormSheet
         open={isFormOpen}
-        title={isEditing ? "تعديل موظف" : "إضافة موظف"}
-        onClose={resetForm}
-        onSubmit={() => handleSubmitForm()}
-        isSubmitting={isFormSubmitting}
-        submitLabel={isEditing ? "تحديث الموظف" : "إضافة موظف"}
-        showFooter={false}
+        onClose={resetFormState}
+        title={isEditing ? "تحديث بيانات الموظف" : "تسجيل موظف جديد بالمؤسسة"}
+        isEditing={isEditing}
+        isSubmitting={isSubmitting}
+        onSubmit={handleSubmit}
       >
-        {!canCreate && !isEditing ? (
-          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground text-center">
-            لا تملك الصلاحية المطلوبة: <code>employees.create</code>.
-          </div>
-        ) : (
-          <form
-            className="space-y-6"
-            onSubmit={handleSubmitForm}
-            data-testid="employee-form"
-          >
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-1">
-                <Label>الرقم الوظيفي</Label>
-                <Input
-                  value={formState.jobNumber}
-                  onChange={(event) => setFormState((prev) => ({ ...prev, jobNumber: event.target.value }))}
-                  placeholder="وظ-0012"
-                  icon={<Hash className="h-4 w-4" />}
-                  data-testid="employee-form-job-number"
-                />
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> الهوية الوظيفية والشخصية</h4>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">الاسم الرباعي المعتمد *</label>
+                <Input value={form.fullName} onChange={(e) => setForm(p => ({ ...p, fullName: e.target.value }))} placeholder="أدخل اسم الموظف كما في الوثائق الرسمية" />
               </div>
-              <div className="space-y-1">
-                <Label>الرقم المالي</Label>
-                <Input
-                  value={formState.financialNumber}
-                  onChange={(event) => setFormState((prev) => ({ ...prev, financialNumber: event.target.value }))}
-                  placeholder="مالي-88991"
-                  icon={<BadgeDollarSign className="h-4 w-4" />}
-                  data-testid="employee-form-financial-number"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <Label required>الاسم الكامل</Label>
-              <Input
-                value={formState.fullName}
-                onChange={(event) => setFormState((prev) => ({ ...prev, fullName: event.target.value }))}
-                placeholder="أحمد علي حسن"
-                icon={<User className="h-5 w-5" />}
-                required
-                data-testid="employee-form-full-name"
-              />
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-1">
-                <Label required>الجنس</Label>
-                <SelectField
-                  value={formState.genderId}
-                  onChange={(event) => setFormState((prev) => ({ ...prev, genderId: event.target.value }))}
-                  disabled={!canReadGenders || genderOptionsQuery.isLoading}
-                  icon={<User className="h-4 w-4" />}
-                  data-testid="employee-form-gender"
-                >
-                  <option value="">اختر الجنس</option>
-                  {genderOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.nameAr ?? option.name ?? option.code}
-                    </option>
-                  ))}
-                </SelectField>
-              </div>
-              <div className="space-y-1">
-                <Label>تاريخ الميلاد</Label>
-                <Input
-                  type="date"
-                  value={formState.birthDate}
-                  onChange={(event) => setFormState((prev) => ({ ...prev, birthDate: event.target.value }))}
-                  icon={<Calendar className="h-4 w-4" />}
-                  data-testid="employee-form-birth-date"
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 border-t pt-4 border-border/40">
-              <div className="space-y-1">
-                <Label>الهاتف الأساسي</Label>
-                <InternationalPhoneField
-                  countryIso2={formState.phonePrimaryCountryIso2}
-                  nationalNumber={formState.phonePrimaryNationalNumber}
-                  onChange={(next) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      phonePrimary: next.e164,
-                      phonePrimaryCountryIso2: next.countryIso2,
-                      phonePrimaryNationalNumber: next.nationalNumber,
-                    }))
-                  }
-                  placeholder="7XXXXXXXX"
-                  enableContactPicker
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>الهاتف الاحتياطي</Label>
-                <InternationalPhoneField
-                  countryIso2={formState.phoneSecondaryCountryIso2}
-                  nationalNumber={formState.phoneSecondaryNationalNumber}
-                  onChange={(next) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      phoneSecondary: next.e164,
-                      phoneSecondaryCountryIso2: next.countryIso2,
-                      phoneSecondaryNationalNumber: next.nationalNumber,
-                    }))
-                  }
-                  placeholder="7XXXXXXXX"
-                  enableContactPicker
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 border-t pt-4 border-border/40">
-              <div className="space-y-1">
-                <Label>المؤهل العلمي</Label>
-                <SelectField
-                  value={formState.qualificationId}
-                  onChange={(event) => setFormState((prev) => ({ ...prev, qualificationId: event.target.value }))}
-                  disabled={!canReadQualifications || qualificationOptionsQuery.isLoading}
-                  icon={<GraduationCap className="h-4 w-4" />}
-                  data-testid="employee-form-qualification"
-                >
-                  <option value="">غير محدد</option>
-                  {qualificationOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.nameAr ?? option.name}
-                    </option>
-                  ))}
-                </SelectField>
-              </div>
-              <div className="space-y-1">
-                <Label>المسمى الوظيفي</Label>
-                <SelectField
-                  value={formState.jobRoleId}
-                  onChange={(event) => setFormState((prev) => ({ ...prev, jobRoleId: event.target.value }))}
-                  disabled={!canReadJobRoles || jobRoleOptionsQuery.isLoading}
-                  icon={<Briefcase className="h-4 w-4" />}
-                  data-testid="employee-form-job-role"
-                >
-                  <option value="">غير محدد</option>
-                  {jobRoleOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.nameAr ?? option.name}
-                    </option>
-                  ))}
-                </SelectField>
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 border-t pt-4 border-border/40">
-              <div className="space-y-1">
-                <Label>القسم</Label>
-                <SelectField
-                  value={formState.departmentId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, departmentId: event.target.value }))
-                  }
-                  disabled={organizationOptionsQuery.isLoading}
-                  icon={<Network className="h-4 w-4" />}
-                  data-testid="employee-form-department"
-                >
-                  <option value="">غير محدد</option>
-                  {departmentOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.name}
-                    </option>
-                  ))}
-                </SelectField>
-              </div>
-
-              <div className="space-y-1">
-                <Label>الفرع</Label>
-                <SelectField
-                  value={formState.branchId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, branchId: event.target.value }))
-                  }
-                  disabled={organizationOptionsQuery.isLoading}
-                  icon={<GitBranch className="h-4 w-4" />}
-                  data-testid="employee-form-branch"
-                >
-                  <option value="">غير محدد</option>
-                  {branchOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.nameAr}
-                    </option>
-                  ))}
-                </SelectField>
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 border-t pt-4 border-border/40">
-              <div className="space-y-1">
-                <Label>المدير المباشر</Label>
-                <SelectField
-                  value={formState.directManagerEmployeeId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      directManagerEmployeeId: event.target.value,
-                    }))
-                  }
-                  disabled={organizationOptionsQuery.isLoading}
-                  icon={<User className="h-4 w-4" />}
-                  data-testid="employee-form-manager"
-                >
-                  <option value="">غير محدد</option>
-                  {managerOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.fullName}
-                    </option>
-                  ))}
-                </SelectField>
-              </div>
-
-              <div className="space-y-1">
-                <Label>مركز التكلفة</Label>
-                <SelectField
-                  value={formState.costCenterId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, costCenterId: event.target.value }))
-                  }
-                  disabled={organizationOptionsQuery.isLoading}
-                  icon={<MapPinned className="h-4 w-4" />}
-                  data-testid="employee-form-cost-center"
-                >
-                  <option value="">غير محدد</option>
-                  {visibleCostCenterOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.nameAr}
-                    </option>
-                  ))}
-                </SelectField>
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-4">
-              {formError ? (
-                <div
-                  className="w-full rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive"
-                  data-testid="employee-form-error"
-                >
-                  {formError}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">الرقم الوظيفي (Job #)</label>
+                  <Input value={form.jobNumber} onChange={(e) => setForm(p => ({ ...p, jobNumber: e.target.value }))} placeholder="EMP-2024-XXX" />
                 </div>
-              ) : null}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">الرقم المالي</label>
+                  <Input value={form.financialNumber} onChange={(e) => setForm(p => ({ ...p, financialNumber: e.target.value }))} placeholder="FIN-XXXX" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">الجنس *</label>
+                  <SelectField value={form.genderId} onChange={(e) => setForm(p => ({ ...p, genderId: e.target.value }))}>
+                    <option value="">اختر الجنس</option>
+                    {(genderOptionsQuery.data ?? []).map(g => <option key={g.id} value={g.id}>{g.nameAr}</option>)}
+                  </SelectField>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">تاريخ الميلاد</label>
+                  <Input type="date" value={form.birthDate} onChange={(e) => setForm(p => ({ ...p, birthDate: e.target.value }))} />
+                </div>
+              </div>
             </div>
+          </div>
 
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/30 active:scale-[0.98] disabled:opacity-50"
-                disabled={isFormSubmitting}
-                data-testid="employee-form-submit"
-              >
-                {isFormSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                {isEditing ? "حفظ التعديلات" : "إضافة الموظف"}
-              </button>
-              <Button type="button" variant="outline" className="rounded-2xl h-12" onClick={resetForm}>
-                إلغاء
-              </Button>
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><Network className="h-3.5 w-3.5" /> التوزيع الإداري وسجل التوظيف</h4>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">الدور الوظيفي / الرتبة</label>
+                <SelectField value={form.jobRoleId} onChange={(e) => setForm(p => ({ ...p, jobRoleId: e.target.value }))}>
+                  <option value="">اختر الدور</option>
+                  {(roleQuery.data ?? []).map(r => <option key={r.id} value={r.id}>{r.nameAr}</option>)}
+                </SelectField>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">القسم الأكاديمي / الإداري</label>
+                <SelectField value={form.departmentId} onChange={(e) => setForm(p => ({ ...p, departmentId: e.target.value }))}>
+                  <option value="">بدون تبعية لقسم</option>
+                  {(orgQuery.data?.departments ?? []).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </SelectField>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">نوع التعاقد</label>
+                <SelectField value={form.employmentType} onChange={(e) => setForm(p => ({ ...p, employmentType: e.target.value as any }))}>
+                  <option value="">اختر النوع</option>
+                  <option value="PERMANENT">دائم / رسمي</option>
+                  <option value="CONTRACTOR">متقاعد / تعاقدي</option>
+                  <option value="TEMPORARY">مؤقت / متطوع</option>
+                </SelectField>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">تاريخ مباشرة العمل</label>
+                <Input type="date" value={form.hireDate} onChange={(e) => setForm(p => ({ ...p, hireDate: e.target.value }))} />
+              </div>
             </div>
-          </form>
-        )}
-      </BottomSheetForm>
-    </>
+          </div>
+
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> قنوات التواصل</h4>
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">رقم الهاتف الأساسي</label>
+                <InternationalPhoneField 
+                   value={form.phonePrimary} 
+                   countryIso2={form.phonePrimaryCountryIso2}
+                   onValueChange={(val, iso) => setForm(p => ({ ...p, phonePrimary: val, phonePrimaryNationalNumber: val, phonePrimaryCountryIso2: iso }))}
+                />
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer transition-opacity hover:opacity-80">
+                <input type="checkbox" className="h-4 w-4 rounded text-primary" checked={form.hasWhatsapp} onChange={(e) => setForm(p => ({ ...p, hasWhatsapp: e.target.checked }))} />
+                <span className="text-[11px] font-bold text-muted-foreground flex items-center gap-1.5"><MessageSquare className="h-3.5 w-3.5 text-emerald-500" /> الرقم مرتبط بتطبيق واتساب</span>
+              </label>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><GraduationCap className="h-3.5 w-3.5" /> السيرة الأكاديمية والخبرات</h4>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">أعلى مؤهل علمي</label>
+                <SelectField value={form.qualificationId} onChange={(e) => setForm(p => ({ ...p, qualificationId: e.target.value }))}>
+                  <option value="">بدون مؤهل محدد</option>
+                  {(qualQuery.data ?? []).map(q => <option key={q.id} value={q.id}>{q.nameAr}</option>)}
+                </SelectField>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">التخصص الدقيق</label>
+                <Input value={form.specialization} onChange={(e) => setForm(p => ({ ...p, specialization: e.target.value }))} placeholder="التربية / الرياضيات ..." />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1 flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> سنوات الخبرة السابقة</label>
+                <Input type="number" value={form.experienceYears} onChange={(e) => setForm(p => ({ ...p, experienceYears: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase px-1">المدرسة/جهة العمل السابقة</label>
+                <Input value={form.previousSchool} onChange={(e) => setForm(p => ({ ...p, previousSchool: e.target.value }))} placeholder="اسم المؤسسة السابقة" />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-3">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><Settings2 className="h-3.5 w-3.5" /> التحكم والمصادقات</h4>
+            <label className="flex items-center justify-between cursor-pointer transition-colors group">
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-foreground">اعتماد الراتب (Salary Approved)</span>
+                <p className="text-[10px] text-muted-foreground">تفعيل صرف المستحقات المالية لهذا الموظف</p>
+              </div>
+              <input type="checkbox" className="h-5 w-5 rounded text-primary" checked={form.salaryApproved} onChange={(e) => setForm(p => ({ ...p, salaryApproved: e.target.checked }))} />
+            </label>
+            <div className="h-[1px] bg-border/40" />
+            <label className="flex items-center justify-between cursor-pointer transition-colors group">
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-foreground group-hover:text-primary">حالة التوظيف (Active)</span>
+                <p className="text-[10px] text-muted-foreground">تفعيل ملف الموظف لكافة العمليات الأكاديمية وصلاحيات النظام</p>
+              </div>
+              <input type="checkbox" className="h-5 w-5 rounded text-primary" checked={form.isActive} onChange={(e) => setForm(p => ({ ...p, isActive: e.target.checked }))} />
+            </label>
+          </div>
+
+          {formError && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive font-bold text-center">
+              {formError}
+            </div>
+          )}
+        </div>
+      </CrudFormSheet>
+    </PageShell>
   );
 }
-

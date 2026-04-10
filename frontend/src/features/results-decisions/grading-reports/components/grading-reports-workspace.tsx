@@ -1,16 +1,30 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
-import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
-
-import { ManagementToolbar } from "@/components/ui/management-toolbar";
-
-import { PageShell } from "@/components/ui/page-shell";
-
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
-import { BarChart3, Filter, RefreshCw } from "lucide-react";
+import {
+  BarChart3,
+  RefreshCw,
+  CalendarDays,
+  GraduationCap,
+  Layout,
+  Users,
+  Trophy,
+  Activity,
+  CheckCircle2,
+  Lock,
+  LockOpen,
+  Eye,
+  FileSpreadsheet,
+  PieChart,
+  ArrowRightCircle,
+  TrendingUp,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
+import { SelectField } from "@/components/ui/select-field";
+import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -18,10 +32,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { Input } from "@/components/ui/input";
-import { SelectField } from "@/components/ui/select-field";
+import { PageShell } from "@/components/ui/page-shell";
 import { useAcademicTermOptionsQuery } from "@/features/results-decisions/grading-reports/hooks/use-academic-term-options-query";
 import { useAcademicYearOptionsQuery } from "@/features/results-decisions/grading-reports/hooks/use-academic-year-options-query";
 import { useGradingDetailedReportQuery } from "@/features/results-decisions/grading-reports/hooks/use-grading-detailed-report-query";
@@ -51,33 +63,17 @@ const DEFAULT_FILTERS: FiltersState = {
 
 const DETAILS_PAGE_SIZE = 12;
 
-function toDateStartIso(value: string): string | undefined {
-  if (!value) {
-    return undefined;
-  }
-
-  return `${value}T00:00:00.000Z`;
-}
-
-function toDateEndIso(value: string): string | undefined {
-  if (!value) {
-    return undefined;
-  }
-
-  return `${value}T23:59:59.999Z`;
-}
-
-function toPercentageLabel(value: number): string {
-  return `${value.toFixed(2)}%`;
-}
+function toDateStartIso(value: string) { return value ? `${value}T00:00:00.000Z` : undefined; }
+function toDateEndIso(value: string) { return value ? `${value}T23:59:59.999Z` : undefined; }
+function toPercentageLabel(value: number) { return `${value.toFixed(1)}%`; }
 
 export function GradingReportsWorkspace() {
   const [searchInput, setSearchInput] = React.useState("");
-  const [search, setSearch] = React.useState("");  const [filterDraft, setFilterDraft] = React.useState<FiltersState>(DEFAULT_FILTERS);
+  const [search, setSearch] = React.useState("");
+  const [filterDraft, setFilterDraft] = React.useState<FiltersState>(DEFAULT_FILTERS);
   const [appliedFilters, setAppliedFilters] = React.useState<FiltersState>(DEFAULT_FILTERS);
   const [detailsPage, setDetailsPage] = React.useState(1);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
-  const [isFilterSheetOpen, setIsFilterSheetOpen] = React.useState(false);
 
   const yearOptionsQuery = useAcademicYearOptionsQuery();
   const gradeLevelOptionsQuery = useGradeLevelOptionsQuery();
@@ -92,6 +88,7 @@ export function GradingReportsWorkspace() {
     fromDate: toDateStartIso(appliedFilters.fromDate),
     toDate: toDateEndIso(appliedFilters.toDate),
   });
+
   const detailsQuery = useGradingDetailedReportQuery({
     page: detailsPage,
     limit: DETAILS_PAGE_SIZE,
@@ -109,9 +106,15 @@ export function GradingReportsWorkspace() {
   const detailsPagination = detailsQuery.data?.pagination;
 
   useDebounceEffect(() => {
-      setSearch(searchInput.trim());
-      setDetailsPage(1);
-    }, 400, [searchInput]);
+    setSearch(searchInput.trim());
+    setDetailsPage(1);
+  }, 400, [searchInput]);
+
+  const applyFilters = () => {
+    setAppliedFilters(filterDraft);
+    setDetailsPage(1);
+    setIsFilterOpen(false);
+  };
 
   const clearFilters = () => {
     setSearchInput("");
@@ -120,14 +123,6 @@ export function GradingReportsWorkspace() {
     setAppliedFilters(DEFAULT_FILTERS);
     setDetailsPage(1);
     setIsFilterOpen(false);
-    setIsFilterSheetOpen(false);
-  };
-
-  const applyFilters = () => {
-    setAppliedFilters(filterDraft);
-    setDetailsPage(1);
-    setIsFilterOpen(false);
-    setIsFilterSheetOpen(false);
   };
 
   const activeFiltersCount = React.useMemo(() => {
@@ -139,263 +134,250 @@ export function GradingReportsWorkspace() {
       appliedFilters.academicTermId ? 1 : 0,
       appliedFilters.fromDate ? 1 : 0,
       appliedFilters.toDate ? 1 : 0,
-    ].reduce((acc, value) => acc + value, 0);
+    ].reduce((acc, v) => acc + v, 0);
   }, [appliedFilters, searchInput]);
 
-  const filterFields = (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <SelectField value={filterDraft.academicYearId} onChange={(event) => setFilterDraft((prev) => ({ ...prev, academicYearId: event.target.value, academicTermId: "" }))} data-testid="grading-report-filter-year">
-        <option value="">كل السنوات</option>
-        {(yearOptionsQuery.data ?? []).map((item) => (
-          <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>
-        ))}
-      </SelectField>
-      <SelectField value={filterDraft.gradeLevelId} onChange={(event) => setFilterDraft((prev) => ({ ...prev, gradeLevelId: event.target.value, sectionId: "" }))} data-testid="grading-report-filter-grade">
-        <option value="">كل المراحل</option>
-        {(gradeLevelOptionsQuery.data ?? []).map((item) => (
-          <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>
-        ))}
-      </SelectField>
-      <SelectField value={filterDraft.sectionId} onChange={(event) => setFilterDraft((prev) => ({ ...prev, sectionId: event.target.value }))} data-testid="grading-report-filter-section">
-        <option value="">كل الشعب</option>
-        {(sectionOptionsQuery.data ?? []).map((item) => (
-          <option key={item.id} value={item.id}>{formatSectionWithGradeLabel(item)}</option>
-        ))}
-      </SelectField>
-      <SelectField value={filterDraft.academicTermId} onChange={(event) => setFilterDraft((prev) => ({ ...prev, academicTermId: event.target.value }))} data-testid="grading-report-filter-term">
-        <option value="">كل الفصول</option>
-        {(termOptionsQuery.data ?? []).map((item) => (
-          <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>
-        ))}
-      </SelectField>
-      <Input type="date" value={filterDraft.fromDate} onChange={(event) => setFilterDraft((prev) => ({ ...prev, fromDate: event.target.value }))} data-testid="grading-report-filter-from-date" />
-      <Input type="date" value={filterDraft.toDate} onChange={(event) => setFilterDraft((prev) => ({ ...prev, toDate: event.target.value }))} data-testid="grading-report-filter-to-date" />
-    </div>
-  );
-
   return (
-    <PageShell title="مرشحات التقارير">
-
+    <PageShell
+      title="تقارير حوكمة الدرجات"
+      subtitle="شاشة تحليلية لمتابعة حالة رصد الدرجات، نسب الإعتماد، وتوزيع النتائج النهائية عبر المستويات التعليمية المختلفة."
+    >
       <div className="space-y-4">
         <ManagementToolbar
           searchValue={searchInput}
-          onSearchChange={(event) => setSearchInput(event.target.value)}
-          searchPlaceholder="بحث باسم الطالب أو رقم القيد"
+          onSearchChange={(e) => setSearchInput(e.target.value)}
+          searchPlaceholder="بحث باسم الطالب..."
           filterCount={activeFiltersCount}
-          onFilterClick={() => setIsFilterOpen((prev) => !prev)}
-          showFilterButton={true}
+          onFilterClick={() => setIsFilterOpen(true)}
+          actions={
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => void Promise.all([reportQuery.refetch(), detailsQuery.refetch()])} disabled={reportQuery.isFetching || detailsQuery.isFetching}>
+              <RefreshCw className={`h-4 w-4 ${reportQuery.isFetching || detailsQuery.isFetching ? "animate-spin" : ""}`} />
+              تحديث
+            </Button>
+          }
         />
 
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
-          title="مرشحات التقارير"
+          title="معايير التقرير"
           actionButtons={
             <div className="flex w-full gap-2">
-              <Button type="button" variant="outline" className="flex-1 gap-1.5" onClick={clearFilters} data-testid="grading-report-filters-clear">
-                مسح
-              </Button>
-              <Button type="button" className="flex-1 gap-1.5" onClick={applyFilters} data-testid="grading-report-filters-submit">
-                تطبيق
-              </Button>
+              <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">مسح</Button>
+              <Button type="button" onClick={applyFilters} className="flex-1">تطبيق</Button>
             </div>
           }
         >
-          {filterFields}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1 sm:col-span-2">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase leading-none px-1">السنة الدراسية</label>
+              <SelectField value={filterDraft.academicYearId} onChange={(e) => setFilterDraft(p => ({ ...p, academicYearId: e.target.value, academicTermId: "" }))}>
+                <option value="">كل السنوات</option>
+                {(yearOptionsQuery.data ?? []).map(y => <option key={y.id} value={y.id}>{formatNameCodeLabel(y.name, y.code)}</option>)}
+              </SelectField>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase leading-none px-1">المرحلة</label>
+              <SelectField value={filterDraft.gradeLevelId} onChange={(e) => setFilterDraft(p => ({ ...p, gradeLevelId: e.target.value, sectionId: "" }))}>
+                <option value="">كل المراحل</option>
+                {(gradeLevelOptionsQuery.data ?? []).map(g => <option key={g.id} value={g.id}>{formatNameCodeLabel(g.name, g.code)}</option>)}
+              </SelectField>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase leading-none px-1">الشعبة</label>
+              <SelectField value={filterDraft.sectionId} onChange={(e) => setFilterDraft(p => ({ ...p, sectionId: e.target.value }))}>
+                <option value="">كل الشعب</option>
+                {(sectionOptionsQuery.data ?? []).map(s => <option key={s.id} value={s.id}>{formatSectionWithGradeLabel(s)}</option>)}
+              </SelectField>
+            </div>
+          </div>
         </FilterDrawer>
 
-        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-          <CardHeader className="space-y-3">
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-primary" />
-              ملخص حوكمة الدرجات
-            </CardTitle>
-            <CardDescription>تقرير ملخّص لحوكمة الدرجات الفصلية والسنوية والنتائج.</CardDescription>
-          </CardHeader>
-        </Card>
-
-        {reportQuery.isPending ? (
-          <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-            <CardContent className="py-6 text-sm text-muted-foreground">جارٍ تحميل البيانات...</CardContent>
-          </Card>
-        ) : null}
-
-        {reportQuery.error ? (
-          <Card className="border-destructive/30 bg-destructive/10">
-            <CardContent className="py-4 text-sm text-destructive">
-              {reportQuery.error instanceof Error ? reportQuery.error.message : "تعذّر تحميل البيانات."}
-            </CardContent>
-          </Card>
-        ) : null}
-
-        {report ? (
-          <>
-            <div className="grid gap-3 md:grid-cols-3">
-              <Card className="border-border/70 bg-card/80" data-testid="grading-report-semester-card">
-                <CardHeader className="space-y-1 pb-2">
-                  <CardTitle className="text-sm">الدرجات الفصلية</CardTitle>
-                  <CardDescription>الإجمالي: {report.semesterGrades.total}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-1 text-sm">
-                  <p>النشط: {report.semesterGrades.active}</p>
-                  <p>المقفل: {report.semesterGrades.locked}</p>
-                  <p>نسبة الإقفال: {toPercentageLabel(report.semesterGrades.lockRate)}</p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-border/70 bg-card/80" data-testid="grading-report-annual-grades-card">
-                <CardHeader className="space-y-1 pb-2">
-                  <CardTitle className="text-sm">الدرجات السنوية</CardTitle>
-                  <CardDescription>الإجمالي: {report.annualGrades.total}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-1 text-sm">
-                  <p>النشط: {report.annualGrades.active}</p>
-                  <p>المقفل: {report.annualGrades.locked}</p>
-                  <p>نسبة الإقفال: {toPercentageLabel(report.annualGrades.lockRate)}</p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-border/70 bg-card/80" data-testid="grading-report-annual-results-card">
-                <CardHeader className="space-y-1 pb-2">
-                  <CardTitle className="text-sm">النتائج السنوية</CardTitle>
-                  <CardDescription>الإجمالي: {report.annualResults.total}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-1 text-sm">
-                  <p>النشط: {report.annualResults.active}</p>
-                  <p>المقفل: {report.annualResults.locked}</p>
-                  <p>نسبة الإقفال: {toPercentageLabel(report.annualResults.lockRate)}</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-2">
-              <Card className="border-border/70 bg-card/80" data-testid="grading-report-workflow-card">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">توزيع حالات سير العمل</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground">الفصلي</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {report.semesterGrades.byStatus.map((item) => (
-                        <Badge key={`semester-${item.status}`} variant="outline">{translateGradingWorkflowStatus(item.status)}: {item.count}</Badge>
-                      ))}
+        {report && (
+          <div className="space-y-4">
+            {/* KPI Summary Rows */}
+            <div className="grid gap-4 md:grid-cols-3">
+              {[
+                { label: "كشوف الفصل", data: report.semesterGrades, color: "primary", icon: GraduationCap },
+                { label: "الدرجات السنوية", data: report.annualGrades, color: "emerald", icon: BarChart3 },
+                { label: "النتائج النهائية", data: report.annualResults, color: "amber", icon: Trophy },
+              ].map((kpi, idx) => (
+                <Card key={idx} className={`border-${kpi.color}-500/10 bg-${kpi.color}-500/5 group hover:shadow-lg transition-all`}>
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className={`p-2 rounded-xl bg-background border border-${kpi.color}-500/10`}>
+                        <kpi.icon className={`h-5 w-5 text-${kpi.color}-600`} />
+                      </div>
+                      <Badge variant="outline" className={`h-5 text-[8px] font-bold border-${kpi.color}-500/20 text-${kpi.color}-700`}>
+                        {toPercentageLabel(kpi.data.lockRate)} قفل
+                      </Badge>
                     </div>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground">الدرجات السنوية</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {report.annualGrades.byStatus.map((item) => (
-                        <Badge key={`annual-grade-${item.status}`} variant="outline">{translateGradingWorkflowStatus(item.status)}: {item.count}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground">النتائج السنوية</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {report.annualResults.byStatus.map((item) => (
-                        <Badge key={`annual-result-${item.status}`} variant="outline">{translateGradingWorkflowStatus(item.status)}: {item.count}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-border/70 bg-card/80" data-testid="grading-report-ranking-card">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">جاهزية الترتيب</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-1 text-sm">
-                  <p>مع ترتيب شعبة: {report.rankingReadiness.withClassRank}</p>
-                  <p>مع ترتيب مرحلة: {report.rankingReadiness.withGradeRank}</p>
-                  <p>مرتبة بالكامل: {report.rankingReadiness.fullyRanked}</p>
-                  <p>بدون ترتيب شعبة: {report.rankingReadiness.missingClassRank}</p>
-                  <p>بدون ترتيب مرحلة: {report.rankingReadiness.missingGradeRank}</p>
-                  <p>غير مرتبة بالكامل: {report.rankingReadiness.notFullyRanked}</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-2">
-              <Card className="border-border/70 bg-card/80" data-testid="grading-report-final-status-card">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">توزيع الحالات النهائية</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  {report.annualGrades.byFinalStatus.length === 0 ? <p className="text-muted-foreground">لا توجد بيانات.</p> : report.annualGrades.byFinalStatus.map((item) => <p key={item.finalStatusId}>{formatNameCodeLabel(item.name, item.code)}: {item.count}</p>)}
-                </CardContent>
-              </Card>
-
-              <Card className="border-border/70 bg-card/80" data-testid="grading-report-promotion-card">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">توزيع قرارات الترفيع</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  {report.annualResults.byPromotionDecision.length === 0 ? <p className="text-muted-foreground">لا توجد بيانات.</p> : report.annualResults.byPromotionDecision.map((item) => <p key={item.promotionDecisionId}>{formatNameCodeLabel(item.name, item.code)}: {item.count}</p>)}
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card className="border-border/70 bg-card/80" data-testid="grading-report-details-card">
-              <CardHeader className="space-y-1 pb-2">
-                <CardTitle className="text-sm">تفاصيل النتائج السنوية</CardTitle>
-                <CardDescription>السجلات: {detailsPagination?.total ?? 0}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {detailsQuery.isPending ? <p className="text-sm text-muted-foreground">جارٍ تحميل التفاصيل...</p> : null}
-                {detailsQuery.error ? <p className="text-sm text-destructive">{detailsQuery.error instanceof Error ? detailsQuery.error.message : "فشل تحميل التفاصيل"}</p> : null}
-                {!detailsQuery.isPending && details.length === 0 ? <p className="text-sm text-muted-foreground">لا توجد بيانات تفصيلية.</p> : null}
-
-                {details.map((item) => (
-                  <div key={item.id} className="space-y-2 rounded-md border border-border/70 bg-background/70 p-3" data-testid="grading-report-detail-item">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="font-medium">{item.student.fullName}{item.student.admissionNo ? ` (${item.student.admissionNo})` : ""}</p>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <Badge variant={item.status === "APPROVED" ? "default" : "secondary"}>{translateGradingWorkflowStatus(item.status)}</Badge>
-                        <Badge variant={item.isLocked ? "default" : "secondary"}>{item.isLocked ? "مقفل" : "غير مقفل"}</Badge>
-                        <Badge variant={item.isActive ? "default" : "outline"}>{item.isActive ? "نشط" : "غير نشط"}</Badge>
+                    <div>
+                      <h3 className="text-[10px] font-bold uppercase text-muted-foreground">{kpi.label}</h3>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-2xl font-black">{kpi.data.total}</span>
+                        <span className="text-[10px] font-bold text-muted-foreground">سجل</span>
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground">{formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} | {formatNameCodeLabel(item.gradeLevel.name, item.gradeLevel.code)} | {formatNameCodeLabel(item.section.name, item.section.code)}</p>
-                    <p className="text-xs text-muted-foreground">الإجمالي: {item.totalAllSubjects}/{item.maxPossibleTotal} | النسبة: {item.percentage}% | ترتيب الشعبة: {item.rankInClass ?? "-"} | ترتيب المرحلة: {item.rankInGrade ?? "-"}</p>
-                    <p className="text-xs text-muted-foreground">الحالة الوصفية: {item.gradeDescription ? (item.gradeDescription.nameAr || item.gradeDescription.nameEn || "-") : "-"} | قرار الترفيع: {formatNameCodeLabel(item.promotionDecision.name, item.promotionDecision.code)}</p>
-                  </div>
-                ))}
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-black/5">
+                      <div className="flex flex-col">
+                        <span className="text-[8px] uppercase font-bold text-muted-foreground">نشط</span>
+                        <span className="text-xs font-bold">{kpi.data.active}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[8px] uppercase font-bold text-muted-foreground">مقفل</span>
+                        <span className="text-xs font-bold">{kpi.data.locked}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-                  <p className="text-xs text-muted-foreground">الصفحة {detailsPagination?.page ?? 1} من {detailsPagination?.totalPages ?? 1}</p>
+            {/* Detailed Analytics Grid */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card className="border-border/70 bg-card/80">
+                <CardHeader className="py-4 border-b border-border/50">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <PieChart className="h-4 w-4 text-primary" /> توزيع حالات المعالجة
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 space-y-4">
+                  {[
+                    { label: "الفصلية", items: report.semesterGrades.byStatus },
+                    { label: "السنوية", items: report.annualGrades.byStatus },
+                    { label: "النتائج", items: report.annualResults.byStatus },
+                  ].map((group, gIdx) => (
+                    <div key={gIdx} className="space-y-2">
+                      <span className="text-[9px] uppercase font-black text-muted-foreground tracking-widest">{group.label}</span>
+                      <div className="flex flex-wrap gap-1.5 text-xs">
+                        {group.items.map((it, iIdx) => (
+                          <Badge key={iIdx} variant="secondary" className="h-6 font-bold bg-background text-[10px] rounded-lg border-border/60">
+                            {translateGradingWorkflowStatus(it.status)}: <span className="ml-1 text-primary">{it.count}</span>
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/70 bg-card/80">
+                <CardHeader className="py-4 border-b border-border/50">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-primary" /> جاهزية تصدير الترتيب
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 space-y-1">
+                      <span className="text-[9px] uppercase font-bold text-emerald-700">مكتملة الترتيب</span>
+                      <div className="text-lg font-black text-emerald-600 leading-none">{report.rankingReadiness.fullyRanked}</div>
+                    </div>
+                    <div className="p-3 rounded-2xl bg-amber-500/5 border border-amber-500/10 space-y-1">
+                      <span className="text-[9px] uppercase font-bold text-amber-700">نواقص الترتيب</span>
+                      <div className="text-lg font-black text-amber-600 leading-none">{report.rankingReadiness.notFullyRanked}</div>
+                    </div>
+                  </div>
+                  <div className="space-y-2 pt-2">
+                    {[
+                      { label: "ترتيب الشعبة مفقود", count: report.rankingReadiness.missingClassRank },
+                      { label: "ترتيب المرحلة مفقود", count: report.rankingReadiness.missingGradeRank },
+                    ].map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-2 text-[11px] font-bold border-b border-border/40 last:border-0">
+                        <span className="text-muted-foreground">{item.label}</span>
+                        <span className="text-destructive px-2 py-0.5 rounded-full bg-destructive/5 border border-destructive/10">{item.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Details List */}
+            <Card className="border-border/70 bg-card/80 overflow-hidden">
+              <CardHeader className="bg-muted/30 border-b border-border/60 py-5">
+                <div className="flex flex-wrap items-center justify-between gap-2 px-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <FileSpreadsheet className="h-5 w-5 text-primary" /> تفاصيل النتائج السنوية
+                  </CardTitle>
+                  <Badge variant="secondary" className="h-5 px-3 rounded-full text-[10px]">نطاق الفلترة: {detailsPagination?.total ?? 0}</Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="divide-y divide-border/40">
+                  {details.map((item) => (
+                    <div key={item.id} className="p-4 hover:bg-muted/10 transition-colors group">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="space-y-1 flex-1 min-w-[200px]">
+                          <div className="flex items-center gap-2">
+                            <p className="font-bold text-[15px]">{item.student.fullName}</p>
+                            {item.student.admissionNo && <Badge variant="outline" className="text-[9px] h-4 leading-none font-bold">#{item.student.admissionNo}</Badge>}
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-bold tracking-tight uppercase">
+                            <Layout className="h-3.5 w-3.5" /> <span>{item.section.name}</span>
+                            <span className="mx-1 opacity-40">•</span>
+                            <CalendarDays className="h-3.5 w-3.5" /> <span>{formatNameCodeLabel(item.academicYear.name, item.academicYear.code)}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <div className="text-[10px] font-black leading-none opacity-40 uppercase">الإجمالي</div>
+                            <div className="text-lg font-black text-primary">{item.totalAllSubjects}</div>
+                          </div>
+                          <div className="h-10 w-[1px] bg-border/40 mx-2" />
+                          <div className="flex flex-col gap-1 items-end">
+                            <Badge variant={item.isLocked ? "secondary" : "default"} className="h-5 text-[8px] font-black uppercase">
+                              {item.isLocked ? <Lock className="h-2.5 w-2.5 mr-1 inline" /> : <LockOpen className="h-2.5 w-2.5 mr-1 inline" />}
+                              {item.isLocked ? "مقفل" : "مفتوح"}
+                            </Badge>
+                            <Badge variant="outline" className="h-5 text-[8px] font-black bg-emerald-50 text-emerald-700 border-emerald-200">
+                              {formatNameCodeLabel(item.promotionDecision.name, item.promotionDecision.code)}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {[
+                          { label: "النسبة", val: `${item.percentage}%`, icon: Trophy },
+                          { label: "ت. الشعبة", val: item.rankInClass ?? "-", icon: Users },
+                          { label: "ت. المرحلة", val: item.rankInGrade ?? "-", icon: ArrowRightCircle },
+                          { label: "التقدير", val: item.gradeDescription?.nameAr ?? "-", icon: CheckCircle2 },
+                        ].map((stat, sIdx) => (
+                          <div key={sIdx} className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/40 bg-background/50">
+                            <stat.icon className="h-3.5 w-3.5 text-muted-foreground/60" />
+                            <div className="flex flex-col">
+                              <span className="text-[7px] uppercase font-bold text-muted-foreground leading-none">{stat.label}</span>
+                              <span className="text-[11px] font-black mt-0.5">{stat.val}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {!detailsQuery.isPending && details.length === 0 && (
+                  <div className="p-12 text-center space-y-2 opacity-50">
+                    <FileSpreadsheet className="h-12 w-12 mx-auto text-muted-foreground" />
+                    <p className="text-sm font-bold">لا توجد بيانات تفصيلية مطابقة للفلترة.</p>
+                  </div>
+                )}
+
+                <div className="p-4 flex flex-wrap items-center justify-between gap-4 border-t border-border/60 bg-muted/10">
+                  <p className="text-xs text-muted-foreground font-bold italic tracking-wide">نمط العرض: كشوفات تفصيلية</p>
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setDetailsPage((prev) => Math.max(prev - 1, 1))} disabled={!detailsPagination || detailsPagination.page <= 1 || detailsQuery.isFetching} data-testid="grading-report-details-prev">السابق</Button>
-                    <Button variant="outline" size="sm" onClick={() => setDetailsPage((prev) => (detailsPagination ? Math.min(prev + 1, detailsPagination.totalPages || 1) : prev))} disabled={!detailsPagination || detailsPagination.page >= detailsPagination.totalPages || detailsQuery.isFetching} data-testid="grading-report-details-next">التالي</Button>
+                    <Button variant="outline" size="sm" className="h-8 rounded-xl px-4 font-bold" onClick={() => setDetailsPage(p => Math.max(p - 1, 1))} disabled={!detailsPagination || detailsPagination.page <= 1}>السابق</Button>
+                    <div className="text-[10px] font-bold px-2">Page {detailsPagination?.page ?? 1} / {detailsPagination?.totalPages ?? 1}</div>
+                    <Button variant="outline" size="sm" className="h-8 rounded-xl px-4 font-bold" onClick={() => setDetailsPage(p => (detailsPagination ? Math.min(p + 1, detailsPagination.totalPages || 1) : p))} disabled={!detailsPagination || detailsPagination.page >= detailsPagination.totalPages}>التالي</Button>
                   </div>
                 </div>
               </CardContent>
             </Card>
-
-            <div className="flex justify-end">
-              <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => { void Promise.all([reportQuery.refetch(), detailsQuery.refetch()]); }} disabled={reportQuery.isFetching || detailsQuery.isFetching} data-testid="grading-report-refresh">
-                <RefreshCw className={`h-4 w-4 ${reportQuery.isFetching || detailsQuery.isFetching ? "animate-spin" : ""}`} />
-                تحديث
-              </Button>
-            </div>
-          </>
-        ) : null}
-      </div>
-
-      <Fab icon={<Filter className="h-4 w-4" />} label="فلاتر" ariaLabel="فتح فلاتر التقارير" onClick={() => setIsFilterSheetOpen(true)} />
-
-      <CrudFormSheet open={isFilterSheetOpen} title="مرشحات التقارير" onClose={() => setIsFilterSheetOpen(false)} onSubmit={() => undefined}>
-        <div className="space-y-3" data-testid="grading-report-filters-form">
-          {filterFields}
-          <div className="flex gap-2 pt-2">
-            <Button type="button" variant="outline" className="flex-1" onClick={clearFilters}>مسح</Button>
-            <Button type="button" className="flex-1" onClick={applyFilters}>تطبيق</Button>
           </div>
-        </div>
-      </CrudFormSheet>
-    
+        )}
+      </div>
     </PageShell>
   );
 }
-
-

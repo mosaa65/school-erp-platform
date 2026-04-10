@@ -1,16 +1,9 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
-import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
-
-import { ManagementToolbar } from "@/components/ui/management-toolbar";
-
-import { PageShell } from "@/components/ui/page-shell";
-
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   Calculator,
-  LoaderCircle,
   Lock,
   LockOpen,
   Medal,
@@ -18,9 +11,24 @@ import {
   Plus,
   RefreshCw,
   Trash2,
+  CalendarDays,
+  Activity,
+  User,
+  BookOpen,
+  GraduationCap,
+  Info,
+  Settings2,
+  CheckCircle2,
+  AlertCircle,
+  Layout,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
+import { SelectField } from "@/components/ui/select-field";
+import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
+import { StudentEnrollmentPickerSheet } from "@/components/ui/student-enrollment-picker-sheet";
 import {
   Card,
   CardContent,
@@ -28,11 +36,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { Input } from "@/components/ui/input";
-import { SelectField } from "@/components/ui/select-field";
-import { StudentEnrollmentPickerSheet } from "@/components/ui/student-enrollment-picker-sheet";
+import { Fab } from "@/components/ui/fab";
+import { PageShell } from "@/components/ui/page-shell";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCalculateMonthlyGradesMutation,
@@ -46,14 +52,12 @@ import { useMonthlyGradesQuery } from "@/features/grade-aggregation/monthly-grad
 import { useAcademicMonthOptionsQuery } from "@/features/grade-aggregation/monthly-grades/hooks/use-academic-month-options-query";
 import { useSectionOptionsQuery } from "@/features/grade-aggregation/monthly-grades/hooks/use-section-options-query";
 import { useSubjectOptionsQuery } from "@/features/grade-aggregation/monthly-grades/hooks/use-subject-options-query";
-import { useStudentEnrollmentOptionsQuery } from "@/features/grade-aggregation/monthly-grades/hooks/use-student-enrollment-options-query";
 import {
   toStudentEnrollmentPickerOption,
   type StudentEnrollmentPickerOption,
 } from "@/features/students/lib/student-enrollment-picker";
 import { translateGradingWorkflowStatus } from "@/lib/i18n/ar";
 import { formatNameCodeLabel, formatSectionWithGradeLabel } from "@/lib/option-labels";
-import { formatStudentEnrollmentPlacementLabel } from "@/lib/student-enrollment-display";
 import type { GradingWorkflowStatus, MonthlyGradeListItem } from "@/lib/api/client";
 
 type FormState = {
@@ -89,11 +93,6 @@ const DEFAULT_CALC_FORM: CalculateFormState = {
   subjectId: "",
 };
 
-function toOptionalString(value: string): string | undefined {
-  const normalized = value.trim();
-  return normalized.length > 0 ? normalized : undefined;
-}
-
 function toFormState(item: MonthlyGradeListItem): FormState {
   return {
     academicMonthId: item.academicMonthId,
@@ -104,10 +103,6 @@ function toFormState(item: MonthlyGradeListItem): FormState {
     notes: item.notes ?? "",
     isActive: item.isActive,
   };
-}
-
-function getWorkflowStatusLabel(status: GradingWorkflowStatus): string {
-  return translateGradingWorkflowStatus(status);
 }
 
 export function MonthlyGradesWorkspace() {
@@ -126,44 +121,22 @@ export function MonthlyGradesWorkspace() {
   const [sectionFilter, setSectionFilter] = React.useState("all");
   const [subjectFilter, setSubjectFilter] = React.useState("all");
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">("all");
-  const [filterDraft, setFilterDraft] = React.useState<{
-    month: string;
-    section: string;
-    subject: string;
-    active: "all" | "active" | "inactive";
-  }>({
-    month: "all",
-    section: "all",
-    subject: "all",
-    active: "all",
-  });
+  const [filterDraft, setFilterDraft] = React.useState({ month: "all", section: "all", subject: "all", active: "all" as any });
 
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [form, setForm] = React.useState<FormState>(DEFAULT_FORM);
   const [calcForm, setCalcForm] = React.useState<CalculateFormState>(DEFAULT_CALC_FORM);
+  const [selectedEnrollment, setSelectedEnrollment] = React.useState<StudentEnrollmentPickerOption | null>(null);
   const [formError, setFormError] = React.useState<string | null>(null);
-  const [calcInfo, setCalcInfo] = React.useState<string | null>(null);
-  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
-  const [selectedFormEnrollmentOption, setSelectedFormEnrollmentOption] =
-    React.useState<StudentEnrollmentPickerOption | null>(null);
+  const [calcResult, setCalcResult] = React.useState<{ message: string, type: 'success' | 'info' } | null>(null);
 
   const monthsQuery = useAcademicMonthOptionsQuery();
   const sectionsQuery = useSectionOptionsQuery();
   const subjectsQuery = useSubjectOptionsQuery();
-  const selectedMonthForForm = (monthsQuery.data ?? []).find(
-    (item) => item.id === form.academicMonthId,
-  );
-  const enrollmentsQuery = useStudentEnrollmentOptionsQuery({
-    academicYearId: selectedMonthForForm?.academicYearId,
-    sectionId: form.sectionId || undefined,
-  });
-
   const monthlyGradesQuery = useMonthlyGradesQuery({
-    page,
-    limit: PAGE_SIZE,
-    search: search || undefined,
+    page, limit: PAGE_SIZE, search: search || undefined,
     academicMonthId: monthFilter === "all" ? undefined : monthFilter,
     sectionId: sectionFilter === "all" ? undefined : sectionFilter,
     subjectId: subjectFilter === "all" ? undefined : subjectFilter,
@@ -179,133 +152,91 @@ export function MonthlyGradesWorkspace() {
 
   const records = React.useMemo(() => monthlyGradesQuery.data?.data ?? [], [monthlyGradesQuery.data?.data]);
   const pagination = monthlyGradesQuery.data?.pagination;
-  const mutationError =
-    (createMutation.error as Error | null)?.message ??
-    (updateMutation.error as Error | null)?.message ??
-    (calculateMutation.error as Error | null)?.message ??
-    (lockMutation.error as Error | null)?.message ??
-    (unlockMutation.error as Error | null)?.message ??
-    (deleteMutation.error as Error | null)?.message ??
-    null;
+  const isEditing = editingId !== null;
+  const isSubmitting = createMutation.isPending || updateMutation.isPending || calculateMutation.isPending;
 
   useDebounceEffect(() => {
-      setPage(1);
-      setSearch(searchInput.trim());
-    }, 400, [searchInput]);
+    setPage(1);
+    setSearch(searchInput.trim());
+  }, 400, [searchInput]);
 
   React.useEffect(() => {
-    if (!isFilterOpen) {
-      return;
-    }
-
-    setFilterDraft({
-      month: monthFilter,
-      section: sectionFilter,
-      subject: subjectFilter,
-      active: activeFilter,
-    });
+    if (!isFilterOpen) return;
+    setFilterDraft({ month: monthFilter, section: sectionFilter, subject: subjectFilter, active: activeFilter });
   }, [activeFilter, isFilterOpen, monthFilter, sectionFilter, subjectFilter]);
-
-  React.useEffect(() => {
-    if (!editingId) {
-      return;
-    }
-
-    const stillExists = records.some((item) => item.id === editingId);
-    if (!stillExists) {
-      setEditingId(null);
-      setForm(DEFAULT_FORM);
-      setFormError(null);
-      setIsFormOpen(false);
-      setSelectedFormEnrollmentOption(null);
-    }
-  }, [editingId, records]);
 
   const resetFormState = () => {
     setEditingId(null);
     setForm(DEFAULT_FORM);
+    setSelectedEnrollment(null);
     setFormError(null);
-    setSelectedFormEnrollmentOption(null);
-  };
-
-  const resetForm = () => {
-    resetFormState();
     setIsFormOpen(false);
   };
 
   const handleStartCreate = () => {
-    if (!canCreate) {
-      return;
-    }
-
-    setActionSuccess(null);
-    setFormError(null);
-    setEditingId(null);
+    if (!canCreate) return;
     setForm(DEFAULT_FORM);
-    setSelectedFormEnrollmentOption(null);
     setIsFormOpen(true);
   };
 
   const handleStartEdit = (item: MonthlyGradeListItem) => {
-    if (!canUpdate || item.isLocked) {
-      return;
-    }
-
-    setActionSuccess(null);
+    if (!canUpdate || item.isLocked) return;
     setEditingId(item.id);
     setForm(toFormState(item));
-    setFormError(null);
-    setSelectedFormEnrollmentOption(toStudentEnrollmentPickerOption(item.studentEnrollment));
+    setSelectedEnrollment(toStudentEnrollmentPickerOption(item.studentEnrollment));
     setIsFormOpen(true);
   };
 
-  const validateForm = (): boolean => {
-    if (!form.academicMonthId || !form.sectionId || !form.subjectId || !form.studentEnrollmentId) {
-      setFormError("الحقول الأساسية مطلوبة.");
-      return false;
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.academicMonthId || !form.studentEnrollmentId || !form.subjectId) {
+      setFormError("الشهر، الطالب، والمادة حقول إجبارية.");
+      return;
     }
-    if (form.notes.trim().length > 255) {
-      setFormError("الملاحظات يجب ألا تتجاوز 255 حرفًا.");
-      return false;
+
+    if (isEditing && editingId) {
+      updateMutation.mutate({
+        monthlyGradeId: editingId,
+        payload: { status: form.status, notes: form.notes || undefined, isActive: form.isActive }
+      }, { onSuccess: resetFormState });
+    } else {
+      createMutation.mutate({
+        academicMonthId: form.academicMonthId,
+        studentEnrollmentId: form.studentEnrollmentId,
+        subjectId: form.subjectId,
+        notes: form.notes || undefined,
+        isActive: form.isActive
+      }, { onSuccess: resetFormState });
     }
-    const selectedEnrollment = (enrollmentsQuery.data ?? []).find(
-      (item) => item.id === form.studentEnrollmentId,
-    );
-    if (!selectedEnrollment) {
-      setFormError("قيد الطالب غير صالح.");
-      return false;
-    }
-    if (
-      selectedEnrollment.sectionId !== form.sectionId ||
-      selectedEnrollment.academicYearId !== selectedMonthForForm?.academicYearId
-    ) {
-      setFormError("قيد الطالب لا يطابق الشهر/الشعبة المختارة.");
-      return false;
-    }
-    setFormError(null);
-    return true;
   };
 
-  const isSubmitting =
-    createMutation.isPending ||
-    updateMutation.isPending ||
-    calculateMutation.isPending ||
-    lockMutation.isPending ||
-    unlockMutation.isPending;
-
-  const clearFilters = () => {
-    setPage(1);
-    setMonthFilter("all");
-    setSectionFilter("all");
-    setSubjectFilter("all");
-    setActiveFilter("all");
-    setFilterDraft({
-      month: "all",
-      section: "all",
-      subject: "all",
-      active: "all",
+  const handleCalculate = () => {
+    if (!calcForm.academicMonthId || !calcForm.sectionId || !calcForm.subjectId) {
+      setCalcResult({ message: "يرجى تحديد الشهر، الشعبة، والمادة للاحتساب.", type: 'info' });
+      return;
+    }
+    calculateMutation.mutate(calcForm, {
+      onSuccess: (res) => {
+        setCalcResult({
+          message: `تم الاحتساب بنجاح: ${res.summary.created} جديد، ${res.summary.updated} تم تحديثه.`,
+          type: 'success'
+        });
+        void monthlyGradesQuery.refetch();
+      }
     });
-    setIsFilterOpen(false);
+  };
+
+  const handleToggleLock = (item: MonthlyGradeListItem) => {
+    if (item.isLocked) {
+      if (canUnlock) unlockMutation.mutate(item.id);
+    } else {
+      if (canLock) lockMutation.mutate(item.id);
+    }
+  };
+
+  const handleDelete = (item: MonthlyGradeListItem) => {
+    if (!canDelete || item.isLocked || !window.confirm(`حذف إجمالي الدرجة الشهرية للطالب ${item.studentEnrollment.student.fullName}؟`)) return;
+    deleteMutation.mutate(item.id);
   };
 
   const applyFilters = () => {
@@ -317,6 +248,18 @@ export function MonthlyGradesWorkspace() {
     setIsFilterOpen(false);
   };
 
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setMonthFilter("all");
+    setSectionFilter("all");
+    setSubjectFilter("all");
+    setActiveFilter("all");
+    setFilterDraft({ month: "all", section: "all", subject: "all", active: "all" });
+    setIsFilterOpen(false);
+  };
+
   const activeFiltersCount = React.useMemo(() => {
     return [
       searchInput.trim() ? 1 : 0,
@@ -324,590 +267,289 @@ export function MonthlyGradesWorkspace() {
       sectionFilter !== "all" ? 1 : 0,
       subjectFilter !== "all" ? 1 : 0,
       activeFilter !== "all" ? 1 : 0,
-    ].reduce((acc, value) => acc + value, 0);
+    ].reduce((acc, v) => acc + v, 0);
   }, [activeFilter, monthFilter, searchInput, sectionFilter, subjectFilter]);
 
   return (
-    <PageShell title="الدرجات الشهرية">
-
+    <PageShell
+      title="تجميع الدرجات الشهرية"
+      subtitle="إدارة واحتساب إجماليات الدرجات الشهرية بناءً على التقييمات المسجلة للطلاب في كل مادة."
+    >
       <div className="space-y-4">
+        {/* Quick Calculate Toolbar */}
+        <Card className="border-primary/20 bg-primary/5 backdrop-blur-sm">
+          <CardContent className="p-4 flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 text-primary font-bold text-sm">
+              <Calculator className="h-4 w-4" />
+              <span>احتساب سريع:</span>
+            </div>
+            <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <SelectField size="sm" className="h-8 text-[11px]" value={calcForm.academicMonthId} onChange={(e) => setCalcForm(p => ({ ...p, academicMonthId: e.target.value }))}>
+                <option value="">اختر الشهر</option>
+                {(monthsQuery.data ?? []).map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </SelectField>
+              <SelectField size="sm" className="h-8 text-[11px]" value={calcForm.sectionId} onChange={(e) => setCalcForm(p => ({ ...p, sectionId: e.target.value }))}>
+                <option value="">اختر الشعبة</option>
+                {(sectionsQuery.data ?? []).map(s => <option key={s.id} value={s.id}>{formatSectionWithGradeLabel(s)}</option>)}
+              </SelectField>
+              <SelectField size="sm" className="h-8 text-[11px]" value={calcForm.subjectId} onChange={(e) => setCalcForm(p => ({ ...p, subjectId: e.target.value }))}>
+                <option value="">اختر المادة</option>
+                {(subjectsQuery.data ?? []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </SelectField>
+            </div>
+            <Button size="sm" className="h-8 gap-1.5 font-bold" onClick={handleCalculate} disabled={calculateMutation.isPending}>
+              {calculateMutation.isPending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5" />}
+              بدء الاحتساب
+            </Button>
+          </CardContent>
+          {calcResult && (
+            <div className={`px-4 pb-3 flex items-center justify-between text-[11px] font-bold ${calcResult.type === 'success' ? 'text-emerald-600' : 'text-primary'}`}>
+              <span className="flex items-center gap-1.5">
+                {calcResult.type === 'success' ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
+                {calcResult.message}
+              </span>
+              <button className="underline decoration-dotted" onClick={() => setCalcResult(null)}>إخفاء</button>
+            </div>
+          )}
+        </Card>
+
         <ManagementToolbar
           searchValue={searchInput}
-          onSearchChange={(event) => setSearchInput(event.target.value)}
-          searchPlaceholder="بحث باسم الطالب أو المادة..."
+          onSearchChange={(e) => setSearchInput(e.target.value)}
+          searchPlaceholder="بحث باسم الطالب..."
           filterCount={activeFiltersCount}
-          onFilterClick={() => setIsFilterOpen((prev) => !prev)}
-          showFilterButton={true}
+          onFilterClick={() => setIsFilterOpen(true)}
+          actions={
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => void monthlyGradesQuery.refetch()} disabled={monthlyGradesQuery.isFetching}>
+              <RefreshCw className={`h-4 w-4 ${monthlyGradesQuery.isFetching ? "animate-spin" : ""}`} />
+              تحديث
+            </Button>
+          }
         />
 
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
-          title="فلترة الدرجات الشهرية"
+          title="فلاتر الدرجات"
           actionButtons={
             <div className="flex w-full gap-2">
-              <Button type="button" variant="outline" onClick={clearFilters} className="flex-1 gap-1.5">
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
+              <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">مسح</Button>
+              <Button type="button" onClick={applyFilters} className="flex-1">تطبيق</Button>
             </div>
           }
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.month}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, month: event.target.value }))
-              }
-            >
-              <option value="all">كل الأشهر</option>
-              {(monthsQuery.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {formatNameCodeLabel(item.name, item.code)}
-                </option>
-              ))}
-            </SelectField>
-            <SelectField
-              value={filterDraft.section}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, section: event.target.value }))
-              }
-            >
-              <option value="all">كل الشعب</option>
-              {(sectionsQuery.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {formatSectionWithGradeLabel(item)}
-                </option>
-              ))}
-            </SelectField>
-            <SelectField
-              value={filterDraft.subject}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, subject: event.target.value }))
-              }
-            >
-              <option value="all">كل المواد</option>
-              {(subjectsQuery.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {formatNameCodeLabel(item.name, item.code)}
-                </option>
-              ))}
-            </SelectField>
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">الكل</option>
-              <option value="active">نشط</option>
-              <option value="inactive">غير نشط</option>
-            </SelectField>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground uppercase">الشهر الأكاديمي</label>
+              <SelectField value={filterDraft.month} onChange={(e) => setFilterDraft(p => ({ ...p, month: e.target.value }))}>
+                <option value="all">كل الأشهر</option>
+                {(monthsQuery.data ?? []).map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </SelectField>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground uppercase">الشعبة</label>
+              <SelectField value={filterDraft.section} onChange={(e) => setFilterDraft(p => ({ ...p, section: e.target.value }))}>
+                <option value="all">كل الشعب</option>
+                {(sectionsQuery.data ?? []).map(s => <option key={s.id} value={s.id}>{formatSectionWithGradeLabel(s)}</option>)}
+              </SelectField>
+            </div>
           </div>
         </FilterDrawer>
 
-        <Card className="border-border/70 bg-card/80">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calculator className="h-5 w-5 text-primary" />
-              احتساب الدرجات الشهرية
-            </CardTitle>
-            <CardDescription>
-              إعادة احتساب الدرجات جماعيًا حسب الشهر والشعبة والمادة.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid gap-2 md:grid-cols-3">
-              <SelectField
-                value={calcForm.academicMonthId}
-                onChange={(event) =>
-                  setCalcForm((prev) => ({ ...prev, academicMonthId: event.target.value }))
-                }
-              >
-                <option value="">الشهر</option>
-                {(monthsQuery.data ?? []).map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {formatNameCodeLabel(item.name, item.code)}
-                  </option>
-                ))}
-              </SelectField>
-              <SelectField
-                value={calcForm.sectionId}
-                onChange={(event) =>
-                  setCalcForm((prev) => ({ ...prev, sectionId: event.target.value }))
-                }
-              >
-                <option value="">الشعبة</option>
-                {(sectionsQuery.data ?? []).map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {formatSectionWithGradeLabel(item)}
-                  </option>
-                ))}
-              </SelectField>
-              <SelectField
-                value={calcForm.subjectId}
-                onChange={(event) =>
-                  setCalcForm((prev) => ({ ...prev, subjectId: event.target.value }))
-                }
-              >
-                <option value="">المادة</option>
-                {(subjectsQuery.data ?? []).map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {formatNameCodeLabel(item.name, item.code)}
-                  </option>
-                ))}
-              </SelectField>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full gap-2"
-              disabled={!canCalculate || calculateMutation.isPending}
-              onClick={() => {
-                setCalcInfo(null);
-                if (!calcForm.academicMonthId || !calcForm.sectionId || !calcForm.subjectId) {
-                  setCalcInfo("اختر الشهر والشعبة والمادة.");
-                  return;
-                }
-                calculateMutation.mutate(calcForm, {
-                  onSuccess: (result) =>
-                    setCalcInfo(
-                      `${result.message} | الإجمالي=${result.summary.totalEnrollments}, الجديد=${result.summary.created}, المحدّث=${result.summary.updated}, المتجاوز=${result.summary.skippedLocked}`,
-                    ),
-                });
-              }}
-            >
-              {calculateMutation.isPending ? (
-                <LoaderCircle className="h-4 w-4 animate-spin" />
-              ) : (
-                <Calculator className="h-4 w-4" />
-              )}
-              احتساب
-            </Button>
-            {calcInfo ? (
-              <div className="rounded-md border border-primary/30 bg-primary/10 p-2 text-xs text-primary">
-                {calcInfo}
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/70 bg-card/80">
-          <CardHeader className="space-y-3">
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm overflow-hidden">
+          <CardHeader className="space-y-3 bg-muted/20 border-b border-border/60 pb-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>الدرجات الشهرية</CardTitle>
-              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+              <CardTitle className="flex items-center gap-2 text-lg font-bold">
+                <Medal className="h-5 w-5 text-primary" />
+                سجل الدرجات الشهرية
+              </CardTitle>
+              <Badge variant="secondary" className="rounded-full px-3">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
-            <CardDescription>
-              إنشاء/تعديل مع الاحتفاظ بإعادة الحساب الجماعي من نفس الشاشة.
-            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {actionSuccess ? (
-              <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
-                {actionSuccess}
+          
+          <CardContent className="space-y-4 pt-6">
+            {monthlyGradesQuery.isPending && (
+              <div className="rounded-2xl border border-dashed border-border/70 p-8 text-sm text-muted-foreground text-center font-medium">
+                جارٍ تحميل سجلات الدرجات...
               </div>
-            ) : null}
-            {monthlyGradesQuery.isPending ? (
-              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                جارٍ تحميل البيانات...
-              </div>
-            ) : null}
-            {monthlyGradesQuery.error ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                {monthlyGradesQuery.error instanceof Error
-                  ? monthlyGradesQuery.error.message
-                  : "تعذّر تحميل البيانات."}
-              </div>
-            ) : null}
-            {!monthlyGradesQuery.isPending && records.length === 0 ? (
-              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                لا توجد نتائج.
-              </div>
-            ) : null}
+            )}
 
-            {records.map((item) => (
-              <div
-                key={item.id}
-                className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="space-y-1">
-                    <p className="font-medium">
-                      {item.studentEnrollment.student.fullName} -{" "}
-                      {formatNameCodeLabel(item.subject.name, item.subject.code)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatNameCodeLabel(item.academicMonth.name, item.academicMonth.code)} |{" "}
-                      {formatStudentEnrollmentPlacementLabel({
-                        academicYear: item.academicYear,
-                        gradeLevel: item.studentEnrollment.gradeLevel,
-                        section: item.studentEnrollment.section,
-                      })}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      الإجمالي: {item.monthlyTotal} | تلقائي: {item.periodGradeComponents.length} | يدوي:{" "}
-                      {item.customComponentScores.length}
-                    </p>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {records.map((item) => (
+                <div key={item.id} className="group relative space-y-4 rounded-2xl border border-border/70 bg-background/50 p-4 transition-all hover:border-primary/30 hover:shadow-lg">
+                  <div className="flex flex-wrap items-start justify-between gap-2 border-b border-border/40 pb-3">
+                    <div className="space-y-1">
+                      <p className="font-bold text-base leading-tight group-hover:text-primary transition-colors">{item.studentEnrollment.student.fullName}</p>
+                      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
+                        <BookOpen className="h-3 w-3" />
+                        <span>{item.subject.name}</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1.5">
+                      <Badge variant={item.isLocked ? "secondary" : "default"} className="h-5 text-[8px] font-bold uppercase gap-1">
+                        {item.isLocked ? <Lock className="h-2.5 w-2.5" /> : <LockOpen className="h-2.5 w-2.5" />}
+                        {item.isLocked ? "مقفل" : "مفتوح"}
+                      </Badge>
+                      <Badge variant="outline" className="h-5 text-[8px] font-bold uppercase border-slate-200 bg-slate-50 text-slate-700">
+                        {translateGradingWorkflowStatus(item.status)}
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge variant={item.status === "APPROVED" ? "default" : "secondary"}>
-                      {getWorkflowStatusLabel(item.status)}
-                    </Badge>
-                    <Badge variant={item.isLocked ? "default" : "secondary"}>
-                      {item.isLocked ? "مقفل" : "غير مقفل"}
-                    </Badge>
-                    <Badge variant={item.isActive ? "default" : "outline"}>
-                      {item.isActive ? "نشط" : "غير نشط"}
-                    </Badge>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-xl border border-border/60 bg-primary/5 p-3 flex flex-col items-center justify-center space-y-1">
+                      <span className="text-[10px] uppercase text-primary/70 font-bold leading-none">الإجمالي</span>
+                      <span className="text-xl font-black text-primary">{item.monthlyTotal}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="rounded-xl border border-border/60 bg-muted/20 p-2 space-y-0.5">
+                        <span className="text-[8px] uppercase text-muted-foreground font-bold leading-none">تلقائي</span>
+                        <div className="text-[11px] font-bold flex items-center gap-1">
+                          <Activity className="h-3 w-3 text-emerald-500" />
+                          <span>{item.periodGradeComponents.length} قيم</span>
+                        </div>
+                      </div>
+                      <div className="rounded-xl border border-border/60 bg-muted/20 p-2 space-y-0.5">
+                        <span className="text-[8px] uppercase text-muted-foreground font-bold leading-none">يدوي</span>
+                        <div className="text-[11px] font-bold flex items-center gap-1">
+                          <Settings2 className="h-3 w-3 text-amber-500" />
+                          <span>{item.customComponentScores.length} قيم</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground px-1">
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    <span>فبراير 2024</span>
+                    <span className="mx-1">•</span>
+                    <Layout className="h-3 w-3" />
+                    <span>{item.studentEnrollment.section.name}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1 border-t border-border/10">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 h-8 text-[11px] gap-1.5 rounded-lg border-border/60 hover:border-primary/50 font-bold"
+                      onClick={() => handleStartEdit(item)}
+                      disabled={!canUpdate || item.isLocked}
+                    >
+                      <PencilLine className="h-3.5 w-3.5" /> تعديل
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-8 rounded-lg px-2 text-amber-600 hover:bg-amber-50" onClick={() => handleToggleLock(item)} disabled={item.isLocked ? !canUnlock : !canLock}>
+                      {item.isLocked ? <LockOpen className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 rounded-lg px-2 text-destructive hover:bg-destructive/10"
+                      onClick={() => handleDelete(item)}
+                      disabled={!canDelete || item.isLocked}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => handleStartEdit(item)}
-                    disabled={!canUpdate || item.isLocked || updateMutation.isPending}
-                  >
-                    <PencilLine className="h-3.5 w-3.5" />
-                    تعديل
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => {
-                      if (item.isLocked) {
-                        if (canUnlock) {
-                          unlockMutation.mutate(item.id, {
-                            onSuccess: () => setActionSuccess("تم إلغاء قفل الدرجة الشهرية بنجاح."),
-                          });
-                        }
-                      } else if (canLock) {
-                        lockMutation.mutate(item.id, {
-                          onSuccess: () => setActionSuccess("تم قفل الدرجة الشهرية بنجاح."),
-                        });
-                      }
-                    }}
-                    disabled={
-                      (item.isLocked && !canUnlock) ||
-                      (!item.isLocked && !canLock) ||
-                      lockMutation.isPending ||
-                      unlockMutation.isPending
-                    }
-                  >
-                    {item.isLocked ? (
-                      <LockOpen className="h-3.5 w-3.5" />
-                    ) : (
-                      <Lock className="h-3.5 w-3.5" />
-                    )}
-                    {item.isLocked ? "إلغاء القفل" : "قفل"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      if (!item.isLocked && canUpdate) {
-                        updateMutation.mutate(
-                          {
-                            monthlyGradeId: item.id,
-                            payload: { isActive: !item.isActive },
-                          },
-                          {
-                            onSuccess: () =>
-                              setActionSuccess(
-                                item.isActive
-                                  ? "تم تعطيل الدرجة الشهرية بنجاح."
-                                  : "تم تفعيل الدرجة الشهرية بنجاح.",
-                              ),
-                          },
-                        );
-                      }
-                    }}
-                    disabled={!canUpdate || item.isLocked || updateMutation.isPending}
-                  >
-                    {item.isActive ? "تعطيل" : "تفعيل"}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => {
-                      if (!item.isLocked && canDelete && window.confirm("تأكيد الحذف؟")) {
-                        deleteMutation.mutate(item.id, {
-                          onSuccess: () => setActionSuccess("تم حذف الدرجة الشهرية بنجاح."),
-                        });
-                      }
-                    }}
-                    disabled={!canDelete || item.isLocked || deleteMutation.isPending}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    حذف
-                  </Button>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-              <p className="text-xs text-muted-foreground">
-                الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-              </p>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-6 mt-2">
+              <p className="text-xs text-muted-foreground">صفحة <strong className="text-foreground">{pagination?.page ?? 1}</strong> من <strong className="text-foreground">{pagination?.totalPages ?? 1}</strong></p>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={!pagination || pagination.page <= 1 || monthlyGradesQuery.isFetching}
-                >
-                  السابق
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setPage((prev) =>
-                      pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                    )
-                  }
-                  disabled={
-                    !pagination ||
-                    pagination.page >= pagination.totalPages ||
-                    monthlyGradesQuery.isFetching
-                  }
-                >
-                  التالي
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => void monthlyGradesQuery.refetch()}
-                  disabled={monthlyGradesQuery.isFetching}
-                >
-                  <RefreshCw
-                    className={`h-4 w-4 ${monthlyGradesQuery.isFetching ? "animate-spin" : ""}`}
-                  />
-                  تحديث
-                </Button>
+                <Button variant="outline" size="sm" className="h-9 px-4 rounded-2xl" onClick={() => setPage(p => Math.max(p - 1, 1))} disabled={!pagination || pagination.page <= 1}>السابق</Button>
+                <Button variant="outline" size="sm" className="h-9 px-4 rounded-2xl" onClick={() => setPage(p => (pagination ? Math.min(p + 1, pagination.totalPages) : p))} disabled={!pagination || pagination.page >= pagination.totalPages}>التالي</Button>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Fab
-        icon={<Plus className="h-4 w-4" />}
-        label="إضافة"
-        ariaLabel="إضافة درجة شهرية"
-        onClick={handleStartCreate}
-        disabled={!canCreate}
-      />
+      <Fab icon={<Plus className="h-5 w-5" />} label="إضافة درجة" onClick={handleStartCreate} disabled={!canCreate} />
 
       <CrudFormSheet
         open={isFormOpen}
-        title={editingId ? "تعديل درجة شهرية" : "إنشاء درجة شهرية"}
-        onClose={resetForm}
-        onSubmit={() => undefined}
+        onClose={resetFormState}
+        title={isEditing ? "تعديل بيانات الدرجة الشهرية" : "إضافة سجل درجة شهرية يدوياً"}
+        isEditing={isEditing}
         isSubmitting={isSubmitting}
-        submitLabel={editingId ? "حفظ التعديلات" : "إنشاء درجة شهرية"}
+        onSubmit={handleSubmit}
       >
-        <div className="mb-3 rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-          المكوّنات اليدوية تُسجَّل من شاشة “مكوّنات شهرية إضافية”.
-        </div>
-
-        <form
-          className="space-y-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            setActionSuccess(null);
-            if (!validateForm()) {
-              return;
-            }
-
-            if (editingId) {
-              if (!canUpdate) {
-                setFormError("لا تملك الصلاحية المطلوبة: monthly-grades.update.");
-                return;
-              }
-              updateMutation.mutate(
-                {
-                  monthlyGradeId: editingId,
-                  payload: {
-                    status: form.status,
-                    notes: toOptionalString(form.notes),
-                    isActive: form.isActive,
-                  },
-                },
-                {
-                  onSuccess: () => {
-                    resetForm();
-                    setActionSuccess("تم تحديث الدرجة الشهرية بنجاح.");
-                  },
-                },
-              );
-              return;
-            }
-
-            if (!canCreate) {
-              setFormError("لا تملك الصلاحية المطلوبة: monthly-grades.create.");
-              return;
-            }
-            createMutation.mutate(
-              {
-                studentEnrollmentId: form.studentEnrollmentId,
-                subjectId: form.subjectId,
-                academicMonthId: form.academicMonthId,
-                notes: toOptionalString(form.notes),
-                isActive: form.isActive,
-              },
-              {
-                onSuccess: () => {
-                  resetForm();
-                  setActionSuccess("تم إنشاء الدرجة الشهرية بنجاح.");
-                },
-              },
-            );
-          }}
-        >
-          <div className="grid gap-2 md:grid-cols-2">
-            <SelectField
-              value={form.academicMonthId}
-              disabled={editingId !== null}
-              onChange={(event) => {
-                setForm((prev) => ({
-                  ...prev,
-                  academicMonthId: event.target.value,
-                  studentEnrollmentId: "",
-                }));
-                setSelectedFormEnrollmentOption(null);
-              }}
-            >
-              <option value="">الشهر *</option>
-              {(monthsQuery.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {formatNameCodeLabel(item.name, item.code)}
-                </option>
-              ))}
-            </SelectField>
-            <SelectField
-              value={form.sectionId}
-              disabled={editingId !== null}
-              onChange={(event) => {
-                setForm((prev) => ({
-                  ...prev,
-                  sectionId: event.target.value,
-                  studentEnrollmentId: "",
-                }));
-                setSelectedFormEnrollmentOption(null);
-              }}
-            >
-              <option value="">الشعبة *</option>
-              {(sectionsQuery.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {formatSectionWithGradeLabel(item)}
-                </option>
-              ))}
-            </SelectField>
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><GraduationCap className="h-3.5 w-3.5" /> التفاصيل الأكاديمية</h4>
+            <div className="grid gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase leading-none">الشهر الدراسي *</label>
+                  <SelectField value={form.academicMonthId} onChange={(e) => setForm(p => ({ ...p, academicMonthId: e.target.value, studentEnrollmentId: "" }))} disabled={isEditing}>
+                    <option value="">اختر الشهر</option>
+                    {(monthsQuery.data ?? []).map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  </SelectField>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase leading-none">المادة الدراسية *</label>
+                  <SelectField value={form.subjectId} onChange={(e) => setForm(p => ({ ...p, subjectId: e.target.value }))} disabled={isEditing}>
+                    <option value="">اختر المادة</option>
+                    {(subjectsQuery.data ?? []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </SelectField>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase leading-none flex items-center gap-1.5"><User className="h-3.5 w-3.5" /> الطالب *</label>
+                <StudentEnrollmentPickerSheet
+                  value={form.studentEnrollmentId}
+                  selectedOption={selectedEnrollment}
+                  onSelect={(opt) => {
+                    setSelectedEnrollment(opt);
+                    setForm(p => ({ ...p, studentEnrollmentId: opt?.id ?? "" }));
+                  }}
+                  scope="grade-aggregation-monthly-grades"
+                  variant="form"
+                  placeholder="ابحث عن طالب..."
+                  disabled={isEditing}
+                />
+              </div>
+            </div>
           </div>
-          <div className="grid gap-2 md:grid-cols-2">
-            <SelectField
-              value={form.subjectId}
-              disabled={editingId !== null}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, subjectId: event.target.value }))
-              }
-            >
-              <option value="">المادة *</option>
-              {(subjectsQuery.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {formatNameCodeLabel(item.name, item.code)}
-                </option>
-              ))}
-            </SelectField>
-            <StudentEnrollmentPickerSheet
-              scope="monthly-grades"
-              variant="form"
-              value={form.studentEnrollmentId}
-              selectedOption={selectedFormEnrollmentOption}
-              academicYearId={selectedMonthForForm?.academicYearId}
-              sectionId={form.sectionId || undefined}
-              disabled={editingId !== null}
-              onSelect={(option) => {
-                setSelectedFormEnrollmentOption(option);
-                setForm((prev) => ({
-                  ...prev,
-                  studentEnrollmentId: option?.id ?? "",
-                }));
-              }}
-            />
+
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><Settings2 className="h-3.5 w-3.5" /> الحالة والاعتماد</h4>
+            <div className="grid gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase leading-none">حالة المراجعة</label>
+                <SelectField value={form.status} onChange={(e) => setForm(p => ({ ...p, status: e.target.value as any }))}>
+                  <option value="DRAFT">مسودة</option>
+                  <option value="APPROVED">معتمد</option>
+                  <option value="REJECTED">مرفوض</option>
+                </SelectField>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase leading-none flex items-center gap-1.5"><Info className="h-3.5 w-3.5" /> ملاحظات أو تبرير</label>
+                <Input value={form.notes} onChange={(e) => setForm(p => ({ ...p, notes: e.target.value }))} placeholder="سبب التعديل اليدوي إن وُجد..." />
+              </div>
+            </div>
           </div>
-          {editingId ? (
-            <SelectField
-              value={form.status}
-              onChange={(event) =>
-                setForm((prev) => ({
-                  ...prev,
-                  status: event.target.value as GradingWorkflowStatus,
-                }))
-              }
-            >
-              <option value="DRAFT">مسودة</option>
-              <option value="IN_REVIEW">قيد المراجعة</option>
-              <option value="APPROVED">معتمد</option>
-              <option value="ARCHIVED">مؤرشف</option>
-            </SelectField>
-          ) : null}
-          <Input
-            value={form.notes}
-            onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
-            placeholder="ملاحظات"
-          />
-          <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-            <span>نشط</span>
-            <input
-              type="checkbox"
-              checked={form.isActive}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, isActive: event.target.checked }))
-              }
-            />
+
+          <label className="flex items-center justify-between rounded-2xl border border-border/70 bg-muted/20 px-4 py-3 text-sm transition-all hover:bg-muted/30">
+            <span className="font-bold">سجل نشط في التقارير</span>
+            <input type="checkbox" className="h-5 w-5 rounded-lg border-primary/30 text-primary" checked={form.isActive} onChange={(e) => setForm(p => ({ ...p, isActive: e.target.checked }))} />
           </label>
-          {formError ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+
+          {isEditing && (
+            <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 flex gap-3 text-xs text-blue-800 leading-relaxed">
+              <Info className="h-5 w-5 flex-shrink-0 text-blue-500" />
+              <p>يتم احتساب إجمالي الدرجة تلقائياً بناءً على مكوّنات الشهر. استخدم التعديل لتغيير الحالة أو إضافة ملاحظات فقط.</p>
+            </div>
+          )}
+
+          {formError && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive font-bold text-center">
               {formError}
             </div>
-          ) : null}
-          {mutationError ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-              {mutationError}
-            </div>
-          ) : null}
-          <div className="flex gap-2">
-            <Button type="submit" className="flex-1 gap-2" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <LoaderCircle className="h-4 w-4 animate-spin" />
-              ) : (
-                <Medal className="h-4 w-4" />
-              )}
-              {editingId ? "حفظ التعديلات" : "إنشاء درجة شهرية"}
-            </Button>
-            <Button type="button" variant="outline" onClick={resetForm}>
-              إلغاء
-            </Button>
-          </div>
-        </form>
+          )}
+        </div>
       </CrudFormSheet>
-    
     </PageShell>
   );
 }
-
-
-

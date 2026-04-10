@@ -1,24 +1,31 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
-import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
-
-import { ManagementToolbar } from "@/components/ui/management-toolbar";
-
-import { PageShell } from "@/components/ui/page-shell";
-
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   CalendarCheck2,
-  LoaderCircle,
   Lock,
   PencilLine,
   Plus,
   RefreshCw,
   Trash2,
+  User,
+  Medal,
+  Clock,
+  Info,
+  ChevronLeft,
+  Settings2,
+  GraduationCap,
+  ShieldCheck,
+  Ban,
+  CircleHelp,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
+import { SelectField } from "@/components/ui/select-field";
+import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
 import { StudentEnrollmentPickerSheet } from "@/components/ui/student-enrollment-picker-sheet";
 import {
   Card,
@@ -27,10 +34,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { Input } from "@/components/ui/input";
-import { SelectField } from "@/components/ui/select-field";
+import { Fab } from "@/components/ui/fab";
+import { PageShell } from "@/components/ui/page-shell";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateStudentExamScoreMutation,
@@ -99,47 +105,6 @@ function toFormState(item: StudentExamScoreListItem): FormState {
   };
 }
 
-function getAbsenceTypeLabel(value: ExamAbsenceType): string {
-  return translateExamAbsenceType(value);
-}
-
-function formatEnrollmentPlacementLabel(
-  item: {
-    academicYear: StudentEnrollmentListItem["academicYear"];
-    gradeLevel?: {
-      id: string;
-      code: string;
-      name: string;
-      sequence: number;
-    } | null;
-    section?: {
-      id: string;
-      code: string;
-      name: string;
-      gradeLevel?: {
-        id: string;
-        code: string;
-        name: string;
-        sequence: number;
-      } | null;
-    } | null;
-  },
-): string {
-  const academicYearLabel = formatNameCodeLabel(item.academicYear.name, item.academicYear.code);
-
-  if (item.section) {
-    return `${academicYearLabel} / ${formatSectionWithGradeLabel(item.section)}`;
-  }
-
-  const gradeLevelLabel = item.gradeLevel
-    ? formatNameCodeLabel(item.gradeLevel.name, item.gradeLevel.code)
-    : null;
-
-  return gradeLevelLabel
-    ? `${academicYearLabel} / ${gradeLevelLabel} / غير موزع`
-    : `${academicYearLabel} / غير موزع`;
-}
-
 export function StudentExamScoresWorkspace() {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("student-exam-scores.create");
@@ -149,43 +114,26 @@ export function StudentExamScoresWorkspace() {
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
-  const [examPeriodFilter, setExamPeriodFilter] = React.useState("all");
+  const [periodFilter, setPeriodFilter] = React.useState("all");
   const [assessmentFilter, setAssessmentFilter] = React.useState("all");
   const [presenceFilter, setPresenceFilter] = React.useState<"all" | "present" | "absent">("all");
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">("all");
-  const [filterDraft, setFilterDraft] = React.useState<{
-    examPeriod: string;
-    assessment: string;
-    presence: "all" | "present" | "absent";
-    active: "all" | "active" | "inactive";
-  }>({
-    examPeriod: "all",
-    assessment: "all",
-    presence: "all",
-    active: "all",
-  });
+  const [filterDraft, setFilterDraft] = React.useState({ period: "all", assessment: "all", presence: "all" as any, active: "all" as any });
 
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [form, setForm] = React.useState<FormState>(DEFAULT_FORM);
-  const [selectedEnrollmentOption, setSelectedEnrollmentOption] =
-    React.useState<StudentEnrollmentPickerOption | null>(null);
+  const [selectedEnrollment, setSelectedEnrollment] = React.useState<StudentEnrollmentPickerOption | null>(null);
   const [formError, setFormError] = React.useState<string | null>(null);
-  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
 
-  const examPeriodsQuery = useExamPeriodOptionsQuery();
-  const assessmentsForFormQuery = useExamAssessmentOptionsQuery(form.examPeriodId || undefined);
-  const filterExamPeriodId = isFilterOpen ? filterDraft.examPeriod : examPeriodFilter;
-  const assessmentsForFilterQuery = useExamAssessmentOptionsQuery(
-    filterExamPeriodId === "all" ? undefined : filterExamPeriodId,
-  );
-
+  const periodsQuery = useExamPeriodOptionsQuery();
+  const assessmentsQuery = useExamAssessmentOptionsQuery(form.examPeriodId || undefined);
+  const filterAssessmentsQuery = useExamAssessmentOptionsQuery(filterDraft.period === "all" ? undefined : filterDraft.period);
+  
   const scoresQuery = useStudentExamScoresQuery({
-    page,
-    limit: PAGE_SIZE,
-    search: search || undefined,
-    examPeriodId: examPeriodFilter === "all" ? undefined : examPeriodFilter,
+    page, limit: PAGE_SIZE, search: search || undefined,
+    examPeriodId: periodFilter === "all" ? undefined : periodFilter,
     examAssessmentId: assessmentFilter === "all" ? undefined : assessmentFilter,
     isPresent: presenceFilter === "all" ? undefined : presenceFilter === "present",
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
@@ -197,122 +145,46 @@ export function StudentExamScoresWorkspace() {
 
   const records = React.useMemo(() => scoresQuery.data?.data ?? [], [scoresQuery.data?.data]);
   const pagination = scoresQuery.data?.pagination;
-  const selectedAssessment = (assessmentsForFormQuery.data ?? []).find(
-    (item) => item.id === form.examAssessmentId,
-  );
-
-  const mutationError =
-    (createMutation.error as Error | null)?.message ??
-    (updateMutation.error as Error | null)?.message ??
-    (deleteMutation.error as Error | null)?.message ??
-    null;
-
-  React.useEffect(() => {
-    if (!editingId) {
-      return;
-    }
-
-    const stillExists = records.some((item) => item.id === editingId);
-    if (!stillExists) {
-      setEditingId(null);
-      setForm(DEFAULT_FORM);
-      setSelectedEnrollmentOption(null);
-      setFormError(null);
-      setIsFormOpen(false);
-    }
-  }, [editingId, records]);
+  const isEditing = editingId !== null;
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+  const selectedAssessment = (assessmentsQuery.data ?? []).find(it => it.id === form.examAssessmentId);
 
   useDebounceEffect(() => {
-      setPage(1);
-      setSearch(searchInput.trim());
-    }, 400, [searchInput]);
+    setPage(1);
+    setSearch(searchInput.trim());
+  }, 400, [searchInput]);
 
   React.useEffect(() => {
-    if (!isFilterOpen) {
-      return;
-    }
-
-    setFilterDraft({
-      examPeriod: examPeriodFilter,
-      assessment: assessmentFilter,
-      presence: presenceFilter,
-      active: activeFilter,
-    });
-  }, [activeFilter, assessmentFilter, examPeriodFilter, isFilterOpen, presenceFilter]);
+    if (!isFilterOpen) return;
+    setFilterDraft({ period: periodFilter, assessment: assessmentFilter, presence: presenceFilter, active: activeFilter });
+  }, [activeFilter, assessmentFilter, isFilterOpen, periodFilter, presenceFilter]);
 
   const resetFormState = () => {
     setEditingId(null);
     setForm(DEFAULT_FORM);
+    setSelectedEnrollment(null);
     setFormError(null);
-  };
-
-  const resetForm = () => {
-    resetFormState();
     setIsFormOpen(false);
   };
 
   const handleStartCreate = () => {
-    if (!canCreate) {
-      return;
-    }
-
-    setFormError(null);
-    setActionSuccess(null);
-    setEditingId(null);
+    if (!canCreate) return;
     setForm(DEFAULT_FORM);
-    setSelectedEnrollmentOption(null);
     setIsFormOpen(true);
   };
 
   const handleStartEdit = (item: StudentExamScoreListItem) => {
-    if (!canUpdate || item.examAssessment.examPeriod.isLocked) {
-      return;
-    }
-
-    setFormError(null);
-    setActionSuccess(null);
+    if (!canUpdate || item.examAssessment.examPeriod.isLocked) return;
     setEditingId(item.id);
     setForm(toFormState(item));
-    setSelectedEnrollmentOption(toStudentEnrollmentPickerOption(item.studentEnrollment));
+    setSelectedEnrollment(toStudentEnrollmentPickerOption(item.studentEnrollment));
     setIsFormOpen(true);
   };
 
-  const validateForm = (): boolean => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
     if (!form.examAssessmentId || !form.studentEnrollmentId) {
-      setFormError("يجب اختيار التقييم والطالب أولًا.");
-      return false;
-    }
-    if (form.teacherNotes.trim().length > 255 || form.excuseDetails.trim().length > 255) {
-      setFormError("ملاحظات المدرس أو تفاصيل العذر لا يمكن أن تتجاوز 255 حرفًا.");
-      return false;
-    }
-    if (!selectedAssessment) {
-      setFormError("الرجاء اختيار تقييم صحيح.");
-      return false;
-    }
-    if (selectedAssessment.examPeriod.isLocked) {
-      setFormError("فترة الاختبار مقفلة.");
-      return false;
-    }
-
-    const score = Number(form.score || "0");
-    if (!Number.isFinite(score) || score < 0) {
-      setFormError("الدرجة يجب أن تكون رقمًا صحيحًا أو عشريًا أكبر من أو يساوي 0.");
-      return false;
-    }
-    if (form.isPresent && score > selectedAssessment.maxScore) {
-      setFormError(`الدرجة لا يمكن أن تتجاوز الحد الأعلى ${selectedAssessment.maxScore}.`);
-      return false;
-    }
-
-    setFormError(null);
-    return true;
-  };
-
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setActionSuccess(null);
-    if (!validateForm()) {
+      setFormError("التقييم والطالب حقول إجبارية.");
       return;
     }
 
@@ -320,526 +192,294 @@ export function StudentExamScoresWorkspace() {
       examAssessmentId: form.examAssessmentId,
       studentEnrollmentId: form.studentEnrollmentId,
       isPresent: form.isPresent,
-      score: form.isPresent ? Number(form.score || "0") : 0,
+      score: form.isPresent ? Number(form.score) : 0,
       absenceType: form.isPresent ? undefined : form.absenceType,
       excuseDetails: form.isPresent ? undefined : toOptionalString(form.excuseDetails),
       teacherNotes: toOptionalString(form.teacherNotes),
       isActive: form.isActive,
     };
 
-    if (editingId) {
-      if (!canUpdate) {
-        setFormError("ليس لديك صلاحية تعديل درجات الاختبارات: student-exam-scores.update.");
-        return;
-      }
-      updateMutation.mutate(
-        { studentExamScoreId: editingId, payload },
-        {
-          onSuccess: () => {
-            resetForm();
-            setActionSuccess("تم تحديث درجة الاختبار بنجاح.");
-          },
-        },
-      );
-      return;
+    if (isEditing && editingId) {
+      updateMutation.mutate({ studentExamScoreId: editingId, payload }, { onSuccess: resetFormState });
+    } else {
+      createMutation.mutate(payload, { onSuccess: resetFormState });
     }
-
-    if (!canCreate) {
-      setFormError("ليس لديك صلاحية إضافة درجات الاختبارات: student-exam-scores.create.");
-      return;
-    }
-    createMutation.mutate(payload, {
-      onSuccess: () => {
-        resetForm();
-        setPage(1);
-        setActionSuccess("تمت إضافة درجة الاختبار بنجاح.");
-      },
-    });
-  };
-
-  const handleToggleActive = (item: StudentExamScoreListItem) => {
-    if (!canUpdate || item.examAssessment.examPeriod.isLocked) {
-      return;
-    }
-
-    updateMutation.mutate(
-      {
-        studentExamScoreId: item.id,
-        payload: { isActive: !item.isActive },
-      },
-        {
-          onSuccess: () => {
-            setActionSuccess(
-              item.isActive ? "تم تعطيل درجة الاختبار بنجاح." : "تم تفعيل درجة الاختبار بنجاح.",
-            );
-          },
-        },
-    );
   };
 
   const handleDelete = (item: StudentExamScoreListItem) => {
-    if (!canDelete || item.examAssessment.examPeriod.isLocked) {
-      return;
-    }
-
-    if (!window.confirm("هل تريد حذف هذا السجل؟")) {
-      return;
-    }
-
-    deleteMutation.mutate(item.id, {
-      onSuccess: () => {
-        setActionSuccess("تم حذف درجة الاختبار بنجاح.");
-      },
-    });
-  };
-
-  const isSubmitting = createMutation.isPending || updateMutation.isPending;
-
-  const clearFilters = () => {
-    setPage(1);
-    setSearchInput("");
-    setSearch("");
-    setExamPeriodFilter("all");
-    setAssessmentFilter("all");
-    setPresenceFilter("all");
-    setActiveFilter("all");
-    setIsFilterOpen(false);
+    if (!canDelete || item.examAssessment.examPeriod.isLocked || !window.confirm(`حذف درجة الطالب ${item.studentEnrollment.student.fullName}؟`)) return;
+    deleteMutation.mutate(item.id);
   };
 
   const applyFilters = () => {
     setPage(1);
-    setExamPeriodFilter(filterDraft.examPeriod);
+    setPeriodFilter(filterDraft.period);
     setAssessmentFilter(filterDraft.assessment);
     setPresenceFilter(filterDraft.presence);
     setActiveFilter(filterDraft.active);
     setIsFilterOpen(false);
   };
 
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setPeriodFilter("all");
+    setAssessmentFilter("all");
+    setPresenceFilter("all");
+    setActiveFilter("all");
+    setFilterDraft({ period: "all", assessment: "all", presence: "all", active: "all" });
+    setIsFilterOpen(false);
+  };
+
   const activeFiltersCount = React.useMemo(() => {
-    const count = [
+    return [
       searchInput.trim() ? 1 : 0,
-      examPeriodFilter !== "all" ? 1 : 0,
+      periodFilter !== "all" ? 1 : 0,
       assessmentFilter !== "all" ? 1 : 0,
       presenceFilter !== "all" ? 1 : 0,
       activeFilter !== "all" ? 1 : 0,
-    ].reduce((acc, value) => acc + value, 0);
-    return count;
-  }, [activeFilter, assessmentFilter, examPeriodFilter, presenceFilter, searchInput]);
+    ].reduce((acc, v) => acc + v, 0);
+  }, [activeFilter, presenceFilter, searchInput, periodFilter, assessmentFilter]);
 
   return (
-    <PageShell title="مرشحات درجات الاختبارات">
-
+    <PageShell
+      title="رصد درجات الاختبارات"
+      subtitle="تسجيل وتحرير درجات الطلاب، إثبات الحضور والغياب، وإدارة الأعذار للفترات الاختبارية المفتوحة."
+    >
       <div className="space-y-4">
         <ManagementToolbar
           searchValue={searchInput}
-          onSearchChange={(event) => setSearchInput(event.target.value)}
-          searchPlaceholder="ابحث..."
+          onSearchChange={(e) => setSearchInput(e.target.value)}
+          searchPlaceholder="بحث بالاسم أو الكود..."
           filterCount={activeFiltersCount}
-          onFilterClick={() => setIsFilterOpen((prev) => !prev)}
-          showFilterButton={true}
+          onFilterClick={() => setIsFilterOpen(true)}
+          actions={
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => void scoresQuery.refetch()} disabled={scoresQuery.isFetching}>
+              <RefreshCw className={`h-4 w-4 ${scoresQuery.isFetching ? "animate-spin" : ""}`} />
+              تحديث
+            </Button>
+          }
         />
 
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
-          title="مرشحات درجات الاختبارات"
+          title="فلاتر درجات الاختبارات"
           actionButtons={
             <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
+              <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">مسح</Button>
+              <Button type="button" onClick={applyFilters} className="flex-1">تطبيق</Button>
             </div>
           }
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.examPeriod}
-              onChange={(event) => {
-                const nextValue = event.target.value;
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  examPeriod: nextValue,
-                  assessment: "all",
-                }));
-              }}
-            >
-              <option value="all">كل الفترات</option>
-              {(examPeriodsQuery.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name} ({translateAssessmentType(item.assessmentType)})
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField
-              value={filterDraft.assessment}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, assessment: event.target.value }))
-              }
-            >
-              <option value="all">كل التقييمات</option>
-              {(assessmentsForFilterQuery.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.title}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField
-              value={filterDraft.presence}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  presence: event.target.value as "all" | "present" | "absent",
-                }))
-              }
-            >
-              <option value="all">الحضور: الكل</option>
-              <option value="present">موجود</option>
-              <option value="absent">غائب</option>
-            </SelectField>
-
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">الكل</option>
-              <option value="active">نشط</option>
-              <option value="inactive">غير نشط</option>
-            </SelectField>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground uppercase">الفترة</label>
+              <SelectField value={filterDraft.period} onChange={(e) => setFilterDraft(p => ({ ...p, period: e.target.value, assessment: "all" }))}>
+                <option value="all">كل الفترات</option>
+                {(periodsQuery.data ?? []).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </SelectField>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground uppercase">التقييم</label>
+              <SelectField value={filterDraft.assessment} onChange={(e) => setFilterDraft(p => ({ ...p, assessment: e.target.value }))}>
+                <option value="all">كل التقييمات</option>
+                {(filterAssessmentsQuery.data ?? []).map(a => <option key={a.id} value={a.id}>{a.title}</option>)}
+              </SelectField>
+            </div>
           </div>
         </FilterDrawer>
 
-        <Card className="border-border/70 bg-card/80">
-          <CardHeader className="space-y-3">
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm overflow-hidden">
+          <CardHeader className="space-y-3 bg-muted/20 border-b border-border/60 pb-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>درجات الاختبارات</CardTitle>
-              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+              <CardTitle className="flex items-center gap-2 text-lg font-bold">
+                <CalendarCheck2 className="h-5 w-5 text-primary" />
+                سجل رصد الدرجات
+              </CardTitle>
+              <Badge variant="secondary" className="rounded-full px-3">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
-            <CardDescription>عرض درجات الاختبارات مع إمكانية التصفية والبحث.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {actionSuccess ? (
-              <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
-                {actionSuccess}
+          
+          <CardContent className="space-y-4 pt-6">
+            {scoresQuery.isPending && (
+              <div className="rounded-2xl border border-dashed border-border/70 p-8 text-sm text-muted-foreground text-center font-medium">
+                جارٍ تحميل كشوف الدرجات...
               </div>
-            ) : null}
-            {scoresQuery.isPending ? (
-              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                جاري تحميل درجات الاختبارات...
-              </div>
-            ) : null}
-            {scoresQuery.error ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                {scoresQuery.error instanceof Error
-                  ? scoresQuery.error.message
-                  : "تعذر تحميل درجات الاختبارات."}
-              </div>
-            ) : null}
-            {!scoresQuery.isPending && records.length === 0 ? (
-              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                لا توجد درجات مطابقة.
-              </div>
-            ) : null}
+            )}
 
-            {records.map((item) => (
-              <div
-                key={item.id}
-                className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="space-y-1">
-                    <p className="font-medium">
-                      {item.studentEnrollment.student.fullName} - {item.examAssessment.title}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      الدرجة: {item.score}/{item.examAssessment.maxScore}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      رقم الطالب: {item.studentEnrollment.student.admissionNo ?? "غير متوفر"} -{" "}
-                      {formatEnrollmentPlacementLabel(item.studentEnrollment)}
-                    </p>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {records.map((item) => (
+                <div key={item.id} className="group relative space-y-4 rounded-2xl border border-border/70 bg-background/50 p-4 transition-all hover:border-primary/30 hover:shadow-lg">
+                  <div className="flex flex-wrap items-start justify-between gap-2 border-b border-border/40 pb-3">
+                    <div className="space-y-1">
+                      <p className="font-bold text-base leading-tight group-hover:text-primary transition-colors">{item.studentEnrollment.student.fullName}</p>
+                      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
+                        <User className="h-3 w-3" />
+                        <span>كود: {item.studentEnrollment.student.admissionNo || "-"}</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1.5">
+                      {item.isPresent ? (
+                        <Badge variant="default" className="h-5 text-[8px] font-bold bg-emerald-500 hover:bg-emerald-600 gap-1 uppercase">
+                          <ShieldCheck className="h-2.5 w-2.5" /> حاضر
+                        </Badge>
+                      ) : (
+                        <Badge variant="destructive" className="h-5 text-[8px] font-bold gap-1 uppercase">
+                          <Ban className="h-2.5 w-2.5" /> غائب
+                        </Badge>
+                      )}
+                      {item.examAssessment.examPeriod.isLocked && (
+                        <Badge variant="secondary" className="h-5 text-[8px] font-bold gap-1 uppercase">
+                          <Lock className="h-2.5 w-2.5" /> مقفل
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge variant={item.isPresent ? "default" : "secondary"}>
-                      {item.isPresent
-                        ? "موجود"
-                        : `غائب (${getAbsenceTypeLabel(item.absenceType ?? "UNEXCUSED")})`}
-                    </Badge>
-                    {item.examAssessment.examPeriod.isLocked ? (
-                      <Badge variant="outline" className="gap-1.5">
-                        <Lock className="h-3.5 w-3.5" />مقفل
-                      </Badge>
-                    ) : null}
-                    <Badge variant={item.isActive ? "default" : "outline"}>
-                      {item.isActive ? "نشط" : "غير نشط"}
-                    </Badge>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-xl border border-border/60 bg-muted/20 p-2.5 space-y-1">
+                      <span className="text-[9px] uppercase text-muted-foreground font-bold leading-none">الاختبار</span>
+                      <div className="flex items-center gap-1.5 text-xs font-bold truncate">
+                        <Medal className="h-3.5 w-3.5 text-primary/70" />
+                        <span>{item.score} / {item.examAssessment.maxScore}</span>
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-border/60 bg-muted/20 p-2.5 space-y-1">
+                      <span className="text-[9px] uppercase text-muted-foreground font-bold leading-none">الفصل</span>
+                      <div className="flex items-center gap-1.5 text-xs font-bold truncate">
+                        <GraduationCap className="h-3.5 w-3.5 text-sky-600/70" />
+                        <span>{item.studentEnrollment.section.name}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1 border-t border-border/10">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 h-8 text-[11px] gap-1.5 rounded-lg border-border/60 hover:border-primary/50 font-bold"
+                      onClick={() => handleStartEdit(item)}
+                      disabled={!canUpdate || item.examAssessment.examPeriod.isLocked}
+                    >
+                      <PencilLine className="h-3.5 w-3.5" /> تعديل
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 rounded-lg px-2 text-destructive hover:bg-destructive/10"
+                      onClick={() => handleDelete(item)}
+                      disabled={!canDelete || item.examAssessment.examPeriod.isLocked}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => handleStartEdit(item)}
-                    disabled={!canUpdate || item.examAssessment.examPeriod.isLocked || updateMutation.isPending}
-                  >
-                    <PencilLine className="h-3.5 w-3.5" />
-                    تعديل
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleToggleActive(item)}
-                    disabled={!canUpdate || item.examAssessment.examPeriod.isLocked || updateMutation.isPending}
-                  >
-                    {item.isActive ? "تعطيل" : "تفعيل"}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => handleDelete(item)}
-                    disabled={!canDelete || item.examAssessment.examPeriod.isLocked || deleteMutation.isPending}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    حذف
-                  </Button>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-              <p className="text-xs text-muted-foreground">
-                الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-              </p>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-6 mt-2">
+              <p className="text-xs text-muted-foreground">صفحة <strong className="text-foreground">{pagination?.page ?? 1}</strong> من <strong className="text-foreground">{pagination?.totalPages ?? 1}</strong></p>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={!pagination || pagination.page <= 1 || scoresQuery.isFetching}
-                >
-                  السابق
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setPage((prev) =>
-                      pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                    )
-                  }
-                  disabled={!pagination || pagination.page >= pagination.totalPages || scoresQuery.isFetching}
-                >
-                  التالي
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => void scoresQuery.refetch()}
-                  disabled={scoresQuery.isFetching}
-                >
-                  <RefreshCw
-                    className={`h-4 w-4 ${scoresQuery.isFetching ? "animate-spin" : ""}`}
-                  />
-                  تحديث
-                </Button>
+                <Button variant="outline" size="sm" className="h-9 px-4 rounded-2xl" onClick={() => setPage(p => Math.max(p - 1, 1))} disabled={!pagination || pagination.page <= 1}>السابق</Button>
+                <Button variant="outline" size="sm" className="h-9 px-4 rounded-2xl" onClick={() => setPage(p => (pagination ? Math.min(p + 1, pagination.totalPages) : p))} disabled={!pagination || pagination.page >= pagination.totalPages}>التالي</Button>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Fab
-        icon={<Plus className="h-4 w-4" />}
-        label="إضافة"
-        ariaLabel="إضافة درجة اختبار"
-        onClick={handleStartCreate}
-        disabled={!canCreate}
-      />
+      <Fab icon={<Plus className="h-5 w-5" />} label="رصد درجة" onClick={handleStartCreate} disabled={!canCreate} />
 
       <CrudFormSheet
         open={isFormOpen}
-        title={editingId ? "تعديل درجة اختبار" : "إضافة درجة اختبار"}
-        onClose={resetForm}
-        onSubmit={() => undefined}
+        onClose={resetFormState}
+        title={isEditing ? "تعديل درجة الطالب" : "رصد درجة جديدة"}
+        isEditing={isEditing}
         isSubmitting={isSubmitting}
-        submitLabel={editingId ? "حفظ التغييرات" : "إضافة الدرجة"}
+        onSubmit={handleSubmit}
       >
-        <form className="space-y-3" onSubmit={handleSubmit}>
-            <select
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-              value={form.examPeriodId}
-              onChange={(event) => {
-                setForm((prev) => ({
-                  ...prev,
-                  examPeriodId: event.target.value,
-                  examAssessmentId: "",
-                  studentEnrollmentId: "",
-                }));
-                setSelectedEnrollmentOption(null);
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><GraduationCap className="h-3.5 w-3.5" /> النطاق الاختباري</h4>
+            <div className="grid gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase leading-none">فترة الاختبار *</label>
+                <SelectField value={form.examPeriodId} onChange={(e) => setForm(p => ({ ...p, examPeriodId: e.target.value, examAssessmentId: "", studentEnrollmentId: "" }))}>
+                  <option value="">اختر الفترة</option>
+                  {(periodsQuery.data ?? []).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </SelectField>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase leading-none">التقييم الاختباري المجلد *</label>
+                <SelectField value={form.examAssessmentId} onChange={(e) => setForm(p => ({ ...p, examAssessmentId: e.target.value, studentEnrollmentId: "" }))}>
+                  <option value="">اختر التقييم</option>
+                  {(assessmentsQuery.data ?? []).map(a => <option key={a.id} value={a.id}>{a.title} ({a.section.name})</option>)}
+                </SelectField>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground uppercase leading-none flex items-center gap-1.5"><User className="h-3.5 w-3.5" /> الطالب *</label>
+            <StudentEnrollmentPickerSheet
+              value={form.studentEnrollmentId}
+              selectedOption={selectedEnrollment}
+              onSelect={(opt) => {
+                setSelectedEnrollment(opt);
+                setForm(p => ({ ...p, studentEnrollmentId: opt?.id ?? "" }));
               }}
-            >
-            <option value="">اختر الفترة *</option>
-            {(examPeriodsQuery.data ?? []).map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name} ({translateAssessmentType(item.assessmentType)})
-              </option>
-            ))}
-          </select>
-
-            <select
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-              value={form.examAssessmentId}
-              onChange={(event) => {
-                setForm((prev) => ({
-                  ...prev,
-                  examAssessmentId: event.target.value,
-                  studentEnrollmentId: "",
-                }));
-                setSelectedEnrollmentOption(null);
-              }}
-            >
-            <option value="">اختر التقييم *</option>
-            {(assessmentsForFormQuery.data ?? []).map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.title} ({formatSectionWithGradeLabel(item.section)} / {formatNameCodeLabel(item.subject.name, item.subject.code)})
-              </option>
-            ))}
-          </select>
-
-          <StudentEnrollmentPickerSheet
-            value={form.studentEnrollmentId}
-            selectedOption={selectedEnrollmentOption}
-            onSelect={(option) => {
-              setSelectedEnrollmentOption(option);
-              setForm((prev) => ({ ...prev, studentEnrollmentId: option?.id ?? "" }));
-            }}
-            scope="exams-student-exam-scores"
-            variant="form"
-            academicYearId={selectedAssessment?.examPeriod.academicYearId}
-            sectionId={selectedAssessment?.sectionId ?? undefined}
-            placeholder="اختر الطالب *"
-            title="اختيار الطالب"
-            searchPlaceholder="ابحث بالاسم أو رقم الطالب"
-            allowEmptySelection={false}
-          />
-
-          <div className="grid gap-3 md:grid-cols-2">
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>موجود</span>
-              <input
-                type="checkbox"
-                checked={form.isPresent}
-                onChange={(event) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    isPresent: event.target.checked,
-                    score: event.target.checked ? prev.score : "0",
-                  }))
-                }
-              />
-            </label>
-            <Input
-              type="number"
-              min={0}
-              step={0.01}
-              value={form.score}
-              onChange={(event) => setForm((prev) => ({ ...prev, score: event.target.value }))}
-              placeholder="الدرجة"
-              disabled={!form.isPresent}
+              scope="exams-student-exam-scores"
+              variant="form"
+              academicYearId={selectedAssessment?.examPeriod.academicYearId}
+              sectionId={selectedAssessment?.sectionId ?? undefined}
+              placeholder="ابحث عن طالب..."
             />
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={form.absenceType}
-              onChange={(event) =>
-                setForm((prev) => ({
-                  ...prev,
-                  absenceType: event.target.value as ExamAbsenceType,
-                }))
-              }
-              disabled={form.isPresent}
-            >
-              <option value="UNEXCUSED">{translateExamAbsenceType("UNEXCUSED")}</option>
-              <option value="EXCUSED">{translateExamAbsenceType("EXCUSED")}</option>
-            </select>
-            <Input
-              value={form.excuseDetails}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, excuseDetails: event.target.value }))
-              }
-              placeholder="تفاصيل العذر"
-              disabled={form.isPresent}
-            />
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><Medal className="h-3.5 w-3.5" /> نتيجة التقييم</h4>
+            <div className="grid gap-4">
+              <label className="flex items-center justify-between px-3 py-1 text-sm bg-background rounded-xl border border-border/50">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className={`h-4 w-4 ${form.isPresent ? 'text-emerald-500' : 'text-muted-foreground'}`} />
+                  <span className="font-bold">هل الطالب حاضر؟</span>
+                </div>
+                <input type="checkbox" className="h-5 w-5 rounded-lg border-primary/30 text-primary" checked={form.isPresent} onChange={(e) => setForm(p => ({ ...p, isPresent: e.target.checked, score: e.target.checked ? p.score : "0" }))} />
+              </label>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase leading-none">الدرجة المكتسبة</label>
+                  <Input type="number" value={form.score} onChange={(e) => setForm(p => ({ ...p, score: e.target.value }))} disabled={!form.isPresent} placeholder="مثال: 45" />
+                  {selectedAssessment && <p className="text-[10px] text-muted-foreground font-medium italic">الحد الأقصى: {selectedAssessment.maxScore}</p>}
+                </div>
+                {!form.isPresent && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-muted-foreground uppercase leading-none">نوع الغياب</label>
+                    <SelectField value={form.absenceType} onChange={(e) => setForm(p => ({ ...p, absenceType: e.target.value as any }))}>
+                      <option value="UNEXCUSED">بدون عذر</option>
+                      <option value="EXCUSED">بعذر مقبول</option>
+                    </SelectField>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
-          <Input
-            value={form.teacherNotes}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, teacherNotes: event.target.value }))
-            }
-            placeholder="ملاحظات المدرس"
-          />
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted-foreground uppercase leading-none flex items-center gap-1.5"><Info className="h-3.5 w-3.5" /> ملاحظات المعلم</label>
+            <Input value={form.teacherNotes} onChange={(e) => setForm(p => ({ ...p, teacherNotes: e.target.value }))} placeholder="سيظهر هذا التقييم في تقارير الطالب..." />
+          </div>
 
-          <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-            <span>نشط</span>
-            <input
-              type="checkbox"
-              checked={form.isActive}
-              onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
-            />
-          </label>
-
-          {formError ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+          {formError && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive font-bold text-center">
               {formError}
             </div>
-          ) : null}
-          {mutationError ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-              {mutationError}
-            </div>
-          ) : null}
-
-          <div className="flex gap-2">
-            <Button type="submit" className="flex-1 gap-2" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <LoaderCircle className="h-4 w-4 animate-spin" />
-              ) : (
-                <CalendarCheck2 className="h-4 w-4" />
-              )}
-              {editingId ? "حفظ التغييرات" : "إضافة الدرجة"}
-            </Button>
-            {editingId ? (
-              <Button type="button" variant="outline" onClick={resetForm}>
-                إلغاء
-              </Button>
-            ) : null}
-          </div>
-        </form>
+          )}
+        </div>
       </CrudFormSheet>
-    
     </PageShell>
   );
 }
-
-

@@ -1,25 +1,30 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
-import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
-
-import { ManagementToolbar } from "@/components/ui/management-toolbar";
-
-import { PageShell } from "@/components/ui/page-shell";
-
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   BadgeCheck,
-  LoaderCircle,
-  PencilLine,
-  Plus,
   RefreshCw,
+  Plus,
+  PencilLine,
   Trash2,
+  Settings2,
+  LayoutGrid,
+  Calculator,
+  CalendarDays,
+  GraduationCap,
+  Info,
+  Activity,
+  CheckCircle2,
+  FileCode,
+  Layers,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
+import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
 import {
   Card,
   CardContent,
@@ -29,6 +34,7 @@ import {
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { Fab } from "@/components/ui/fab";
+import { PageShell } from "@/components/ui/page-shell";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useGradingPoliciesQuery } from "@/features/evaluation-policies/grading-policies/hooks/use-grading-policies-query";
 import {
@@ -46,29 +52,19 @@ import type {
 const PAGE_SIZE = 12;
 
 const CALCULATION_MODE_OPTIONS: GradingComponentCalculationMode[] = [
-  "MANUAL",
-  "AUTO_ATTENDANCE",
-  "AUTO_HOMEWORK",
-  "AUTO_EXAM",
+  "MANUAL", "AUTO_ATTENDANCE", "AUTO_HOMEWORK", "AUTO_EXAM",
 ];
 
-const calculationModeLabel = (
-  mode: GradingComponentCalculationMode,
-): string => {
+const calculationModeLabel = (mode: GradingComponentCalculationMode): string => {
   switch (mode) {
-    case "AUTO_ATTENDANCE":
-      return "تلقائي: الحضور";
-    case "AUTO_HOMEWORK":
-      return "تلقائي: الواجبات";
-    case "AUTO_EXAM":
-      return "تلقائي: الاختبارات";
-    case "MANUAL":
-    default:
-      return "يدوي";
+    case "AUTO_ATTENDANCE": return "تلقائي: الحضور";
+    case "AUTO_HOMEWORK": return "تلقائي: الواجبات";
+    case "AUTO_EXAM": return "تلقائي: الاختبارات";
+    default: return "يدوي";
   }
 };
 
-type GradingPolicyComponentFormState = {
+type FormState = {
   gradingPolicyId: string;
   code: string;
   name: string;
@@ -80,7 +76,7 @@ type GradingPolicyComponentFormState = {
   isActive: boolean;
 };
 
-const DEFAULT_FORM_STATE: GradingPolicyComponentFormState = {
+const DEFAULT_FORM: FormState = {
   gradingPolicyId: "",
   code: "",
   name: "",
@@ -92,37 +88,41 @@ const DEFAULT_FORM_STATE: GradingPolicyComponentFormState = {
   isActive: true,
 };
 
+function toFormState(item: GradingPolicyComponentListItem): FormState {
+  return {
+    gradingPolicyId: item.gradingPolicyId,
+    code: item.code ?? "",
+    name: item.name ?? "",
+    maxScore: String(item.maxScore ?? ""),
+    calculationMode: item.calculationMode,
+    includeInMonthly: item.includeInMonthly,
+    includeInSemester: item.includeInSemester,
+    sortOrder: String(item.sortOrder ?? 1),
+    isActive: item.isActive,
+  };
+}
+
 export function GradingPolicyComponentsWorkspace() {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("grading-policy-components.create");
   const canUpdate = hasPermission("grading-policy-components.update");
   const canDelete = hasPermission("grading-policy-components.delete");
-  const canRead = hasPermission("grading-policy-components.read");
 
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
   const [selectedPolicyId, setSelectedPolicyId] = React.useState("all");
-  const [filterDraft, setFilterDraft] = React.useState<{ policy: string }>({
-    policy: "all",
-  });
+  const [filterDraft, setFilterDraft] = React.useState({ policy: "all" });
+
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [formState, setFormState] = React.useState(DEFAULT_FORM_STATE);
+  const [form, setForm] = React.useState<FormState>(DEFAULT_FORM);
   const [formError, setFormError] = React.useState<string | null>(null);
-  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
 
-  const policiesQuery = useGradingPoliciesQuery({
-    page: 1,
-    limit: 200,
-    isActive: true,
-  });
-
+  const policiesQuery = useGradingPoliciesQuery({ page: 1, limit: 300, isActive: true });
   const componentsQuery = useGradingPolicyComponentsQuery({
-    page,
-    limit: PAGE_SIZE,
-    search,
+    page, limit: PAGE_SIZE, search,
     gradingPolicyId: selectedPolicyId === "all" ? undefined : selectedPolicyId,
   });
 
@@ -130,165 +130,69 @@ export function GradingPolicyComponentsWorkspace() {
   const updateMutation = useUpdateGradingPolicyComponentMutation();
   const deleteMutation = useDeleteGradingPolicyComponentMutation();
 
-  const policyLabelById = React.useMemo(() => {
-    const map = new Map<string, string>();
-    for (const policy of policiesQuery.data?.data ?? []) {
-      const subjectLabel = formatNameCodeLabel(policy.subject.name, policy.subject.code);
-      const gradeLabel = formatNameCodeLabel(policy.gradeLevel.name, policy.gradeLevel.code);
-      const yearLabel = formatNameCodeLabel(policy.academicYear.name, policy.academicYear.code);
-      map.set(policy.id, `${subjectLabel} / ${gradeLabel} / ${yearLabel}`);
-    }
-    return map;
-  }, [policiesQuery.data]);
+  const records = React.useMemo(() => componentsQuery.data?.data ?? [], [componentsQuery.data?.data]);
+  const pagination = componentsQuery.data?.pagination;
+  const isEditing = editingId !== null;
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   useDebounceEffect(() => {
-      setPage(1);
-      setSearch(searchInput.trim());
-    }, 400, [searchInput]);
+    setPage(1);
+    setSearch(searchInput.trim());
+  }, 400, [searchInput]);
 
   React.useEffect(() => {
-    if (!isFilterOpen) {
-      return;
-    }
-
-    setFilterDraft({
-      policy: selectedPolicyId,
-    });
+    if (!isFilterOpen) return;
+    setFilterDraft({ policy: selectedPolicyId });
   }, [isFilterOpen, selectedPolicyId]);
 
   const resetFormState = () => {
     setEditingId(null);
-    setFormState(DEFAULT_FORM_STATE);
+    setForm(DEFAULT_FORM);
     setFormError(null);
-  };
-
-  const resetForm = () => {
-    resetFormState();
     setIsFormOpen(false);
-    setActionSuccess(null);
   };
 
   const handleStartCreate = () => {
-    if (!canCreate) {
-      return;
-    }
-
-    setFormError(null);
-    setActionSuccess(null);
-    setEditingId(null);
-    setFormState(DEFAULT_FORM_STATE);
+    if (!canCreate) return;
+    setForm(DEFAULT_FORM);
     setIsFormOpen(true);
   };
 
   const handleStartEdit = (item: GradingPolicyComponentListItem) => {
-    if (!canUpdate) {
-      return;
-    }
-
+    if (!canUpdate) return;
     setEditingId(item.id);
-    setFormState({
-      gradingPolicyId: item.gradingPolicyId,
-      code: item.code ?? "",
-      name: item.name ?? "",
-      maxScore: String(item.maxScore ?? ""),
-      calculationMode: item.calculationMode,
-      includeInMonthly: item.includeInMonthly,
-      includeInSemester: item.includeInSemester,
-      sortOrder: String(item.sortOrder ?? 1),
-      isActive: item.isActive,
-    });
-    setFormError(null);
-    setActionSuccess(null);
+    setForm(toFormState(item));
     setIsFormOpen(true);
   };
 
-  const validateForm = (): boolean => {
-    if (!formState.gradingPolicyId || !formState.name.trim()) {
-      setFormError("السياسة والاسم مطلوبان.");
-      return false;
-    }
-
-    if (!formState.maxScore.trim()) {
-      setFormError("الدرجة القصوى مطلوبة.");
-      return false;
-    }
-
-    const maxScore = Number(formState.maxScore);
-    if (!Number.isFinite(maxScore) || maxScore < 0) {
-      setFormError("الدرجة القصوى يجب أن تكون رقمًا غير سالب.");
-      return false;
-    }
-
-    const sortOrder = Number(formState.sortOrder);
-    if (!Number.isFinite(sortOrder) || sortOrder < 1) {
-      setFormError("ترتيب العرض يجب أن يكون رقمًا صحيحًا أكبر من صفر.");
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleSubmit = () => {
-    setFormError(null);
-    setActionSuccess(null);
-
-    if (!validateForm()) {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.gradingPolicyId || !form.name || !form.maxScore) {
+      setFormError("الرجاء تحديد السياسة والاسم والدرجة القصوى.");
       return;
     }
 
     const payload = {
-      gradingPolicyId: formState.gradingPolicyId,
-      name: formState.name.trim(),
-      maxScore: Number(formState.maxScore),
-      calculationMode: formState.calculationMode,
-      includeInMonthly: formState.includeInMonthly,
-      includeInSemester: formState.includeInSemester,
-      sortOrder: Number(formState.sortOrder),
-      isActive: formState.isActive,
+      gradingPolicyId: form.gradingPolicyId,
+      name: form.name.trim(),
+      maxScore: Number(form.maxScore),
+      calculationMode: form.calculationMode,
+      includeInMonthly: form.includeInMonthly,
+      includeInSemester: form.includeInSemester,
+      sortOrder: Number(form.sortOrder),
+      isActive: form.isActive,
     };
 
-    if (editingId) {
-      updateMutation.mutate(
-        { gradingPolicyComponentId: editingId, payload },
-        {
-          onSuccess: () => {
-            resetFormState();
-            setActionSuccess("تم تحديث المكوّن بنجاح.");
-          },
-        },
-      );
-      return;
+    if (isEditing && editingId) {
+      updateMutation.mutate({ gradingPolicyComponentId: editingId, payload }, { onSuccess: resetFormState });
+    } else {
+      createMutation.mutate(payload, { onSuccess: resetFormState });
     }
-
-    createMutation.mutate(payload, {
-      onSuccess: () => {
-        resetFormState();
-        setActionSuccess("تم إنشاء المكوّن بنجاح.");
-      },
-    });
   };
 
   const handleDelete = (item: GradingPolicyComponentListItem) => {
-    if (!confirm(`تأكيد حذف المكوّن ${item.name}؟`)) {
-      return;
-    }
-
-    deleteMutation.mutate(item.id, {
-      onSuccess: () => {
-        setActionSuccess("تم حذف المكوّن بنجاح.");
-      },
-    });
-  };
-
-  const isBusy =
-    createMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
-
-  const clearFilters = () => {
-    setPage(1);
-    setSearchInput("");
-    setSearch("");
-    setSelectedPolicyId("all");
-    setIsFilterOpen(false);
+    if (!canDelete || !window.confirm(`حذف المكون ${item.name}؟`)) return;
+    deleteMutation.mutate(item.id);
   };
 
   const applyFilters = () => {
@@ -297,347 +201,251 @@ export function GradingPolicyComponentsWorkspace() {
     setIsFilterOpen(false);
   };
 
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setSelectedPolicyId("all");
+    setFilterDraft({ policy: "all" });
+    setIsFilterOpen(false);
+  };
+
   const activeFiltersCount = React.useMemo(() => {
-    const count = [searchInput.trim() ? 1 : 0, selectedPolicyId !== "all" ? 1 : 0].reduce(
-      (acc, value) => acc + value,
-      0,
-    );
-    return count;
+    return [searchInput.trim() ? 1 : 0, selectedPolicyId !== "all" ? 1 : 0].reduce((acc, v) => acc + v, 0);
   }, [searchInput, selectedPolicyId]);
 
   return (
-    <PageShell title="فلاتر المكوّنات">
-
+    <PageShell
+      title="مكونات سياسات التقييم"
+      subtitle="تعريف البنود التفصيلية لسياسة الدرجات (مثل الحضور، الاختبارات القصيرة، البحوث) وتحديد طريقة حسابها وأوزانها."
+    >
       <div className="space-y-4">
         <ManagementToolbar
           searchValue={searchInput}
-          onSearchChange={(event) => setSearchInput(event.target.value)}
-          searchPlaceholder="ابحث بالاسم أو الرمز..."
+          onSearchChange={(e) => setSearchInput(e.target.value)}
+          searchPlaceholder="بحث في المكونات..."
           filterCount={activeFiltersCount}
-          onFilterClick={() => setIsFilterOpen((prev) => !prev)}
-          showFilterButton={true}
+          onFilterClick={() => setIsFilterOpen(true)}
+          actions={
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => void componentsQuery.refetch()} disabled={componentsQuery.isFetching}>
+              <RefreshCw className={`h-4 w-4 ${componentsQuery.isFetching ? "animate-spin" : ""}`} />
+              تحديث
+            </Button>
+          }
         />
 
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
-          title="فلاتر المكوّنات"
+          title="تصفية حسب السياسة"
           actionButtons={
             <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
+              <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">مسح</Button>
+              <Button type="button" onClick={applyFilters} className="flex-1">تطبيق</Button>
             </div>
           }
         >
-          <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.policy}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, policy: event.target.value }))
-              }
-            >
-              <option value="all">كل السياسات</option>
-              {(policiesQuery.data?.data ?? []).map((policy) => (
-                <option key={policy.id} value={policy.id}>
-                  {formatNameCodeLabel(policy.subject.name, policy.subject.code)} /{" "}
-                  {formatNameCodeLabel(policy.gradeLevel.name, policy.gradeLevel.code)}
-                </option>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-muted-foreground uppercase leading-none px-1">سياسة التقييم الأب</label>
+            <SelectField value={filterDraft.policy} onChange={(e) => setFilterDraft({ policy: e.target.value })}>
+              <option value="all">كل السياسات المتاحة</option>
+              {(policiesQuery.data?.data ?? []).map(p => (
+                <option key={p.id} value={p.id}>{p.subject.name} - {p.gradeLevel.name} ({p.academicYear.name})</option>
               ))}
             </SelectField>
           </div>
         </FilterDrawer>
 
-        <Card className="border-border/70 bg-card/80">
-          <CardHeader className="space-y-2">
-            <CardTitle>قائمة المكوّنات</CardTitle>
-            <CardDescription>عرض المكوّنات حسب السياسة.</CardDescription>
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm overflow-hidden">
+          <CardHeader className="space-y-3 bg-muted/20 border-b border-border/60 pb-6">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-bold">
+                <LayoutGrid className="h-5 w-5 text-primary" />
+                هيكل مكونات السياسة
+              </CardTitle>
+              <Badge variant="secondary" className="rounded-full px-3">الإجمالي: {pagination?.total ?? 0}</Badge>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {!canRead ? (
-              <p className="text-sm text-muted-foreground">لا تملك صلاحية القراءة.</p>
-            ) : componentsQuery.isLoading ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <LoaderCircle className="h-4 w-4 animate-spin" /> جارٍ التحميل
+          
+          <CardContent className="space-y-4 pt-6">
+            {componentsQuery.isPending && (
+              <div className="rounded-2xl border border-dashed border-border/70 p-8 text-sm text-muted-foreground text-center font-medium">
+                جارٍ تحميل بنود السياسة...
               </div>
-            ) : componentsQuery.data?.data.length ? (
-              <div className="space-y-2">
-                {componentsQuery.data.data.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex flex-col gap-2 rounded-md border p-3 md:flex-row md:items-center md:justify-between"
-                  >
-                    <div>
-                      <p className="text-sm font-medium">
-                        {item.name} ({item.code})
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {calculationModeLabel(item.calculationMode)} | الدرجة القصوى:{" "}
-                        {item.maxScore}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        السياسة:{" "}
-                        {policyLabelById.get(item.gradingPolicyId) ?? item.gradingPolicyId}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {item.isActive ? (
-                        <Badge variant="secondary" className="gap-1">
-                          <BadgeCheck className="h-3 w-3" /> نشط
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline">غير نشط</Badge>
-                      )}
-                      <Badge variant="outline">
-                        شهري: {item.includeInMonthly ? "نعم" : "لا"}
-                      </Badge>
-                      <Badge variant="outline">
-                        فصلي: {item.includeInSemester ? "نعم" : "لا"}
-                      </Badge>
-                      {canUpdate ? (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleStartEdit(item)}
-                        >
-                          <PencilLine className="h-4 w-4" />
-                        </Button>
-                      ) : null}
-                      {canDelete ? (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleDelete(item)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      ) : null}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">لا توجد بيانات.</p>
             )}
 
-            {componentsQuery.data?.pagination ? (
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <span>
-                  صفحة {componentsQuery.data.pagination.page} من{" "}
-                  {componentsQuery.data.pagination.totalPages}
-                </span>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={page <= 1}
-                    onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                  >
-                    السابق
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={page >= (componentsQuery.data.pagination.totalPages ?? 1)}
-                    onClick={() => setPage((prev) => prev + 1)}
-                  >
-                    التالي
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => componentsQuery.refetch()}
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                    تحديث
-                  </Button>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {records.map((item) => (
+                <div key={item.id} className="group relative space-y-4 rounded-2xl border border-border/70 bg-background/50 p-4 transition-all hover:border-primary/30 hover:shadow-lg">
+                  <div className="flex flex-wrap items-start justify-between gap-2 border-b border-border/40 pb-3">
+                    <div className="space-y-1">
+                      <p className="font-bold text-base leading-tight group-hover:text-primary transition-colors">{item.name}</p>
+                      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
+                        <FileCode className="h-3 w-3" />
+                        <span>{item.code || "بدون رمز"}</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1.5">
+                      <Badge variant={item.isActive ? "default" : "outline"} className={`h-5 text-[8px] font-bold uppercase ${item.isActive ? 'bg-emerald-500 hover:bg-emerald-600' : ''}`}>
+                        {item.isActive ? "نشط" : "معطل"}
+                      </Badge>
+                      <Badge variant="outline" className="h-5 text-[8px] font-bold uppercase bg-background">
+                        #{item.sortOrder} الترتيب
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2">
+                    <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] uppercase text-primary/70 font-bold leading-none">الوزن الأقصى</span>
+                        <span className="text-2xl font-black text-primary mt-1">{item.maxScore}</span>
+                      </div>
+                      <div className="h-8 w-8 rounded-full bg-background flex items-center justify-center border border-primary/10">
+                        <Medal className="h-4 w-4 text-primary" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground px-1">
+                      <Calculator className="h-3.5 w-3.5" />
+                      <span>{calculationModeLabel(item.calculationMode)}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 px-1 pt-1">
+                      <Badge variant="secondary" className={`h-5 text-[8px] font-bold uppercase ${item.includeInMonthly ? "bg-amber-100/50 text-amber-700 border-amber-200" : "opacity-30"}`}>شهري</Badge>
+                      <Badge variant="secondary" className={`h-5 text-[8px] font-bold uppercase ${item.includeInSemester ? "bg-sky-100/50 text-sky-700 border-sky-200" : "opacity-30"}`}>فصلي</Badge>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1 border-t border-border/10">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 h-8 text-[11px] gap-1.5 rounded-lg border-border/60 hover:border-primary/50 font-bold"
+                      onClick={() => handleStartEdit(item)}
+                      disabled={!canUpdate}
+                    >
+                      <PencilLine className="h-3.5 w-3.5" /> تعديل
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 rounded-lg px-2 text-destructive hover:bg-destructive/10"
+                      onClick={() => handleDelete(item)}
+                      disabled={!canDelete}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-6 mt-2">
+              <p className="text-xs text-muted-foreground">صفحة <strong className="text-foreground">{pagination?.page ?? 1}</strong> من <strong className="text-foreground">{pagination?.totalPages ?? 1}</strong></p>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" className="h-9 px-4 rounded-2xl" onClick={() => setPage(p => Math.max(p - 1, 1))} disabled={!pagination || pagination.page <= 1}>السابق</Button>
+                <Button variant="outline" size="sm" className="h-9 px-4 rounded-2xl" onClick={() => setPage(p => (pagination ? Math.min(p + 1, pagination.totalPages) : p))} disabled={!pagination || pagination.page >= pagination.totalPages}>التالي</Button>
               </div>
-            ) : null}
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      <Fab
-        icon={<Plus className="h-4 w-4" />}
-        label="إنشاء"
-        ariaLabel="إنشاء مكوّن سياسة"
-        onClick={handleStartCreate}
-        disabled={!canCreate}
-      />
+      <Fab icon={<Plus className="h-5 w-5" />} label="إضافة مكون" onClick={handleStartCreate} disabled={!canCreate} />
 
       <CrudFormSheet
         open={isFormOpen}
-        title={editingId ? "تعديل مكوّن سياسة" : "إنشاء مكوّن سياسة"}
-        onClose={resetForm}
-        onSubmit={() => undefined}
-        isSubmitting={isBusy}
-        submitLabel={editingId ? "حفظ التعديلات" : "إنشاء المكوّن"}
+        onClose={resetFormState}
+        title={isEditing ? "تعديل مكون التقييم" : "رسم مكون سياسة جديد"}
+        isEditing={isEditing}
+        isSubmitting={isSubmitting}
+        onSubmit={handleSubmit}
       >
-        {!canCreate && !editingId ? (
-          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            لا تملك الصلاحية المطلوبة: <code>grading-policy-components.create</code>.
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><Layers className="h-3.5 w-3.5" /> السياسة الأم</h4>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted-foreground uppercase leading-none">ربط بسياسة التقييم المعتمدة *</label>
+              <SelectField value={form.gradingPolicyId} onChange={(e) => setForm(p => ({ ...p, gradingPolicyId: e.target.value }))} disabled={isEditing}>
+                <option value="">اختر السياسة الأب من القائمة</option>
+                {(policiesQuery.data?.data ?? []).map(p => (
+                  <option key={p.id} value={p.id}>{p.subject.name} - {p.gradeLevel.name} - {p.academicYear.name}</option>
+                ))}
+              </SelectField>
+            </div>
           </div>
-        ) : (
-          <form
-            className="space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              handleSubmit();
-            }}
-          >
-            <p className="text-sm text-muted-foreground">
-              هذه شاشة تعريف المكوّنات (قالب السياسة)، وليست درجات فعلية للطلاب.
-            </p>
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-              <div>
-                <label className="mb-2 block text-sm font-medium">سياسة الدرجات *</label>
-                <select
-                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-                  value={formState.gradingPolicyId}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      gradingPolicyId: event.target.value,
-                    }))
-                  }
-                >
-                  <option value="">اختر سياسة الدرجات</option>
-                  {(policiesQuery.data?.data ?? []).map((policy) => (
-                    <option key={policy.id} value={policy.id}>
-                      {formatNameCodeLabel(policy.subject.name, policy.subject.code)} /{" "}
-                      {formatNameCodeLabel(policy.gradeLevel.name, policy.gradeLevel.code)} /{" "}
-                      {formatNameCodeLabel(policy.academicYear.name, policy.academicYear.code)}
-                    </option>
-                  ))}
-                </select>
+
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><Settings2 className="h-3.5 w-3.5" /> مواصفات المكون</h4>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase leading-none">اسم المكون (عربي) *</label>
+                <Input value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))} placeholder="حضور وحضور..." />
               </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium">الاسم *</label>
-                <Input
-                  value={formState.name}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, name: event.target.value }))
-                  }
-                  placeholder="الحضور"
-                />
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase leading-none">رمز المكون (اختياري)</label>
+                <Input value={form.code} onChange={(e) => setForm(p => ({ ...p, code: e.target.value }))} placeholder="ATTND-1" />
               </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium">الدرجة القصوى *</label>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={formState.maxScore}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, maxScore: event.target.value }))
-                  }
-                  placeholder="0"
-                />
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase leading-none">الدرجة القصوى *</label>
+                <Input type="number" step="0.01" value={form.maxScore} onChange={(e) => setForm(p => ({ ...p, maxScore: e.target.value }))} placeholder="10.00" />
               </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium">نوع الحساب *</label>
-                <select
-                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-                  value={formState.calculationMode}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      calculationMode: event.target.value as GradingComponentCalculationMode,
-                    }))
-                  }
-                >
-                  {CALCULATION_MODE_OPTIONS.map((mode) => (
-                    <option key={mode} value={mode}>
-                      {calculationModeLabel(mode)}
-                    </option>
-                  ))}
-                </select>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase leading-none">طريقة الرصد/الحساب *</label>
+                <SelectField value={form.calculationMode} onChange={(e) => setForm(p => ({ ...p, calculationMode: e.target.value as any }))}>
+                  {CALCULATION_MODE_OPTIONS.map(m => <option key={m} value={m}>{calculationModeLabel(m)}</option>)}
+                </SelectField>
               </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium">ترتيب العرض</label>
-                <Input
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={formState.sortOrder}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, sortOrder: event.target.value }))
-                  }
-                />
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase leading-none">ترتيب العرض</label>
+                <Input type="number" value={form.sortOrder} onChange={(e) => setForm(p => ({ ...p, sortOrder: e.target.value }))} placeholder="1" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase leading-none">الحالة</label>
+                <label className="flex items-center justify-between h-10 px-3 bg-background/50 rounded-xl border border-border/50">
+                  <span className="text-xs font-bold">مكون نشط</span>
+                  <input type="checkbox" className="h-4 w-4 rounded text-primary" checked={form.isActive} onChange={(e) => setForm(p => ({ ...p, isActive: e.target.checked }))} />
+                </label>
               </div>
             </div>
+          </div>
 
-            <div className="flex flex-wrap gap-3">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={formState.includeInMonthly}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      includeInMonthly: event.target.checked,
-                    }))
-                  }
-                />
-                يدخل في المحصلة الشهرية
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><Activity className="h-3.5 w-3.5" /> قواعد الدمج</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <label className="flex flex-col gap-2 p-3 rounded-2xl border border-border/50 bg-background/50 cursor-pointer transition-colors hover:bg-background">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold">الدمج الشهري</span>
+                  <input type="checkbox" className="h-4 w-4 rounded text-primary" checked={form.includeInMonthly} onChange={(e) => setForm(p => ({ ...p, includeInMonthly: e.target.checked }))} />
+                </div>
+                <p className="text-[10px] text-muted-foreground leading-tight">هل يتم احتساب هذا المكون ضمن المحصلة الشهرية؟</p>
               </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={formState.includeInSemester}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      includeInSemester: event.target.checked,
-                    }))
-                  }
-                />
-                يدخل في نتيجة الفصل
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                />
-                نشط
+              <label className="flex flex-col gap-2 p-3 rounded-2xl border border-border/50 bg-background/50 cursor-pointer transition-colors hover:bg-background">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold">الدمج الفصلي</span>
+                  <input type="checkbox" className="h-4 w-4 rounded text-primary" checked={form.includeInSemester} onChange={(e) => setForm(p => ({ ...p, includeInSemester: e.target.checked }))} />
+                </div>
+                <p className="text-[10px] text-muted-foreground leading-tight">هل يدخل المكون مباشرة في الدرجة النهائية للفصل؟</p>
               </label>
             </div>
+          </div>
 
-            {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
-            {actionSuccess ? (
-              <p className="text-sm text-emerald-600">{actionSuccess}</p>
-            ) : null}
-
-            <div className="flex flex-wrap gap-2">
-              <Button type="submit" disabled={!canCreate && !editingId || isBusy}>
-                {editingId ? "حفظ التعديلات" : "إنشاء المكوّن"}
-              </Button>
-              {editingId ? (
-                <Button variant="outline" type="button" onClick={resetForm} disabled={isBusy}>
-                  إلغاء
-                </Button>
-              ) : null}
+          {!form.gradingPolicyId && !isEditing && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 flex gap-3 text-xs text-amber-800 leading-relaxed">
+              <Info className="h-5 w-5 flex-shrink-0 text-amber-500" />
+              <p>يجب اختيار سياسة الدرجات أولاً ليتمكن النظام من وضع المكون في سياقه الأكاديمي الصحيح.</p>
             </div>
-          </form>
-        )}
+          )}
+
+          {formError && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive font-bold text-center">
+              {formError}
+            </div>
+          )}
+        </div>
       </CrudFormSheet>
-    
     </PageShell>
   );
 }
-
-

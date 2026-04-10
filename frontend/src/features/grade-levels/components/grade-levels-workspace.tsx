@@ -1,26 +1,28 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   Layers3,
-  LoaderCircle,
-  PencilLine,
-  Plus,
   RefreshCw,
+  Plus,
+  PencilLine,
   Trash2,
   Hash,
   BookOpen,
   Activity,
   ListOrdered,
+  Layout,
+  Target,
+  Settings2,
+  Boxes,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
-import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
+import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
 import {
   Card,
   CardContent,
@@ -30,6 +32,7 @@ import {
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { Fab } from "@/components/ui/fab";
+import { PageShell } from "@/components/ui/page-shell";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateGradeLevelMutation,
@@ -57,22 +60,15 @@ const DEFAULT_FORM_STATE: GradeLevelFormState = {
   isActive: true,
 };
 
-const STAGE_OPTIONS: GradeStage[] = [
-  "PRE_SCHOOL",
-  "PRIMARY",
-  "MIDDLE",
-  "HIGH",
-  "OTHER",
-];
+const STAGE_OPTIONS: GradeStage[] = ["PRE_SCHOOL", "PRIMARY", "MIDDLE", "HIGH", "OTHER"];
 
 const STAGE_LABELS: Record<GradeStage, string> = {
-  PRE_SCHOOL: "ما قبل المدرسة",
-  PRIMARY: "ابتدائي",
-  MIDDLE: "إعدادي",
-  HIGH: "ثانوي",
-  OTHER: "أخرى",
+  PRE_SCHOOL: "ما قبل المدرسة (K-Level)",
+  PRIMARY: "المرحلة الابتدائية (Primary)",
+  MIDDLE: "المرحلة الإعدادية (Middle)",
+  HIGH: "المرحلة الثانوية (High)",
+  OTHER: "تصنيف آخر (Other)",
 };
-
 
 function toFormState(gradeLevel: GradeLevelListItem): GradeLevelFormState {
   return {
@@ -82,20 +78,6 @@ function toFormState(gradeLevel: GradeLevelListItem): GradeLevelFormState {
     sequence: String(gradeLevel.sequence),
     isActive: gradeLevel.isActive,
   };
-}
-
-function stageBadgeVariant(
-  stage: GradeStage,
-): "default" | "secondary" | "outline" {
-  switch (stage) {
-    case "PRIMARY":
-      return "default";
-    case "PRE_SCHOOL":
-    case "MIDDLE":
-      return "secondary";
-    default:
-      return "outline";
-  }
 }
 
 export function GradeLevelsWorkspace() {
@@ -108,27 +90,17 @@ export function GradeLevelsWorkspace() {
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
   const [stageFilter, setStageFilter] = React.useState<GradeStage | "all">("all");
-  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
-    "all",
-  );
-  const [filterDraft, setFilterDraft] = React.useState<{
-    stage: GradeStage | "all";
-    active: "all" | "active" | "inactive";
-  }>({
-    stage: "all",
-    active: "all",
-  });
+  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">("all");
+  const [filterDraft, setFilterDraft] = React.useState({ stage: "all" as any, active: "all" as any });
 
-  const [editingGradeLevelId, setEditingGradeLevelId] = React.useState<string | null>(null);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [formState, setFormState] = React.useState<GradeLevelFormState>(DEFAULT_FORM_STATE);
+  const [form, setForm] = React.useState<GradeLevelFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
 
   const gradeLevelsQuery = useGradeLevelsQuery({
-    page,
-    limit: PAGE_SIZE,
-    search: search || undefined,
+    page, limit: PAGE_SIZE, search,
     stage: stageFilter === "all" ? undefined : stageFilter,
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
   });
@@ -137,174 +109,65 @@ export function GradeLevelsWorkspace() {
   const updateMutation = useUpdateGradeLevelMutation();
   const deleteMutation = useDeleteGradeLevelMutation();
 
-  const gradeLevels = React.useMemo(
-    () => gradeLevelsQuery.data?.data ?? [],
-    [gradeLevelsQuery.data?.data],
-  );
+  const records = React.useMemo(() => gradeLevelsQuery.data?.data ?? [], [gradeLevelsQuery.data?.data]);
   const pagination = gradeLevelsQuery.data?.pagination;
-  const isEditing = editingGradeLevelId !== null;
-
-  const mutationError =
-    (createMutation.error as Error | null)?.message ??
-    (updateMutation.error as Error | null)?.message ??
-    (deleteMutation.error as Error | null)?.message ??
-    null;
-
-  React.useEffect(() => {
-    if (!isEditing) {
-      return;
-    }
-
-    const stillExists = gradeLevels.some(
-      (gradeLevel) => gradeLevel.id === editingGradeLevelId,
-    );
-
-    if (!stillExists) {
-      setEditingGradeLevelId(null);
-      setFormState(DEFAULT_FORM_STATE);
-      setFormError(null);
-      setIsFormOpen(false);
-    }
-  }, [editingGradeLevelId, gradeLevels, isEditing]);
+  const isEditing = editingId !== null;
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   useDebounceEffect(() => {
-      setPage(1);
-      setSearch(searchInput.trim());
-    }, 400, [searchInput]);
+    setPage(1);
+    setSearch(searchInput.trim());
+  }, 400, [searchInput]);
 
   React.useEffect(() => {
-    if (!isFilterOpen) {
-      return;
-    }
-
-    setFilterDraft({
-      stage: stageFilter,
-      active: activeFilter,
-    });
+    if (!isFilterOpen) return;
+    setFilterDraft({ stage: stageFilter, active: activeFilter });
   }, [activeFilter, isFilterOpen, stageFilter]);
 
-  const resetForm = () => {
-    setEditingGradeLevelId(null);
-    setFormState(DEFAULT_FORM_STATE);
+  const resetFormState = () => {
+    setEditingId(null);
+    setForm(DEFAULT_FORM_STATE);
     setFormError(null);
     setIsFormOpen(false);
   };
 
   const handleStartCreate = () => {
-    if (!canCreate) {
-      return;
-    }
-
-    setFormError(null);
-    setEditingGradeLevelId(null);
-    setFormState(DEFAULT_FORM_STATE);
+    if (!canCreate) return;
+    setForm(DEFAULT_FORM_STATE);
     setIsFormOpen(true);
   };
 
-  const validateForm = (): boolean => {
-    const name = formState.name.trim();
-    const sequence = Number(formState.sequence);
-
-    if (!name) {
-      setFormError("الحقول الأساسية مطلوبة: الاسم.");
-      return false;
-    }
-
-    if (!Number.isInteger(sequence) || sequence < 1 || sequence > 1000) {
-      setFormError("الترتيب يجب أن يكون رقمًا صحيحًا بين 1 و 1000.");
-      return false;
-    }
-
-    setFormError(null);
-    return true;
+  const handleStartEdit = (item: GradeLevelListItem) => {
+    if (!canUpdate) return;
+    setEditingId(item.id);
+    setForm(toFormState(item));
+    setIsFormOpen(true);
   };
 
-  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
-    event?.preventDefault();
-
-    if (!validateForm()) {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name.trim()) {
+      setFormError("اسم المستوى مطلوب.");
       return;
     }
 
     const payload = {
-      name: formState.name.trim(),
-      stage: formState.stage,
-      sequence: Number(formState.sequence),
-      isActive: formState.isActive,
+      name: form.name.trim(),
+      stage: form.stage,
+      sequence: Number(form.sequence) || 1,
+      isActive: form.isActive,
     };
 
-    if (isEditing && editingGradeLevelId) {
-      if (!canUpdate) {
-        setFormError("لا تملك الصلاحية المطلوبة: grade-levels.update.");
-        return;
-      }
-
-      updateMutation.mutate(
-        {
-          gradeLevelId: editingGradeLevelId,
-          payload,
-        },
-        {
-          onSuccess: () => {
-            resetForm();
-          },
-        },
-      );
-      return;
+    if (isEditing && editingId) {
+      updateMutation.mutate({ gradeLevelId: editingId, payload }, { onSuccess: resetFormState });
+    } else {
+      createMutation.mutate(payload, { onSuccess: resetFormState });
     }
-
-    if (!canCreate) {
-      setFormError("لا تملك الصلاحية المطلوبة: grade-levels.create.");
-      return;
-    }
-
-    createMutation.mutate(payload, {
-      onSuccess: () => {
-        resetForm();
-        setPage(1);
-      },
-    });
   };
 
-  const handleStartEdit = (gradeLevel: GradeLevelListItem) => {
-    if (!canUpdate) {
-      return;
-    }
-
-    setFormError(null);
-    setEditingGradeLevelId(gradeLevel.id);
-    setFormState(toFormState(gradeLevel));
-    setIsFormOpen(true);
-  };
-
-  const handleDelete = (gradeLevel: GradeLevelListItem) => {
-    if (!canDelete) {
-      return;
-    }
-
-    const confirmed = window.confirm(`تأكيد حذف الصف/المرحلة ${gradeLevel.name}؟`);
-    if (!confirmed) {
-      return;
-    }
-
-    deleteMutation.mutate(gradeLevel.id, {
-      onSuccess: () => {
-        if (editingGradeLevelId === gradeLevel.id) {
-          resetForm();
-        }
-      },
-    });
-  };
-
-  const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
-
-  const clearFilters = () => {
-    setPage(1);
-    setSearchInput("");
-    setSearch("");
-    setStageFilter("all");
-    setActiveFilter("all");
-    setIsFilterOpen(false);
+  const handleDelete = (item: GradeLevelListItem) => {
+    if (!canDelete || !window.confirm(`تأكيد حذف المستوى التعليمي ${item.name}؟ سيؤدي ذلك لحذف الارتباطات التابعة.`)) return;
+    deleteMutation.mutate(item.id);
   };
 
   const applyFilters = () => {
@@ -314,368 +177,216 @@ export function GradeLevelsWorkspace() {
     setIsFilterOpen(false);
   };
 
+  const clearFilters = () => {
+    setPage(1);
+    setSearchInput("");
+    setSearch("");
+    setStageFilter("all");
+    setActiveFilter("all");
+    setFilterDraft({ stage: "all", active: "all" });
+    setIsFilterOpen(false);
+  };
+
   const activeFiltersCount = React.useMemo(() => {
     return [
-      searchInput.trim() ? 1 : 0,
-      stageFilter !== "all" ? 1 : 0,
-      activeFilter !== "all" ? 1 : 0,
-    ].reduce((acc, value) => acc + value, 0);
+      searchInput.trim() ? 1 : 0, stageFilter !== "all" ? 1 : 0, activeFilter !== "all" ? 1 : 0
+    ].reduce((acc, v) => acc + v, 0);
   }, [activeFilter, searchInput, stageFilter]);
 
   return (
-    <>
+    <PageShell
+      title="المستويات الأكاديمية"
+      subtitle="تعريف سلم الدرجات التعليمي، ترتيب الصفوف، وتصنيف المرحل التدريسية المعتمدة."
+    >
       <div className="space-y-4">
-                  <ManagementToolbar
-            searchValue={searchInput}
-            onSearchChange={(event) => setSearchInput(event.target.value)}
-            searchPlaceholder="بحث بالاسم..."
-            filterCount={activeFiltersCount}
-            onFilterClick={() => setIsFilterOpen((prev) => !prev)}
-            showFilterButton={true}
-          />
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(e) => setSearchInput(e.target.value)}
+          searchPlaceholder="بحث باسم الصف أو الكود..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen(true)}
+          actions={
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => void gradeLevelsQuery.refetch()} disabled={gradeLevelsQuery.isFetching}>
+              <RefreshCw className={`h-4 w-4 ${gradeLevelsQuery.isFetching ? "animate-spin" : ""}`} />
+              تحديث
+            </Button>
+          }
+        />
 
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
-          title="فلاتر المراحل والصفوف"
+          title="فلاتر المستويات التدريسية"
           actionButtons={
             <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
+              <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">مسح</Button>
+              <Button type="button" onClick={applyFilters} className="flex-1">تطبيق</Button>
             </div>
           }
         >
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1">
-              <Label>المرحلة التدريسية</Label>
-              <SelectField
-                value={filterDraft.stage}
-                onChange={(event) =>
-                  setFilterDraft((prev) => ({
-                    ...prev,
-                    stage: event.target.value as GradeStage | "all",
-                  }))
-                }
-                icon={<Layers3 className="h-4 w-4" />}
-              >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5 sm:col-span-2">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">المرحلة التعليمية</label>
+              <SelectField value={filterDraft.stage} onChange={(e) => setFilterDraft(p => ({ ...p, stage: e.target.value as any }))}>
                 <option value="all">كل المراحل</option>
-                {STAGE_OPTIONS.map((stage) => (
-                  <option key={stage} value={stage}>
-                    {STAGE_LABELS[stage]}
-                  </option>
-                ))}
+                {STAGE_OPTIONS.map(s => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}
               </SelectField>
             </div>
-
-            <div className="space-y-1">
-              <Label>الحالة</Label>
-              <SelectField
-                value={filterDraft.active}
-                onChange={(event) =>
-                  setFilterDraft((prev) => ({
-                    ...prev,
-                    active: event.target.value as "all" | "active" | "inactive",
-                  }))
-                }
-                icon={<Activity className="h-4 w-4" />}
-              >
+            <div className="space-y-1.5 sm:col-span-2">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">الحالة التشغيلية</label>
+              <SelectField value={filterDraft.active} onChange={(e) => setFilterDraft(p => ({ ...p, active: e.target.value as any }))}>
                 <option value="all">كل الحالات</option>
-                <option value="active">النشطة فقط</option>
-                <option value="inactive">غير النشطة فقط</option>
+                <option value="active">مستويات نشطة</option>
+                <option value="inactive">مستويات مؤرشفة</option>
               </SelectField>
             </div>
           </div>
         </FilterDrawer>
 
-        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-          <CardHeader className="space-y-3">
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm overflow-hidden">
+          <CardHeader className="space-y-3 bg-muted/30 border-b border-border/60 pb-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>قائمة المراحل/الصفوف</CardTitle>
-              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+              <CardTitle className="flex items-center gap-2 text-lg font-bold">
+                <Layers3 className="h-5 w-5 text-primary" />
+                سجل الصفوف والمراحل
+              </CardTitle>
+              <Badge variant="secondary" className="rounded-full px-3">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
-            <CardDescription>
-              إدارة المراحل/الصفوف مع الفلترة بالبحث والمرحلة والحالة.
-            </CardDescription>
           </CardHeader>
+          
+          <CardContent className="p-0">
+            {gradeLevelsQuery.isPending && (
+              <div className="p-12 text-center text-sm text-muted-foreground font-medium animate-pulse">جارٍ تحميل البيانات...</div>
+            )}
 
-          <CardContent className="space-y-3">
-            {gradeLevelsQuery.isPending ? (
-              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                جارٍ تحميل البيانات...
-              </div>
-            ) : null}
+            <div className="divide-y divide-border/40">
+              {records.map((item) => (
+                <div key={item.id} className="p-4 hover:bg-muted/10 transition-colors group">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="flex gap-4 flex-1">
+                      <div className="flex flex-col items-center justify-center h-12 w-12 rounded-2xl bg-primary/5 border border-primary/10 group-hover:bg-primary/10 transition-colors shadow-sm">
+                        <Boxes className="h-6 w-6 text-primary/60" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-base">{item.name}</p>
+                          <Badge variant="outline" className="h-5 text-[8px] font-black uppercase text-muted-foreground border-border/70">
+                             {item.code}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-bold uppercase tracking-tight">
+                          <Target className="h-3.5 w-3.5" /> <span>{STAGE_LABELS[item.stage]}</span>
+                          <span className="mx-1 opacity-30">•</span>
+                          <Hash className="h-3.5 w-3.5" /> <span>Sequence: {item.sequence}</span>
+                        </div>
+                      </div>
+                    </div>
 
-            {gradeLevelsQuery.error ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                {gradeLevelsQuery.error instanceof Error
-                  ? gradeLevelsQuery.error.message
-                  : "تعذّر تحميل البيانات."}
-              </div>
-            ) : null}
-
-            {!gradeLevelsQuery.isPending && gradeLevels.length === 0 ? (
-              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                لا توجد مراحل/صفوف مطابقة.
-              </div>
-            ) : null}
-
-            {gradeLevels.map((gradeLevel) => (
-              <div
-                key={gradeLevel.id}
-                className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="space-y-1">
-                    <p className="font-medium">{gradeLevel.name}</p>
-                    <p className="text-xs text-muted-foreground flex items-center gap-3">
-                      <span className="flex items-center gap-1">
-                        <Hash className="h-3 w-3" />
-                        <code>{gradeLevel.code}</code>
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <ListOrdered className="h-3 w-3" />
-                        الترتيب: {gradeLevel.sequence}
-                      </span>
-                    </p>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <BookOpen className="h-3 w-3" />
-                      الشعب: {gradeLevel.sections.length}
-                    </p>
+                    <div className="flex flex-col items-end gap-3">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge variant={item.isActive ? "default" : "outline"} className={`h-5 text-[8px] font-black uppercase ${item.isActive ? 'bg-primary/10 text-primary border-primary/20' : ''}`}>
+                          {item.isActive ? "Active Level" : "Archived"}
+                        </Badge>
+                        <Badge variant="outline" className="h-5 text-[8px] font-black uppercase border-border/70 italic text-stone-500 bg-stone-50">
+                          <Layout className="h-2.5 w-2.5 mr-1 inline" /> {item.sections.length} Sections
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" className="h-8 rounded-lg px-3 text-[11px] font-bold gap-1.5" onClick={() => handleStartEdit(item)} disabled={!canUpdate}>
+                          <PencilLine className="h-3.5 w-3.5" /> تعديل
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 rounded-lg px-2 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(item)} disabled={!canDelete}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge variant={stageBadgeVariant(gradeLevel.stage)}>
-                      {STAGE_LABELS[gradeLevel.stage]}
-                    </Badge>
-                    <Badge variant={gradeLevel.isActive ? "default" : "outline"}>
-                      {gradeLevel.isActive ? "نشط" : "غير نشط"}
-                    </Badge>
-                  </div>
+                  
+                  {item.sections.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                       {item.sections.map(sec => (
+                          <Badge key={sec.id} variant="outline" className="px-2 py-0 h-4 text-[7px] border-emerald-500/20 text-emerald-600 bg-emerald-500/5">{sec.name}</Badge>
+                       ))}
+                    </div>
+                  )}
                 </div>
+              ))}
+            </div>
 
-                {gradeLevel.sections.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5">
-                    {gradeLevel.sections.slice(0, 4).map((section) => (
-                      <Badge key={section.id} variant="outline" className="text-[10px] h-5">
-                        {section.code}
-                      </Badge>
-                    ))}
-                    {gradeLevel.sections.length > 4 ? (
-                      <Badge variant="outline" className="text-[10px] h-5">+{gradeLevel.sections.length - 4}</Badge>
-                    ) : null}
-                  </div>
-                ) : null}
+            {!gradeLevelsQuery.isPending && records.length === 0 && (
+              <div className="p-12 text-center text-sm text-muted-foreground opacity-50">لا توجد صفوف مسجلة تتوافق مع البحث.</div>
+            )}
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => handleStartEdit(gradeLevel)}
-                    disabled={!canUpdate || updateMutation.isPending}
-                  >
-                    <PencilLine className="h-3.5 w-3.5" />
-                    تعديل
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => handleDelete(gradeLevel)}
-                    disabled={!canDelete || deleteMutation.isPending}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    حذف
-                  </Button>
-                </div>
-              </div>
-            ))}
-
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-              <p className="text-xs text-muted-foreground">
-                الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-              </p>
-
+            <div className="p-4 flex flex-wrap items-center justify-between gap-4 border-t border-border/60 bg-muted/10">
+              <p className="text-[10px] text-muted-foreground font-bold italic tracking-wide">نمط التدرج: تنظيم الهياكل التعليمية</p>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={!pagination || pagination.page <= 1 || gradeLevelsQuery.isFetching}
-                >
-                  السابق
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setPage((prev) =>
-                      pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                    )
-                  }
-                  disabled={
-                    !pagination ||
-                    pagination.page >= pagination.totalPages ||
-                    gradeLevelsQuery.isFetching
-                  }
-                >
-                  التالي
-                </Button>
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => void gradeLevelsQuery.refetch()}
-                  disabled={gradeLevelsQuery.isFetching}
-                >
-                  <RefreshCw
-                    className={`h-4 w-4 ${gradeLevelsQuery.isFetching ? "animate-spin" : ""}`}
-                  />
-                  تحديث
-                </Button>
+                <Button variant="outline" size="sm" className="h-8 rounded-xl px-4 font-bold" onClick={() => setPage(p => Math.max(p - 1, 1))} disabled={!pagination || pagination.page <= 1}>السابق</Button>
+                <div className="text-[10px] font-bold px-2">Page {pagination?.page ?? 1} / {pagination?.totalPages ?? 1}</div>
+                <Button variant="outline" size="sm" className="h-8 rounded-xl px-4 font-bold" onClick={() => setPage(p => (pagination ? Math.min(p + 1, pagination.totalPages || 1) : p))} disabled={!pagination || pagination.page >= pagination.totalPages}>التالي</Button>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Fab
-        icon={<Plus className="h-4 w-4" />}
-        label="إنشاء"
-        ariaLabel="إنشاء مرحلة أو صف"
-        onClick={handleStartCreate}
-        disabled={!canCreate}
-      />
+      <Fab icon={<Plus className="h-5 w-5" />} label="إضافة صف" onClick={handleStartCreate} disabled={!canCreate} />
 
-      <BottomSheetForm
+      <CrudFormSheet
         open={isFormOpen}
-        title={isEditing ? "تعديل مرحلة/صف" : "إنشاء مرحلة/صف"}
-        onClose={resetForm}
-        onSubmit={() => handleSubmitForm()}
-        isSubmitting={isFormSubmitting}
-        submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء مرحلة/صف"}
-        showFooter={false}
+        onClose={resetFormState}
+        title={isEditing ? "تحرير بيانات المستوى" : "تعريف مستوى تعليمي جديد"}
+        isEditing={isEditing}
+        isSubmitting={isSubmitting}
+        onSubmit={handleSubmit}
       >
-        {!canCreate && !isEditing ? (
-          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            لا تملك الصلاحية المطلوبة: <code>grade-levels.create</code>.
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><BookOpen className="h-3.5 w-3.5" /> الهوية الأكاديمية</h4>
+            <div className="grid gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">الاسم المعتمد للمستوى *</label>
+                <Input value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))} placeholder="مثال: الصف التاسع" />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase leading-none">كود النظام</label>
+                  <Input value={form.code} onChange={(e) => setForm(p => ({ ...p, code: e.target.value }))} placeholder="G-9" disabled={isEditing} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1 flex items-center gap-1.5"><ListOrdered className="h-3.5 w-3.5" /> التسلسل الدراسي</label>
+                  <Input type="number" value={form.sequence} onChange={(e) => setForm(p => ({ ...p, sequence: e.target.value }))} placeholder="9" />
+                </div>
+              </div>
+            </div>
           </div>
-        ) : (
-          <form className="space-y-4" onSubmit={handleSubmitForm}>
-            <div className="space-y-1">
-              <Label required>الاسم</Label>
-              <Input
-                value={formState.name}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, name: event.target.value }))
-                }
-                placeholder="الصف الأول"
-                icon={<BookOpen className="h-4 w-4" />}
-                required
-              />
-            </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-1">
-                <Label required>المرحلة</Label>
-                <SelectField
-                  value={formState.stage}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      stage: event.target.value as GradeStage,
-                    }))
-                  }
-                  icon={<Layers3 className="h-4 w-4" />}
-                >
-                  {STAGE_OPTIONS.map((stage) => (
-                    <option key={stage} value={stage}>
-                      {STAGE_LABELS[stage]}
-                    </option>
-                  ))}
-                </SelectField>
-              </div>
-
-              <div className="space-y-1">
-                <Label required>الترتيب</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={1000}
-                  value={formState.sequence}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, sequence: event.target.value }))
-                  }
-                  icon={<ListOrdered className="h-4 w-4" />}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <Label>الحالة</Label>
-              <SelectField
-                value={formState.isActive ? "active" : "inactive"}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    isActive: event.target.value === "active",
-                  }))
-                }
-                icon={<Activity className="h-4 w-4" />}
-              >
-                <option value="active">نشط</option>
-                <option value="inactive">غير نشط</option>
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><Target className="h-3.5 w-3.5" /> التصنيف المرحلي</h4>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted-foreground uppercase leading-none">المرحلة التعليمية الكبرى *</label>
+              <SelectField value={form.stage} onChange={(e) => setForm(p => ({ ...p, stage: e.target.value as any }))}>
+                {STAGE_OPTIONS.map(s => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}
               </SelectField>
             </div>
+          </div>
 
-            {formError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                {formError}
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+            <label className="flex items-center justify-between cursor-pointer transition-colors group">
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-foreground group-hover:text-primary">مستوى نشط (Active)</span>
+                <p className="text-[10px] text-muted-foreground">تفعيل المستوى لاستقبال الشعب والطلاب</p>
               </div>
-            ) : null}
+              <input type="checkbox" className="h-5 w-5 rounded text-primary" checked={form.isActive} onChange={(e) => setForm(p => ({ ...p, isActive: e.target.checked }))} />
+            </label>
+          </div>
 
-            {mutationError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                {mutationError}
-              </div>
-            ) : null}
-
-            <div className="flex gap-2 pt-2">
-              <button
-                type="submit"
-                className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/30 active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
-                disabled={isFormSubmitting || (!canCreate && !isEditing)}
-              >
-                {isFormSubmitting ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Layers3 className="h-4 w-4" />
-                )}
-                {isEditing ? "حفظ التعديلات" : "إنشاء مرحلة/صف"}
-              </button>
-              {isEditing ? (
-                <Button type="button" variant="outline" onClick={resetForm} className="rounded-2xl">
-                  إلغاء
-                </Button>
-              ) : null}
+          {formError && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive font-bold text-center">
+              {formError}
             </div>
-          </form>
-        )}
-      </BottomSheetForm>
-    </>
+          )}
+        </div>
+      </CrudFormSheet>
+    </PageShell>
   );
 }
-
