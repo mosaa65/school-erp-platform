@@ -33,7 +33,7 @@ import { translateRoleCode } from "@/lib/i18n/ar";
 import { cn } from "@/lib/utils";
 import type { ColorPresetId, ColorScheme } from "@/theme/appearance-types";
 import { resolveAppearanceThemeTokens } from "@/theme/color-presets";
-import type { NavigationDensity } from "@/navigation/navigation-preferences";
+import { saveLastVisitedAppPath, type NavigationDensity } from "@/navigation/navigation-preferences";
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -58,6 +58,7 @@ type StandalonePageMeta = {
 };
 
 const NAV_SCROLL_STORAGE_KEY = "app-shell.nav-scroll-top";
+const LAST_VISITED_NAVIGATION_STORAGE_KEY = "school-erp.navigation.last-visited.v1";
 
 function isNavItemActive(pathname: string, href: string): boolean {
   if (href === "/app") {
@@ -69,6 +70,10 @@ function isNavItemActive(pathname: string, href: string): boolean {
 
 function normalizeText(value: string): string {
   return value.trim().toLowerCase();
+}
+
+function isInAppSection(pathname: string): boolean {
+  return pathname === "/app" || pathname.startsWith("/app/");
 }
 
 function resolveGroupTheme(
@@ -226,6 +231,7 @@ export function AppShell({ children }: AppShellProps) {
   const isNavigationHubLanding =
     pathname === "/app" &&
     (isHubMode || navigationPreferences.landingPage === "navigation-hub");
+  const isLastVisitedLanding = navigationPreferences.landingPage === "last-visited";
   const navDensityClasses = React.useMemo(
     () => resolveNavDensityClasses(navigationPreferences.density),
     [navigationPreferences.density],
@@ -354,6 +360,44 @@ export function AppShell({ children }: AppShellProps) {
     setNavigationDrawerOpen(false);
     setNavSearch("");
   }, [pathname, persistNavScrollPosition]);
+
+  React.useEffect(() => {
+    saveLastVisitedAppPath(pathname);
+  }, [pathname]);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined" || !isInAppSection(pathname) || pathname === "/app") {
+      return;
+    }
+
+    window.localStorage.setItem(
+      LAST_VISITED_NAVIGATION_STORAGE_KEY,
+      `${window.location.pathname}${window.location.search}`,
+    );
+  }, [pathname]);
+
+  React.useEffect(() => {
+    if (!auth.isHydrated || !auth.session) {
+      return;
+    }
+
+    if (pathname !== "/app" || !isLastVisitedLanding) {
+      return;
+    }
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const lastVisitedPath = window.localStorage.getItem(
+      LAST_VISITED_NAVIGATION_STORAGE_KEY,
+    );
+    if (!lastVisitedPath || lastVisitedPath === "/app") {
+      return;
+    }
+
+    router.replace(lastVisitedPath);
+  }, [auth.isHydrated, auth.session, isLastVisitedLanding, pathname, router]);
 
   const visibleNavGroups = React.useMemo<VisibleNavGroup[]>(() => {
     return APP_NAV_GROUPS.map((group) => ({

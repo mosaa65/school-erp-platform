@@ -1,6 +1,12 @@
 import * as React from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  FIELD_ICON_BADGE_CLASS_NAME,
+  FIELD_ICON_EDGE_RIGHT_CLASS_NAME,
+  FIELD_SELECT_CHEVRON_CLASS_NAME,
+  FIELD_SURFACE_CLASS_NAME,
+} from "@/components/ui/field-styles";
 
 export type SelectFieldProps = React.ComponentProps<"select"> & {
   icon?: React.ReactElement<{ className?: string }>;
@@ -18,26 +24,33 @@ export function SelectField({
   const renderedIcon =
     icon && React.isValidElement(icon)
       ? React.cloneElement(icon, {
-          className: cn("h-4 w-4", icon.props.className),
+          className: cn(
+            "h-4 w-4 text-[color:var(--app-accent-color)]",
+            icon.props.className,
+          ),
         })
       : icon;
 
   return (
-    <div className={cn("group/select relative", containerClassName)}>
+    <div className={cn("group/select relative w-full", containerClassName)}>
       {hasIcon ? (
-        <span className="pointer-events-none absolute right-3 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 text-primary shadow-sm transition-colors group-focus-within/select:border-primary/50 group-focus-within/select:bg-primary/15 group-focus-within/select:text-primary">
+        <span
+          className={cn(
+            FIELD_ICON_BADGE_CLASS_NAME,
+            FIELD_ICON_EDGE_RIGHT_CLASS_NAME,
+            "group-focus-within/select:text-[color:var(--app-accent-color)]",
+          )}
+        >
           {renderedIcon}
         </span>
       ) : null}
-      <span className="pointer-events-none absolute left-3 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl border border-primary/20 bg-primary/5 text-primary/60 shadow-sm transition-colors group-focus-within/select:border-primary/40 group-focus-within/select:bg-primary/10 group-focus-within/select:text-primary">
-        <ChevronDown className="h-4 w-4" />
+      <span className={FIELD_SELECT_CHEVRON_CLASS_NAME}>
+        <ChevronDown className="h-3.5 w-3.5 transition-transform group-focus-within/select:translate-y-[1px]" />
       </span>
       <select
         className={cn(
-          "h-11 w-full appearance-none rounded-2xl border border-border/40 bg-background/50 px-4 text-sm shadow-sm backdrop-blur-md ring-offset-background transition-all duration-300",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary/50",
-          "hover:border-border/80 hover:bg-background/80",
-          "disabled:cursor-not-allowed disabled:opacity-50",
+          FIELD_SURFACE_CLASS_NAME,
+          "appearance-none px-4",
           hasIcon ? "pr-14" : "pr-4",
           "pl-14",
           className,

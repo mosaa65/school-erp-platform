@@ -103,9 +103,24 @@ export function findCountryDialCodeOption(
     );
   }
 
-  return COUNTRY_DIAL_CODE_OPTIONS.find(
-    (option) => option.iso2 === iso2.toUpperCase(),
+  const normalizedValue = iso2.toUpperCase();
+  return (
+    COUNTRY_DIAL_CODE_OPTIONS.find((option) => option.iso2 === normalizedValue) ??
+    findCountryDialCodeOptionByDialCode(normalizedValue)
   );
+}
+
+export function findCountryDialCodeOptionByDialCode(
+  dialCode: string | null | undefined,
+): CountryDialCodeOption | undefined {
+  if (!dialCode?.trim()) {
+    return undefined;
+  }
+
+  const normalizedDialCode = dialCode.trim().replace(/[^\d+]/g, "");
+  return [...COUNTRY_DIAL_CODE_OPTIONS]
+    .sort((left, right) => right.dialCode.length - left.dialCode.length)
+    .find((option) => option.dialCode === normalizedDialCode);
 }
 
 export function normalizeNationalNumberInput(value: string): string {

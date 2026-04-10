@@ -39,6 +39,7 @@ export type NavigationDensityDefinition = {
 
 const STORAGE_VERSION = 1;
 const STORAGE_KEY = "school-erp.navigation.v1";
+const LAST_VISITED_APP_PATH_STORAGE_KEY = "school-erp.navigation.last-visited-path.v1";
 
 export const DEFAULT_NAVIGATION_PREFERENCES: NavigationPreferences = {
   layoutMode: "classic",
@@ -99,7 +100,7 @@ export const NAVIGATION_LANDING_PAGE_OPTIONS: NavigationLandingPageDefinition[] 
     value: "last-visited",
     label: "آخر صفحة",
     description: "العودة إلى آخر صفحة تمت زيارتها.",
-    available: false,
+    available: true,
   },
 ];
 
@@ -262,4 +263,47 @@ export function getNavigationDensityLabel(value: NavigationDensity): string {
 
 export function getHeaderMenuButtonVisibilityLabel(value: boolean): string {
   return value ? "ظاهر" : "مخفي";
+}
+
+function getNavigationStorage(): Storage | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+export function saveLastVisitedAppPath(pathname: string): void {
+  const storage = getNavigationStorage();
+  if (!storage || !pathname.startsWith("/app") || pathname === "/app") {
+    return;
+  }
+
+  try {
+    storage.setItem(LAST_VISITED_APP_PATH_STORAGE_KEY, pathname);
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+export function loadLastVisitedAppPath(): string | null {
+  const storage = getNavigationStorage();
+  if (!storage) {
+    return null;
+  }
+
+  try {
+    const value = storage.getItem(LAST_VISITED_APP_PATH_STORAGE_KEY);
+    if (!value || !value.startsWith("/app") || value.startsWith("//")) {
+      return null;
+    }
+
+    return value;
+  } catch {
+    return null;
+  }
 }

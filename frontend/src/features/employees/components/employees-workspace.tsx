@@ -59,6 +59,11 @@ import {
   translateEmployeeGender,
   translateEmploymentType,
 } from "@/lib/i18n/ar";
+import {
+  DEFAULT_COUNTRY_ISO2,
+  normalizePhoneValue,
+  parseStoredPhoneValue,
+} from "@/lib/intl/phone";
 import type {
   EmployeeGender,
   EmployeeListItem,
@@ -74,7 +79,11 @@ type EmployeeFormState = {
   genderId: string;
   birthDate: string;
   phonePrimary: string;
+  phonePrimaryCountryIso2: string;
+  phonePrimaryNationalNumber: string;
   phoneSecondary: string;
+  phoneSecondaryCountryIso2: string;
+  phoneSecondaryNationalNumber: string;
   hasWhatsapp: boolean;
   qualificationId: string;
   qualificationDate: string;
@@ -119,7 +128,11 @@ const DEFAULT_FORM_STATE: EmployeeFormState = {
   genderId: "",
   birthDate: "",
   phonePrimary: "",
+  phonePrimaryCountryIso2: DEFAULT_COUNTRY_ISO2,
+  phonePrimaryNationalNumber: "",
   phoneSecondary: "",
+  phoneSecondaryCountryIso2: DEFAULT_COUNTRY_ISO2,
+  phoneSecondaryNationalNumber: "",
   hasWhatsapp: true,
   qualificationId: "",
   qualificationDate: "",
@@ -183,6 +196,33 @@ function toDateIso(dateInput: string): string {
   return `${dateInput}T00:00:00.000Z`;
 }
 
+function toPhoneFieldState(value: string | null | undefined): {
+  phone: string;
+  countryIso2: string;
+  nationalNumber: string;
+} {
+  const parsed = parseStoredPhoneValue(value, DEFAULT_COUNTRY_ISO2);
+  return {
+    phone: parsed.e164,
+    countryIso2: parsed.countryIso2,
+    nationalNumber: parsed.nationalNumber,
+  };
+}
+
+function composePhoneValue(countryIso2: string, nationalNumber: string): string | undefined {
+  const normalizedNationalNumber = nationalNumber.trim();
+  if (!normalizedNationalNumber) {
+    return undefined;
+  }
+
+  const normalized = normalizePhoneValue({
+    countryIso2,
+    nationalNumber: normalizedNationalNumber,
+  });
+
+  return normalized.ok ? normalized.e164 : undefined;
+}
+
 function resolveOperationalReadiness(employee: EmployeeListItem): {
   label: string;
   variant: "default" | "secondary" | "outline";
@@ -224,14 +264,21 @@ function resolveOperationalReadiness(employee: EmployeeListItem): {
 
 
 function toFormState(employee: EmployeeListItem): EmployeeFormState {
+  const primaryPhone = toPhoneFieldState(employee.phonePrimary);
+  const secondaryPhone = toPhoneFieldState(employee.phoneSecondary);
+
   return {
     jobNumber: employee.jobNumber ?? "",
     financialNumber: employee.financialNumber ?? "",
     fullName: employee.fullName,
     genderId: employee.genderId ? String(employee.genderId) : "",
     birthDate: toDateInput(employee.birthDate),
-    phonePrimary: employee.phonePrimary ?? "",
-    phoneSecondary: employee.phoneSecondary ?? "",
+    phonePrimary: primaryPhone.phone,
+    phonePrimaryCountryIso2: primaryPhone.countryIso2,
+    phonePrimaryNationalNumber: primaryPhone.nationalNumber,
+    phoneSecondary: secondaryPhone.phone,
+    phoneSecondaryCountryIso2: secondaryPhone.countryIso2,
+    phoneSecondaryNationalNumber: secondaryPhone.nationalNumber,
     hasWhatsapp: employee.hasWhatsapp,
     qualificationId: employee.qualificationId
       ? String(employee.qualificationId)
@@ -627,6 +674,32 @@ export function EmployeesWorkspace() {
       return false;
     }
 
+    const primaryPhone = formState.phonePrimaryNationalNumber.trim();
+    if (primaryPhone) {
+      const normalizedPrimary = normalizePhoneValue({
+        countryIso2: formState.phonePrimaryCountryIso2,
+        nationalNumber: primaryPhone,
+      });
+
+      if (!normalizedPrimary.ok) {
+        setFormError("رقم الهاتف الأساسي غير صالح.");
+        return false;
+      }
+    }
+
+    const secondaryPhone = formState.phoneSecondaryNationalNumber.trim();
+    if (secondaryPhone) {
+      const normalizedSecondary = normalizePhoneValue({
+        countryIso2: formState.phoneSecondaryCountryIso2,
+        nationalNumber: secondaryPhone,
+      });
+
+      if (!normalizedSecondary.ok) {
+        setFormError("رقم الهاتف الاحتياطي غير صالح.");
+        return false;
+      }
+    }
+
     setFormError(null);
     return true;
   };
@@ -662,8 +735,14 @@ export function EmployeesWorkspace() {
       birthDate: formState.birthDate
         ? toDateIso(formState.birthDate)
         : undefined,
-      phonePrimary: toOptionalString(formState.phonePrimary),
-      phoneSecondary: toOptionalString(formState.phoneSecondary),
+      phonePrimary: composePhoneValue(
+        formState.phonePrimaryCountryIso2,
+        formState.phonePrimaryNationalNumber,
+      ),
+      phoneSecondary: composePhoneValue(
+        formState.phoneSecondaryCountryIso2,
+        formState.phoneSecondaryNationalNumber,
+      ),
       hasWhatsapp: formState.hasWhatsapp,
       qualification: toOptionalString(selectedQualification?.nameAr ?? ""),
       qualificationId: formState.qualificationId
@@ -985,6 +1064,7 @@ export function EmployeesWorkspace() {
           searchPlaceholder="ابحث بالاسم، الرقم، الهاتف..."
           filterCount={activeFiltersCount}
           onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+          actionsClassName="justify-start lg:justify-end"
         />
 
         {actionSuccess ? (
@@ -1040,35 +1120,35 @@ export function EmployeesWorkspace() {
                       </div>
                       <div className="grid gap-x-6 gap-y-1 text-xs text-muted-foreground sm:grid-cols-2">
                         <span className="flex items-center gap-1.5">
-                          <Briefcase className="h-3.5 w-3.5 opacity-70" />
+                          <Briefcase className="h-3.5 w-3.5 text-[color:var(--app-accent-color)]/80" />
                           {employee.jobRoleLookup?.nameAr ?? employee.jobTitle ?? "-"}
                         </span>
                         <span className="flex items-center gap-1.5">
-                          <Users className="h-3.5 w-3.5 opacity-70" />
+                          <Users className="h-3.5 w-3.5 text-[color:var(--app-accent-color)]/80" />
                           الرقم الوظيفي: {employee.jobNumber ?? "-"}
                         </span>
                         <span className="flex items-center gap-1.5">
-                          <BadgeDollarSign className="h-3.5 w-3.5 opacity-70" />
+                          <BadgeDollarSign className="h-3.5 w-3.5 text-[color:var(--app-accent-color)]/80" />
                           الرقم المالي: {employee.financialNumber ?? "-"}
                         </span>
                         <span className="flex items-center gap-1.5">
-                          <GraduationCap className="h-3.5 w-3.5 opacity-70" />
+                          <GraduationCap className="h-3.5 w-3.5 text-[color:var(--app-accent-color)]/80" />
                           {employee.qualificationLookup?.nameAr ?? "-"}
                         </span>
                         <span className="flex items-center gap-1.5">
-                          <Network className="h-3.5 w-3.5 opacity-70" />
+                          <Network className="h-3.5 w-3.5 text-[color:var(--app-accent-color)]/80" />
                           القسم: {employee.department?.name ?? "-"}
                         </span>
                         <span className="flex items-center gap-1.5">
-                          <GitBranch className="h-3.5 w-3.5 opacity-70" />
+                          <GitBranch className="h-3.5 w-3.5 text-[color:var(--app-accent-color)]/80" />
                           الفرع: {employee.branch?.nameAr ?? "-"}
                         </span>
                         <span className="flex items-center gap-1.5">
-                          <MapPinned className="h-3.5 w-3.5 opacity-70" />
+                          <MapPinned className="h-3.5 w-3.5 text-[color:var(--app-accent-color)]/80" />
                           مركز التكلفة: {employee.costCenter?.nameAr ?? "-"}
                         </span>
                         <span className="flex items-center gap-1.5">
-                          <User className="h-3.5 w-3.5 opacity-70" />
+                          <User className="h-3.5 w-3.5 text-[color:var(--app-accent-color)]/80" />
                           المدير المباشر: {employee.directManager?.fullName ?? "-"}
                         </span>
                       </div>
@@ -1253,11 +1333,14 @@ export function EmployeesWorkspace() {
               <div className="space-y-1">
                 <Label>الهاتف الأساسي</Label>
                 <InternationalPhoneField
-                  value={formState.phonePrimary}
+                  countryIso2={formState.phonePrimaryCountryIso2}
+                  nationalNumber={formState.phonePrimaryNationalNumber}
                   onChange={(next) =>
                     setFormState((prev) => ({
                       ...prev,
                       phonePrimary: next.e164,
+                      phonePrimaryCountryIso2: next.countryIso2,
+                      phonePrimaryNationalNumber: next.nationalNumber,
                     }))
                   }
                   placeholder="7XXXXXXXX"
@@ -1267,11 +1350,14 @@ export function EmployeesWorkspace() {
               <div className="space-y-1">
                 <Label>الهاتف الاحتياطي</Label>
                 <InternationalPhoneField
-                  value={formState.phoneSecondary}
+                  countryIso2={formState.phoneSecondaryCountryIso2}
+                  nationalNumber={formState.phoneSecondaryNationalNumber}
                   onChange={(next) =>
                     setFormState((prev) => ({
                       ...prev,
                       phoneSecondary: next.e164,
+                      phoneSecondaryCountryIso2: next.countryIso2,
+                      phoneSecondaryNationalNumber: next.nationalNumber,
                     }))
                   }
                   placeholder="7XXXXXXXX"

@@ -27,9 +27,9 @@ function SummaryTile({
   icon: React.ComponentType<{ className?: string }>;
 }) {
   return (
-    <div className="rounded-[1.05rem] border border-white/70 bg-background/80 px-2 py-2.5 text-slate-900 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-black/25 dark:text-white">
+    <div className="rounded-[1.15rem] border border-white/70 bg-background/80 px-3 py-3 text-slate-900 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-black/25 dark:text-white">
       <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-white/55">
-        <Icon className="h-3 w-3 text-[color:var(--app-accent-color)]" />
+        <Icon className="h-2.5 w-2.5 text-[color:var(--app-accent-color)]" />
         <span className="truncate">{label}</span>
       </div>
       <p className="mt-1.5 truncate text-xs font-semibold">{value}</p>
@@ -45,8 +45,8 @@ function ControlBlock({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[1.25rem] border border-white/70 bg-white/68 p-3 shadow-[0_14px_34px_-26px_rgba(15,23,42,0.18)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.04] dark:shadow-[0_12px_30px_-24px_rgba(15,23,42,0.85)]">
-      <div className="mb-3 flex items-center justify-between gap-3">
+    <section className="rounded-[1.5rem] border border-white/70 bg-white/68 p-4 shadow-[0_14px_34px_-26px_rgba(15,23,42,0.18)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.04] dark:shadow-[0_12px_30px_-24px_rgba(15,23,42,0.85)]">
+      <div className="mb-3.5 flex items-center justify-between gap-3">
         <span className="text-sm font-semibold text-slate-900 dark:text-white">{title}</span>
         <span className="h-px flex-1 bg-black/[0.06] dark:bg-white/10" />
       </div>
@@ -101,7 +101,7 @@ export function ProfileNavigationSection({ className }: ProfileNavigationSection
                 disabled={!option.available}
                 onClick={() => navigation.setLayoutMode(option.value)}
                 className={cn(
-                  "rounded-[1rem] border px-3 py-3 text-right transition-all",
+                  "rounded-[1.15rem] border px-3.5 py-3 text-right transition-all",
                   option.available
                     ? active
                       ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
@@ -139,7 +139,7 @@ export function ProfileNavigationSection({ className }: ProfileNavigationSection
                   type="button"
                   onClick={() => navigation.setMobilePresentation(option.value)}
                   className={cn(
-                    "rounded-[1rem] border px-3 py-3 text-right transition-all",
+                    "rounded-[1.15rem] border px-3.5 py-3 text-right transition-all",
                     active
                       ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
                       : "border-white/70 bg-background/75 text-slate-700 hover:bg-white hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/80 dark:hover:bg-white/[0.06] dark:hover:text-white",
@@ -166,7 +166,7 @@ export function ProfileNavigationSection({ className }: ProfileNavigationSection
                   type="button"
                   onClick={() => navigation.setDensity(option.value)}
                   className={cn(
-                    "rounded-[1rem] border px-3 py-3 text-right transition-all",
+                    "rounded-[1.15rem] border px-3.5 py-3 text-right transition-all",
                     active
                       ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
                       : "border-white/70 bg-background/75 text-slate-700 hover:bg-white hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/80 dark:hover:bg-white/[0.06] dark:hover:text-white",
@@ -195,7 +195,7 @@ export function ProfileNavigationSection({ className }: ProfileNavigationSection
                 disabled={!option.available}
                 onClick={() => navigation.setLandingPage(option.value)}
                 className={cn(
-                  "rounded-[1rem] border px-3 py-3 text-right transition-all",
+                  "rounded-[1.15rem] border px-3.5 py-3 text-right transition-all",
                   option.available
                     ? active
                       ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
@@ -224,7 +224,7 @@ export function ProfileNavigationSection({ className }: ProfileNavigationSection
             type="button"
             onClick={() => navigation.setShowHeaderMenuButton(true)}
             className={cn(
-              "rounded-[1rem] border px-3 py-3 text-right transition-all",
+                  "rounded-[1.15rem] border px-3.5 py-3 text-right transition-all",
               navigation.showHeaderMenuButton
                 ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
                 : "border-white/70 bg-background/75 text-slate-700 hover:bg-white hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/80 dark:hover:bg-white/[0.06] dark:hover:text-white",
@@ -239,7 +239,7 @@ export function ProfileNavigationSection({ className }: ProfileNavigationSection
             type="button"
             onClick={() => navigation.setShowHeaderMenuButton(false)}
             className={cn(
-              "rounded-[1rem] border px-3 py-3 text-right transition-all",
+                  "rounded-[1.15rem] border px-3.5 py-3 text-right transition-all",
               !navigation.showHeaderMenuButton
                 ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
                 : "border-white/70 bg-background/75 text-slate-700 hover:bg-white hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/80 dark:hover:bg-white/[0.06] dark:hover:text-white",
@@ -256,7 +256,7 @@ export function ProfileNavigationSection({ className }: ProfileNavigationSection
       <Button
         type="button"
         variant="ghost"
-        className="h-11 w-full rounded-[1.1rem] border border-white/70 bg-background/75 text-slate-800 hover:bg-white hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:hover:bg-white/[0.08] dark:hover:text-white"
+        className="h-11 w-full rounded-[1.2rem] border border-white/70 bg-background/75 text-slate-800 hover:bg-white hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:hover:bg-white/[0.08] dark:hover:text-white"
         onClick={() => navigation.resetNavigationPreferences()}
       >
         إعادة إعدادات التنقل

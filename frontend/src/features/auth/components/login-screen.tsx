@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Fingerprint, LoaderCircle, LogIn, Mail, ShieldCheck } from "lucide-react";
+import { LoaderCircle, LogIn, Mail, ShieldCheck } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { startAuthentication } from "@simplewebauthn/browser";
@@ -747,6 +747,9 @@ export function LoginScreen() {
                     id="password"
                     value={password}
                     onChange={setPassword}
+                    onBiometricAction={() => passkeyLoginMutation.mutate()}
+                    biometricDisabled={isSubmitting}
+                    biometricLabel="تسجيل الدخول بالبصمة"
                     required
                     minLength={8}
                   />
@@ -761,18 +764,6 @@ export function LoginScreen() {
                     >
                       نسيت كلمة المرور؟
                     </Link>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => passkeyLoginMutation.mutate()}
-                      disabled={isSubmitting}
-                      title="تسجيل الدخول بالبصمة"
-                      aria-label="تسجيل الدخول بالبصمة"
-                      className="h-9 w-9 rounded-full border-primary/25 bg-primary/5 text-primary hover:bg-primary/10"
-                    >
-                      <Fingerprint className="h-4 w-4" />
-                    </Button>
                   </div>
                 </div>
 

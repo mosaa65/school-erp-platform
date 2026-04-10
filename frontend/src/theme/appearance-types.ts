@@ -4,7 +4,6 @@ export type AppearanceMode = "light" | "dark" | "system";
 
 export type ColorPresetId =
   | "adaptive"
-  | "custom"
   | "violet"
   | "emerald"
   | "sky"

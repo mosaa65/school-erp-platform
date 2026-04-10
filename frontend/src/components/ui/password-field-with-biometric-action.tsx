@@ -3,6 +3,11 @@
 import * as React from "react";
 import { Eye, EyeOff, Fingerprint, LockKeyhole } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  FIELD_ICON_EDGE_RIGHT_CLASS_NAME,
+  FIELD_ICON_SMALL_BADGE_CLASS_NAME,
+  FIELD_SURFACE_CLASS_NAME,
+} from "@/components/ui/field-styles";
 
 type PasswordFieldWithBiometricActionProps = {
   id?: string;
@@ -41,17 +46,26 @@ export function PasswordFieldWithBiometricAction({
       {hasBiometricAction ? (
         <button
           type="button"
-          onClick={() => onBiometricAction?.()}
+          onClick={onBiometricAction}
           disabled={disabled}
           title={biometricLabel}
           aria-label={biometricLabel}
-          className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full p-1.5 text-primary/80 transition hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+          className={cn(
+            "absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full p-1.5 transition hover:bg-[color:var(--app-accent-soft)] hover:text-[color:var(--app-accent-color)] disabled:cursor-not-allowed disabled:opacity-40",
+            "text-[color:var(--app-accent-color)]",
+          )}
         >
           <Fingerprint className="h-4 w-4" />
         </button>
       ) : null}
 
-      <div className="pointer-events-none absolute right-3 top-1/2 z-10 -translate-y-1/2 text-primary/80">
+      <div
+        className={cn(
+          FIELD_ICON_SMALL_BADGE_CLASS_NAME,
+          FIELD_ICON_EDGE_RIGHT_CLASS_NAME,
+          "text-[color:var(--app-accent-color)]",
+        )}
+      >
         <LockKeyhole className="h-4 w-4" />
       </div>
 
@@ -66,11 +80,7 @@ export function PasswordFieldWithBiometricAction({
         minLength={minLength}
         disabled={disabled}
         className={cn(
-          "flex h-11 w-full rounded-2xl border border-border/40 bg-background/50 py-2 text-sm shadow-sm backdrop-blur-md transition-all duration-300 ring-offset-background",
-          "placeholder:text-muted-foreground/40",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary/50",
-          "hover:border-border/80 hover:bg-background/80",
-          "disabled:cursor-not-allowed disabled:opacity-50",
+          FIELD_SURFACE_CLASS_NAME,
           hasBiometricAction ? "pl-11" : "pl-4",
           "pr-20",
         )}
@@ -82,7 +92,10 @@ export function PasswordFieldWithBiometricAction({
         onClick={() => setIsVisible((current) => !current)}
         disabled={disabled}
         aria-label={isVisible ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
-        className="absolute right-9 top-1/2 z-10 -translate-y-1/2 rounded-full p-1.5 text-slate-500 transition hover:bg-black/5 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
+        className={cn(
+          "absolute right-9 top-1/2 z-10 -translate-y-1/2 rounded-full p-1.5 transition hover:bg-[color:var(--app-accent-soft)] hover:text-[color:var(--app-accent-color)] disabled:cursor-not-allowed disabled:opacity-40",
+          "text-[color:var(--app-accent-color)]",
+        )}
       >
         {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
       </button>

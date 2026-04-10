@@ -62,34 +62,33 @@ export function InternationalPhoneField({
     setIsSupported(enableContactPicker && supportsContactPicker());
   }, [enableContactPicker]);
 
+  const hasStructuredValue = countryIso2 !== undefined || nationalNumber !== undefined;
+
   const resolvedValue = React.useMemo(() => {
-    if (typeof value === "string") {
+    if (hasStructuredValue) {
+      return normalizePhoneValue({
+        countryIso2: countryIso2 ?? DEFAULT_COUNTRY_ISO2,
+        nationalNumber: nationalNumber ?? "",
+      });
+    }
+
+    if (typeof value === "string" && value.trim().length > 0) {
       return parseStoredPhoneValue(value, DEFAULT_COUNTRY_ISO2);
     }
 
     return normalizePhoneValue({
-      countryIso2: countryIso2 ?? DEFAULT_COUNTRY_ISO2,
-      nationalNumber: nationalNumber ?? "",
+      countryIso2: DEFAULT_COUNTRY_ISO2,
+      nationalNumber: "",
     });
-  }, [countryIso2, nationalNumber, value]);
+  }, [countryIso2, hasStructuredValue, nationalNumber, value]);
 
-  const resolvedCountryIso2 =
-    "ok" in resolvedValue
-      ? resolvedValue.ok
-        ? resolvedValue.countryIso2
-        : resolvedValue.countryIso2 ?? DEFAULT_COUNTRY_ISO2
-      : resolvedValue.countryIso2 ?? DEFAULT_COUNTRY_ISO2;
+  const resolvedCountryIso2 = resolvedValue.countryIso2 ?? DEFAULT_COUNTRY_ISO2;
 
   const selectedCountry =
     findCountryDialCodeOption(resolvedCountryIso2) ??
     findCountryDialCodeOption(DEFAULT_COUNTRY_ISO2)!;
 
-  const resolvedNationalNumber =
-    "ok" in resolvedValue
-      ? resolvedValue.ok
-        ? resolvedValue.nationalNumber ?? ""
-        : resolvedValue.nationalNumber ?? ""
-      : resolvedValue.nationalNumber ?? "";
+  const resolvedNationalNumber = resolvedValue.nationalNumber ?? "";
 
   const emitNextValue = React.useCallback(
     (nextCountryIso2: CountryIso2, nextNationalNumber: string) => {

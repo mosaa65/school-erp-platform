@@ -1,5 +1,7 @@
-﻿"use client";
+"use client";
 
+import * as React from "react";
+import { useRouter } from "next/navigation";
 import { KeyRound, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -12,13 +14,26 @@ import {
 import { NavigationHubWorkspace } from "@/features/navigation-hub/components/navigation-hub-workspace";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 import { useNavigationPreferences } from "@/hooks/use-navigation-preferences";
+import { loadLastVisitedAppPath } from "@/navigation/navigation-preferences";
 import { UsersPreviewCard } from "@/features/users/components/users-preview-card";
 import { BackendHealthCard } from "@/features/system-foundation/components/backend-health-card";
 import { translatePermissionCode, translateRoleCode } from "@/lib/i18n/ar";
 
 export default function AppDashboardPage() {
   const auth = useAuth();
+  const router = useRouter();
   const navigationPreferences = useNavigationPreferences();
+
+  React.useEffect(() => {
+    if (navigationPreferences.landingPage !== "last-visited") {
+      return;
+    }
+
+    const lastVisitedPath = loadLastVisitedAppPath();
+    if (lastVisitedPath && lastVisitedPath !== "/app") {
+      router.replace(lastVisitedPath);
+    }
+  }, [navigationPreferences.landingPage, router]);
 
   if (!auth.session) {
     return null;
@@ -29,6 +44,13 @@ export default function AppDashboardPage() {
     navigationPreferences.landingPage === "navigation-hub"
   ) {
     return <NavigationHubWorkspace />;
+  }
+
+  if (navigationPreferences.landingPage === "last-visited") {
+    const lastVisitedPath = loadLastVisitedAppPath();
+    if (lastVisitedPath && lastVisitedPath !== "/app") {
+      return null;
+    }
   }
 
   return (
@@ -109,7 +131,3 @@ export default function AppDashboardPage() {
     </div>
   );
 }
-
-
-
-

@@ -46,6 +46,9 @@ import {
 import type { UserListItem } from "@/lib/api/client";
 import { translateRoleCode } from "@/lib/i18n/ar";
 import { Label } from "@/components/ui/label";
+import {
+  findCountryDialCodeOptionByDialCode,
+} from "@/lib/intl/phone";
 
 type UserFormState = {
   email: string;
@@ -471,6 +474,12 @@ export function UsersManagementWorkspace({
     return count;
   }, [activeFilter, searchInput]);
 
+  const phoneCountryIso2 = React.useMemo(
+    () =>
+      findCountryDialCodeOptionByDialCode(formState.phoneCountryCode)?.iso2 ?? "YE",
+    [formState.phoneCountryCode],
+  );
+
   return (
     <>
       <div className="space-y-4">
@@ -662,8 +671,8 @@ export function UsersManagementWorkspace({
                       </Button>
                     ) : (
                       <>
-                        <select
-                          className="h-9 min-w-[220px] rounded-md border border-input bg-background px-2 text-sm"
+                        <SelectField
+                          className="h-9 min-w-[220px] rounded-md text-sm"
                           value={employeeSelections[user.id] ?? ""}
                           onChange={(event) =>
                             setEmployeeSelections((prev) => ({
@@ -684,7 +693,7 @@ export function UsersManagementWorkspace({
                               {employee.fullName} ({employee.jobNumber})
                             </option>
                           ))}
-                        </select>
+                        </SelectField>
                         <Button
                           variant="outline"
                           size="sm"
@@ -784,11 +793,8 @@ export function UsersManagementWorkspace({
               <Label required>رقم الهاتف</Label>
               <InternationalPhoneField
                 required
-                value={
-                  formState.phoneCountryCode || formState.phoneNationalNumber
-                    ? `${formState.phoneCountryCode}${formState.phoneNationalNumber}`
-                    : ""
-                }
+                countryIso2={phoneCountryIso2}
+                nationalNumber={formState.phoneNationalNumber}
                 onChange={(next) =>
                   setFormState((prev) => ({
                     ...prev,

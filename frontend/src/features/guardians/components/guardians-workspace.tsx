@@ -1,11 +1,11 @@
 "use client";
 
 import * as React from "react";
+import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   LoaderCircle,
   PencilLine,
   RefreshCw,
-  Search,
   Trash2,
   Users,
   User,
@@ -20,6 +20,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InternationalPhoneField } from "@/components/ui/international-phone-field";
 import { Label } from "@/components/ui/label";
+import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
 import {
   Card,
@@ -44,6 +47,11 @@ import { useGuardianGenderOptionsQuery } from "@/features/guardians/hooks/use-ge
 import { useGuardianIdTypeOptionsQuery } from "@/features/guardians/hooks/use-id-type-options-query";
 import { useGuardiansQuery } from "@/features/guardians/hooks/use-guardians-query";
 import { translateGuardianRelationship, translateStudentGender } from "@/lib/i18n/ar";
+import {
+  DEFAULT_COUNTRY_ISO2,
+  normalizePhoneValue,
+  parseStoredPhoneValue,
+} from "@/lib/intl/phone";
 import type {
   GuardianListItem,
   GuardianRelationship,
@@ -57,10 +65,23 @@ type GuardianFormState = {
   idTypeId: string;
   localityId: string;
   phonePrimary: string;
+  phonePrimaryCountryIso2: string;
+  phonePrimaryNationalNumber: string;
   phoneSecondary: string;
+  phoneSecondaryCountryIso2: string;
+  phoneSecondaryNationalNumber: string;
   whatsappNumber: string;
+  whatsappCountryIso2: string;
+  whatsappNationalNumber: string;
   residenceText: string;
   isActive: boolean;
+};
+
+type GuardianFilterDraft = {
+  gender: string;
+  idType: string;
+  locality: string;
+  active: "all" | "active" | "inactive";
 };
 
 const PAGE_SIZE = 12;
@@ -86,10 +107,23 @@ const DEFAULT_FORM_STATE: GuardianFormState = {
   idTypeId: "",
   localityId: "",
   phonePrimary: "",
+  phonePrimaryCountryIso2: DEFAULT_COUNTRY_ISO2,
+  phonePrimaryNationalNumber: "",
   phoneSecondary: "",
+  phoneSecondaryCountryIso2: DEFAULT_COUNTRY_ISO2,
+  phoneSecondaryNationalNumber: "",
   whatsappNumber: "",
+  whatsappCountryIso2: DEFAULT_COUNTRY_ISO2,
+  whatsappNationalNumber: "",
   residenceText: "",
   isActive: true,
+};
+
+const DEFAULT_FILTER_DRAFT: GuardianFilterDraft = {
+  gender: "all",
+  idType: "all",
+  locality: "all",
+  active: "all",
 };
 
 function toOptionalString(value: string): string | undefined {
@@ -99,6 +133,33 @@ function toOptionalString(value: string): string | undefined {
 
 function isStudentGenderCode(value: string): value is StudentGender {
   return STUDENT_GENDER_CODES.includes(value as StudentGender);
+}
+
+function toPhoneFieldState(value: string | null | undefined): {
+  phone: string;
+  countryIso2: string;
+  nationalNumber: string;
+} {
+  const parsed = parseStoredPhoneValue(value, DEFAULT_COUNTRY_ISO2);
+  return {
+    phone: parsed.e164,
+    countryIso2: parsed.countryIso2,
+    nationalNumber: parsed.nationalNumber,
+  };
+}
+
+function composePhoneValue(countryIso2: string, nationalNumber: string): string | undefined {
+  const normalizedNationalNumber = nationalNumber.trim();
+  if (!normalizedNationalNumber) {
+    return undefined;
+  }
+
+  const normalized = normalizePhoneValue({
+    countryIso2,
+    nationalNumber: normalizedNationalNumber,
+  });
+
+  return normalized.ok ? normalized.e164 : undefined;
 }
 
 type LocalityLabelInput = {
@@ -111,15 +172,25 @@ type LocalityLabelInput = {
 };
 
 function toFormState(guardian: GuardianListItem): GuardianFormState {
+  const primaryPhone = toPhoneFieldState(guardian.phonePrimary);
+  const secondaryPhone = toPhoneFieldState(guardian.phoneSecondary);
+  const whatsappPhone = toPhoneFieldState(guardian.whatsappNumber);
+
   return {
     fullName: guardian.fullName,
     genderId: guardian.genderId ? String(guardian.genderId) : "",
     idNumber: guardian.idNumber ?? "",
     idTypeId: guardian.idTypeId ? String(guardian.idTypeId) : "",
     localityId: guardian.localityId ? String(guardian.localityId) : "",
-    phonePrimary: guardian.phonePrimary ?? "",
-    phoneSecondary: guardian.phoneSecondary ?? "",
-    whatsappNumber: guardian.whatsappNumber ?? "",
+    phonePrimary: primaryPhone.phone,
+    phonePrimaryCountryIso2: primaryPhone.countryIso2,
+    phonePrimaryNationalNumber: primaryPhone.nationalNumber,
+    phoneSecondary: secondaryPhone.phone,
+    phoneSecondaryCountryIso2: secondaryPhone.countryIso2,
+    phoneSecondaryNationalNumber: secondaryPhone.nationalNumber,
+    whatsappNumber: whatsappPhone.phone,
+    whatsappCountryIso2: whatsappPhone.countryIso2,
+    whatsappNationalNumber: whatsappPhone.nationalNumber,
     residenceText: guardian.residenceText ?? "",
     isActive: guardian.isActive,
   };
@@ -160,6 +231,10 @@ export function GuardiansWorkspace() {
   const [localityFilter, setLocalityFilter] = React.useState<string>("all");
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
     "all",
+  );
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [filterDraft, setFilterDraft] = React.useState<GuardianFilterDraft>(
+    DEFAULT_FILTER_DRAFT,
   );
 
   const [editingGuardianId, setEditingGuardianId] = React.useState<string | null>(null);
@@ -301,6 +376,11 @@ export function GuardiansWorkspace() {
     (deleteMutation.error as Error | null)?.message ??
     null;
 
+  useDebounceEffect(() => {
+    setPage(1);
+    setSearch(searchInput.trim());
+  }, 400, [searchInput]);
+
   React.useEffect(() => {
     if (!isEditing) {
       return;
@@ -377,10 +457,36 @@ export function GuardiansWorkspace() {
     setFormVillageId("");
   };
 
-  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  React.useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    setFilterDraft({
+      gender: genderFilter,
+      idType: idTypeFilter,
+      locality: localityFilter,
+      active: activeFilter,
+    });
+  }, [activeFilter, genderFilter, idTypeFilter, isFilterOpen, localityFilter]);
+
+  const clearFilters = () => {
+    setFilterDraft(DEFAULT_FILTER_DRAFT);
+    setGenderFilter("all");
+    setIdTypeFilter("all");
+    setLocalityFilter("all");
+    setActiveFilter("all");
     setPage(1);
-    setSearch(searchInput.trim());
+    setIsFilterOpen(false);
+  };
+
+  const applyFilters = () => {
+    setGenderFilter(filterDraft.gender);
+    setIdTypeFilter(filterDraft.idType);
+    setLocalityFilter(filterDraft.locality);
+    setActiveFilter(filterDraft.active);
+    setPage(1);
+    setIsFilterOpen(false);
   };
 
   const handleGovernorateChange = (value: string) => {
@@ -434,19 +540,43 @@ export function GuardiansWorkspace() {
       return false;
     }
 
-    if (formState.phonePrimary.trim().length > 20) {
-      setFormError("الهاتف الأساسي يجب ألا يتجاوز 20 حرفًا.");
-      return false;
+    const primaryPhone = formState.phonePrimaryNationalNumber.trim();
+    if (primaryPhone) {
+      const normalizedPrimary = normalizePhoneValue({
+        countryIso2: formState.phonePrimaryCountryIso2,
+        nationalNumber: primaryPhone,
+      });
+
+      if (!normalizedPrimary.ok) {
+        setFormError("الهاتف الأساسي غير صالح.");
+        return false;
+      }
     }
 
-    if (formState.phoneSecondary.trim().length > 20) {
-      setFormError("الهاتف الاحتياطي يجب ألا يتجاوز 20 حرفًا.");
-      return false;
+    const secondaryPhone = formState.phoneSecondaryNationalNumber.trim();
+    if (secondaryPhone) {
+      const normalizedSecondary = normalizePhoneValue({
+        countryIso2: formState.phoneSecondaryCountryIso2,
+        nationalNumber: secondaryPhone,
+      });
+
+      if (!normalizedSecondary.ok) {
+        setFormError("الهاتف الاحتياطي غير صالح.");
+        return false;
+      }
     }
 
-    if (formState.whatsappNumber.trim().length > 20) {
-      setFormError("رقم واتساب يجب ألا يتجاوز 20 حرفًا.");
-      return false;
+    const whatsappPhone = formState.whatsappNationalNumber.trim();
+    if (whatsappPhone) {
+      const normalizedWhatsapp = normalizePhoneValue({
+        countryIso2: formState.whatsappCountryIso2,
+        nationalNumber: whatsappPhone,
+      });
+
+      if (!normalizedWhatsapp.ok) {
+        setFormError("رقم واتساب غير صالح.");
+        return false;
+      }
     }
 
     if (formState.residenceText.trim().length > 255) {
@@ -481,9 +611,18 @@ export function GuardiansWorkspace() {
       idNumber: toOptionalString(formState.idNumber),
       idTypeId: formState.idTypeId ? Number(formState.idTypeId) : null,
       localityId: formState.localityId ? Number(formState.localityId) : null,
-      phonePrimary: toOptionalString(formState.phonePrimary),
-      phoneSecondary: toOptionalString(formState.phoneSecondary),
-      whatsappNumber: toOptionalString(formState.whatsappNumber),
+      phonePrimary: composePhoneValue(
+        formState.phonePrimaryCountryIso2,
+        formState.phonePrimaryNationalNumber,
+      ),
+      phoneSecondary: composePhoneValue(
+        formState.phoneSecondaryCountryIso2,
+        formState.phoneSecondaryNationalNumber,
+      ),
+      whatsappNumber: composePhoneValue(
+        formState.whatsappCountryIso2,
+        formState.whatsappNationalNumber,
+      ),
       residenceText: toOptionalString(formState.residenceText),
       isActive: formState.isActive,
     };
@@ -598,6 +737,12 @@ export function GuardiansWorkspace() {
     });
   };
 
+  const activeFiltersCount = React.useMemo(() => {
+    return [genderFilter, idTypeFilter, localityFilter, activeFilter].filter(
+      (value) => value !== "all",
+    ).length;
+  }, [activeFilter, genderFilter, idTypeFilter, localityFilter]);
+
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
 
   return (
@@ -705,34 +850,40 @@ export function GuardiansWorkspace() {
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-1">
-                  <Label>الهاتف الأساسي</Label>
-                  <InternationalPhoneField
-                    value={formState.phonePrimary}
-                    onChange={(next) =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        phonePrimary: next.e164,
-                      }))
-                    }
-                    placeholder="7XXXXXXXX"
-                    enableContactPicker
-                    buttonTestId="guardian-phone-primary-contact-picker"
+              <div className="space-y-1">
+                <Label>الهاتف الأساسي</Label>
+                <InternationalPhoneField
+                  countryIso2={formState.phonePrimaryCountryIso2}
+                  nationalNumber={formState.phonePrimaryNationalNumber}
+                  onChange={(next) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      phonePrimary: next.e164,
+                      phonePrimaryCountryIso2: next.countryIso2,
+                      phonePrimaryNationalNumber: next.nationalNumber,
+                    }))
+                  }
+                  placeholder="7XXXXXXXX"
+                  enableContactPicker
+                  buttonTestId="guardian-phone-primary-contact-picker"
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label>الهاتف الاحتياطي</Label>
-                  <InternationalPhoneField
-                    value={formState.phoneSecondary}
-                    onChange={(next) =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        phoneSecondary: next.e164,
-                      }))
-                    }
-                    placeholder="7XXXXXXXX"
-                    enableContactPicker
-                    buttonTestId="guardian-phone-secondary-contact-picker"
+              <div className="space-y-1">
+                <Label>الهاتف الاحتياطي</Label>
+                <InternationalPhoneField
+                  countryIso2={formState.phoneSecondaryCountryIso2}
+                  nationalNumber={formState.phoneSecondaryNationalNumber}
+                  onChange={(next) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      phoneSecondary: next.e164,
+                      phoneSecondaryCountryIso2: next.countryIso2,
+                      phoneSecondaryNationalNumber: next.nationalNumber,
+                    }))
+                  }
+                  placeholder="7XXXXXXXX"
+                  enableContactPicker
+                  buttonTestId="guardian-phone-secondary-contact-picker"
                   />
                 </div>
               </div>
@@ -740,11 +891,14 @@ export function GuardiansWorkspace() {
               <div className="space-y-1">
                 <Label>رقم واتساب</Label>
                 <InternationalPhoneField
-                  value={formState.whatsappNumber}
+                  countryIso2={formState.whatsappCountryIso2}
+                  nationalNumber={formState.whatsappNationalNumber}
                   onChange={(next) =>
                     setFormState((prev) => ({
                       ...prev,
                       whatsappNumber: next.e164,
+                      whatsappCountryIso2: next.countryIso2,
+                      whatsappNationalNumber: next.nationalNumber,
                     }))
                   }
                   placeholder="7XXXXXXXX"
@@ -948,104 +1102,120 @@ export function GuardiansWorkspace() {
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <CardDescription>إدارة أولياء الأمور مع فلترة حسب النوع والحالة.</CardDescription>
-
-          <form
-            onSubmit={handleSearchSubmit}
-            className="grid gap-2 md:grid-cols-[1fr_auto_auto_auto_auto_auto]"
-          >
-            <div className="relative flex-1">
-              <Input
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="بحث..."
-                className="pr-10"
-                icon={<Search className="h-4 w-4" />}
-              />
-            </div>
-
-            <SelectField
-              className="w-full md:w-[140px]"
-              value={genderFilter}
-              onChange={(event) => {
-                setPage(1);
-                setGenderFilter(event.target.value);
-              }}
-              disabled={!canReadGenders || genderOptionsQuery.isLoading}
-              icon={<User className="h-3.5 w-3.5" />}
-            >
-              <option value="all">كل الأجناس</option>
-              {genderOptions.map((option) => {
-                const translated =
-                  option.code && isStudentGenderCode(option.code)
-                    ? translateStudentGender(option.code)
-                    : option.nameAr ?? option.name ?? option.code ?? String(option.id);
-
-                return (
-                  <option key={option.id} value={option.id}>
-                    {option.nameAr ?? translated}
-                  </option>
-                );
-              })}
-            </SelectField>
-
-            <SelectField
-              className="w-full md:w-[160px]"
-              value={idTypeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setIdTypeFilter(event.target.value);
-              }}
-              disabled={!canReadIdTypes || idTypeOptionsQuery.isLoading}
-              icon={<IdCard className="h-3.5 w-3.5" />}
-            >
-              <option value="all">كل الهويات</option>
-              {idTypeOptions.map((idType) => (
-                <option key={idType.id} value={idType.id}>
-                  {idType.nameAr}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField
-              className="w-full md:w-[160px]"
-              value={localityFilter}
-              onChange={(event) => {
-                setPage(1);
-                setLocalityFilter(event.target.value);
-              }}
-              disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
-              icon={<MapPin className="h-3.5 w-3.5" />}
-            >
-              <option value="all">كل المحلات</option>
-              {localityOptions.map((locality) => (
-                <option key={locality.id} value={locality.id}>
-                  {formatLocalityHierarchyLabel(locality, geographyMaps)}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField
-              className="w-full md:w-[140px]"
-              value={activeFilter}
-              onChange={(event) => {
-                setPage(1);
-                setActiveFilter(event.target.value as "all" | "active" | "inactive");
-              }}
-              icon={<Activity className="h-3.5 w-3.5" />}
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة</option>
-              <option value="inactive">غير النشطة</option>
-            </SelectField>
-
-            <Button type="submit" variant="outline" className="gap-2">
-              <Search className="h-4 w-4" />
-              تطبيق
-            </Button>
-          </form>
         </CardHeader>
 
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
+          <ManagementToolbar
+            searchValue={searchInput}
+            onSearchChange={(event) => setSearchInput(event.target.value)}
+            searchPlaceholder="ابحث بالاسم، الرقم، الهاتف..."
+            filterCount={activeFiltersCount}
+            onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+            actionsClassName="justify-start lg:justify-end"
+          />
+
+          <FilterDrawer
+            open={isFilterOpen}
+            onClose={() => setIsFilterOpen(false)}
+            title="فلترة أولياء الأمور"
+            actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
+            renderInPortal
+            overlayClassName="z-[70]"
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label>الجنس</Label>
+                <SelectField
+                  value={filterDraft.gender}
+                  onChange={(event) =>
+                    setFilterDraft((prev) => ({
+                      ...prev,
+                      gender: event.target.value,
+                    }))
+                  }
+                  disabled={!canReadGenders || genderOptionsQuery.isLoading}
+                  icon={<User className="h-4 w-4" />}
+                >
+                  <option value="all">كل الأجناس</option>
+                  {genderOptions.map((option) => {
+                    const translated =
+                      option.code && isStudentGenderCode(option.code)
+                        ? translateStudentGender(option.code)
+                        : option.nameAr ?? option.name ?? option.code ?? String(option.id);
+
+                    return (
+                      <option key={option.id} value={option.id}>
+                        {option.nameAr ?? translated}
+                      </option>
+                    );
+                  })}
+                </SelectField>
+              </div>
+
+              <div className="space-y-1">
+                <Label>نوع الهوية</Label>
+                <SelectField
+                  value={filterDraft.idType}
+                  onChange={(event) =>
+                    setFilterDraft((prev) => ({
+                      ...prev,
+                      idType: event.target.value,
+                    }))
+                  }
+                  disabled={!canReadIdTypes || idTypeOptionsQuery.isLoading}
+                  icon={<IdCard className="h-4 w-4" />}
+                >
+                  <option value="all">كل الهويات</option>
+                  {idTypeOptions.map((idType) => (
+                    <option key={idType.id} value={idType.id}>
+                      {idType.nameAr}
+                    </option>
+                  ))}
+                </SelectField>
+              </div>
+
+              <div className="space-y-1">
+                <Label>المحلة</Label>
+                <SelectField
+                  value={filterDraft.locality}
+                  onChange={(event) =>
+                    setFilterDraft((prev) => ({
+                      ...prev,
+                      locality: event.target.value,
+                    }))
+                  }
+                  disabled={!canReadLocalities || geographyOptionsQuery.isLoading}
+                  icon={<MapPin className="h-4 w-4" />}
+                >
+                  <option value="all">كل المحلات</option>
+                  {localityOptions.map((locality) => (
+                    <option key={locality.id} value={locality.id}>
+                      {formatLocalityHierarchyLabel(locality, geographyMaps)}
+                    </option>
+                  ))}
+                </SelectField>
+              </div>
+
+              <div className="space-y-1">
+                <Label>الحالة</Label>
+                <SelectField
+                  value={filterDraft.active}
+                  onChange={(event) =>
+                    setFilterDraft((prev) => ({
+                      ...prev,
+                      active: event.target.value as "all" | "active" | "inactive",
+                    }))
+                  }
+                  icon={<Activity className="h-4 w-4" />}
+                >
+                  <option value="all">كل الحالات</option>
+                  <option value="active">النشطة</option>
+                  <option value="inactive">غير النشطة</option>
+                </SelectField>
+              </div>
+            </div>
+          </FilterDrawer>
+
           {guardiansQuery.isPending ? (
             <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
               جارٍ تحميل البيانات...
@@ -1081,15 +1251,15 @@ export function GuardiansWorkspace() {
                   </div>
                   <p className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span className="flex items-center gap-1">
-                      <IdCard className="h-3 w-3" />
+                      <IdCard className="h-3 w-3 text-[color:var(--app-accent-color)]/80" />
                       {guardian.idNumber ?? "-"} ({guardian.idType?.nameAr ?? "بدون"})
                     </span>
                     <span className="flex items-center gap-1">
-                      <Phone className="h-3 w-3" />
+                      <Phone className="h-3 w-3 text-[color:var(--app-accent-color)]/80" />
                       {guardian.phonePrimary ?? "-"}
                     </span>
                     <span className="flex items-center gap-1">
-                      <MessageSquare className="h-3 w-3" />
+                      <MessageSquare className="h-3 w-3 text-[color:var(--app-accent-color)]/80" />
                       {guardian.whatsappNumber ?? "-"}
                     </span>
                   </p>
@@ -1097,7 +1267,7 @@ export function GuardiansWorkspace() {
                     الطلاب: {guardian.students.length} ({toRelationshipPreview(guardian)})
                   </p>
                   <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
+                    <MapPin className="h-3 w-3 text-[color:var(--app-accent-color)]/80" />
                     {guardian.locality
                       ? formatLocalityHierarchyLabel(
                           (geographyMaps.localityById.get(guardian.locality.id) ??

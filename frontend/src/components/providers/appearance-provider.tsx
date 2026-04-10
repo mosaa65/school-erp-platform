@@ -6,18 +6,13 @@ import {
   APPEARANCE_FONT_FAMILIES,
   APPEARANCE_FONT_SCALES,
   DEFAULT_APPEARANCE_PREFERENCES,
-  clearCustomAccentHex,
   clearAppearancePreferences,
-  getDefaultCustomAccentHex,
-  loadCustomAccentHex,
   loadAppearancePreferences,
-  resolveCustomAccentTokens,
   resolveAppearanceTokens,
   resolveFontFamilyStack,
   resolveMonoFontFamilyStack,
   resolveFontScaleValue,
   resolveSurfaceMode,
-  saveCustomAccentHex,
   saveAppearancePreferences,
   type AppearanceColorPreset,
   type AppearanceFontFamily,
@@ -37,12 +32,10 @@ export type AppearanceContextValue = {
   colorPresetOptions: typeof APPEARANCE_COLOR_PRESETS;
   fontFamilyOptions: typeof APPEARANCE_FONT_FAMILIES;
   fontScaleOptions: typeof APPEARANCE_FONT_SCALES;
-  customAccentHex: string;
   setColorPreset: (value: AppearanceColorPreset) => void;
   setSurfaceMode: (value: AppearanceSurfaceMode) => void;
   setFontFamily: (value: AppearanceFontFamily) => void;
   setFontScale: (value: AppearanceFontScale) => void;
-  setCustomAccentHex: (value: string) => void;
   setMode: (value: AppearanceSurfaceMode) => void;
   setPreset: (value: AppearanceColorPreset) => void;
   resetAppearance: () => void;
@@ -59,17 +52,13 @@ type AppearanceProviderProps = {
 function applyAppearanceToDocument(
   preferences: AppearancePreferences,
   resolvedSurfaceMode: Exclude<AppearanceSurfaceMode, "system">,
-  customAccentHex: string,
 ): void {
   if (typeof document === "undefined") {
     return;
   }
 
   const root = document.documentElement;
-  const tokens =
-    preferences.colorPreset === "custom"
-      ? resolveCustomAccentTokens(customAccentHex, resolvedSurfaceMode)
-      : resolveAppearanceTokens(preferences.colorPreset, resolvedSurfaceMode);
+  const tokens = resolveAppearanceTokens(preferences.colorPreset, resolvedSurfaceMode);
   const fontFamilyStack = resolveFontFamilyStack(preferences.fontFamily);
   const monoFontFamilyStack = resolveMonoFontFamilyStack(preferences.fontFamily);
   const fontScale = resolveFontScaleValue(preferences.fontScale);
@@ -102,15 +91,11 @@ export function AppearanceProvider({ children }: AppearanceProviderProps) {
   const [preferences, setPreferences] = React.useState<AppearancePreferences>(
     DEFAULT_APPEARANCE_PREFERENCES,
   );
-  const [customAccentHex, setCustomAccentHexState] = React.useState<string>(
-    getDefaultCustomAccentHex(),
-  );
   const [isHydrated, setIsHydrated] = React.useState(false);
   const [prefersDark, setPrefersDark] = React.useState(false);
 
   React.useEffect(() => {
     setPreferences(loadAppearancePreferences());
-    setCustomAccentHexState(loadCustomAccentHex());
     setIsHydrated(true);
   }, []);
 
@@ -135,8 +120,8 @@ export function AppearanceProvider({ children }: AppearanceProviderProps) {
   const resolvedSurfaceMode = resolveSurfaceMode(preferences.surfaceMode, prefersDark);
 
   React.useEffect(() => {
-    applyAppearanceToDocument(preferences, resolvedSurfaceMode, customAccentHex);
-  }, [customAccentHex, preferences, resolvedSurfaceMode]);
+    applyAppearanceToDocument(preferences, resolvedSurfaceMode);
+  }, [preferences, resolvedSurfaceMode]);
 
   React.useEffect(() => {
     if (!isHydrated) {
@@ -145,14 +130,6 @@ export function AppearanceProvider({ children }: AppearanceProviderProps) {
 
     saveAppearancePreferences(preferences);
   }, [isHydrated, preferences]);
-
-  React.useEffect(() => {
-    if (!isHydrated) {
-      return;
-    }
-
-    saveCustomAccentHex(customAccentHex);
-  }, [customAccentHex, isHydrated]);
 
   const setColorPreset = (value: AppearanceColorPreset) => {
     setPreferences((current) => ({ ...current, colorPreset: value }));
@@ -170,15 +147,9 @@ export function AppearanceProvider({ children }: AppearanceProviderProps) {
     setPreferences((current) => ({ ...current, fontScale: value }));
   };
 
-  const setCustomAccentHex = (value: string) => {
-    setCustomAccentHexState(saveCustomAccentHex(value));
-  };
-
   const resetAppearance = () => {
     clearAppearancePreferences();
-    clearCustomAccentHex();
     setPreferences(DEFAULT_APPEARANCE_PREFERENCES);
-    setCustomAccentHexState(getDefaultCustomAccentHex());
   };
 
   const contextValue: AppearanceContextValue = {
@@ -192,12 +163,10 @@ export function AppearanceProvider({ children }: AppearanceProviderProps) {
     colorPresetOptions: APPEARANCE_COLOR_PRESETS,
     fontFamilyOptions: APPEARANCE_FONT_FAMILIES,
     fontScaleOptions: APPEARANCE_FONT_SCALES,
-    customAccentHex,
     setColorPreset,
     setSurfaceMode,
     setFontFamily,
     setFontScale,
-    setCustomAccentHex,
     setMode: setSurfaceMode,
     setPreset: setColorPreset,
     resetAppearance,
