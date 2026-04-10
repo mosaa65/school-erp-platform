@@ -4007,7 +4007,7 @@ export type CreateClassroomPayload = {
   name: string;
   capacity?: number;
   notes?: string;
-  buildingLookupId?: number;
+  buildingLookupId?: number | null;
   isActive?: boolean;
 };
 

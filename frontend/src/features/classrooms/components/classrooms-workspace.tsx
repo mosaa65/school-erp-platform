@@ -159,7 +159,7 @@ export function ClassroomsWorkspace() {
       capacity: formState.capacity.trim() ? Number(formState.capacity) : undefined,
       notes: formState.notes.trim() || undefined,
       isActive: formState.isActive,
-      buildingLookupId: formState.buildingLookupId ? Number(formState.buildingLookupId) : undefined,
+      buildingLookupId: formState.buildingLookupId ? Number(formState.buildingLookupId) : null,
     };
 
     if (isEditing && editingItem) {
