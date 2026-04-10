@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { SelectField } from "@/components/ui/select-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {

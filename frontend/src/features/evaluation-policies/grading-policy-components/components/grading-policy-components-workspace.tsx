@@ -13,6 +13,7 @@ import {
   Calculator,
   CalendarDays,
   GraduationCap,
+  Medal,
   Info,
   Activity,
   CheckCircle2,

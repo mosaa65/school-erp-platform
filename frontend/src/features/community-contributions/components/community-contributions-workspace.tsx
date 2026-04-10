@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { SelectField } from "@/components/ui/select-field";
 import { useCommunityContributionsQuery } from "@/features/community-contributions/hooks/use-community-contributions-query";
 

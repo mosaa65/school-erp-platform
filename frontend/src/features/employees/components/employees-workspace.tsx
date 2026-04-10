@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InternationalPhoneField } from "@/components/ui/international-phone-field";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
 import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
 import {
