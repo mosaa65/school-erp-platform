@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Power, RefreshCw, Landmark, User, Hierarchy, Building2 } from "lucide-react";
+import { Power, RefreshCw, Landmark, User, Workflow, Building2 } from "lucide-react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -193,7 +193,7 @@ export function CostCentersWorkspace() {
 
                   <div className="flex items-center justify-between gap-3 border-t border-border/50 pt-3">
                     <div className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground bg-muted/40 px-2 py-1 rounded-lg">
-                      <Hierarchy className="h-3 w-3" />
+                      <Workflow className="h-3 w-3" />
                       <span>{center.parent ? `تابع لـ: ${center.parent.nameAr}` : "مستوى رئيسي"}</span>
                     </div>
                     <Button

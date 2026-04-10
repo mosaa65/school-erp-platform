@@ -1,21 +1,29 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   Cable,
-  LoaderCircle,
-  PencilLine,
-  Plus,
   RefreshCw,
+  Plus,
+  PencilLine,
   Trash2,
+  Calendar,
+  Layers,
+  GraduationCap,
+  BookOpen,
+  Layout,
+  Target,
+  Settings2,
+  BarChart3,
+  ListOrdered,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
-import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
+import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
 import {
   Card,
   CardContent,
@@ -25,6 +33,7 @@ import {
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { Fab } from "@/components/ui/fab";
+import { PageShell } from "@/components/ui/page-shell";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateTermSubjectOfferingMutation,
@@ -69,303 +78,118 @@ function toFormState(offering: TermSubjectOfferingListItem): TermSubjectOffering
   };
 }
 
-function findTermById(terms: AcademicTermListItem[], termId: string): AcademicTermListItem | null {
-  return terms.find((term) => term.id === termId) ?? null;
-}
-
-function findMappingById(
-  mappings: GradeLevelSubjectListItem[],
-  mappingId: string,
-): GradeLevelSubjectListItem | null {
-  return mappings.find((mapping) => mapping.id === mappingId) ?? null;
-}
-
 export function TermSubjectOfferingsWorkspace() {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission("term-subject-offerings.create");
   const canUpdate = hasPermission("term-subject-offerings.update");
   const canDelete = hasPermission("term-subject-offerings.delete");
-  const canReadAcademicYears = hasPermission("academic-years.read");
-  const canReadAcademicTerms = hasPermission("academic-terms.read");
-  const canReadGradeLevelSubjects = hasPermission("grade-level-subjects.read");
 
   const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
   const [yearFilter, setYearFilter] = React.useState("all");
   const [termFilter, setTermFilter] = React.useState("all");
-  const [mappingFilter, setMappingFilter] = React.useState("all");
-  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
-    "all",
-  );
-  const [filterDraft, setFilterDraft] = React.useState<{
-    year: string;
-    term: string;
-    mapping: string;
-    active: "all" | "active" | "inactive";
-  }>({
-    year: "all",
-    term: "all",
-    mapping: "all",
-    active: "all",
-  });
+  const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">("all");
+  const [filterDraft, setFilterDraft] = React.useState({ year: "all", term: "all", active: "all" as any });
 
-  const [editingOfferingId, setEditingOfferingId] = React.useState<string | null>(null);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [formState, setFormState] = React.useState<TermSubjectOfferingFormState>(
-    DEFAULT_FORM_STATE,
-  );
+  const [form, setForm] = React.useState<TermSubjectOfferingFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
 
   const offeringsQuery = useTermSubjectOfferingsQuery({
-    page,
-    limit: PAGE_SIZE,
-    search: search || undefined,
+    page, limit: PAGE_SIZE, search,
     academicYearId: yearFilter === "all" ? undefined : yearFilter,
     academicTermId: termFilter === "all" ? undefined : termFilter,
-    gradeLevelSubjectId: mappingFilter === "all" ? undefined : mappingFilter,
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
   });
 
-  const academicYearOptionsQuery = useAcademicYearOptionsQuery();
-  const allAcademicTermOptionsQuery = useAcademicTermOptionsQuery();
-  const filterYearForOptions = isFilterOpen ? filterDraft.year : yearFilter;
-  const filterGradeLevelSubjectOptionsQuery = useGradeLevelSubjectOptionsQuery({
-    academicYearId: filterYearForOptions === "all" ? undefined : filterYearForOptions,
-  });
-
-  const allAcademicTerms = React.useMemo(
-    () => allAcademicTermOptionsQuery.data ?? [],
-    [allAcademicTermOptionsQuery.data],
+  const yearOptionsQuery = useAcademicYearOptionsQuery();
+  const termOptionsQuery = useAcademicTermOptionsQuery();
+  
+  const selectedTermForForm = React.useMemo(() => 
+    (termOptionsQuery.data ?? []).find(t => t.id === form.academicTermId),
+    [termOptionsQuery.data, form.academicTermId]
   );
-  const selectedFormTerm = React.useMemo(
-    () => findTermById(allAcademicTerms, formState.academicTermId),
-    [allAcademicTerms, formState.academicTermId],
-  );
-  const selectedFormAcademicYearId = selectedFormTerm?.academicYearId;
 
-  const formGradeLevelSubjectOptionsQuery = useGradeLevelSubjectOptionsQuery({
-    academicYearId: selectedFormAcademicYearId,
+  const subjectOptionsQuery = useGradeLevelSubjectOptionsQuery({
+    academicYearId: selectedTermForForm?.academicYearId
   });
 
   const createMutation = useCreateTermSubjectOfferingMutation();
   const updateMutation = useUpdateTermSubjectOfferingMutation();
   const deleteMutation = useDeleteTermSubjectOfferingMutation();
 
-  const offerings = React.useMemo(
-    () => offeringsQuery.data?.data ?? [],
-    [offeringsQuery.data?.data],
-  );
+  const records = React.useMemo(() => offeringsQuery.data?.data ?? [], [offeringsQuery.data?.data]);
   const pagination = offeringsQuery.data?.pagination;
-  const yearOptions = React.useMemo(
-    () => academicYearOptionsQuery.data ?? [],
-    [academicYearOptionsQuery.data],
-  );
-  const filterTermOptions = React.useMemo(() => {
-    const selectedYear = isFilterOpen ? filterDraft.year : yearFilter;
-
-    if (selectedYear === "all") {
-      return allAcademicTerms;
-    }
-
-    return allAcademicTerms.filter((term) => term.academicYearId === selectedYear);
-  }, [allAcademicTerms, filterDraft.year, isFilterOpen, yearFilter]);
-  const filterMappingOptions = React.useMemo(
-    () => filterGradeLevelSubjectOptionsQuery.data ?? [],
-    [filterGradeLevelSubjectOptionsQuery.data],
-  );
-  const formMappingOptions = React.useMemo(
-    () => formGradeLevelSubjectOptionsQuery.data ?? [],
-    [formGradeLevelSubjectOptionsQuery.data],
-  );
-  const isEditing = editingOfferingId !== null;
-
-  const mutationError =
-    (createMutation.error as Error | null)?.message ??
-    (updateMutation.error as Error | null)?.message ??
-    (deleteMutation.error as Error | null)?.message ??
-    null;
-
-  React.useEffect(() => {
-    if (!isEditing) {
-      return;
-    }
-
-    const stillExists = offerings.some((offering) => offering.id === editingOfferingId);
-    if (!stillExists) {
-      setEditingOfferingId(null);
-      setFormState(DEFAULT_FORM_STATE);
-      setFormError(null);
-      setIsFormOpen(false);
-    }
-  }, [editingOfferingId, isEditing, offerings]);
+  const isEditing = editingId !== null;
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   useDebounceEffect(() => {
-      setPage(1);
-      setSearch(searchInput.trim());
-    }, 400, [searchInput]);
+    setPage(1);
+    setSearch(searchInput.trim());
+  }, 400, [searchInput]);
 
   React.useEffect(() => {
-    if (!isFilterOpen) {
-      return;
-    }
+    if (!isFilterOpen) return;
+    setFilterDraft({ year: yearFilter, term: termFilter, active: activeFilter });
+  }, [activeFilter, isFilterOpen, termFilter, yearFilter]);
 
-    setFilterDraft({
-      year: yearFilter,
-      term: termFilter,
-      mapping: mappingFilter,
-      active: activeFilter,
-    });
-  }, [activeFilter, isFilterOpen, mappingFilter, termFilter, yearFilter]);
-
-  React.useEffect(() => {
-    if (!formState.gradeLevelSubjectId || formGradeLevelSubjectOptionsQuery.isPending) {
-      return;
-    }
-
-    const exists = formMappingOptions.some((mapping) => mapping.id === formState.gradeLevelSubjectId);
-    if (!exists) {
-      setFormState((prev) => ({ ...prev, gradeLevelSubjectId: "" }));
-    }
-  }, [formGradeLevelSubjectOptionsQuery.isPending, formMappingOptions, formState.gradeLevelSubjectId]);
-
-  const resetForm = () => {
-    setEditingOfferingId(null);
-    setFormState(DEFAULT_FORM_STATE);
+  const resetFormState = () => {
+    setEditingId(null);
+    setForm(DEFAULT_FORM_STATE);
     setFormError(null);
     setIsFormOpen(false);
   };
 
   const handleStartCreate = () => {
-    if (!canCreate) {
-      return;
-    }
-
-    setFormError(null);
-    setEditingOfferingId(null);
-    setFormState(DEFAULT_FORM_STATE);
+    if (!canCreate) return;
+    setForm(DEFAULT_FORM_STATE);
     setIsFormOpen(true);
   };
 
-  const validateForm = (): boolean => {
-    if (!formState.academicTermId || !formState.gradeLevelSubjectId) {
-      setFormError("الحقول الأساسية مطلوبة: الفصل الأكاديمي وربط الصف مع المادة.");
-      return false;
-    }
-
-    const weeklyPeriods = Number(formState.weeklyPeriods);
-    if (!Number.isInteger(weeklyPeriods) || weeklyPeriods < 1 || weeklyPeriods > 60) {
-      setFormError("عدد الحصص الأسبوعية يجب أن يكون رقمًا صحيحًا بين 1 و 60.");
-      return false;
-    }
-
-    if (formState.displayOrder.trim()) {
-      const displayOrder = Number(formState.displayOrder);
-      if (!Number.isInteger(displayOrder) || displayOrder < 1 || displayOrder > 500) {
-        setFormError("ترتيب العرض يجب أن يكون رقمًا صحيحًا بين 1 و 500.");
-        return false;
-      }
-    }
-
-    const selectedTerm = findTermById(allAcademicTerms, formState.academicTermId);
-    const selectedMapping = findMappingById(formMappingOptions, formState.gradeLevelSubjectId);
-
-    if (selectedTerm && selectedMapping) {
-      if (selectedTerm.academicYearId !== selectedMapping.academicYearId) {
-        setFormError(
-          "الفصل الأكاديمي وربط الصف مع المادة يجب أن يكونا ضمن نفس السنة الأكاديمية.",
-        );
-        return false;
-      }
-    }
-
-    setFormError(null);
-    return true;
+  const handleStartEdit = (item: TermSubjectOfferingListItem) => {
+    if (!canUpdate) return;
+    setEditingId(item.id);
+    setForm(toFormState(item));
+    setIsFormOpen(true);
   };
 
-  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
-    event?.preventDefault();
-
-    if (!validateForm()) {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.academicTermId || !form.gradeLevelSubjectId) {
+      setFormError("الفصل الدراسي وربط المادة حقول مطلوبة.");
       return;
     }
 
     const payload = {
-      academicTermId: formState.academicTermId,
-      gradeLevelSubjectId: formState.gradeLevelSubjectId,
-      weeklyPeriods: Number(formState.weeklyPeriods),
-      displayOrder: formState.displayOrder.trim() ? Number(formState.displayOrder) : undefined,
-      isActive: formState.isActive,
+      academicTermId: form.academicTermId,
+      gradeLevelSubjectId: form.gradeLevelSubjectId,
+      weeklyPeriods: Number(form.weeklyPeriods) || 1,
+      displayOrder: form.displayOrder.trim() ? Number(form.displayOrder) : undefined,
+      isActive: form.isActive,
     };
 
-    if (isEditing && editingOfferingId) {
-      if (!canUpdate) {
-        setFormError("لا تملك الصلاحية المطلوبة: term-subject-offerings.update.");
-        return;
-      }
-
-      updateMutation.mutate(
-        {
-          offeringId: editingOfferingId,
-          payload,
-        },
-        {
-          onSuccess: () => {
-            resetForm();
-          },
-        },
-      );
-      return;
+    if (isEditing && editingId) {
+      updateMutation.mutate({ offeringId: editingId, payload }, { onSuccess: resetFormState });
+    } else {
+      createMutation.mutate(payload, { onSuccess: resetFormState });
     }
-
-    if (!canCreate) {
-      setFormError("لا تملك الصلاحية المطلوبة: term-subject-offerings.create.");
-      return;
-    }
-
-    createMutation.mutate(payload, {
-      onSuccess: () => {
-        resetForm();
-        setPage(1);
-      },
-    });
   };
 
-  const handleStartEdit = (offering: TermSubjectOfferingListItem) => {
-    if (!canUpdate) {
-      return;
-    }
-
-    setFormError(null);
-    setEditingOfferingId(offering.id);
-    setFormState(toFormState(offering));
-    setIsFormOpen(true);
+  const handleDelete = (item: TermSubjectOfferingListItem) => {
+    if (!canDelete || !window.confirm(`تأكيد حذف عرض المادة ${item.gradeLevelSubject.subject.name} من الفصل الدراسي؟`)) return;
+    deleteMutation.mutate(item.id);
   };
 
-  const handleDelete = (offering: TermSubjectOfferingListItem) => {
-    if (!canDelete) {
-      return;
-    }
-
-    const confirmed = window.confirm(
-      `تأكيد حذف عرض المادة: ${offering.gradeLevelSubject.subject.name} - ${offering.academicTerm.name}؟`,
-    );
-    if (!confirmed) {
-      return;
-    }
-
-    deleteMutation.mutate(offering.id, {
-      onSuccess: () => {
-        if (editingOfferingId === offering.id) {
-          resetForm();
-        }
-      },
-    });
+  const applyFilters = () => {
+    setPage(1);
+    setYearFilter(filterDraft.year);
+    setTermFilter(filterDraft.term);
+    setActiveFilter(filterDraft.active);
+    setIsFilterOpen(false);
   };
-
-  const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
-  const hasDependenciesReadPermissions = canReadAcademicTerms && canReadGradeLevelSubjects;
 
   const clearFilters = () => {
     setPage(1);
@@ -373,448 +197,240 @@ export function TermSubjectOfferingsWorkspace() {
     setSearch("");
     setYearFilter("all");
     setTermFilter("all");
-    setMappingFilter("all");
     setActiveFilter("all");
-    setIsFilterOpen(false);
-  };
-
-  const applyFilters = () => {
-    setPage(1);
-    setYearFilter(filterDraft.year);
-    setTermFilter(filterDraft.term);
-    setMappingFilter(filterDraft.mapping);
-    setActiveFilter(filterDraft.active);
+    setFilterDraft({ year: "all", term: "all", active: "all" });
     setIsFilterOpen(false);
   };
 
   const activeFiltersCount = React.useMemo(() => {
     return [
-      searchInput.trim() ? 1 : 0,
-      yearFilter !== "all" ? 1 : 0,
-      termFilter !== "all" ? 1 : 0,
-      mappingFilter !== "all" ? 1 : 0,
-      activeFilter !== "all" ? 1 : 0,
-    ].reduce((acc, value) => acc + value, 0);
-  }, [activeFilter, mappingFilter, searchInput, termFilter, yearFilter]);
+      searchInput.trim() ? 1 : 0, yearFilter !== "all" ? 1 : 0,
+      termFilter !== "all" ? 1 : 0, activeFilter !== "all" ? 1 : 0
+    ].reduce((acc, v) => acc + v, 0);
+  }, [activeFilter, searchInput, termFilter, yearFilter]);
 
   return (
-    <>
+    <PageShell
+      title="عروض المواد الفصلية"
+      subtitle="تفعيل الخطط الدراسية لكل فصل أكاديمي، وتحديد الكثافة الزمنية (الحصص الأسبوعية) لكل مادة."
+    >
       <div className="space-y-4">
-                  <ManagementToolbar
-            searchValue={searchInput}
-            onSearchChange={(event) => setSearchInput(event.target.value)}
-            searchPlaceholder="بحث بالفصل أو الصف أو المادة..."
-            filterCount={activeFiltersCount}
-            onFilterClick={() => setIsFilterOpen((prev) => !prev)}
-            showFilterButton={true}
-          />
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(e) => setSearchInput(e.target.value)}
+          searchPlaceholder="بحث بالمادة، الصف، أو الفصل..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen(true)}
+          actions={
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => void offeringsQuery.refetch()} disabled={offeringsQuery.isFetching}>
+              <RefreshCw className={`h-4 w-4 ${offeringsQuery.isFetching ? "animate-spin" : ""}`} />
+              تحديث
+            </Button>
+          }
+        />
 
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
-          title="فلاتر عروض المواد"
+          title="خيارات العرض التشغيلي"
           actionButtons={
             <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button
-                type="button"
-                onClick={applyFilters}
-                className="flex-1 gap-1.5"
-                data-testid="offering-filters-submit"
-              >
-                تطبيق
-              </Button>
+              <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">مسح</Button>
+              <Button type="button" onClick={applyFilters} className="flex-1">تطبيق</Button>
             </div>
           }
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.year}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  year: event.target.value,
-                  term: "all",
-                  mapping: "all",
-                }))
-              }
-              disabled={!canReadAcademicYears}
-              data-testid="offering-filter-year"
-            >
-              <option value="all">كل السنوات</option>
-              {yearOptions.map((year) => (
-                <option key={year.id} value={year.id}>
-                  {year.code}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField
-              value={filterDraft.term}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  term: event.target.value,
-                }))
-              }
-              disabled={!canReadAcademicTerms}
-              data-testid="offering-filter-term"
-            >
-              <option value="all">كل الفصول</option>
-              {filterTermOptions.map((term) => (
-                <option key={term.id} value={term.id}>
-                  {term.code}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField
-              value={filterDraft.mapping}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  mapping: event.target.value,
-                }))
-              }
-              disabled={!canReadGradeLevelSubjects}
-              data-testid="offering-filter-mapping"
-            >
-              <option value="all">كل الربوط</option>
-              {filterMappingOptions.map((mapping) => (
-                <option key={mapping.id} value={mapping.id}>
-                  {mapping.gradeLevel.code} - {mapping.subject.code}
-                </option>
-              ))}
-            </SelectField>
-
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-              data-testid="offering-filter-active"
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </SelectField>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">السنة الأكاديمية</label>
+              <SelectField value={filterDraft.year} onChange={(e) => setFilterDraft(p => ({ ...p, year: e.target.value, term: "all" }))}>
+                <option value="all">كل السنوات</option>
+                {(yearOptionsQuery.data ?? []).map(y => <option key={y.id} value={y.id}>{y.code}</option>)}
+              </SelectField>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">الفصل الدراسي</label>
+              <SelectField value={filterDraft.term} onChange={(e) => setFilterDraft(p => ({ ...p, term: e.target.value }))}>
+                <option value="all">كل الفصول</option>
+                {(termOptionsQuery.data ?? []).filter(t => filterDraft.year === "all" || t.academicYearId === filterDraft.year).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </SelectField>
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">الحالة</label>
+              <SelectField value={filterDraft.active} onChange={(e) => setFilterDraft(p => ({ ...p, active: e.target.value as any }))}>
+                <option value="all">كل العروض</option>
+                <option value="active">العروض النشطة</option>
+                <option value="inactive">العروض المؤرشفة</option>
+              </SelectField>
+            </div>
           </div>
         </FilterDrawer>
 
-        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-          <CardHeader className="space-y-3">
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm overflow-hidden">
+          <CardHeader className="space-y-3 bg-muted/30 border-b border-border/60 pb-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>عروض المواد للفصول</CardTitle>
-              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
+              <CardTitle className="flex items-center gap-2 text-lg font-bold">
+                <Cable className="h-5 w-5 text-primary" />
+                خطة المواد التشغيلية
+              </CardTitle>
+              <Badge variant="secondary" className="rounded-full px-3">الإجمالي: {pagination?.total ?? 0}</Badge>
             </div>
-            <CardDescription>
-              هذه هي الخطة التشغيلية للمواد لكل فصل أكاديمي، وتعتمد عليها الواجبات والدرجات والجدول الدراسي.
-            </CardDescription>
           </CardHeader>
+          
+          <CardContent className="p-0">
+            {offeringsQuery.isPending && (
+              <div className="p-12 text-center text-sm text-muted-foreground font-medium animate-pulse">جارٍ تحميل خطة المواد...</div>
+            )}
 
-          <CardContent className="space-y-3">
-            {offeringsQuery.isPending ? (
-              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                جارٍ تحميل البيانات...
-              </div>
-            ) : null}
+            <div className="divide-y divide-border/40">
+              {records.map((item) => (
+                <div key={item.id} className="p-4 hover:bg-muted/10 transition-colors group">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="flex gap-4 flex-1">
+                      <div className="flex flex-col items-center justify-center h-12 w-12 rounded-2xl bg-secondary/5 border border-secondary/10 group-hover:bg-secondary/10 transition-colors shadow-sm">
+                         <BookOpen className="h-6 w-6 text-primary/60" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-base">{item.gradeLevelSubject.subject.name}</p>
+                          <Badge variant="outline" className="h-5 text-[8px] font-black uppercase text-muted-foreground border-border/70">
+                             {item.gradeLevelSubject.subject.code}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-bold uppercase tracking-tight">
+                          <GraduationCap className="h-3.5 w-3.5" /> <span>{item.gradeLevelSubject.gradeLevel.name}</span>
+                          <span className="mx-1 opacity-30">•</span>
+                          <Calendar className="h-3.5 w-3.5" /> <span>{item.academicTerm.name} ({item.academicTerm.academicYear.code})</span>
+                        </div>
+                      </div>
+                    </div>
 
-            {offeringsQuery.error ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                {offeringsQuery.error instanceof Error
-                  ? offeringsQuery.error.message
-                  : "تعذّر تحميل البيانات."}
-              </div>
-            ) : null}
-
-            {!offeringsQuery.isPending && offerings.length === 0 ? (
-              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                لا توجد عروض مطابقة.
-              </div>
-            ) : null}
-
-            {offerings.map((offering) => (
-              <div
-                key={offering.id}
-                className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-                data-testid="offering-card"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="space-y-1">
-                    <p className="font-medium">
-                      {offering.gradeLevelSubject.subject.name} - {offering.academicTerm.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      الفصل: <code>{offering.academicTerm.code}</code> | السنة: <code>{offering.gradeLevelSubject.academicYear.code}</code>
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      الصف: {offering.gradeLevelSubject.gradeLevel.name} ({offering.gradeLevelSubject.gradeLevel.code})
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      الحصص الأسبوعية: {offering.weeklyPeriods}
-                      {offering.displayOrder !== null ? ` | ترتيب العرض: ${offering.displayOrder}` : ""}
-                    </p>
+                    <div className="flex flex-col items-end gap-3">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge variant={item.isActive ? "default" : "outline"} className={`h-5 text-[8px] font-black uppercase ${item.isActive ? 'bg-primary/10 text-primary border-primary/20' : ''}`}>
+                          {item.isActive ? "Operational" : "Offline"}
+                        </Badge>
+                        <Badge variant="outline" className="h-5 text-[8px] font-black uppercase border-border/70 text-indigo-600 bg-indigo-50">
+                          <BarChart3 className="h-2.5 w-2.5 mr-1 inline" /> {item.weeklyPeriods} Periods/Week
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" className="h-8 rounded-lg px-3 text-[11px] font-bold gap-1.5" onClick={() => handleStartEdit(item)} disabled={!canUpdate}>
+                          <PencilLine className="h-3.5 w-3.5" /> تعديل
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-8 rounded-lg px-2 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(item)} disabled={!canDelete}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge variant={offering.gradeLevelSubject.isMandatory ? "default" : "secondary"}>
-                      {offering.gradeLevelSubject.isMandatory ? "إلزامية" : "اختيارية"}
-                    </Badge>
-                    <Badge variant={offering.isActive ? "default" : "outline"}>
-                      {offering.isActive ? "نشط" : "غير نشط"}
-                    </Badge>
+                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                     <div className="flex items-start gap-2 px-3 py-2 rounded-xl border border-border/40 bg-background/50 group-hover:bg-background transition-colors">
+                        <Layout className="h-4 w-4 text-primary/60 mt-0.5 shrink-0" />
+                        <div className="flex flex-col overflow-hidden">
+                           <span className="text-[7px] uppercase font-bold text-muted-foreground leading-none mb-1">الصف المستهدف</span>
+                           <span className="text-[10px] font-bold truncate tracking-tight">{item.gradeLevelSubject.gradeLevel.name} ({item.gradeLevelSubject.gradeLevel.code})</span>
+                        </div>
+                     </div>
+                     <div className="flex items-start gap-2 px-3 py-2 rounded-xl border border-border/40 bg-background/50 group-hover:bg-background transition-colors">
+                        <ListOrdered className="h-4 w-4 text-emerald-500/60 mt-0.5 shrink-0" />
+                        <div className="flex flex-col overflow-hidden">
+                           <span className="text-[7px] uppercase font-bold text-muted-foreground leading-none mb-1">تسلسل العرض بالجدول</span>
+                           <span className="text-[10px] font-bold truncate tracking-tight">{item.displayOrder !== null ? `Order #${item.displayOrder}` : "تلقائي"}</span>
+                        </div>
+                     </div>
+                     <div className="flex items-start gap-2 px-3 py-2 rounded-xl border border-border/40 bg-background/50 group-hover:bg-background transition-colors">
+                        <Target className="h-4 w-4 text-amber-500/60 mt-0.5 shrink-0" />
+                        <div className="flex flex-col overflow-hidden">
+                           <span className="text-[7px] uppercase font-bold text-muted-foreground leading-none mb-1">نوع المادة</span>
+                           <span className="text-[10px] font-bold truncate tracking-tight">{item.gradeLevelSubject.isMandatory ? "إلزامية (Core)" : "اختيارية (Elective)"}</span>
+                        </div>
+                     </div>
                   </div>
                 </div>
+              ))}
+            </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => handleStartEdit(offering)}
-                    disabled={!canUpdate || updateMutation.isPending}
-                  >
-                    <PencilLine className="h-3.5 w-3.5" />
-                    تعديل
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => handleDelete(offering)}
-                    disabled={!canDelete || deleteMutation.isPending}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    حذف
-                  </Button>
-                </div>
-              </div>
-            ))}
+            {!offeringsQuery.isPending && records.length === 0 && (
+              <div className="p-12 text-center text-sm text-muted-foreground opacity-50">لا توجد عروض مواد مسجلة حالياً.</div>
+            )}
 
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-              <p className="text-xs text-muted-foreground">
-                الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-              </p>
-
+            <div className="p-4 flex flex-wrap items-center justify-between gap-4 border-t border-border/60 bg-muted/10">
+              <p className="text-[10px] text-muted-foreground font-bold italic tracking-wide">نمط التخطيط: الخطة الدراسية المعتمدة</p>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={!pagination || pagination.page <= 1 || offeringsQuery.isFetching}
-                >
-                  السابق
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setPage((prev) =>
-                      pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                    )
-                  }
-                  disabled={
-                    !pagination ||
-                    pagination.page >= pagination.totalPages ||
-                    offeringsQuery.isFetching
-                  }
-                >
-                  التالي
-                </Button>
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => void offeringsQuery.refetch()}
-                  disabled={offeringsQuery.isFetching}
-                >
-                  <RefreshCw
-                    className={`h-4 w-4 ${offeringsQuery.isFetching ? "animate-spin" : ""}`}
-                  />
-                  تحديث
-                </Button>
+                <Button variant="outline" size="sm" className="h-8 rounded-xl px-4 font-bold" onClick={() => setPage(p => Math.max(p - 1, 1))} disabled={!pagination || pagination.page <= 1}>السابق</Button>
+                <div className="text-[10px] font-bold px-2">Page {pagination?.page ?? 1} / {pagination?.totalPages ?? 1}</div>
+                <Button variant="outline" size="sm" className="h-8 rounded-xl px-4 font-bold" onClick={() => setPage(p => (pagination ? Math.min(p + 1, pagination.totalPages || 1) : p))} disabled={!pagination || pagination.page >= pagination.totalPages}>التالي</Button>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Fab
-        icon={<Plus className="h-4 w-4" />}
-        label="إنشاء"
-        ariaLabel="إنشاء عرض مادة للفصل"
-        onClick={handleStartCreate}
-        disabled={!canCreate}
-      />
+      <Fab icon={<Plus className="h-5 w-5" />} label="طرح مادة" onClick={handleStartCreate} disabled={!canCreate} />
 
-      <BottomSheetForm
+      <CrudFormSheet
         open={isFormOpen}
-        title={isEditing ? "تعديل عرض مادة للفصل" : "إنشاء عرض مادة للفصل"}
-        onClose={resetForm}
-        onSubmit={() => handleSubmitForm()}
-        isSubmitting={isFormSubmitting}
-        submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء عرض مادة"}
-        showFooter={false}
+        onClose={resetFormState}
+        title={isEditing ? "تحديث عرض المادة" : "إضافة مادة للخطة الفصلية"}
+        isEditing={isEditing}
+        isSubmitting={isSubmitting}
+        onSubmit={handleSubmit}
       >
-        {!canCreate && !isEditing ? (
-          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            لا تملك الصلاحية المطلوبة: <code>term-subject-offerings.create</code>.
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> الإطار الزمني والمكاني</h4>
+            <div className="grid gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">الفصل المستهدف *</label>
+                <SelectField value={form.academicTermId} onChange={(e) => setForm(p => ({ ...p, academicTermId: e.target.value, gradeLevelSubjectId: "" }))}>
+                  <option value="">اختر الفصل الدراسي</option>
+                  {(termOptionsQuery.data ?? []).map(t => <option key={t.id} value={t.id}>{t.name} ({t.academicYear.code})</option>)}
+                </SelectField>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">المادة (من دليل الصفوف) *</label>
+                <SelectField value={form.gradeLevelSubjectId} onChange={(e) => setForm(p => ({ ...p, gradeLevelSubjectId: e.target.value }))} disabled={!form.academicTermId}>
+                  <option value="">اختر الربط المتاح</option>
+                  {(subjectOptionsQuery.data ?? []).map(s => <option key={s.id} value={s.id}>{s.gradeLevel.name} - {s.subject.name} ({s.academicYear.code})</option>)}
+                </SelectField>
+              </div>
+            </div>
           </div>
-        ) : (
-          <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="offering-form">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الفصل الأكاديمي *</label>
-              <SelectField
-                value={formState.academicTermId}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    academicTermId: event.target.value,
-                    gradeLevelSubjectId: "",
-                  }))
-                }
-                disabled={!canReadAcademicTerms}
-                data-testid="offering-form-term"
-              >
-                <option value="">اختر الفصل الدراسي</option>
-                {allAcademicTerms.map((term) => (
-                  <option key={term.id} value={term.id}>
-                    {term.name} ({term.code})
-                  </option>
-                ))}
-              </SelectField>
-            </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ربط الصف مع المادة *</label>
-              <SelectField
-                value={formState.gradeLevelSubjectId}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    gradeLevelSubjectId: event.target.value,
-                  }))
-                }
-                disabled={!canReadGradeLevelSubjects || !formState.academicTermId}
-                data-testid="offering-form-mapping"
-              >
-                <option value="">اختر الربط</option>
-                {formMappingOptions.map((mapping) => (
-                  <option key={mapping.id} value={mapping.id}>
-                    {mapping.gradeLevel.code} - {mapping.subject.code} ({mapping.academicYear.code})
-                  </option>
-                ))}
-              </SelectField>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-2">
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><ListOrdered className="h-3.5 w-3.5" /> تفاصيل التشغيل</h4>
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الحصص الأسبوعية *</label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={60}
-                  value={formState.weeklyPeriods}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      weeklyPeriods: event.target.value,
-                    }))
-                  }
-                  required
-                  data-testid="offering-form-weekly-periods"
-                />
+                <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">الحصص الأسبوعية *</label>
+                <Input type="number" min={1} max={60} value={form.weeklyPeriods} onChange={(e) => setForm(p => ({ ...p, weeklyPeriods: e.target.value }))} placeholder="1" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">ترتيب العرض</label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={500}
-                  value={formState.displayOrder}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      displayOrder: event.target.value,
-                    }))
-                  }
-                  placeholder="1"
-                  data-testid="offering-form-display-order"
-                />
+                <label className="text-xs font-bold text-muted-foreground uppercase leading-none px-1">ترتيب العرض</label>
+                <Input type="number" min={1} max={500} value={form.displayOrder} onChange={(e) => setForm(p => ({ ...p, displayOrder: e.target.value }))} placeholder="1" />
               </div>
             </div>
+          </div>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-                data-testid="offering-form-active"
-              />
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-3">
+             <h4 className="text-xs font-bold uppercase text-primary border-b border-border/60 pb-2 flex items-center gap-1.5"><Settings2 className="h-3.5 w-3.5" /> حالة العرض</h4>
+            <label className="flex items-center justify-between cursor-pointer transition-colors group">
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-foreground group-hover:text-primary">مادة مفعلة فصلياً (Active)</span>
+                <p className="text-[10px] text-muted-foreground">تفعيل ظهور المادة في سجلات الحضور والجدول</p>
+              </div>
+              <input type="checkbox" className="h-5 w-5 rounded text-primary" checked={form.isActive} onChange={(e) => setForm(p => ({ ...p, isActive: e.target.checked }))} />
             </label>
+          </div>
 
-            {formError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                {formError}
-              </div>
-            ) : null}
-
-            {mutationError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                {mutationError}
-              </div>
-            ) : null}
-
-            {!hasDependenciesReadPermissions ? (
-              <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                يتطلب هذا الجزء صلاحيات القراءة المرتبطة: <code>academic-terms.read</code>, <code>grade-level-subjects.read</code>.
-              </div>
-            ) : null}
-
-            <div className="flex gap-2">
-              <Button
-                type="submit"
-                className="flex-1 gap-2"
-                disabled={
-                  isFormSubmitting ||
-                  (!canCreate && !isEditing) ||
-                  !hasDependenciesReadPermissions
-                }
-                data-testid="offering-form-submit"
-              >
-                {isFormSubmitting ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Cable className="h-4 w-4" />
-                )}
-                {isEditing ? "حفظ التعديلات" : "إنشاء عرض مادة"}
-              </Button>
-              {isEditing ? (
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  إلغاء
-                </Button>
-              ) : null}
+          {formError && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive font-bold text-center">
+              {formError}
             </div>
-          </form>
-        )}
-      </BottomSheetForm>
-    </>
+          )}
+        </div>
+      </CrudFormSheet>
+    </PageShell>
   );
 }
-
