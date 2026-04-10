@@ -320,7 +320,7 @@ export function StudentHomeworksWorkspace() {
     }
 
     if (score !== null && selectedHomeworkForForm && score > selectedHomeworkForForm.maxScore) {
-      setFormError(\الدرجة اليدوية يجب ألا تتجاوز \.\);
+      setFormError(`الدرجة اليدوية يجب ألا تتجاوز ${selectedHomeworkForForm.maxScore}.`);
       return false;
     }
 
@@ -447,7 +447,7 @@ export function StudentHomeworksWorkspace() {
     }
 
     const confirmed = window.confirm(
-      \تأكيد حذف متابعة واجب الطالب \؟\,
+      `تأكيد حذف متابعة واجب الطالب ${item.studentEnrollment.student.fullName}؟`,
     );
     if (!confirmed) {
       return;
@@ -673,7 +673,7 @@ export function StudentHomeworksWorkspace() {
                   disabled={studentHomeworksQuery.isFetching}
                 >
                   <RefreshCw
-                    className={\h-4 w-4 \\}
+                    className={`h-4 w-4 ${studentHomeworksQuery.isFetching ? "animate-spin" : ""}`}
                   />
                   تحديث
                 </Button>

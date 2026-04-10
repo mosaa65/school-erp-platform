@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
@@ -516,12 +516,9 @@ export function ExamPeriodsWorkspace() {
     assessmentTypeFilter !== "all" ? 1 : 0,
     statusFilter !== "all" ? 1 : 0,
     lockedFilter !== "all" ? 1 : 0,
-    activeFilter !== "all" ? 1 : 0,
   ].reduce((total, count) => total + count, 0);
 
-  return (
-    <PageShell title="الفترات الاختبارية">
-      <div className="space-y-4">
+  return ( <PageShell title="الفترات الاختبارية"> <div className="space-y-4"> 
       <ManagementToolbar
         searchValue={searchInput}
         onSearchChange={(event) => setSearchInput(event.target.value)}
@@ -984,12 +981,6 @@ export function ExamPeriodsWorkspace() {
         </CardContent>
       </Card>
     </div>
+    </PageShell>
   );
 }
-
-
-
-
-
-
-
