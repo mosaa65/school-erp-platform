@@ -1,6 +1,10 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
+import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
+
+import { PageShell } from "@/components/ui/page-shell";
+
 import {
   Plus,
   Lock,
@@ -9,7 +13,7 @@ import {
   RefreshCw,
   Trash2,
 } from "lucide-react";
-import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
+import { CrudFormSheet } from "@/components/ui/bottom-sheet-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Fab } from "@/components/ui/fab";
@@ -517,7 +521,8 @@ export function ExamPeriodsWorkspace() {
   ].reduce((total, count) => total + count, 0);
 
   return (
-    <div className="space-y-4">
+    <PageShell title="الفترات الاختبارية">
+      <div className="space-y-4">
       <ManagementToolbar
         searchValue={searchInput}
         onSearchChange={(event) => setSearchInput(event.target.value)}
@@ -644,14 +649,13 @@ export function ExamPeriodsWorkspace() {
         </div>
       </FilterDrawer>
 
-      <BottomSheetForm
+      <CrudFormSheet
         open={isFormOpen}
         title={isEditing ? "تعديل فترة اختبارية" : "إنشاء فترة اختبارية"}
         onClose={closeFormSheet}
         onSubmit={handleSubmitForm}
         submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء فترة اختبارية"}
         isSubmitting={isFormSubmitting}
-        showFooter={false}
       >
         <div className="space-y-4">
           <div className="grid gap-3 md:grid-cols-2">
@@ -811,7 +815,7 @@ export function ExamPeriodsWorkspace() {
             </div>
           ) : null}
         </div>
-      </BottomSheetForm>
+      </CrudFormSheet>
 
       <Fab
         icon={<Plus className="h-4 w-4" />}
@@ -983,6 +987,7 @@ export function ExamPeriodsWorkspace() {
     </div>
   );
 }
+
 
 
 

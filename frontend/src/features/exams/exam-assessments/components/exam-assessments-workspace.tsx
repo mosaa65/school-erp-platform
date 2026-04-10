@@ -1,6 +1,10 @@
 "use client";
 
 import * as React from "react";
+import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
+
+import { PageShell } from "@/components/ui/page-shell";
+
 import {
   Lock,
   PencilLine,
@@ -8,7 +12,7 @@ import {
   RefreshCw,
   Trash2,
 } from "lucide-react";
-import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
+import { CrudFormSheet } from "@/components/ui/bottom-sheet-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Fab } from "@/components/ui/fab";
@@ -472,7 +476,8 @@ export function ExamAssessmentsWorkspace() {
   );
 
   return (
-    <>
+    <PageShell title="الاختبارات">
+
       <div className="space-y-4">
         <ManagementToolbar
           searchValue={searchInput}
@@ -748,14 +753,13 @@ export function ExamAssessmentsWorkspace() {
         />
       ) : null}
 
-      <BottomSheetForm
+      <CrudFormSheet
         open={isFormOpen}
         title={isEditing ? "تعديل اختبار" : "إنشاء اختبار"}
         onClose={resetForm}
         onSubmit={submitForm}
         submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء اختبار"}
         isSubmitting={isFormSubmitting}
-        showFooter={false}
       >
         <form className="space-y-4" onSubmit={handleSubmitForm}>
           <div className="space-y-1.5">
@@ -898,8 +902,9 @@ export function ExamAssessmentsWorkspace() {
             </div>
           ) : null}
         </form>
-      </BottomSheetForm>
-    </>
+      </CrudFormSheet>
+    
+    </PageShell>
   );
 }
 

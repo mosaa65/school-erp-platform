@@ -1,6 +1,12 @@
 "use client";
 
 import * as React from "react";
+import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
+
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
+
+import { PageShell } from "@/components/ui/page-shell";
+
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   BadgeCheck,
@@ -15,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
-import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
+import { CrudFormSheet } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
   CardContent,
@@ -303,25 +309,17 @@ export function GradingPolicyComponentsWorkspace() {
   }, [searchInput, selectedPolicyId]);
 
   return (
-    <>
+    <PageShell title="فلاتر المكوّنات">
+
       <div className="space-y-4">
-        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
-          <div className="min-w-0">
-            <SearchField
-              containerClassName="min-w-0"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="ابحث بالاسم أو الرمز..."
-            />
-          </div>
-          <div className="flex items-center justify-end gap-2">
-            <FilterTriggerButton
-              count={activeFiltersCount}
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-              className="h-11 w-11 justify-center px-0 sm:w-auto sm:px-4 sm:justify-start [&>span:nth-child(2)]:hidden sm:[&>span:nth-child(2)]:inline [&>span:nth-child(3)]:hidden sm:[&>span:nth-child(3)]:inline"
-            />
-          </div>
-        </div>
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="ابحث بالاسم أو الرمز..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+          showFilterButton={true}
+        />
 
         <FilterDrawer
           open={isFilterOpen}
@@ -481,14 +479,13 @@ export function GradingPolicyComponentsWorkspace() {
         disabled={!canCreate}
       />
 
-      <BottomSheetForm
+      <CrudFormSheet
         open={isFormOpen}
         title={editingId ? "تعديل مكوّن سياسة" : "إنشاء مكوّن سياسة"}
         onClose={resetForm}
         onSubmit={() => undefined}
         isSubmitting={isBusy}
         submitLabel={editingId ? "حفظ التعديلات" : "إنشاء المكوّن"}
-        showFooter={false}
       >
         {!canCreate && !editingId ? (
           <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
@@ -640,7 +637,8 @@ export function GradingPolicyComponentsWorkspace() {
             </div>
           </form>
         )}
-      </BottomSheetForm>
-    </>
+      </CrudFormSheet>
+    
+    </PageShell>
   );
 }

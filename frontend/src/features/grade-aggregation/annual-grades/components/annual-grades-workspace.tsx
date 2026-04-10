@@ -1,6 +1,12 @@
 "use client";
 
 import * as React from "react";
+import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
+
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
+
+import { PageShell } from "@/components/ui/page-shell";
+
 import {
   LoaderCircle,
   Lock,
@@ -12,7 +18,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
+import { CrudFormSheet } from "@/components/ui/bottom-sheet-form";
 import { Button } from "@/components/ui/button";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
@@ -469,23 +475,17 @@ export function AnnualGradesWorkspace() {
   ]);
 
   return (
-    <>
+    <PageShell title="الدرجات السنوية">
+
       <div className="space-y-4">
-        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
-          <SearchField
-            containerClassName="min-w-0"
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            placeholder="ابحث باسم الطالب أو المادة..."
-          />
-          <div className="flex items-center justify-end gap-2">
-            <FilterTriggerButton
-              count={activeFiltersCount}
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-              className="h-11 w-11 justify-center px-0 sm:w-auto sm:px-4 sm:justify-start [&>span:nth-child(2)]:hidden sm:[&>span:nth-child(2)]:inline [&>span:nth-child(3)]:hidden sm:[&>span:nth-child(3)]:inline"
-            />
-          </div>
-        </div>
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="ابحث باسم الطالب أو المادة..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+          showFilterButton={true}
+        />
 
         <FilterDrawer
           open={isFilterOpen}
@@ -607,7 +607,7 @@ export function AnnualGradesWorkspace() {
           </div>
         </FilterDrawer>
 
-      <BottomSheetForm
+      <CrudFormSheet
         open={isFormOpen}
         title={editingId ? "تعديل درجة سنوية" : "إنشاء درجة سنوية"}
         description="إدارة الدرجات السنوية لكل مادة لكل طالب."
@@ -616,7 +616,6 @@ export function AnnualGradesWorkspace() {
         onSubmit={() => undefined}
         isSubmitting={isSubmitting}
         submitLabel={editingId ? "حفظ التعديلات" : "إنشاء درجة سنوية"}
-        showFooter={false}
         renderInPortal
         overlayClassName="z-[80]"
         panelClassName="md:max-w-[760px]"
@@ -961,7 +960,7 @@ export function AnnualGradesWorkspace() {
             ) : null}
           </div>
         </form>
-      </BottomSheetForm>
+      </CrudFormSheet>
 
       <Card className="border-border/70 bg-card/80">
         <CardHeader className="space-y-3">
@@ -1165,7 +1164,8 @@ export function AnnualGradesWorkspace() {
           icon={<Plus className="h-4 w-4 sm:h-5 sm:w-5" />}
         />
       ) : null}
-    </>
+    
+    </PageShell>
   );
 }
 

@@ -1,6 +1,12 @@
 "use client";
 
 import * as React from "react";
+import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
+
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
+
+import { PageShell } from "@/components/ui/page-shell";
+
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   LoaderCircle,
@@ -13,7 +19,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
+import { CrudFormSheet } from "@/components/ui/bottom-sheet-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Fab } from "@/components/ui/fab";
@@ -279,7 +285,8 @@ export function PromotionDecisionsWorkspace() {
   }, [activeFilter, searchInput, systemFilter]);
 
   return (
-    <>
+    <PageShell title="قرارات الترقية">
+
       <div className="space-y-4">
         <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
           <div className="min-w-0">
@@ -509,14 +516,13 @@ export function PromotionDecisionsWorkspace() {
         disabled={!canCreate}
       />
 
-      <BottomSheetForm
+      <CrudFormSheet
         open={isFormOpen}
         title={isEditing ? "تعديل قرار ترقية" : "إضافة قرار ترقية"}
         onClose={resetForm}
         onSubmit={() => undefined}
         isSubmitting={isSubmitting}
         submitLabel={isEditing ? "حفظ التعديلات" : "إضافة القرار"}
-        showFooter={false}
       >
         {!canCreate && !isEditing ? (
           <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
@@ -591,7 +597,8 @@ export function PromotionDecisionsWorkspace() {
             </div>
           </form>
         )}
-      </BottomSheetForm>
-    </>
+      </CrudFormSheet>
+    
+    </PageShell>
   );
 }

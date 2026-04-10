@@ -1,6 +1,12 @@
 ﻿"use client";
 
 import * as React from "react";
+import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
+
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
+
+import { PageShell } from "@/components/ui/page-shell";
+
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   LoaderCircle,
@@ -11,7 +17,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
+import { CrudFormSheet } from "@/components/ui/bottom-sheet-form";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -342,25 +348,17 @@ export function MonthlyCustomComponentScoresWorkspace() {
   }, [activeFilter, monthFilter, searchInput, sectionFilter, subjectFilter]);
 
   return (
-    <>
+    <PageShell title="مكوّنات الدرجات الشهرية">
+
       <div className="space-y-4">
-        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
-          <div className="min-w-0">
-            <SearchField
-              containerClassName="min-w-0"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="بحث باسم الطالب أو المكوّن..."
-            />
-          </div>
-          <div className="flex items-center justify-end gap-2">
-            <FilterTriggerButton
-              count={activeFiltersCount}
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-              className="h-11 w-11 justify-center px-0 sm:w-auto sm:px-4 sm:justify-start [&>span:nth-child(2)]:hidden sm:[&>span:nth-child(2)]:inline [&>span:nth-child(3)]:hidden sm:[&>span:nth-child(3)]:inline"
-            />
-          </div>
-        </div>
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="بحث باسم الطالب أو المكوّن..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+          showFilterButton={true}
+        />
 
         <FilterDrawer
           open={isFilterOpen}
@@ -555,14 +553,13 @@ export function MonthlyCustomComponentScoresWorkspace() {
         disabled={!canCreate}
       />
 
-      <BottomSheetForm
+      <CrudFormSheet
         open={isFormOpen}
         title={editingId ? "تعديل مكوّن شهري" : "إضافة مكوّن شهري"}
         onClose={resetForm}
         onSubmit={() => undefined}
         isSubmitting={isSubmitting}
         submitLabel={editingId ? "حفظ التعديلات" : "إنشاء مكوّن شهري"}
-        showFooter={false}
       >
         <form
           className="space-y-3"
@@ -692,7 +689,8 @@ export function MonthlyCustomComponentScoresWorkspace() {
             </Button>
           </div>
         </form>
-      </BottomSheetForm>
-    </>
+      </CrudFormSheet>
+    
+    </PageShell>
   );
 }
