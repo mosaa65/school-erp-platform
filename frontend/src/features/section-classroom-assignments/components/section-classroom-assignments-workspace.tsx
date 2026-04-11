@@ -2,13 +2,16 @@
 
 import * as React from "react";
 import {
+  Activity,
   CalendarRange,
+  GraduationCap,
   Lightbulb,
   LoaderCircle,
   PencilLine,
   Plus,
   RefreshCw,
   Trash2,
+  Type,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,10 +25,14 @@ import {
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
+import { TextareaField } from "@/components/ui/textarea-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useAcademicYearOptionsQuery } from "@/features/student-enrollments/hooks/use-academic-year-options-query";
 import { useSectionOptionsQuery } from "@/features/student-enrollments/hooks/use-section-options-query";
@@ -661,99 +668,99 @@ export function SectionClassroomAssignmentsWorkspace({
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
           title="فلاتر ربط الشعب بالغرف"
-          actionButtons={
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
-            </div>
-          }
+          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.academicYearId}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, academicYearId: event.target.value }))
-              }
-            >
-              <option value="all">كل السنوات</option>
-              {academicYears.map((academicYear) => (
-                <option key={academicYear.id} value={academicYear.id}>
-                  {academicYear.name}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="السنة الدراسية">
+              <SelectField
+                icon={<CalendarRange />}
+                value={filterDraft.academicYearId}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, academicYearId: event.target.value }))
+                }
+              >
+                <option value="all">كل السنوات</option>
+                {academicYears.map((academicYear) => (
+                  <option key={academicYear.id} value={academicYear.id}>
+                    {academicYear.name}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.sectionId}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, sectionId: event.target.value }))
-              }
-            >
-              <option value="all">كل الشعب</option>
-              {sections.map((section) => (
-                <option key={section.id} value={section.id}>
-                  {section.gradeLevel.code} - {section.name}
-                  {section.capacity !== null ? ` | السعة ${section.capacity}` : ""}
-                  {section.building ? ` | المبنى ${section.building.nameAr}` : ""}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="الشعبة">
+              <SelectField
+                icon={<GraduationCap />}
+                value={filterDraft.sectionId}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, sectionId: event.target.value }))
+                }
+              >
+                <option value="all">كل الشعب</option>
+                {sections.map((section) => (
+                  <option key={section.id} value={section.id}>
+                    {section.gradeLevel.code} - {section.name}
+                    {section.capacity !== null ? ` | السعة ${section.capacity}` : ""}
+                    {section.building ? ` | المبنى ${section.building.nameAr}` : ""}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.classroomId}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, classroomId: event.target.value }))
-              }
-            >
-              <option value="all">كل الغرف</option>
-              {classrooms.map((classroom) => (
-                <option key={classroom.id} value={classroom.id}>
-                  {classroom.name}
-                  {classroom.building ? ` | ${formatBuildingLabel(classroom.building)}` : ""}
-                  {classroom.activeAssignmentsCount > 0
-                    ? ` | روابط نشطة ${classroom.activeAssignmentsCount}`
-                    : ""}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="الغرفة">
+              <SelectField
+                icon={<Lightbulb />}
+                value={filterDraft.classroomId}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, classroomId: event.target.value }))
+                }
+              >
+                <option value="all">كل الغرف</option>
+                {classrooms.map((classroom) => (
+                  <option key={classroom.id} value={classroom.id}>
+                    {classroom.name}
+                    {classroom.building ? ` | ${formatBuildingLabel(classroom.building)}` : ""}
+                    {classroom.activeAssignmentsCount > 0
+                      ? ` | روابط نشطة ${classroom.activeAssignmentsCount}`
+                      : ""}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as FilterState["active"],
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </SelectField>
+            <FormField label="التفعيل">
+              <SelectField
+                icon={<Activity />}
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as FilterState["active"],
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">النشطة فقط</option>
+                <option value="inactive">غير النشطة فقط</option>
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.primary}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  primary: event.target.value as FilterState["primary"],
-                }))
-              }
-            >
-              <option value="all">كل أنواع الربط</option>
-              <option value="primary">الرئيسية فقط</option>
-              <option value="secondary">الثانوية فقط</option>
-            </SelectField>
+            <FormField label="نوع الربط">
+              <SelectField
+                icon={<Lightbulb />}
+                value={filterDraft.primary}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    primary: event.target.value as FilterState["primary"],
+                  }))
+                }
+              >
+                <option value="all">كل أنواع الربط</option>
+                <option value="primary">الرئيسية فقط</option>
+                <option value="secondary">الثانوية فقط</option>
+              </SelectField>
+            </FormField>
           </div>
         </FilterDrawer>
 
@@ -928,9 +935,9 @@ export function SectionClassroomAssignmentsWorkspace({
         ) : (
           <form className="space-y-3" onSubmit={handleSubmit}>
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">السنة الدراسية *</label>
+              <FormField label="السنة الدراسية" required>
                 <SelectField
+                  icon={<CalendarRange />}
                   value={formState.academicYearId}
                   onChange={(event) =>
                     setFormState((prev) => ({
@@ -938,6 +945,7 @@ export function SectionClassroomAssignmentsWorkspace({
                       academicYearId: event.target.value,
                     }))
                   }
+                  required
                 >
                   <option value="">اختر السنة</option>
                   {academicYears.map((academicYear) => (
@@ -946,11 +954,11 @@ export function SectionClassroomAssignmentsWorkspace({
                     </option>
                   ))}
                 </SelectField>
-              </div>
+              </FormField>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الشعبة *</label>
+              <FormField label="الشعبة" required>
                 <SelectField
+                  icon={<GraduationCap />}
                   value={formState.sectionId}
                   onChange={(event) =>
                     setFormState((prev) => ({
@@ -958,6 +966,7 @@ export function SectionClassroomAssignmentsWorkspace({
                       sectionId: event.target.value,
                     }))
                   }
+                  required
                 >
                   <option value="">اختر الشعبة</option>
                   {sections.map((section) => (
@@ -966,12 +975,12 @@ export function SectionClassroomAssignmentsWorkspace({
                     </option>
                   ))}
                 </SelectField>
-              </div>
+              </FormField>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الغرفة *</label>
+            <FormField label="الغرفة" required>
               <SelectField
+                icon={<Lightbulb />}
                 value={formState.classroomId}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -979,6 +988,7 @@ export function SectionClassroomAssignmentsWorkspace({
                     classroomId: event.target.value,
                   }))
                 }
+                required
               >
                 <option value="">اختر الغرفة</option>
                 {classrooms.map((classroom) => (
@@ -991,7 +1001,7 @@ export function SectionClassroomAssignmentsWorkspace({
                   </option>
                 ))}
               </SelectField>
-            </div>
+            </FormField>
 
             {selectedSection ? (
               <div className="rounded-md border border-dashed border-border/70 bg-muted/30 p-3 text-xs text-muted-foreground">
@@ -1061,9 +1071,9 @@ export function SectionClassroomAssignmentsWorkspace({
             ) : null}
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">يبدأ من</label>
+              <FormField label="يبدأ من">
                 <Input
+                  icon={<CalendarRange />}
                   type="date"
                   value={formState.effectiveFrom}
                   onChange={(event) =>
@@ -1073,10 +1083,10 @@ export function SectionClassroomAssignmentsWorkspace({
                     }))
                   }
                 />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">ينتهي في</label>
+              </FormField>
+              <FormField label="ينتهي في">
                 <Input
+                  icon={<CalendarRange />}
                   type="date"
                   value={formState.effectiveTo}
                   onChange={(event) =>
@@ -1086,12 +1096,12 @@ export function SectionClassroomAssignmentsWorkspace({
                     }))
                   }
                 />
-              </div>
+              </FormField>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
-              <Input
+            <FormField label="ملاحظات">
+              <TextareaField
+                icon={<Type />}
                 value={formState.notes}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -1100,36 +1110,31 @@ export function SectionClassroomAssignmentsWorkspace({
                   }))
                 }
                 placeholder="مثال: القاعة الرئيسية للحصة الصباحية"
+                rows={3}
               />
-            </div>
+            </FormField>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>ربط رئيسي</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isPrimary}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      isPrimary: event.target.checked,
-                    }))
-                  }
-                />
-              </label>
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشط</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      isActive: event.target.checked,
-                    }))
-                  }
-                />
-              </label>
+              <FormBooleanField
+                label="ربط رئيسي"
+                checked={formState.isPrimary}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    isPrimary: checked,
+                  }))
+                }
+              />
+              <FormBooleanField
+                label="نشط"
+                checked={formState.isActive}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    isActive: checked,
+                  }))
+                }
+              />
             </div>
 
             {formError ? (

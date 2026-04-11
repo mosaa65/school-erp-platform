@@ -5,6 +5,7 @@ import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   ArrowLeftRight,
   CalendarDays,
+  Hash,
   LoaderCircle,
   PencilLine,
   Plus,
@@ -12,6 +13,7 @@ import {
   ShieldCheck,
   ShieldX,
   Trash2,
+  Type,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
@@ -25,7 +27,10 @@ import {
 } from "@/components/ui/card";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
@@ -344,54 +349,45 @@ export function CurrencyExchangeRatesWorkspace() {
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
           title="فلاتر أسعار الصرف"
-          actionButtons={
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
-            </div>
-          }
+          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">نشط</option>
-              <option value="inactive">غير نشط</option>
-            </SelectField>
+            <FormField label="الحالة">
+              <SelectField
+                icon={<ShieldCheck />}
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">نشط</option>
+                <option value="inactive">غير نشط</option>
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.base}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  base: event.target.value === "all" ? "all" : Number(event.target.value),
-                }))
-              }
-            >
-              <option value="all">كل العملات الأساسية</option>
-              {currencyOptions.map((currency) => (
-                <option key={currency.id} value={currency.id}>
-                  {currency.code}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="العملة الأساسية">
+              <SelectField
+                icon={<ArrowLeftRight />}
+                value={filterDraft.base}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    base: event.target.value === "all" ? "all" : Number(event.target.value),
+                  }))
+                }
+              >
+                <option value="all">كل العملات الأساسية</option>
+                {currencyOptions.map((currency) => (
+                  <option key={currency.id} value={currency.id}>
+                    {currency.code}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
           </div>
         </FilterDrawer>
 
@@ -559,13 +555,14 @@ export function CurrencyExchangeRatesWorkspace() {
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">العملة الأساسية *</label>
+              <FormField label="العملة الأساسية" required>
                 <SelectField
+                  icon={<ArrowLeftRight />}
                   value={form.fromCurrencyId || ""}
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, fromCurrencyId: Number(event.target.value) }))
                   }
+                  required
                 >
                   <option value="">اختر العملة</option>
                   {currencyOptions.map((currency) => (
@@ -574,14 +571,15 @@ export function CurrencyExchangeRatesWorkspace() {
                     </option>
                   ))}
                 </SelectField>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">العملة المقابلة *</label>
+              </FormField>
+              <FormField label="العملة المقابلة" required>
                 <SelectField
+                  icon={<ArrowLeftRight />}
                   value={form.toCurrencyId || ""}
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, toCurrencyId: Number(event.target.value) }))
                   }
+                  required
                 >
                   <option value="">اختر العملة</option>
                   {currencyOptions.map((currency) => (
@@ -590,13 +588,13 @@ export function CurrencyExchangeRatesWorkspace() {
                     </option>
                   ))}
                 </SelectField>
-              </div>
+              </FormField>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">سعر الصرف *</label>
+              <FormField label="سعر الصرف" required>
                 <Input
+                  icon={<Hash />}
                   type="number"
                   min="0"
                   step="0.0001"
@@ -605,43 +603,37 @@ export function CurrencyExchangeRatesWorkspace() {
                     setForm((prev) => ({ ...prev, rate: Number(event.target.value) }))
                   }
                 />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">تاريخ السريان *</label>
+              </FormField>
+              <FormField label="تاريخ السريان" required>
                 <Input
+                  icon={<CalendarDays />}
                   type="date"
                   value={form.effectiveDate}
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, effectiveDate: event.target.value }))
                   }
                 />
-              </div>
+              </FormField>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">المصدر</label>
+            <FormField label="المصدر">
               <Input
+                icon={<Type />}
                 value={form.source ?? ""}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, source: event.target.value }))
                 }
                 placeholder="Manual"
               />
-            </div>
+            </FormField>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span className="flex items-center gap-2">
-                <ArrowLeftRight className="h-4 w-4" />
-                نشط
-              </span>
-              <input
-                type="checkbox"
-                checked={form.isActive}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-              />
-            </label>
+            <FormBooleanField
+              label="نشط"
+              checked={form.isActive}
+              onCheckedChange={(checked) =>
+                setForm((prev) => ({ ...prev, isActive: checked }))
+              }
+            />
 
             {formError ? (
               <FinanceAlert tone="error" className="p-2 text-xs">

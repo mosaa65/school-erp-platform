@@ -37,8 +37,8 @@
     "test:e2e:finance": "jest --config ./test/jest-e2e.json --runInBand finance-journal-entries.e2e-spec.ts finance-payment-webhooks.e2e-spec.ts finance-billing-payments.e2e-spec.ts finance-bank-reconciliations.e2e-spec.ts finance-hr-integrations.e2e-spec.ts finance-procurement-integrations.e2e-spec.ts finance-transport-revenue-report.e2e-spec.ts finance-community-contributions.e2e-spec.ts finance-advanced-coverage.e2e-spec.ts"
   },
   "dependencies": {
-    "@nestjs/common": "^11.0.1",
     "@nestjs/cli": "^11.0.0",
+    "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.0.1",
     "@nestjs/jwt": "^11.0.2",
@@ -47,6 +47,7 @@
     "@nestjs/swagger": "^11.2.6",
     "@prisma/client": "^6.16.3",
     "@simplewebauthn/server": "^13.3.0",
+    "@types/bcrypt": "^6.0.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.7",
@@ -54,7 +55,6 @@
     "@types/speakeasy": "^2.0.10",
     "argon2": "^0.44.0",
     "bcrypt": "^6.0.0",
-    "@types/bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
     "cookie-parser": "^1.4.7",

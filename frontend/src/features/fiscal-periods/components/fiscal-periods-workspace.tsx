@@ -3,13 +3,17 @@
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
+  Activity,
+  ArrowRightLeft,
   CalendarDays,
+  Hash,
   LoaderCircle,
   Lock,
   PencilLine,
   Plus,
   RefreshCw,
   Trash2,
+  Type,
   Unlock,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -24,10 +28,14 @@ import {
 } from "@/components/ui/card";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
+import { TextareaField } from "@/components/ui/textarea-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   FinanceAlert,
@@ -137,7 +145,10 @@ export function FiscalPeriodsWorkspace() {
   const [formError, setFormError] = React.useState<string | null>(null);
 
   const fiscalYearsQuery = useFiscalYearsQuery({ page: 1, limit: 200 });
-  const fiscalYears = fiscalYearsQuery.data?.data ?? [];
+  const fiscalYears = React.useMemo(
+    () => fiscalYearsQuery.data?.data ?? [],
+    [fiscalYearsQuery.data?.data],
+  );
 
   const fiscalPeriodsQuery = useFiscalPeriodsQuery({
     page,
@@ -403,59 +414,50 @@ export function FiscalPeriodsWorkspace() {
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
           title="فلاتر الفترات المالية"
-          actionButtons={
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
-            </div>
-          }
+          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.status}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  status: event.target.value as FiscalPeriodStatusValue | "all",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="OPEN">مفتوحة</option>
-              <option value="CLOSING">قيد الإغلاق</option>
-              <option value="CLOSED">مغلقة</option>
-              <option value="REOPENED">أعيد فتحها</option>
-            </SelectField>
+            <FormField label="الحالة">
+              <SelectField
+                icon={<Activity />}
+                value={filterDraft.status}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    status: event.target.value as FiscalPeriodStatusValue | "all",
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                <option value="OPEN">مفتوحة</option>
+                <option value="CLOSING">قيد الإغلاق</option>
+                <option value="CLOSED">مغلقة</option>
+                <option value="REOPENED">أعيد فتحها</option>
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.fiscalYearId}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  fiscalYearId:
-                    event.target.value === "all"
-                      ? "all"
-                      : Number(event.target.value),
-                }))
-              }
-            >
-              <option value="all">كل السنوات المالية</option>
-              {fiscalYears.map((year) => (
-                <option key={year.id} value={year.id}>
-                  {year.nameAr}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="السنة المالية">
+              <SelectField
+                icon={<CalendarDays />}
+                value={filterDraft.fiscalYearId}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    fiscalYearId:
+                      event.target.value === "all"
+                        ? "all"
+                        : Number(event.target.value),
+                  }))
+                }
+              >
+                <option value="all">كل السنوات المالية</option>
+                {fiscalYears.map((year) => (
+                  <option key={year.id} value={year.id}>
+                    {year.nameAr}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
           </div>
         </FilterDrawer>
 
@@ -615,9 +617,9 @@ export function FiscalPeriodsWorkspace() {
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">رقم الفترة *</label>
+              <FormField label="رقم الفترة" required>
                 <Input
+                  icon={<Hash />}
                   type="number"
                   min={1}
                   value={form.periodNumber}
@@ -629,10 +631,10 @@ export function FiscalPeriodsWorkspace() {
                   }
                   required
                 />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
+              </FormField>
+              <FormField label="الاسم" required>
                 <Input
+                  icon={<Type />}
                   value={form.nameAr}
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, nameAr: event.target.value }))
@@ -640,13 +642,13 @@ export function FiscalPeriodsWorkspace() {
                   placeholder="الفترة الأولى"
                   required
                 />
-              </div>
+              </FormField>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">السنة المالية *</label>
+              <FormField label="السنة المالية" required>
                 <SelectField
+                  icon={<CalendarDays />}
                   value={form.fiscalYearId || ""}
                   onChange={(event) =>
                     setForm((prev) => ({
@@ -654,6 +656,7 @@ export function FiscalPeriodsWorkspace() {
                       fiscalYearId: Number(event.target.value),
                     }))
                   }
+                  required
                 >
                   <option value="">اختر السنة المالية</option>
                   {fiscalYears.map((year) => (
@@ -662,11 +665,10 @@ export function FiscalPeriodsWorkspace() {
                     </option>
                   ))}
                 </SelectField>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">نوع الفترة</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              </FormField>
+              <FormField label="نوع الفترة">
+                <SelectField
+                  icon={<ArrowRightLeft />}
                   value={form.periodType}
                   onChange={(event) =>
                     setForm((prev) => ({
@@ -678,16 +680,14 @@ export function FiscalPeriodsWorkspace() {
                   <option value="MONTHLY">شهرية</option>
                   <option value="QUARTERLY">ربع سنوية</option>
                   <option value="CUSTOM">مخصصة</option>
-                </select>
-              </div>
+                </SelectField>
+              </FormField>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  تاريخ البداية *
-                </label>
+              <FormField label="تاريخ البداية" required>
                 <Input
+                  icon={<CalendarDays />}
                   type="date"
                   value={form.startDate}
                   onChange={(event) =>
@@ -695,10 +695,10 @@ export function FiscalPeriodsWorkspace() {
                   }
                   required
                 />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">تاريخ النهاية *</label>
+              </FormField>
+              <FormField label="تاريخ النهاية" required>
                 <Input
+                  icon={<CalendarDays />}
                   type="date"
                   value={form.endDate}
                   onChange={(event) =>
@@ -706,14 +706,13 @@ export function FiscalPeriodsWorkspace() {
                   }
                   required
                 />
-              </div>
+              </FormField>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الحالة *</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <FormField label="الحالة" required>
+                <SelectField
+                  icon={<Activity />}
                   value={form.status}
                   onChange={(event) =>
                     setForm((prev) => ({
@@ -721,65 +720,58 @@ export function FiscalPeriodsWorkspace() {
                       status: event.target.value as FiscalPeriodStatusValue,
                     }))
                   }
+                  required
                 >
                   <option value="OPEN">مفتوحة</option>
                   <option value="CLOSING">قيد الإغلاق</option>
                   <option value="CLOSED">مغلقة</option>
                   <option value="REOPENED">أعيد فتحها</option>
-                </select>
-              </div>
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span className="flex items-center gap-2">
-                  <Unlock className="h-4 w-4" />
-                  نشطة
-                </span>
-                <input
-                  type="checkbox"
-                  checked={form.isActive ?? true}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                />
-              </label>
+                </SelectField>
+              </FormField>
+              <FormBooleanField
+                label="نشطة"
+                checked={form.isActive ?? true}
+                onCheckedChange={(checked) =>
+                  setForm((prev) => ({ ...prev, isActive: checked }))
+                }
+              />
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">ملاحظات الإغلاق</label>
-                <Input
+              <FormField label="ملاحظات الإغلاق">
+                <TextareaField
+                  icon={<Lock />}
                   value={form.closeNotes ?? ""}
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, closeNotes: event.target.value }))
                   }
                   placeholder="ملاحظات الإغلاق"
+                  rows={3}
                 />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  سبب إعادة الفتح
-                </label>
-                <Input
+              </FormField>
+              <FormField label="سبب إعادة الفتح">
+                <TextareaField
+                  icon={<Unlock />}
                   value={form.reopenReason ?? ""}
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, reopenReason: event.target.value }))
                   }
                   placeholder="سبب إعادة الفتح"
+                  rows={3}
                 />
-              </div>
+              </FormField>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                مهلة إعادة الفتح
-              </label>
+            <FormField label="مهلة إعادة الفتح">
               <Input
+                icon={<CalendarDays />}
                 type="date"
                 value={form.reopenDeadline ?? ""}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, reopenDeadline: event.target.value }))
                 }
               />
-            </div>
+            </FormField>
 
             {formError ? (
               <FinanceAlert tone="error" className="p-2 text-xs">

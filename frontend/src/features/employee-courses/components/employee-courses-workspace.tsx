@@ -3,15 +3,22 @@
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
+  Building2,
+  CalendarRange,
+  Hash,
   BookText,
   LoaderCircle,
   PencilLine,
   Plus,
   RefreshCw,
   Trash2,
+  Type,
+  UserRound,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
@@ -26,6 +33,7 @@ import {
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { Fab } from "@/components/ui/fab";
+import { TextareaField } from "@/components/ui/textarea-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateEmployeeCourseMutation,
@@ -376,49 +384,61 @@ export function EmployeeCoursesWorkspace() {
           actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.employee}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, employee: event.target.value }))
-              }
-            >
-              <option value="all">كل الموظفين</option>
-              {(employeesQuery.data ?? []).map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.jobNumber ?? employee.fullName}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="الموظف">
+              <SelectField
+                icon={<UserRound />}
+                value={filterDraft.employee}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, employee: event.target.value }))
+                }
+              >
+                <option value="all">كل الموظفين</option>
+                {(employeesQuery.data ?? []).map((employee) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.jobNumber ?? employee.fullName}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <Input
-              type="date"
-              value={filterDraft.fromDate}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, fromDate: event.target.value }))
-              }
-            />
+            <FormField label="من تاريخ">
+              <Input
+                icon={<CalendarRange />}
+                type="date"
+                value={filterDraft.fromDate}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, fromDate: event.target.value }))
+                }
+              />
+            </FormField>
 
-            <Input
-              type="date"
-              value={filterDraft.toDate}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, toDate: event.target.value }))
-              }
-            />
+            <FormField label="إلى تاريخ">
+              <Input
+                icon={<CalendarRange />}
+                type="date"
+                value={filterDraft.toDate}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, toDate: event.target.value }))
+                }
+              />
+            </FormField>
 
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </SelectField>
+            <FormField label="الحالة">
+              <SelectField
+                icon={<BookText />}
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">النشطة فقط</option>
+                <option value="inactive">غير النشطة فقط</option>
+              </SelectField>
+            </FormField>
           </div>
         </FilterDrawer>
 
@@ -584,15 +604,15 @@ export function EmployeeCoursesWorkspace() {
             <p className="text-sm text-muted-foreground">
               {isEditing ? "تحديث بيانات الدورة التدريبية." : "إضافة دورة تدريبية جديدة للموظف."}
             </p>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <FormField label="الموظف" required>
+              <SelectField
+                icon={<UserRound />}
                 value={formState.employeeId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
                 }
                 disabled={!canReadEmployees}
+                required
                 data-testid="course-form-employee"
               >
                 <option value="">اختر الموظف</option>
@@ -601,12 +621,12 @@ export function EmployeeCoursesWorkspace() {
                     {employee.fullName} ({employee.jobNumber ?? "غير متوفر"})
                   </option>
                 ))}
-              </select>
-            </div>
+              </SelectField>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">اسم الدورة *</label>
+            <FormField label="اسم الدورة" required>
               <Input
+                icon={<BookText />}
                 value={formState.courseName}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, courseName: event.target.value }))
@@ -615,11 +635,11 @@ export function EmployeeCoursesWorkspace() {
                 required
                 data-testid="course-form-name"
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">جهة التدريب</label>
+            <FormField label="جهة التدريب">
               <Input
+                icon={<Building2 />}
                 value={formState.courseProvider}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -630,12 +650,12 @@ export function EmployeeCoursesWorkspace() {
                 placeholder="وزارة التربية والتعليم"
                 data-testid="course-form-provider"
               />
-            </div>
+            </FormField>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">تاريخ الدورة</label>
+              <FormField label="تاريخ الدورة">
                 <Input
+                  icon={<CalendarRange />}
                   type="date"
                   value={formState.courseDate}
                   onChange={(event) =>
@@ -643,12 +663,10 @@ export function EmployeeCoursesWorkspace() {
                   }
                   data-testid="course-form-date"
                 />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  المدة (بالأيام)
-                </label>
+              </FormField>
+              <FormField label="المدة (بالأيام)">
                 <Input
+                  icon={<Hash />}
                   type="number"
                   min={1}
                   max={365}
@@ -662,12 +680,12 @@ export function EmployeeCoursesWorkspace() {
                   placeholder="5"
                   data-testid="course-form-duration"
                 />
-              </div>
+              </FormField>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">رقم الشهادة</label>
+            <FormField label="رقم الشهادة">
               <Input
+                icon={<Hash />}
                 value={formState.certificateNumber}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -678,31 +696,28 @@ export function EmployeeCoursesWorkspace() {
                 placeholder="CERT-2026-889"
                 data-testid="course-form-certificate"
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
-              <Input
+            <FormField label="ملاحظات">
+              <TextareaField
+                icon={<Type />}
                 value={formState.notes}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, notes: event.target.value }))
                 }
                 placeholder="مشاركة ممتازة ومشروع نهائي"
+                rows={3}
                 data-testid="course-form-notes"
               />
-            </div>
+            </FormField>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-                data-testid="course-form-active"
-              />
-            </label>
+            <FormBooleanField
+              label="نشط"
+              checked={formState.isActive}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({ ...prev, isActive: checked }))
+              }
+            />
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

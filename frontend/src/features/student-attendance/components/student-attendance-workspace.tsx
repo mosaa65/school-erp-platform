@@ -3,7 +3,11 @@
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
+  Activity,
+  CalendarDays,
   ClipboardCheck,
+  Clock3,
+  GraduationCap,
   LoaderCircle,
   PencilLine,
   Plus,
@@ -25,8 +29,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
+import { TextareaField } from "@/components/ui/textarea-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateStudentAttendanceMutation,
@@ -579,107 +587,103 @@ export function StudentAttendanceWorkspace() {
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
           title="فلاتر الحضور"
-          actionButtons={
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
-            </div>
-          }
+          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <StudentPickerSheet
-              scope="student-attendance"
-              variant="filter"
-              value={filterDraft.student}
-              selectedOption={filterDraftStudentOption}
-              onSelect={(option) => {
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  student: option?.id ?? "all",
-                  enrollment: option ? "all" : prev.enrollment,
-                }));
-                setFilterDraftStudentOption(option);
-              }}
-              disabled={!canReadStudents}
-            />
+            <FormField label="الطالب">
+              <StudentPickerSheet
+                scope="student-attendance"
+                variant="filter"
+                value={filterDraft.student}
+                selectedOption={filterDraftStudentOption}
+                onSelect={(option) => {
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    student: option?.id ?? "all",
+                    enrollment: option ? "all" : prev.enrollment,
+                  }));
+                  setFilterDraftStudentOption(option);
+                }}
+                disabled={!canReadStudents}
+              />
+            </FormField>
 
-            <SelectField
-              value={filterDraft.enrollment}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, enrollment: event.target.value }))
-              }
-              disabled={!canReadStudentEnrollments}
-            >
-              <option value="all">كل القيود</option>
-              {enrollmentOptions.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.displayLabel}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="القيد الطلابي">
+              <SelectField
+                icon={<GraduationCap />}
+                value={filterDraft.enrollment}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, enrollment: event.target.value }))
+                }
+                disabled={!canReadStudentEnrollments}
+              >
+                <option value="all">كل القيود</option>
+                {enrollmentOptions.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.displayLabel}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.status}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  status: event.target.value as StudentAttendanceStatus | "all",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              {STATUS_OPTIONS.map((status) => (
-                <option key={status} value={status}>
-                  {translateAttendanceStatus(status)}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="الحالة">
+              <SelectField
+                icon={<Activity />}
+                value={filterDraft.status}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    status: event.target.value as StudentAttendanceStatus | "all",
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                {STATUS_OPTIONS.map((status) => (
+                  <option key={status} value={status}>
+                    {translateAttendanceStatus(status)}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">من تاريخ</label>
+            <FormField label="من تاريخ">
               <Input
+                icon={<CalendarDays />}
                 type="date"
                 value={filterDraft.fromDate}
                 onChange={(event) =>
                   setFilterDraft((prev) => ({ ...prev, fromDate: event.target.value }))
                 }
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">إلى تاريخ</label>
+            <FormField label="إلى تاريخ">
               <Input
+                icon={<CalendarDays />}
                 type="date"
                 value={filterDraft.toDate}
                 onChange={(event) =>
                   setFilterDraft((prev) => ({ ...prev, toDate: event.target.value }))
                 }
               />
-            </div>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </SelectField>
+            <FormField label="التفعيل">
+              <SelectField
+                icon={<ClipboardCheck />}
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">النشطة فقط</option>
+                <option value="inactive">غير النشطة فقط</option>
+              </SelectField>
+            </FormField>
           </div>
         </FilterDrawer>
 
@@ -854,8 +858,7 @@ export function StudentAttendanceWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الطالب</label>
+            <FormField label="الطالب">
               <StudentPickerSheet
                 scope="student-attendance"
                 variant="narrow"
@@ -878,14 +881,17 @@ export function StudentAttendanceWorkspace() {
                 }}
                 disabled={!canReadStudents}
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                القيد الطلابي *
-              </label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <FormField
+              label="القيد الطلابي"
+              required
+              hint={
+                selectedFormStudent ? "تم تقليص القيود بحسب الطالب المحدد." : undefined
+              }
+            >
+              <SelectField
+                icon={<GraduationCap />}
                 value={formState.studentEnrollmentId}
                 onChange={(event) => {
                   const nextEnrollmentId = event.target.value;
@@ -911,6 +917,7 @@ export function StudentAttendanceWorkspace() {
                   }
                 }}
                 disabled={!canReadStudentEnrollments}
+                required
               >
                 <option value="">اختر القيد</option>
                 {formEnrollmentOptions.map((item) => (
@@ -918,19 +925,12 @@ export function StudentAttendanceWorkspace() {
                     {item.displayLabel}
                   </option>
                 ))}
-              </select>
-              {selectedFormStudent ? (
-                <p className="text-[11px] text-muted-foreground">
-                  تم تقليص القيود بحسب الطالب المحدد.
-                </p>
-              ) : null}
-            </div>
+              </SelectField>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                تاريخ الحضور *
-              </label>
+            <FormField label="تاريخ الحضور" required>
               <Input
+                icon={<CalendarDays />}
                 type="date"
                 value={formState.attendanceDate}
                 onChange={(event) =>
@@ -941,12 +941,11 @@ export function StudentAttendanceWorkspace() {
                 }
                 required
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الحالة *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <FormField label="الحالة" required>
+              <SelectField
+                icon={<Activity />}
                 value={formState.status}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -954,59 +953,58 @@ export function StudentAttendanceWorkspace() {
                     status: event.target.value as StudentAttendanceStatus,
                   }))
                 }
+                required
               >
                 {STATUS_OPTIONS.map((status) => (
                   <option key={status} value={status}>
                     {translateAttendanceStatus(status)}
                   </option>
                 ))}
-              </select>
-            </div>
+              </SelectField>
+            </FormField>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الدخول</label>
+              <FormField label="الدخول">
                 <Input
+                  icon={<Clock3 />}
                   type="datetime-local"
                   value={formState.checkInAt}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, checkInAt: event.target.value }))
                   }
                 />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الخروج</label>
+              </FormField>
+              <FormField label="الخروج">
                 <Input
+                  icon={<Clock3 />}
                   type="datetime-local"
                   value={formState.checkOutAt}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, checkOutAt: event.target.value }))
                   }
                 />
-              </div>
+              </FormField>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
-              <Input
+            <FormField label="ملاحظات">
+              <TextareaField
+                icon={<ClipboardCheck />}
                 value={formState.notes}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, notes: event.target.value }))
                 }
                 placeholder="مثال: تأخر 5 دقائق"
+                rows={3}
               />
-            </div>
+            </FormField>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-              />
-            </label>
+            <FormBooleanField
+              label="نشط"
+              checked={formState.isActive}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({ ...prev, isActive: checked }))
+              }
+            />
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

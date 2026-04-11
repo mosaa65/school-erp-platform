@@ -2,12 +2,15 @@
 
 import * as React from "react";
 import {
+  CalendarDays,
   BadgePercent,
+  Hash,
   LoaderCircle,
   PencilLine,
   Plus,
   RefreshCw,
   Trash2,
+  Type,
   UsersRound,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +19,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { PageShell } from "@/components/ui/page-shell";
 import { SearchField } from "@/components/ui/search-field";
@@ -422,54 +428,54 @@ export function DiscountRulesWorkspace() {
         open={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
         title="فلاتر قواعد الخصم"
-        actionButtons={
-          <div className="flex w-full gap-2">
-            <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">
-              مسح
-            </Button>
-            <Button type="button" onClick={applyFilters} className="flex-1">
-              تطبيق
-            </Button>
-          </div>
-        }
+        actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
       >
         <div className="grid gap-3 sm:grid-cols-2">
-          <SelectField
-            value={filterDraft.appliesToFeeType}
-            onChange={(event) =>
-              setFilterDraft((prev) => ({
-                ...prev,
-                appliesToFeeType: event.target.value as "all" | DiscountAppliesToFeeType,
-              }))
-            }
-          >
-            <option value="all">كل الرسوم</option>
-            {Object.entries(FEE_SCOPE_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </SelectField>
-          <Input
-            value={filterDraft.academicYearId}
-            onChange={(event) =>
-              setFilterDraft((prev) => ({ ...prev, academicYearId: event.target.value }))
-            }
-            placeholder="معرّف السنة الأكاديمية"
-          />
-          <SelectField
-            value={filterDraft.isActive}
-            onChange={(event) =>
-              setFilterDraft((prev) => ({
-                ...prev,
-                isActive: event.target.value as "all" | "active" | "inactive",
-              }))
-            }
-          >
-            <option value="all">كل الحالات</option>
-            <option value="active">نشط</option>
-            <option value="inactive">غير نشط</option>
-          </SelectField>
+          <FormField label="نطاق الرسوم">
+            <SelectField
+              icon={<BadgePercent />}
+              value={filterDraft.appliesToFeeType}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  appliesToFeeType: event.target.value as "all" | DiscountAppliesToFeeType,
+                }))
+              }
+            >
+              <option value="all">كل الرسوم</option>
+              {Object.entries(FEE_SCOPE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </SelectField>
+          </FormField>
+          <FormField label="السنة الأكاديمية">
+            <Input
+              icon={<CalendarDays />}
+              value={filterDraft.academicYearId}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, academicYearId: event.target.value }))
+              }
+              placeholder="معرّف السنة الأكاديمية"
+            />
+          </FormField>
+          <FormField label="الحالة">
+            <SelectField
+              icon={<BadgePercent />}
+              value={filterDraft.isActive}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  isActive: event.target.value as "all" | "active" | "inactive",
+                }))
+              }
+            >
+              <option value="all">كل الحالات</option>
+              <option value="active">نشط</option>
+              <option value="inactive">غير نشط</option>
+            </SelectField>
+          </FormField>
         </div>
       </FilterDrawer>
 
@@ -606,20 +612,20 @@ export function DiscountRulesWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
+            <FormField label="الاسم" required>
               <Input
+                icon={<Type />}
                 value={form.nameAr}
                 onChange={(event) => setForm((prev) => ({ ...prev, nameAr: event.target.value }))}
                 placeholder="اسم قاعدة الخصم"
                 required
               />
-            </div>
+            </FormField>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">التصنيف *</label>
+              <FormField label="التصنيف" required>
                 <SelectField
+                  icon={<UsersRound />}
                   value={form.discountType}
                   onChange={(event) =>
                     setForm((prev) => ({
@@ -627,6 +633,7 @@ export function DiscountRulesWorkspace() {
                       discountType: event.target.value as DiscountType,
                     }))
                   }
+                  required
                 >
                   {Object.entries(DISCOUNT_TYPE_LABELS).map(([value, label]) => (
                     <option key={value} value={value}>
@@ -634,10 +641,10 @@ export function DiscountRulesWorkspace() {
                     </option>
                   ))}
                 </SelectField>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">النطاق *</label>
+              </FormField>
+              <FormField label="النطاق" required>
                 <SelectField
+                  icon={<BadgePercent />}
                   value={form.appliesToFeeType}
                   onChange={(event) =>
                     setForm((prev) => ({
@@ -645,6 +652,7 @@ export function DiscountRulesWorkspace() {
                       appliesToFeeType: event.target.value as DiscountAppliesToFeeType,
                     }))
                   }
+                  required
                 >
                   {Object.entries(FEE_SCOPE_LABELS).map(([value, label]) => (
                     <option key={value} value={value}>
@@ -652,15 +660,13 @@ export function DiscountRulesWorkspace() {
                     </option>
                   ))}
                 </SelectField>
-              </div>
+              </FormField>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  طريقة الحساب *
-                </label>
+              <FormField label="طريقة الحساب" required>
                 <SelectField
+                  icon={<BadgePercent />}
                   value={form.calculationMethod}
                   onChange={(event) =>
                     setForm((prev) => ({
@@ -668,6 +674,7 @@ export function DiscountRulesWorkspace() {
                       calculationMethod: event.target.value as DiscountCalculationMethod,
                     }))
                   }
+                  required
                 >
                   {Object.entries(CALCULATION_LABELS).map(([value, label]) => (
                     <option key={value} value={value}>
@@ -675,10 +682,10 @@ export function DiscountRulesWorkspace() {
                     </option>
                   ))}
                 </SelectField>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">القيمة *</label>
+              </FormField>
+              <FormField label="القيمة" required>
                 <Input
+                  icon={<Hash />}
                   type="number"
                   min="0"
                   value={form.value}
@@ -686,15 +693,13 @@ export function DiscountRulesWorkspace() {
                   placeholder="0"
                   required
                 />
-              </div>
+              </FormField>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  ترتيب الأخوة من
-                </label>
+              <FormField label="ترتيب الأخوة من">
                 <Input
+                  icon={<Hash />}
                   type="number"
                   min="1"
                   value={form.siblingOrderFrom}
@@ -703,12 +708,10 @@ export function DiscountRulesWorkspace() {
                   }
                   placeholder="اختياري"
                 />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  الحد الأعلى للنسبة
-                </label>
+              </FormField>
+              <FormField label="الحد الأعلى للنسبة">
                 <Input
+                  icon={<Hash />}
                   type="number"
                   min="0"
                   value={form.maxDiscountPercentage}
@@ -717,15 +720,13 @@ export function DiscountRulesWorkspace() {
                   }
                   placeholder="اختياري"
                 />
-              </div>
+              </FormField>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  حساب الخصم
-                </label>
+              <FormField label="حساب الخصم">
                 <Input
+                  icon={<Hash />}
                   type="number"
                   min="1"
                   value={form.discountGlAccountId}
@@ -734,12 +735,10 @@ export function DiscountRulesWorkspace() {
                   }
                   placeholder="معرّف الحساب (اختياري)"
                 />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  حساب مقابل
-                </label>
+              </FormField>
+              <FormField label="حساب مقابل">
                 <Input
+                  icon={<Hash />}
                   type="number"
                   min="1"
                   value={form.contraGlAccountId}
@@ -748,43 +747,35 @@ export function DiscountRulesWorkspace() {
                   }
                   placeholder="معرّف الحساب (اختياري)"
                 />
-              </div>
+              </FormField>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                السنة الأكاديمية
-              </label>
+            <FormField label="السنة الأكاديمية">
               <Input
+                icon={<CalendarDays />}
                 value={form.academicYearId}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, academicYearId: event.target.value }))
                 }
                 placeholder="معرّف السنة (اختياري)"
               />
-            </div>
+            </FormField>
 
             <div className="grid gap-2 md:grid-cols-2">
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span className="flex items-center gap-2">يتطلب اعتماد</span>
-                <input
-                  type="checkbox"
-                  checked={form.requiresApproval}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, requiresApproval: event.target.checked }))
-                  }
-                />
-              </label>
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span className="flex items-center gap-2">نشط</span>
-                <input
-                  type="checkbox"
-                  checked={form.isActive}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                />
-              </label>
+              <FormBooleanField
+                label="يتطلب اعتماد"
+                checked={form.requiresApproval}
+                onCheckedChange={(checked) =>
+                  setForm((prev) => ({ ...prev, requiresApproval: checked }))
+                }
+              />
+              <FormBooleanField
+                label="نشط"
+                checked={form.isActive}
+                onCheckedChange={(checked) =>
+                  setForm((prev) => ({ ...prev, isActive: checked }))
+                }
+              />
             </div>
 
             {formError ? (

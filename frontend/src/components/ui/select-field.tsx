@@ -1,10 +1,12 @@
 import * as React from "react";
-import { ChevronDown } from "lucide-react";
+import { Asterisk, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
+  FIELD_ICON_CLASS_NAME,
   FIELD_ICON_BADGE_CLASS_NAME,
   FIELD_ICON_EDGE_RIGHT_CLASS_NAME,
   FIELD_SELECT_CHEVRON_CLASS_NAME,
+  FIELD_SELECT_CHEVRON_ICON_CLASS_NAME,
   FIELD_SURFACE_CLASS_NAME,
 } from "@/components/ui/field-styles";
 
@@ -20,16 +22,19 @@ export function SelectField({
   children,
   ...props
 }: SelectFieldProps) {
-  const hasIcon = Boolean(icon);
+  const fallbackIcon = props.required ? <Asterisk className="text-rose-500" /> : null;
+  const resolvedIcon = icon ?? fallbackIcon;
+  const hasIcon = Boolean(resolvedIcon);
   const renderedIcon =
-    icon && React.isValidElement(icon)
-      ? React.cloneElement(icon, {
+    resolvedIcon && React.isValidElement(resolvedIcon)
+      ? React.cloneElement(resolvedIcon as React.ReactElement<{ className?: string }>, {
           className: cn(
-            "h-4 w-4 text-[color:var(--app-accent-color)]",
-            icon.props.className,
+            FIELD_ICON_CLASS_NAME,
+            (resolvedIcon as React.ReactElement<{ className?: string }>).props.className ??
+              "text-[color:var(--app-accent-color)]",
           ),
         })
-      : icon;
+      : resolvedIcon;
 
   return (
     <div className={cn("group/select relative w-full", containerClassName)}>
@@ -45,7 +50,12 @@ export function SelectField({
         </span>
       ) : null}
       <span className={FIELD_SELECT_CHEVRON_CLASS_NAME}>
-        <ChevronDown className="h-3.5 w-3.5 transition-transform group-focus-within/select:translate-y-[1px]" />
+        <ChevronDown
+          className={cn(
+            FIELD_SELECT_CHEVRON_ICON_CLASS_NAME,
+            "transition-transform group-focus-within/select:translate-y-[1px]",
+          )}
+        />
       </span>
       <select
         className={cn(

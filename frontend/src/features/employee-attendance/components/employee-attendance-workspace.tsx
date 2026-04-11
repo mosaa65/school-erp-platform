@@ -3,20 +3,27 @@
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
+  Activity,
+  CalendarDays,
   ClipboardCheck,
+  Clock3,
   LoaderCircle,
   PencilLine,
   Plus,
   RefreshCw,
   Trash2,
+  UserRound,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
+import { TextareaField } from "@/components/ui/textarea-field";
 import {
   Card,
   CardContent,
@@ -668,15 +675,15 @@ export function EmployeeAttendanceWorkspace() {
             <p className="text-sm text-muted-foreground">
               {isEditing ? "تحديث سجل حضور الموظف." : "إضافة سجل حضور جديد ضمن الموارد البشرية."}
             </p>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <FormField label="الموظف" required>
+              <SelectField
                 value={formState.employeeId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
                 }
                 disabled={!canReadEmployees}
+                icon={<UserRound className="h-4 w-4" />}
+                required
                 data-testid="attendance-form-employee"
               >
                 <option value="">اختر الموظف</option>
@@ -685,13 +692,10 @@ export function EmployeeAttendanceWorkspace() {
                     {employee.fullName} ({employee.jobNumber ?? "غير متوفر"})
                   </option>
                 ))}
-              </select>
-            </div>
+              </SelectField>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                تاريخ الحضور *
-              </label>
+            <FormField label="تاريخ الحضور" required>
               <Input
                 type="date"
                 value={formState.attendanceDate}
@@ -701,15 +705,14 @@ export function EmployeeAttendanceWorkspace() {
                     attendanceDate: event.target.value,
                   }))
                 }
+                icon={<CalendarDays className="h-4 w-4" />}
                 required
                 data-testid="attendance-form-date"
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الحالة *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <FormField label="الحالة" required>
+              <SelectField
                 value={formState.status}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -717,6 +720,8 @@ export function EmployeeAttendanceWorkspace() {
                     status: event.target.value as EmployeeAttendanceStatus,
                   }))
                 }
+                icon={<Activity className="h-4 w-4" />}
+                required
                 data-testid="attendance-form-status"
               >
                 {STATUS_OPTIONS.map((status) => (
@@ -724,56 +729,54 @@ export function EmployeeAttendanceWorkspace() {
                     {translateAttendanceStatus(status)}
                   </option>
                 ))}
-              </select>
-            </div>
+              </SelectField>
+            </FormField>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">وقت الدخول</label>
+              <FormField label="وقت الدخول">
                 <Input
                   type="datetime-local"
                   value={formState.checkInAt}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, checkInAt: event.target.value }))
                   }
+                  icon={<Clock3 className="h-4 w-4" />}
                   data-testid="attendance-form-check-in"
                 />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">وقت الخروج</label>
+              </FormField>
+              <FormField label="وقت الخروج">
                 <Input
                   type="datetime-local"
                   value={formState.checkOutAt}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, checkOutAt: event.target.value }))
                   }
+                  icon={<Clock3 className="h-4 w-4" />}
                   data-testid="attendance-form-check-out"
                 />
-              </div>
+              </FormField>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
-              <Input
+            <FormField label="ملاحظات">
+              <TextareaField
                 value={formState.notes}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, notes: event.target.value }))
                 }
                 placeholder="تأخر 10 دقائق"
+                icon={<ClipboardCheck className="h-4 w-4" />}
                 data-testid="attendance-form-notes"
               />
-            </div>
+            </FormField>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-              />
-            </label>
+            <FormBooleanField
+              label="نشط"
+              description="يعرض هذا الخيار ما إذا كان سجل الحضور فعالًا في النظام."
+              checked={formState.isActive}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({ ...prev, isActive: checked }))
+              }
+            />
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

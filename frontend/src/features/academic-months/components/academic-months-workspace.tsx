@@ -3,12 +3,16 @@
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
+  Activity,
+  CalendarDays,
   CalendarClock,
+  Hash,
   LoaderCircle,
   PencilLine,
   Plus,
   RefreshCw,
   Trash2,
+  Type,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +30,8 @@ import {
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateAcademicMonthMutation,
@@ -713,12 +719,9 @@ export function AcademicMonthsWorkspace() {
             data-testid="academic-month-form"
           >
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  السنة الأكاديمية *
-                </label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <FormField label="السنة الأكاديمية" required>
+                <SelectField
+                  icon={<CalendarClock />}
                   value={formState.academicYearId}
                   onChange={(event) => {
                     const academicYearId = event.target.value;
@@ -728,23 +731,21 @@ export function AcademicMonthsWorkspace() {
                       academicTermId: "",
                     }));
                   }}
+                  required
                   data-testid="academic-month-form-year"
                 >
-                  <option value="">اختر السنة</option>
+                  <option value="">اختر السنة الأكاديمية</option>
                   {yearOptions.map((year) => (
                     <option key={year.id} value={year.id}>
                       {year.code}
                     </option>
                   ))}
-                </select>
-              </div>
+                </SelectField>
+              </FormField>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  الفصل الأكاديمي *
-                </label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <FormField label="الفصل الأكاديمي" required>
+                <SelectField
+                  icon={<CalendarDays />}
                   value={formState.academicTermId}
                   onChange={(event) =>
                     setFormState((prev) => ({
@@ -752,22 +753,23 @@ export function AcademicMonthsWorkspace() {
                       academicTermId: event.target.value,
                     }))
                   }
+                  required
                   data-testid="academic-month-form-term"
                 >
-                  <option value="">اختر الفصل</option>
+                  <option value="">اختر الفصل الأكاديمي</option>
                   {termOptions.map((term) => (
                     <option key={term.id} value={term.id}>
                       {term.code}
                     </option>
                   ))}
-                </select>
-              </div>
+                </SelectField>
+              </FormField>
             </div>
 
             <div className="grid gap-3 md:grid-cols-[1fr_110px]">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الترتيب *</label>
+              <FormField label="الترتيب" required>
                 <Input
+                  icon={<Hash />}
                   type="number"
                   min={1}
                   max={24}
@@ -778,12 +780,12 @@ export function AcademicMonthsWorkspace() {
                   required
                   data-testid="academic-month-form-sequence"
                 />
-              </div>
+              </FormField>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
+            <FormField label="الاسم" required>
               <Input
+                icon={<Type />}
                 value={formState.name}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, name: event.target.value }))
@@ -792,14 +794,12 @@ export function AcademicMonthsWorkspace() {
                 required
                 data-testid="academic-month-form-name"
               />
-            </div>
+            </FormField>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  تاريخ البداية *
-                </label>
+              <FormField label="تاريخ البداية" required>
                 <Input
+                  icon={<CalendarDays />}
                   type="date"
                   value={formState.startDate}
                   onChange={(event) =>
@@ -808,12 +808,10 @@ export function AcademicMonthsWorkspace() {
                   required
                   data-testid="academic-month-form-start-date"
                 />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  تاريخ النهاية *
-                </label>
+              </FormField>
+              <FormField label="تاريخ النهاية" required>
                 <Input
+                  icon={<CalendarDays />}
                   type="date"
                   value={formState.endDate}
                   onChange={(event) =>
@@ -822,14 +820,13 @@ export function AcademicMonthsWorkspace() {
                   required
                   data-testid="academic-month-form-end-date"
                 />
-              </div>
+              </FormField>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الحالة *</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <FormField label="الحالة" required>
+                <SelectField
+                  icon={<Activity />}
                   value={formState.status}
                   onChange={(event) =>
                     setFormState((prev) => ({
@@ -837,6 +834,7 @@ export function AcademicMonthsWorkspace() {
                       status: event.target.value as GradingWorkflowStatus,
                     }))
                   }
+                  required
                   data-testid="academic-month-form-status"
                 >
                   {WORKFLOW_OPTIONS.map((status) => (
@@ -844,42 +842,33 @@ export function AcademicMonthsWorkspace() {
                       {translateGradingWorkflowStatus(status)}
                     </option>
                   ))}
-                </select>
-              </div>
+                </SelectField>
+              </FormField>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الخيارات</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <label className="flex items-center justify-between rounded-md border px-3 py-2 text-xs">
-                    <span>الحالي</span>
-                    <input
-                      type="checkbox"
-                      checked={formState.isCurrent}
-                      onChange={(event) =>
-                        setFormState((prev) => ({
-                          ...prev,
-                          isCurrent: event.target.checked,
-                        }))
-                      }
-                      data-testid="academic-month-form-current"
-                    />
-                  </label>
-                  <label className="flex items-center justify-between rounded-md border px-3 py-2 text-xs">
-                    <span>نشط</span>
-                    <input
-                      type="checkbox"
-                      checked={formState.isActive}
-                      onChange={(event) =>
-                        setFormState((prev) => ({
-                          ...prev,
-                          isActive: event.target.checked,
-                        }))
-                      }
-                      data-testid="academic-month-form-active"
-                    />
-                  </label>
-                </div>
-              </div>
+              <FormField label="الخيارات" contentClassName="grid grid-cols-2 gap-2">
+                <FormBooleanField
+                  label="الحالي"
+                  checked={formState.isCurrent}
+                  onCheckedChange={(checked) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      isCurrent: checked,
+                    }))
+                  }
+                  className="min-h-14"
+                />
+                <FormBooleanField
+                  label="نشط"
+                  checked={formState.isActive}
+                  onCheckedChange={(checked) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      isActive: checked,
+                    }))
+                  }
+                  className="min-h-14"
+                />
+              </FormField>
             </div>
 
             {formError ? (

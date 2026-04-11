@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
@@ -551,8 +553,7 @@ export function AcademicYearsWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1">
-              <Label required>الاسم</Label>
+            <FormField label="الاسم" required>
               <Input
                 value={formState.name}
                 onChange={(event) =>
@@ -562,11 +563,10 @@ export function AcademicYearsWorkspace() {
                 icon={<CalendarDays className="h-4 w-4" />}
                 required
               />
-            </div>
+            </FormField>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-1">
-                <Label required>تاريخ البداية</Label>
+              <FormField label="تاريخ البداية" required>
                 <Input
                   type="date"
                   value={formState.startDate}
@@ -579,9 +579,8 @@ export function AcademicYearsWorkspace() {
                   icon={<CalendarDays className="h-4 w-4" />}
                   required
                 />
-              </div>
-              <div className="space-y-1">
-                <Label required>تاريخ النهاية</Label>
+              </FormField>
+              <FormField label="تاريخ النهاية" required>
                 <Input
                   type="date"
                   value={formState.endDate}
@@ -594,11 +593,10 @@ export function AcademicYearsWorkspace() {
                   icon={<CalendarDays className="h-4 w-4" />}
                   required
                 />
-              </div>
+              </FormField>
             </div>
 
-            <div className="space-y-1">
-              <Label required>الحالة</Label>
+            <FormField label="الحالة" required>
               <SelectField
                 value={formState.status}
                 onChange={(event) =>
@@ -614,24 +612,19 @@ export function AcademicYearsWorkspace() {
                 <option value="CLOSED">مغلقة</option>
                 <option value="ARCHIVED">مؤرشفة</option>
               </SelectField>
-            </div>
+            </FormField>
 
-            <div className="space-y-1">
-              <Label>هل السنة الحالية؟</Label>
-              <SelectField
-                value={formState.isCurrent ? "yes" : "no"}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    isCurrent: event.target.value === "yes",
-                  }))
-                }
-                icon={<Star className="h-4 w-4" />}
-              >
-                <option value="yes">نعم، هي السنة الحالية</option>
-                <option value="no">لا</option>
-              </SelectField>
-            </div>
+            <FormBooleanField
+              label="السنة الحالية"
+              description="فعّل هذا الخيار إذا كانت هذه السنة هي السنة التشغيلية الحالية في النظام."
+              checked={formState.isCurrent}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({
+                  ...prev,
+                  isCurrent: checked,
+                }))
+              }
+            />
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

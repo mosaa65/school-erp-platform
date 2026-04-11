@@ -3,12 +3,15 @@
 import * as React from "react";
 import {
   CalendarDays,
+  Hash,
   LoaderCircle,
   PencilLine,
   Plus,
   RefreshCw,
   Sparkles,
   Trash2,
+  Type,
+  UserRound,
 } from "lucide-react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import { Badge } from "@/components/ui/badge";
@@ -24,9 +27,12 @@ import {
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
+import { TextareaField } from "@/components/ui/textarea-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateEmployeeLeaveBalanceMutation,
@@ -447,9 +453,9 @@ export function EmployeeLeaveBalancesWorkspace() {
           actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الموظف</label>
+            <FormField label="الموظف">
               <SelectField
+                icon={<UserRound />}
                 value={filterDraft.employee}
                 onChange={(event) =>
                   setFilterDraft((prev) => ({ ...prev, employee: event.target.value }))
@@ -460,13 +466,13 @@ export function EmployeeLeaveBalancesWorkspace() {
                   <option key={employee.id} value={employee.id}>
                     {employee.fullName}
                   </option>
-                ))}
+                  ))}
               </SelectField>
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">نوع الإجازة</label>
+            <FormField label="نوع الإجازة">
               <SelectField
+                icon={<CalendarDays />}
                 value={filterDraft.leaveType}
                 onChange={(event) =>
                   setFilterDraft((prev) => ({
@@ -480,13 +486,13 @@ export function EmployeeLeaveBalancesWorkspace() {
                   <option key={value} value={value}>
                     {label}
                   </option>
-                ))}
+                  ))}
               </SelectField>
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">السنة</label>
+            <FormField label="السنة">
               <Input
+                icon={<Hash />}
                 type="number"
                 value={filterDraft.year}
                 onChange={(event) =>
@@ -494,11 +500,11 @@ export function EmployeeLeaveBalancesWorkspace() {
                 }
                 placeholder="2026"
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الحالة</label>
+            <FormField label="الحالة">
               <SelectField
+                icon={<Sparkles />}
                 value={filterDraft.active}
                 onChange={(event) =>
                   setFilterDraft((prev) => ({
@@ -511,7 +517,7 @@ export function EmployeeLeaveBalancesWorkspace() {
                 <option value="active">نشط</option>
                 <option value="inactive">غير نشط</option>
               </SelectField>
-            </div>
+            </FormField>
           </div>
 
         </FilterDrawer>
@@ -700,15 +706,15 @@ export function EmployeeLeaveBalancesWorkspace() {
                 : "إضافة رصيد سنوي جديد مع الأيام المرحلة والتعديلات اليدوية."}
             </p>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <FormField label="الموظف" required>
+              <SelectField
+                icon={<UserRound />}
                 value={formState.employeeId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
                 }
                 disabled={!canReadEmployees}
+                required
                 data-testid="leave-balance-form-employee"
               >
                 <option value="">اختر الموظف</option>
@@ -717,13 +723,13 @@ export function EmployeeLeaveBalancesWorkspace() {
                     {employee.fullName} ({employee.jobNumber ?? "غير متوفر"})
                   </option>
                 ))}
-              </select>
-            </div>
+              </SelectField>
+            </FormField>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">نوع الإجازة</label>
+              <FormField label="نوع الإجازة">
                 <SelectField
+                  icon={<CalendarDays />}
                   value={formState.leaveType}
                   onChange={(event) =>
                     setFormState((prev) => ({
@@ -739,10 +745,10 @@ export function EmployeeLeaveBalancesWorkspace() {
                     </option>
                   ))}
                 </SelectField>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">سنة الرصيد *</label>
+              </FormField>
+              <FormField label="سنة الرصيد" required>
                 <Input
+                  icon={<Hash />}
                   type="number"
                   value={formState.balanceYear}
                   onChange={(event) =>
@@ -750,15 +756,13 @@ export function EmployeeLeaveBalancesWorkspace() {
                   }
                   data-testid="leave-balance-form-year"
                 />
-              </div>
+              </FormField>
             </div>
 
             <div className="grid gap-3 md:grid-cols-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  الأيام المخصصة *
-                </label>
+              <FormField label="الأيام المخصصة" required>
                 <Input
+                  icon={<Hash />}
                   type="number"
                   min="0"
                   value={formState.allocatedDays}
@@ -767,10 +771,10 @@ export function EmployeeLeaveBalancesWorkspace() {
                   }
                   data-testid="leave-balance-form-allocated"
                 />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الأيام المرحلة</label>
+              </FormField>
+              <FormField label="الأيام المرحلة">
                 <Input
+                  icon={<Hash />}
                   type="number"
                   min="0"
                   value={formState.carriedForwardDays}
@@ -782,10 +786,10 @@ export function EmployeeLeaveBalancesWorkspace() {
                   }
                   data-testid="leave-balance-form-carried"
                 />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">تعديل يدوي</label>
+              </FormField>
+              <FormField label="تعديل يدوي">
                 <Input
+                  icon={<Hash />}
                   type="number"
                   value={formState.manualAdjustmentDays}
                   onChange={(event) =>
@@ -796,32 +800,29 @@ export function EmployeeLeaveBalancesWorkspace() {
                   }
                   data-testid="leave-balance-form-adjustment"
                 />
-              </div>
+              </FormField>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
-              <Input
+            <FormField label="ملاحظات">
+              <TextareaField
+                icon={<Type />}
                 value={formState.notes}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, notes: event.target.value }))
                 }
                 placeholder="ترحيل من العام السابق أو قرار إداري"
+                rows={3}
                 data-testid="leave-balance-form-notes"
               />
-            </div>
+            </FormField>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-                data-testid="leave-balance-form-active"
-              />
-            </label>
+            <FormBooleanField
+              label="نشط"
+              checked={formState.isActive}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({ ...prev, isActive: checked }))
+              }
+            />
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

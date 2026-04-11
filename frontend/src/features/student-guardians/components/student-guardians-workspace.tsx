@@ -3,18 +3,26 @@
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
+  Activity,
+  CalendarRange,
   Link2,
   LoaderCircle,
   PencilLine,
   Plus,
   RefreshCw,
   Trash2,
+  Type,
+  UserRound,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
+import { TextareaField } from "@/components/ui/textarea-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import { GuardianPickerSheet } from "@/components/ui/guardian-picker-sheet";
 import { StudentPickerSheet } from "@/components/ui/student-picker-sheet";
@@ -647,98 +655,96 @@ export function StudentGuardiansWorkspace() {
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
           title="فلاتر علاقات أولياء الأمور"
-          actionButtons={
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
-            </div>
-          }
+          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <StudentPickerSheet
-              scope="student-guardians"
-              variant="filter"
-              value={filterDraft.student}
-              selectedOption={filterDraftStudentOption}
-              onSelect={(option) => {
-                setFilterDraft((prev) => ({ ...prev, student: option?.id ?? "all" }));
-                setFilterDraftStudentOption(option);
-              }}
-              disabled={!canReadStudents}
-            />
+            <FormField label="الطالب">
+              <StudentPickerSheet
+                scope="student-guardians"
+                variant="filter"
+                value={filterDraft.student}
+                selectedOption={filterDraftStudentOption}
+                onSelect={(option) => {
+                  setFilterDraft((prev) => ({ ...prev, student: option?.id ?? "all" }));
+                  setFilterDraftStudentOption(option);
+                }}
+                disabled={!canReadStudents}
+              />
+            </FormField>
 
-            <GuardianPickerSheet
-              scope="student-guardians"
-              variant="filter"
-              value={filterDraft.guardian}
-              selectedOption={filterDraftGuardianOption}
-              onSelect={(option) => {
-                setFilterDraft((prev) => ({ ...prev, guardian: option?.id ?? "all" }));
-                setFilterDraftGuardianOption(option);
-              }}
-              disabled={!canReadGuardians}
-            />
+            <FormField label="ولي الأمر">
+              <GuardianPickerSheet
+                scope="student-guardians"
+                variant="filter"
+                value={filterDraft.guardian}
+                selectedOption={filterDraftGuardianOption}
+                onSelect={(option) => {
+                  setFilterDraft((prev) => ({ ...prev, guardian: option?.id ?? "all" }));
+                  setFilterDraftGuardianOption(option);
+                }}
+                disabled={!canReadGuardians}
+              />
+            </FormField>
 
-            <SelectField
-              value={filterDraft.relationshipType}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  relationshipType: event.target.value,
-                }))
-              }
-              disabled={!canReadRelationshipTypes || relationshipTypeOptionsQuery.isLoading}
-            >
-              <option value="all">كل صلات القرابة</option>
-              {relationshipTypeOptions.map((value) => (
-                <option key={value.id} value={value.id}>
-                  {value.nameAr ??
-                    (value.code
-                      ? translateGuardianRelationship(
-                          mapRelationshipCodeToEnum(value.code) ?? "OTHER",
-                        )
-                      : String(value.id))}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="صلة القرابة">
+              <SelectField
+                icon={<Link2 />}
+                value={filterDraft.relationshipType}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    relationshipType: event.target.value,
+                  }))
+                }
+                disabled={!canReadRelationshipTypes || relationshipTypeOptionsQuery.isLoading}
+              >
+                <option value="all">كل صلات القرابة</option>
+                {relationshipTypeOptions.map((value) => (
+                  <option key={value.id} value={value.id}>
+                    {value.nameAr ??
+                      (value.code
+                        ? translateGuardianRelationship(
+                            mapRelationshipCodeToEnum(value.code) ?? "OTHER",
+                          )
+                        : String(value.id))}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.primary}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  primary: event.target.value as "all" | "primary" | "secondary",
-                }))
-              }
-            >
-              <option value="all">كل الأولويات</option>
-              <option value="primary">الأساسية فقط</option>
-              <option value="secondary">غير الأساسية فقط</option>
-            </SelectField>
+            <FormField label="الأولوية">
+              <SelectField
+                icon={<UserRound />}
+                value={filterDraft.primary}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    primary: event.target.value as "all" | "primary" | "secondary",
+                  }))
+                }
+              >
+                <option value="all">كل الأولويات</option>
+                <option value="primary">الأساسية فقط</option>
+                <option value="secondary">غير الأساسية فقط</option>
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </SelectField>
+            <FormField label="الحالة">
+              <SelectField
+                icon={<Activity />}
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">النشطة فقط</option>
+                <option value="inactive">غير النشطة فقط</option>
+              </SelectField>
+            </FormField>
           </div>
         </FilterDrawer>
 
@@ -921,8 +927,7 @@ export function StudentGuardiansWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الطالب *</label>
+            <FormField label="الطالب" required>
               <StudentPickerSheet
                 scope="student-guardians"
                 variant="form"
@@ -934,10 +939,9 @@ export function StudentGuardiansWorkspace() {
                 }}
                 disabled={!canReadStudents}
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ولي الأمر *</label>
+            <FormField label="ولي الأمر" required>
               <GuardianPickerSheet
                 scope="student-guardians"
                 variant="form"
@@ -949,12 +953,11 @@ export function StudentGuardiansWorkspace() {
                 }}
                 disabled={!canReadGuardians}
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">صلة القرابة *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <FormField label="صلة القرابة" required>
+              <SelectField
+                icon={<Link2 />}
                 value={formState.relationshipTypeId}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -963,6 +966,7 @@ export function StudentGuardiansWorkspace() {
                   }))
                 }
                 disabled={!canReadRelationshipTypes || relationshipTypeOptionsQuery.isLoading}
+                required
               >
                 <option value="">اختر صلة القرابة</option>
                 {relationshipTypeOptions.map((value) => (
@@ -975,91 +979,80 @@ export function StudentGuardiansWorkspace() {
                         : String(value.id))}
                   </option>
                 ))}
-              </select>
-            </div>
+              </SelectField>
+            </FormField>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">تاريخ البداية</label>
+              <FormField label="تاريخ البداية">
                 <Input
+                  icon={<CalendarRange />}
                   type="date"
                   value={formState.startDate}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, startDate: event.target.value }))
                   }
                 />
-              </div>
+              </FormField>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">تاريخ النهاية</label>
+              <FormField label="تاريخ النهاية">
                 <Input
+                  icon={<CalendarRange />}
                   type="date"
                   value={formState.endDate}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, endDate: event.target.value }))
                   }
                 />
-              </div>
+              </FormField>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
-              <Input
+            <FormField label="ملاحظات">
+              <TextareaField
+                icon={<Type />}
                 value={formState.notes}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, notes: event.target.value }))
                 }
                 placeholder="مثال: جهة الاتصال الأساسية لمتابعة الحضور"
+                rows={3}
               />
-            </div>
+            </FormField>
 
             <div className="grid gap-2 md:grid-cols-2">
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>صلة أساسية</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isPrimary}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isPrimary: event.target.checked }))
-                  }
-                />
-              </label>
+              <FormBooleanField
+                label="صلة أساسية"
+                checked={formState.isPrimary}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({ ...prev, isPrimary: checked }))
+                }
+              />
 
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>يستقبل الإشعارات</span>
-                <input
-                  type="checkbox"
-                  checked={formState.canReceiveNotifications}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      canReceiveNotifications: event.target.checked,
-                    }))
-                  }
-                />
-              </label>
+              <FormBooleanField
+                label="يستقبل الإشعارات"
+                checked={formState.canReceiveNotifications}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    canReceiveNotifications: checked,
+                  }))
+                }
+              />
 
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>مصرح بالاستلام</span>
-                <input
-                  type="checkbox"
-                  checked={formState.canPickup}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, canPickup: event.target.checked }))
-                  }
-                />
-              </label>
+              <FormBooleanField
+                label="مصرح بالاستلام"
+                checked={formState.canPickup}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({ ...prev, canPickup: checked }))
+                }
+              />
 
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشط</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                />
-              </label>
+              <FormBooleanField
+                label="نشط"
+                checked={formState.isActive}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({ ...prev, isActive: checked }))
+                }
+              />
             </div>
 
             {formError ? (

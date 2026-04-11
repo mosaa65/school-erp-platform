@@ -3,15 +3,21 @@
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
+  CalendarRange,
   ClipboardList,
+  GraduationCap,
   LoaderCircle,
   PencilLine,
   Plus,
   RefreshCw,
   Trash2,
+  Type,
+  UserRound,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
@@ -26,6 +32,7 @@ import {
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { Fab } from "@/components/ui/fab";
+import { TextareaField } from "@/components/ui/textarea-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useAcademicYearOptionsQuery } from "@/features/employee-tasks/hooks/use-academic-year-options-query";
 import { useEmployeeOptionsQuery } from "@/features/employee-tasks/hooks/use-employee-options-query";
@@ -387,64 +394,76 @@ export function EmployeeTasksWorkspace() {
           actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.employee}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, employee: event.target.value }))
-              }
-            >
-              <option value="all">كل الموظفين</option>
-              {(employeesQuery.data ?? []).map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.jobNumber ?? employee.fullName}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="الموظف">
+              <SelectField
+                icon={<UserRound />}
+                value={filterDraft.employee}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, employee: event.target.value }))
+                }
+              >
+                <option value="all">كل الموظفين</option>
+                {(employeesQuery.data ?? []).map((employee) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.jobNumber ?? employee.fullName}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.academicYear}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, academicYear: event.target.value }))
-              }
-            >
-              <option value="all">كل السنوات</option>
-              {(academicYearsQuery.data ?? []).map((year) => (
-                <option key={year.id} value={year.id}>
-                  {year.code}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="السنة الأكاديمية">
+              <SelectField
+                icon={<GraduationCap />}
+                value={filterDraft.academicYear}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, academicYear: event.target.value }))
+                }
+              >
+                <option value="all">كل السنوات</option>
+                {(academicYearsQuery.data ?? []).map((year) => (
+                  <option key={year.id} value={year.id}>
+                    {year.code}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.day}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  day: event.target.value as TimetableDay | "all",
-                }))
-              }
-            >
-              <option value="all">كل الأيام</option>
-              {DAY_OPTIONS.map((day) => (
-                <option key={day} value={day}>
-                  {translateTimetableDay(day)}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="اليوم">
+              <SelectField
+                icon={<CalendarRange />}
+                value={filterDraft.day}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    day: event.target.value as TimetableDay | "all",
+                  }))
+                }
+              >
+                <option value="all">كل الأيام</option>
+                {DAY_OPTIONS.map((day) => (
+                  <option key={day} value={day}>
+                    {translateTimetableDay(day)}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </SelectField>
+            <FormField label="الحالة">
+              <SelectField
+                icon={<ClipboardList />}
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">النشطة فقط</option>
+                <option value="inactive">غير النشطة فقط</option>
+              </SelectField>
+            </FormField>
           </div>
         </FilterDrawer>
 
@@ -618,15 +637,15 @@ export function EmployeeTasksWorkspace() {
             <p className="text-sm text-muted-foreground">
               {isEditing ? "تحديث المهمة." : "إضافة مهمة جديدة مرتبطة بموظف."}
             </p>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <FormField label="الموظف" required>
+              <SelectField
+                icon={<UserRound />}
                 value={formState.employeeId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
                 }
                 disabled={!canReadEmployees}
+                required
                 data-testid="task-form-employee"
               >
                 <option value="">اختر الموظف</option>
@@ -635,12 +654,12 @@ export function EmployeeTasksWorkspace() {
                     {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
                   </option>
                 ))}
-              </select>
-            </div>
+              </SelectField>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">اسم المهمة *</label>
+            <FormField label="اسم المهمة" required>
               <Input
+                icon={<ClipboardList />}
                 value={formState.taskName}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, taskName: event.target.value }))
@@ -649,14 +668,11 @@ export function EmployeeTasksWorkspace() {
                 required
                 data-testid="task-form-name"
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                السنة الأكاديمية
-              </label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <FormField label="السنة الأكاديمية">
+              <SelectField
+                icon={<GraduationCap />}
                 value={formState.academicYearId}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -673,14 +689,13 @@ export function EmployeeTasksWorkspace() {
                     {year.name} ({year.code})
                   </option>
                 ))}
-              </select>
-            </div>
+              </SelectField>
+            </FormField>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">اليوم</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <FormField label="اليوم">
+                <SelectField
+                  icon={<CalendarRange />}
                   value={formState.dayOfWeek}
                   onChange={(event) =>
                     setFormState((prev) => ({
@@ -696,13 +711,11 @@ export function EmployeeTasksWorkspace() {
                       {translateTimetableDay(day)}
                     </option>
                   ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  تاريخ الإسناد
-                </label>
+                </SelectField>
+              </FormField>
+              <FormField label="تاريخ الإسناد">
                 <Input
+                  icon={<CalendarRange />}
                   type="date"
                   value={formState.assignmentDate}
                   onChange={(event) =>
@@ -713,32 +726,29 @@ export function EmployeeTasksWorkspace() {
                   }
                   data-testid="task-form-date"
                 />
-              </div>
+              </FormField>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
-              <Input
+            <FormField label="ملاحظات">
+              <TextareaField
+                icon={<Type />}
                 value={formState.notes}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, notes: event.target.value }))
                 }
                 placeholder="مناوبة البوابة قبل الحصة الأولى"
+                rows={3}
                 data-testid="task-form-notes"
               />
-            </div>
+            </FormField>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-                data-testid="task-form-active"
-              />
-            </label>
+            <FormBooleanField
+              label="نشط"
+              checked={formState.isActive}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({ ...prev, isActive: checked }))
+              }
+            />
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

@@ -2,11 +2,16 @@
 
 import * as React from "react";
 import {
+  Activity,
+  CalendarRange,
+  GraduationCap,
+  Hash,
   Lock,
   PencilLine,
   Plus,
   RefreshCw,
   Trash2,
+  Type,
 } from "lucide-react";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +19,8 @@ import { Button } from "@/components/ui/button";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { Input } from "@/components/ui/input";
 import {
@@ -24,6 +31,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { SelectField } from "@/components/ui/select-field";
+import { TextareaField } from "@/components/ui/textarea-field";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
@@ -500,78 +508,96 @@ export function ExamAssessmentsWorkspace() {
       >
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.examPeriodId}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, examPeriodId: event.target.value }))
-              }
-            >
-              <option value="all">كل الفترات</option>
-              {(examPeriodsQuery.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatNameCodeLabel(item.academicTerm.name, item.academicTerm.code)})
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="فترة الاختبار">
+              <SelectField
+                icon={<CalendarRange />}
+                value={filterDraft.examPeriodId}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, examPeriodId: event.target.value }))
+                }
+              >
+                <option value="all">كل الفترات</option>
+                {(examPeriodsQuery.data ?? []).map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} / {formatNameCodeLabel(item.academicTerm.name, item.academicTerm.code)})
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.sectionId}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, sectionId: event.target.value }))
-              }
-            >
-              <option value="all">كل الشعب</option>
-              {(sectionsQuery.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {formatSectionWithGradeLabel(item)}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="الشعبة">
+              <SelectField
+                icon={<GraduationCap />}
+                value={filterDraft.sectionId}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, sectionId: event.target.value }))
+                }
+              >
+                <option value="all">كل الشعب</option>
+                {(sectionsQuery.data ?? []).map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {formatSectionWithGradeLabel(item)}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.subjectId}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, subjectId: event.target.value }))
-              }
-            >
-              <option value="all">كل المواد</option>
-              {(subjectsQuery.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {formatNameCodeLabel(item.name, item.code)}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="المادة">
+              <SelectField
+                icon={<Type />}
+                value={filterDraft.subjectId}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, subjectId: event.target.value }))
+                }
+              >
+                <option value="all">كل المواد</option>
+                {(subjectsQuery.data ?? []).map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {formatNameCodeLabel(item.name, item.code)}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.activeFilter}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  activeFilter: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">الكل</option>
-              <option value="active">نشط</option>
-              <option value="inactive">غير نشط</option>
-            </SelectField>
+            <FormField label="الحالة">
+              <SelectField
+                icon={<Activity />}
+                value={filterDraft.activeFilter}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    activeFilter: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+              >
+                <option value="all">الكل</option>
+                <option value="active">نشط</option>
+                <option value="inactive">غير نشط</option>
+              </SelectField>
+            </FormField>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <Input
-              type="date"
-              value={filterDraft.fromExamDate}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, fromExamDate: event.target.value }))
-              }
-            />
-            <Input
-              type="date"
-              value={filterDraft.toExamDate}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, toExamDate: event.target.value }))
-              }
-            />
+            <FormField label="من تاريخ الاختبار">
+              <Input
+                icon={<CalendarRange />}
+                type="date"
+                value={filterDraft.fromExamDate}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, fromExamDate: event.target.value }))
+                }
+              />
+            </FormField>
+            <FormField label="إلى تاريخ الاختبار">
+              <Input
+                icon={<CalendarRange />}
+                type="date"
+                value={filterDraft.toExamDate}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, toExamDate: event.target.value }))
+                }
+              />
+            </FormField>
           </div>
         </div>
       </FilterDrawer>
@@ -758,16 +784,17 @@ export function ExamAssessmentsWorkspace() {
         showFooter={false}
       >
         <form className="space-y-4" onSubmit={handleSubmitForm}>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">فترة الاختبار *</label>
+          <FormField label="فترة الاختبار" required>
             <SelectField
+              icon={<CalendarRange />}
               value={formState.examPeriodId}
               onChange={(event) =>
                 setFormState((prev) => ({ ...prev, examPeriodId: event.target.value }))
               }
               disabled={!canReadExamPeriods}
+              required
             >
-              <option value="">اختر فترة الاختبار *</option>
+              <option value="">اختر فترة الاختبار</option>
               {(examPeriodsQuery.data ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name} ({formatNameCodeLabel(item.academicYear.name, item.academicYear.code)} /{" "}
@@ -775,49 +802,51 @@ export function ExamAssessmentsWorkspace() {
                 </option>
               ))}
             </SelectField>
-          </div>
+          </FormField>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الشعبة *</label>
+            <FormField label="الشعبة" required>
               <SelectField
+                icon={<GraduationCap />}
                 value={formState.sectionId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, sectionId: event.target.value }))
                 }
                 disabled={!canReadSections}
+                required
               >
-                <option value="">اختر الشعبة *</option>
+                <option value="">اختر الشعبة</option>
                 {(sectionsQuery.data ?? []).map((item) => (
                   <option key={item.id} value={item.id}>
                     {formatSectionWithGradeLabel(item)}
                   </option>
                 ))}
               </SelectField>
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">المادة *</label>
+            <FormField label="المادة" required>
               <SelectField
+                icon={<Type />}
                 value={formState.subjectId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, subjectId: event.target.value }))
                 }
                 disabled={!canReadSubjects}
+                required
               >
-                <option value="">اختر المادة *</option>
+                <option value="">اختر المادة</option>
                 {(subjectsQuery.data ?? []).map((item) => (
                   <option key={item.id} value={item.id}>
                     {formatNameCodeLabel(item.name, item.code)}
                   </option>
                 ))}
               </SelectField>
-            </div>
+            </FormField>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">عنوان الاختبار *</label>
+          <FormField label="عنوان الاختبار" required>
             <Input
+              icon={<Type />}
               value={formState.title}
               onChange={(event) =>
                 setFormState((prev) => ({ ...prev, title: event.target.value }))
@@ -825,12 +854,12 @@ export function ExamAssessmentsWorkspace() {
               placeholder="اختبار الرياضيات الشهري 1"
               required
             />
-          </div>
+          </FormField>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">تاريخ الاختبار *</label>
+            <FormField label="تاريخ الاختبار" required>
               <Input
+                icon={<CalendarRange />}
                 type="datetime-local"
                 value={formState.examDate}
                 onChange={(event) =>
@@ -838,10 +867,10 @@ export function ExamAssessmentsWorkspace() {
                 }
                 required
               />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الدرجة العظمى *</label>
+            </FormField>
+            <FormField label="الدرجة العظمى" required>
               <Input
+                icon={<Hash />}
                 type="number"
                 min={0.01}
                 step={0.01}
@@ -850,31 +879,30 @@ export function ExamAssessmentsWorkspace() {
                   setFormState((prev) => ({ ...prev, maxScore: event.target.value }))
                 }
                 placeholder="الدرجة العظمى"
+                required
               />
-            </div>
+            </FormField>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
-            <Input
+          <FormField label="ملاحظات">
+            <TextareaField
+              icon={<Type />}
               value={formState.notes}
               onChange={(event) =>
                 setFormState((prev) => ({ ...prev, notes: event.target.value }))
               }
               placeholder="ملاحظات"
+              rows={3}
             />
-          </div>
+          </FormField>
 
-          <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-            <span>نشط</span>
-            <input
-              type="checkbox"
-              checked={formState.isActive}
-              onChange={(event) =>
-                setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-              }
-            />
-          </label>
+          <FormBooleanField
+            label="نشط"
+            checked={formState.isActive}
+            onCheckedChange={(checked) =>
+              setFormState((prev) => ({ ...prev, isActive: checked }))
+            }
+          />
 
           {formError ? (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

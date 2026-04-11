@@ -9,6 +9,8 @@ import {
   Plus,
   RefreshCw,
   Trash2,
+  Type,
+  UserRound,
   XCircle,
 } from "lucide-react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
@@ -25,9 +27,12 @@ import {
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
+import { TextareaField } from "@/components/ui/textarea-field";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
@@ -499,83 +504,101 @@ export function EmployeeLeavesWorkspace() {
           actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.employee}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, employee: event.target.value }))
-              }
-            >
-              <option value="all">كل الموظفين</option>
-              {(employeesQuery.data ?? []).map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.jobNumber ?? employee.fullName}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="الموظف">
+              <SelectField
+                icon={<UserRound />}
+                value={filterDraft.employee}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, employee: event.target.value }))
+                }
+              >
+                <option value="all">كل الموظفين</option>
+                {(employeesQuery.data ?? []).map((employee) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.jobNumber ?? employee.fullName}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.leaveType}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  leaveType: event.target.value as "all" | EmployeeLeaveType,
-                }))
-              }
-            >
-              <option value="all">كل أنواع الإجازات</option>
-              {Object.entries(LEAVE_TYPE_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="نوع الإجازة">
+              <SelectField
+                icon={<CalendarRange />}
+                value={filterDraft.leaveType}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    leaveType: event.target.value as "all" | EmployeeLeaveType,
+                  }))
+                }
+              >
+                <option value="all">كل أنواع الإجازات</option>
+                {Object.entries(LEAVE_TYPE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.status}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  status: event.target.value as "all" | EmployeeLeaveRequestStatus,
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              {Object.entries(LEAVE_STATUS_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="حالة الطلب">
+              <SelectField
+                icon={<CheckCircle2 />}
+                value={filterDraft.status}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    status: event.target.value as "all" | EmployeeLeaveRequestStatus,
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                {Object.entries(LEAVE_STATUS_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <Input
-              type="date"
-              value={filterDraft.fromDate}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, fromDate: event.target.value }))
-              }
-            />
+            <FormField label="من تاريخ">
+              <Input
+                icon={<CalendarRange />}
+                type="date"
+                value={filterDraft.fromDate}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, fromDate: event.target.value }))
+                }
+              />
+            </FormField>
 
-            <Input
-              type="date"
-              value={filterDraft.toDate}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, toDate: event.target.value }))
-              }
-            />
+            <FormField label="إلى تاريخ">
+              <Input
+                icon={<CalendarRange />}
+                type="date"
+                value={filterDraft.toDate}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, toDate: event.target.value }))
+                }
+              />
+            </FormField>
 
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </SelectField>
+            <FormField label="الحالة">
+              <SelectField
+                icon={<CheckCircle2 />}
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">النشطة فقط</option>
+                <option value="inactive">غير النشطة فقط</option>
+              </SelectField>
+            </FormField>
           </div>
         </FilterDrawer>
 
@@ -807,15 +830,15 @@ export function EmployeeLeavesWorkspace() {
               {isEditing ? "تحديث بيانات طلب الإجازة." : "إضافة طلب إجازة جديد للموظف."}
             </p>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <FormField label="الموظف" required>
+              <SelectField
+                icon={<UserRound />}
                 value={formState.employeeId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
                 }
                 disabled={!canReadEmployees}
+                required
                 data-testid="leave-form-employee"
               >
                 <option value="">اختر الموظف</option>
@@ -824,13 +847,13 @@ export function EmployeeLeavesWorkspace() {
                     {employee.fullName} ({employee.jobNumber ?? "غير متوفر"})
                   </option>
                 ))}
-              </select>
-            </div>
+              </SelectField>
+            </FormField>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">نوع الإجازة</label>
+              <FormField label="نوع الإجازة">
                 <SelectField
+                  icon={<CalendarRange />}
                   value={formState.leaveType}
                   onChange={(event) =>
                     setFormState((prev) => ({
@@ -846,72 +869,72 @@ export function EmployeeLeavesWorkspace() {
                     </option>
                   ))}
                 </SelectField>
-              </div>
+              </FormField>
               <div className="flex items-end rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
                 سيتم إنشاء الطلب بحالة: <span className="mr-1 font-medium">قيد الانتظار</span>
               </div>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">تاريخ البداية *</label>
+              <FormField label="تاريخ البداية" required>
                 <Input
+                  icon={<CalendarRange />}
                   type="date"
                   value={formState.startDate}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, startDate: event.target.value }))
                   }
+                  required
                   data-testid="leave-form-start-date"
                 />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">تاريخ النهاية *</label>
+              </FormField>
+              <FormField label="تاريخ النهاية" required>
                 <Input
+                  icon={<CalendarRange />}
                   type="date"
                   value={formState.endDate}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, endDate: event.target.value }))
                   }
+                  required
                   data-testid="leave-form-end-date"
                 />
-              </div>
+              </FormField>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">سبب الإجازة</label>
-              <Input
+            <FormField label="سبب الإجازة">
+              <TextareaField
+                icon={<Type />}
                 value={formState.reason}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, reason: event.target.value }))
                 }
                 placeholder="ظرف صحي أو أسري"
+                rows={3}
                 data-testid="leave-form-reason"
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
-              <Input
+            <FormField label="ملاحظات">
+              <TextareaField
+                icon={<Type />}
                 value={formState.notes}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, notes: event.target.value }))
                 }
                 placeholder="أي ملاحظات إضافية"
+                rows={3}
                 data-testid="leave-form-notes"
               />
-            </div>
+            </FormField>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-                data-testid="leave-form-active"
-              />
-            </label>
+            <FormBooleanField
+              label="نشط"
+              checked={formState.isActive}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({ ...prev, isActive: checked }))
+              }
+            />
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

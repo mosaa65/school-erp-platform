@@ -4,11 +4,13 @@ import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   AlertTriangle,
+  CalendarDays,
   LoaderCircle,
   PencilLine,
   Plus,
   RefreshCw,
   Trash2,
+  Type,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,8 +27,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
+import { TextareaField } from "@/components/ui/textarea-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateStudentProblemMutation,
@@ -429,85 +435,78 @@ export function StudentProblemsWorkspace() {
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
           title="فلاتر المشكلات"
-          actionButtons={
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
-            </div>
-          }
+          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <StudentPickerSheet
-              scope="student-problems"
-              variant="filter"
-              value={filterDraft.student}
-              selectedOption={filterDraftStudentOption}
-              onSelect={(option) => {
-                setFilterDraft((prev) => ({ ...prev, student: option?.id ?? "all" }));
-                setFilterDraftStudentOption(option);
-              }}
-              disabled={!canReadStudents}
-            />
+            <FormField label="الطالب">
+              <StudentPickerSheet
+                scope="student-problems"
+                variant="filter"
+                value={filterDraft.student}
+                selectedOption={filterDraftStudentOption}
+                onSelect={(option) => {
+                  setFilterDraft((prev) => ({ ...prev, student: option?.id ?? "all" }));
+                  setFilterDraftStudentOption(option);
+                }}
+                disabled={!canReadStudents}
+              />
+            </FormField>
 
-            <SelectField
-              value={filterDraft.status}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  status: event.target.value as "all" | "resolved" | "open",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="resolved">محلولة</option>
-              <option value="open">غير محلولة</option>
-            </SelectField>
+            <FormField label="الحالة">
+              <SelectField
+                icon={<AlertTriangle />}
+                value={filterDraft.status}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    status: event.target.value as "all" | "resolved" | "open",
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                <option value="resolved">محلولة</option>
+                <option value="open">غير محلولة</option>
+              </SelectField>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">من تاريخ</label>
+            <FormField label="من تاريخ">
               <Input
+                icon={<CalendarDays />}
                 type="date"
                 value={filterDraft.fromDate}
                 onChange={(event) =>
                   setFilterDraft((prev) => ({ ...prev, fromDate: event.target.value }))
                 }
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">إلى تاريخ</label>
+            <FormField label="إلى تاريخ">
               <Input
+                icon={<CalendarDays />}
                 type="date"
                 value={filterDraft.toDate}
                 onChange={(event) =>
                   setFilterDraft((prev) => ({ ...prev, toDate: event.target.value }))
                 }
               />
-            </div>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </SelectField>
+            <FormField label="التفعيل">
+              <SelectField
+                icon={<AlertTriangle />}
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">النشطة فقط</option>
+                <option value="inactive">غير النشطة فقط</option>
+              </SelectField>
+            </FormField>
           </div>
         </FilterDrawer>
 
@@ -667,8 +666,7 @@ export function StudentProblemsWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الطالب *</label>
+            <FormField label="الطالب" required>
               <StudentPickerSheet
                 scope="student-problems"
                 variant="form"
@@ -681,12 +679,12 @@ export function StudentProblemsWorkspace() {
                 disabled={!canReadStudents}
                 triggerTestId="student-problem-form-student"
               />
-            </div>
+            </FormField>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">تاريخ المشكلة *</label>
+              <FormField label="تاريخ المشكلة" required>
                 <Input
+                  icon={<CalendarDays />}
                   data-testid="student-problem-form-date"
                   type="date"
                   value={formState.problemDate}
@@ -695,10 +693,10 @@ export function StudentProblemsWorkspace() {
                   }
                   required
                 />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">نوع المشكلة</label>
+              </FormField>
+              <FormField label="نوع المشكلة">
                 <Input
+                  icon={<Type />}
                   data-testid="student-problem-form-type"
                   value={formState.problemType}
                   onChange={(event) =>
@@ -706,67 +704,56 @@ export function StudentProblemsWorkspace() {
                   }
                   placeholder="مثال: سلوكي"
                 />
-              </div>
+              </FormField>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">وصف المشكلة *</label>
-              <textarea
+            <FormField label="وصف المشكلة" required>
+              <TextareaField
+                icon={<AlertTriangle />}
                 data-testid="student-problem-form-description"
-                className="min-h-[96px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={formState.problemDescription}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, problemDescription: event.target.value }))
                 }
+                required
+                rows={4}
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الإجراءات المتخذة</label>
-              <textarea
+            <FormField label="الإجراءات المتخذة">
+              <TextareaField
+                icon={<Type />}
                 data-testid="student-problem-form-actions"
-                className="min-h-[86px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={formState.actionsTaken}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, actionsTaken: event.target.value }))
                 }
+                rows={4}
               />
-            </div>
+            </FormField>
 
             <div className="grid gap-2 md:grid-cols-3">
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>محضر</span>
-                <input
-                  data-testid="student-problem-form-has-minutes"
-                  type="checkbox"
-                  checked={formState.hasMinutes}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, hasMinutes: event.target.checked }))
-                  }
-                />
-              </label>
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>تم الحل</span>
-                <input
-                  data-testid="student-problem-form-resolved"
-                  type="checkbox"
-                  checked={formState.isResolved}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isResolved: event.target.checked }))
-                  }
-                />
-              </label>
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشط</span>
-                <input
-                  data-testid="student-problem-form-active"
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                />
-              </label>
+              <FormBooleanField
+                label="محضر"
+                checked={formState.hasMinutes}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({ ...prev, hasMinutes: checked }))
+                }
+              />
+              <FormBooleanField
+                label="تم الحل"
+                checked={formState.isResolved}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({ ...prev, isResolved: checked }))
+                }
+              />
+              <FormBooleanField
+                label="نشط"
+                checked={formState.isActive}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({ ...prev, isActive: checked }))
+                }
+              />
             </div>
 
             {formError ? (

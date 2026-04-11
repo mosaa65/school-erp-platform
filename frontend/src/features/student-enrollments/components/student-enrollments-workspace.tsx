@@ -3,13 +3,17 @@
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
+  Activity,
   ArrowRightLeft,
+  CalendarDays,
   GraduationCap,
+  Hash,
   LoaderCircle,
   PencilLine,
   Plus,
   RefreshCw,
   Trash2,
+  Type,
   Undo2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -28,8 +32,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
+import { TextareaField } from "@/components/ui/textarea-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useLookupEnrollmentStatusesQuery } from "@/features/lookup-enrollment-statuses/hooks/use-lookup-enrollment-statuses-query";
 import { useGradeLevelOptionsQuery } from "@/features/student-enrollments/hooks/use-grade-level-options-query";
@@ -656,131 +664,136 @@ export function StudentEnrollmentsWorkspace() {
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
           title="فلاتر القيود"
-          actionButtons={
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
-            </div>
-          }
+          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <StudentPickerSheet
-              scope="student-enrollments"
-              variant="filter"
-              value={filterDraft.student}
-              selectedOption={filterDraftStudentOption}
-              onSelect={(option) => {
-                setFilterDraft((prev) => ({ ...prev, student: option?.id ?? "all" }));
-                setFilterDraftStudentOption(option);
-              }}
-              disabled={!canReadStudents}
-            />
+            <FormField label="الطالب">
+              <StudentPickerSheet
+                scope="student-enrollments"
+                variant="filter"
+                value={filterDraft.student}
+                selectedOption={filterDraftStudentOption}
+                onSelect={(option) => {
+                  setFilterDraft((prev) => ({ ...prev, student: option?.id ?? "all" }));
+                  setFilterDraftStudentOption(option);
+                }}
+                disabled={!canReadStudents}
+              />
+            </FormField>
 
-            <SelectField
-              value={filterDraft.academicYear}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, academicYear: event.target.value }))
-              }
-            >
-              <option value="all">كل السنوات</option>
-              {(academicYearsQuery.data ?? []).map((year) => (
-                <option key={year.id} value={year.id}>
-                  {year.code}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="السنة الأكاديمية">
+              <SelectField
+                icon={<CalendarDays />}
+                value={filterDraft.academicYear}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, academicYear: event.target.value }))
+                }
+              >
+                <option value="all">كل السنوات</option>
+                {(academicYearsQuery.data ?? []).map((year) => (
+                  <option key={year.id} value={year.id}>
+                    {year.code}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.gradeLevel}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  gradeLevel: event.target.value,
-                  section: "all",
-                }))
-              }
-            >
-              <option value="all">كل الصفوف</option>
-              {gradeLevelOptions.map((gradeLevel) => (
-                <option key={gradeLevel.id} value={gradeLevel.id}>
-                  {gradeLevel.name} ({gradeLevel.code})
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="الصف">
+              <SelectField
+                icon={<GraduationCap />}
+                value={filterDraft.gradeLevel}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    gradeLevel: event.target.value,
+                    section: "all",
+                  }))
+                }
+              >
+                <option value="all">كل الصفوف</option>
+                {gradeLevelOptions.map((gradeLevel) => (
+                  <option key={gradeLevel.id} value={gradeLevel.id}>
+                    {gradeLevel.name} ({gradeLevel.code})
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.section}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, section: event.target.value }))
-              }
-            >
-              <option value="all">كل الشعب</option>
-              {(sectionsQuery.data ?? []).map((section) => (
-                <option key={section.id} value={section.id}>
-                  {section.code} - {section.gradeLevel.name}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="الشعبة">
+              <SelectField
+                icon={<GraduationCap />}
+                value={filterDraft.section}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, section: event.target.value }))
+                }
+              >
+                <option value="all">كل الشعب</option>
+                {(sectionsQuery.data ?? []).map((section) => (
+                  <option key={section.id} value={section.id}>
+                    {section.code} - {section.gradeLevel.name}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.status}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  status: event.target.value as StudentEnrollmentStatus | "all",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              {enrollmentStatusOptions.map((status) => (
-                <option key={status.code} value={status.code}>
-                  {status.nameAr}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="الحالة">
+              <SelectField
+                icon={<Activity />}
+                value={filterDraft.status}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    status: event.target.value as StudentEnrollmentStatus | "all",
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                {enrollmentStatusOptions.map((status) => (
+                  <option key={status.code} value={status.code}>
+                    {status.nameAr}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.distributionStatus}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  distributionStatus: event.target.value as
-                    | StudentEnrollmentDistributionStatus
-                    | "all",
-                }))
-              }
-            >
-              <option value="all">كل حالات التوزيع</option>
-              {DISTRIBUTION_STATUS_OPTIONS.map((option) => (
-                <option key={option.code} value={option.code}>
-                  {option.nameAr}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="حالة التوزيع">
+              <SelectField
+                icon={<ArrowRightLeft />}
+                value={filterDraft.distributionStatus}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    distributionStatus: event.target.value as
+                      | StudentEnrollmentDistributionStatus
+                      | "all",
+                  }))
+                }
+              >
+                <option value="all">كل حالات التوزيع</option>
+                {DISTRIBUTION_STATUS_OPTIONS.map((option) => (
+                  <option key={option.code} value={option.code}>
+                    {option.nameAr}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </SelectField>
+            <FormField label="التفعيل">
+              <SelectField
+                icon={<Activity />}
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">النشطة فقط</option>
+                <option value="inactive">غير النشطة فقط</option>
+              </SelectField>
+            </FormField>
           </div>
         </FilterDrawer>
 
@@ -1005,8 +1018,7 @@ export function StudentEnrollmentsWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الطالب *</label>
+            <FormField label="الطالب" required>
               <StudentPickerSheet
                 scope="student-enrollments"
                 variant="form"
@@ -1021,19 +1033,17 @@ export function StudentEnrollmentsWorkspace() {
                 }}
                 disabled={!canReadStudents}
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                السنة الأكاديمية *
-              </label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <FormField label="السنة الأكاديمية" required>
+              <SelectField
+                icon={<CalendarDays />}
                 value={formState.academicYearId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, academicYearId: event.target.value }))
                 }
                 disabled={!canReadAcademicYears}
+                required
               >
                 <option value="">اختر السنة الدراسية</option>
                 {(academicYearsQuery.data ?? []).map((year) => (
@@ -1041,13 +1051,12 @@ export function StudentEnrollmentsWorkspace() {
                     {year.name} ({year.code})
                   </option>
                 ))}
-              </select>
-            </div>
+              </SelectField>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الصف *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <FormField label="الصف" required>
+              <SelectField
+                icon={<GraduationCap />}
                 value={formState.gradeLevelId}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -1057,6 +1066,7 @@ export function StudentEnrollmentsWorkspace() {
                   }))
                 }
                 disabled={!canReadGradeLevels || gradeLevelsQuery.isLoading}
+                required
               >
                 <option value="">اختر الصف</option>
                 {gradeLevelOptions.map((gradeLevel) => (
@@ -1064,15 +1074,20 @@ export function StudentEnrollmentsWorkspace() {
                     {gradeLevel.name} ({gradeLevel.code})
                   </option>
                 ))}
-              </select>
-            </div>
+              </SelectField>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                الشعبة {requiresSection ? "*" : "(اختيارية مع بانتظار التوزيع)"}
-              </label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <FormField
+              label="الشعبة"
+              required={requiresSection}
+              hint={
+                !requiresSection
+                  ? "يمكن ترك الشعبة فارغة عندما تكون حالة التوزيع بانتظار التوزيع."
+                  : undefined
+              }
+            >
+              <SelectField
+                icon={<GraduationCap />}
                 value={formState.sectionId}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -1089,6 +1104,7 @@ export function StudentEnrollmentsWorkspace() {
                   requiresSection === false ||
                   formSectionOptions.length === 0
                 }
+                required={requiresSection}
               >
                 <option value="">
                   {requiresSection ? "اختر الشعبة" : "سيتم التوزيع لاحقًا"}
@@ -1098,32 +1114,25 @@ export function StudentEnrollmentsWorkspace() {
                     {section.name} ({section.code})
                   </option>
                 ))}
-              </select>
-              {!requiresSection ? (
-                <p className="text-[11px] text-muted-foreground">
-                  يمكن ترك الشعبة فارغة عندما تكون حالة التوزيع بانتظار التوزيع.
-                </p>
-              ) : null}
-            </div>
+              </SelectField>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                رقم القيد السنوي
-              </label>
+            <FormField label="رقم القيد السنوي">
               <Input
+                icon={<Hash />}
                 value={formState.yearlyEnrollmentNo}
                 readOnly
                 placeholder="سيُولد تلقائيًا عند الحفظ"
                 className="bg-muted/40"
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                حالة التوزيع
-              </label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <FormField
+              label="حالة التوزيع"
+              hint='رقم القيد السنوي سيُولد تلقائيًا عند الحفظ. عند اختيار "بانتظار التوزيع" سيُحفظ القيد على مستوى الصف فقط بدون شعبة، ويمكن إسناده لاحقًا من شاشة التوزيع.'
+            >
+              <SelectField
+                icon={<ArrowRightLeft />}
                 value={formState.distributionStatus}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -1140,29 +1149,23 @@ export function StudentEnrollmentsWorkspace() {
                     {option.nameAr}
                   </option>
                 ))}
-              </select>
-              <p className="text-[11px] text-muted-foreground">
-                رقم القيد السنوي سيُولد تلقائيًا عند الحفظ. عند اختيار
-                {" "} &quot;بانتظار التوزيع&quot; {" "}سيُحفظ القيد على مستوى الصف فقط بدون شعبة، ويمكن إسناده
-                لاحقًا من شاشة التوزيع.
-              </p>
-            </div>
+              </SelectField>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">تاريخ القيد</label>
+            <FormField label="تاريخ القيد">
               <Input
+                icon={<CalendarDays />}
                 type="date"
                 value={formState.enrollmentDate}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, enrollmentDate: event.target.value }))
                 }
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الحالة *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <FormField label="الحالة" required>
+              <SelectField
+                icon={<Activity />}
                 value={formState.status}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -1170,36 +1173,35 @@ export function StudentEnrollmentsWorkspace() {
                     status: event.target.value as StudentEnrollmentStatus,
                   }))
                 }
+                required
               >
                 {enrollmentStatusOptions.map((status) => (
                   <option key={status.code} value={status.code}>
                     {status.nameAr}
                   </option>
                 ))}
-              </select>
-            </div>
+              </SelectField>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
-              <Input
+            <FormField label="ملاحظات">
+              <TextareaField
+                icon={<Type />}
                 value={formState.notes}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, notes: event.target.value }))
                 }
                 placeholder="منقول من مدرسة أخرى"
+                rows={3}
               />
-            </div>
+            </FormField>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-              />
-            </label>
+            <FormBooleanField
+              label="نشط"
+              checked={formState.isActive}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({ ...prev, isActive: checked }))
+              }
+            />
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

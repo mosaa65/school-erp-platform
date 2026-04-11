@@ -3,16 +3,20 @@
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
+  Activity,
   LoaderCircle,
   PencilLine,
   Plus,
   RefreshCw,
   Trash2,
+  Type,
   Users,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
@@ -27,6 +31,7 @@ import {
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
+import { TextareaField } from "@/components/ui/textarea-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateStudentSiblingMutation,
@@ -400,80 +405,75 @@ export function StudentSiblingsWorkspace() {
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
           title="فلاتر الإخوة"
-          actionButtons={
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
-            </div>
-          }
+          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <StudentPickerSheet
-              scope="student-siblings"
-              variant="filter"
-              value={filterDraft.student}
-              selectedOption={filterDraftStudentOption}
-              onSelect={(option) => {
-                setFilterDraft((prev) => ({ ...prev, student: option?.id ?? "all" }));
-                setFilterDraftStudentOption(option);
-              }}
-              disabled={!canReadStudents}
-            />
+            <FormField label="الطالب">
+              <StudentPickerSheet
+                scope="student-siblings"
+                variant="filter"
+                value={filterDraft.student}
+                selectedOption={filterDraftStudentOption}
+                onSelect={(option) => {
+                  setFilterDraft((prev) => ({ ...prev, student: option?.id ?? "all" }));
+                  setFilterDraftStudentOption(option);
+                }}
+                disabled={!canReadStudents}
+              />
+            </FormField>
 
-            <StudentPickerSheet
-              scope="student-siblings"
-              variant="filter"
-              value={filterDraft.sibling}
-              selectedOption={filterDraftSiblingOption}
-              onSelect={(option) => {
-                setFilterDraft((prev) => ({ ...prev, sibling: option?.id ?? "all" }));
-                setFilterDraftSiblingOption(option);
-              }}
-              disabled={!canReadStudents}
-            />
+            <FormField label="الأخ/الأخت">
+              <StudentPickerSheet
+                scope="student-siblings"
+                variant="filter"
+                value={filterDraft.sibling}
+                selectedOption={filterDraftSiblingOption}
+                onSelect={(option) => {
+                  setFilterDraft((prev) => ({ ...prev, sibling: option?.id ?? "all" }));
+                  setFilterDraftSiblingOption(option);
+                }}
+                disabled={!canReadStudents}
+              />
+            </FormField>
 
-            <SelectField
-              value={filterDraft.relationship}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  relationship: event.target.value as StudentSiblingRelationship | "all",
-                }))
-              }
-            >
-              <option value="all">كل العلاقات</option>
-              {(Object.keys(RELATIONSHIP_LABELS) as StudentSiblingRelationship[]).map(
-                (relationship) => (
-                  <option key={relationship} value={relationship}>
-                    {RELATIONSHIP_LABELS[relationship]}
-                  </option>
-                ),
-              )}
-            </SelectField>
+            <FormField label="نوع العلاقة">
+              <SelectField
+                icon={<Users />}
+                value={filterDraft.relationship}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    relationship: event.target.value as StudentSiblingRelationship | "all",
+                  }))
+                }
+              >
+                <option value="all">كل العلاقات</option>
+                {(Object.keys(RELATIONSHIP_LABELS) as StudentSiblingRelationship[]).map(
+                  (relationship) => (
+                    <option key={relationship} value={relationship}>
+                      {RELATIONSHIP_LABELS[relationship]}
+                    </option>
+                  ),
+                )}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </SelectField>
+            <FormField label="الحالة">
+              <SelectField
+                icon={<Activity />}
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">النشطة فقط</option>
+                <option value="inactive">غير النشطة فقط</option>
+              </SelectField>
+            </FormField>
           </div>
         </FilterDrawer>
 
@@ -629,11 +629,10 @@ export function StudentSiblingsWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الطالب *</label>
+            <FormField label="الطالب" required>
               <StudentPickerSheet
-              scope="student-siblings"
-              variant="form"
+                scope="student-siblings"
+                variant="form"
                 triggerTestId="student-sibling-form-student"
                 value={formState.studentId}
                 selectedOption={selectedFormStudent}
@@ -643,13 +642,12 @@ export function StudentSiblingsWorkspace() {
                 }}
                 disabled={!canReadStudents}
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الأخ/الأخت *</label>
+            <FormField label="الأخ/الأخت" required>
               <StudentPickerSheet
-              scope="student-siblings"
-              variant="form"
+                scope="student-siblings"
+                variant="form"
                 triggerTestId="student-sibling-form-sibling"
                 value={formState.siblingId}
                 selectedOption={selectedFormSibling}
@@ -659,13 +657,12 @@ export function StudentSiblingsWorkspace() {
                 }}
                 disabled={!canReadStudents}
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">نوع العلاقة *</label>
-              <select
+            <FormField label="نوع العلاقة" required>
+              <SelectField
+                icon={<Users />}
                 data-testid="student-sibling-form-relationship"
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                 value={formState.relationship}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -673,6 +670,7 @@ export function StudentSiblingsWorkspace() {
                     relationship: event.target.value as StudentSiblingRelationship,
                   }))
                 }
+                required
               >
                 {(Object.keys(RELATIONSHIP_LABELS) as StudentSiblingRelationship[]).map(
                   (relationship) => (
@@ -681,31 +679,28 @@ export function StudentSiblingsWorkspace() {
                     </option>
                   ),
                 )}
-              </select>
-            </div>
+              </SelectField>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
-              <Input
+            <FormField label="ملاحظات">
+              <TextareaField
+                icon={<Type />}
                 data-testid="student-sibling-form-notes"
                 value={formState.notes}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, notes: event.target.value }))
                 }
+                rows={3}
               />
-            </div>
+            </FormField>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                data-testid="student-sibling-form-active"
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-              />
-            </label>
+            <FormBooleanField
+              label="نشط"
+              checked={formState.isActive}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({ ...prev, isActive: checked }))
+              }
+            />
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

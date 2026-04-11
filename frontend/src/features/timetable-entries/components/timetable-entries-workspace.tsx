@@ -3,13 +3,16 @@
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
+  Activity,
+  CalendarDays,
   CalendarClock,
-  Filter,
+  Hash,
   LoaderCircle,
   PencilLine,
   Plus,
   RefreshCw,
   Trash2,
+  Type,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,7 +28,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
+import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
+import { TextareaField } from "@/components/ui/textarea-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateTimetableEntryMutation,
@@ -482,19 +490,10 @@ export function TimetableEntriesWorkspace() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              className="gap-2"
+            <FilterTriggerButton
+              count={activeFiltersCount}
               onClick={() => setIsFilterOpen((prev) => !prev)}
-            >
-              <Filter className="h-4 w-4" />
-              فلترة
-              {activeFiltersCount > 0 ? (
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
-                  {activeFiltersCount}
-                </span>
-              ) : null}
-            </Button>
+            />
           </div>
         </div>
 
@@ -503,109 +502,111 @@ export function TimetableEntriesWorkspace() {
           onClose={() => setIsFilterOpen(false)}
           title="فلاتر الجدول الدراسي"
           actionButtons={
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
-            </div>
+            <FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />
           }
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.term}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  term: event.target.value,
-                  offering: "all",
-                }))
-              }
-              disabled={!canReadAcademicTerms}
-            >
-              <option value="all">كل الفصول</option>
-              {termOptions.map((term) => (
-                <option key={term.id} value={term.id}>
-                  {term.code}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="الفصل الأكاديمي">
+              <SelectField
+                icon={<CalendarClock />}
+                value={filterDraft.term}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    term: event.target.value,
+                    offering: "all",
+                  }))
+                }
+                disabled={!canReadAcademicTerms}
+              >
+                <option value="all">كل الفصول</option>
+                {termOptions.map((term) => (
+                  <option key={term.id} value={term.id}>
+                    {term.code}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.section}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  section: event.target.value,
-                }))
-              }
-              disabled={!canReadSections}
-            >
-              <option value="all">كل الشعب</option>
-              {filterSectionOptions.map((section) => (
-                <option key={section.id} value={section.id}>
-                  {section.code}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="الشعبة">
+              <SelectField
+                icon={<Type />}
+                value={filterDraft.section}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    section: event.target.value,
+                  }))
+                }
+                disabled={!canReadSections}
+              >
+                <option value="all">كل الشعب</option>
+                {filterSectionOptions.map((section) => (
+                  <option key={section.id} value={section.id}>
+                    {section.code}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.offering}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  offering: event.target.value,
-                }))
-              }
-              disabled={!canReadTermSubjectOfferings}
-            >
-              <option value="all">كل العروض</option>
-              {filterOfferingOptions.map((offering) => (
-                <option key={offering.id} value={offering.id}>
-                  {offering.gradeLevelSubject.gradeLevel.code} -{" "}
-                  {offering.gradeLevelSubject.subject.code}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="عرض المادة">
+              <SelectField
+                icon={<Type />}
+                value={filterDraft.offering}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    offering: event.target.value,
+                  }))
+                }
+                disabled={!canReadTermSubjectOfferings}
+              >
+                <option value="all">كل العروض</option>
+                {filterOfferingOptions.map((offering) => (
+                  <option key={offering.id} value={offering.id}>
+                    {offering.gradeLevelSubject.gradeLevel.code} -{" "}
+                    {offering.gradeLevelSubject.subject.code}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.day}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  day: event.target.value as TimetableDay | "all",
-                }))
-              }
-            >
-              <option value="all">كل الأيام</option>
-              {DAY_OPTIONS.map((day) => (
-                <option key={day} value={day}>
-                  {translateTimetableDay(day)}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="اليوم">
+              <SelectField
+                icon={<CalendarDays />}
+                value={filterDraft.day}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    day: event.target.value as TimetableDay | "all",
+                  }))
+                }
+              >
+                <option value="all">كل الأيام</option>
+                {DAY_OPTIONS.map((day) => (
+                  <option key={day} value={day}>
+                    {translateTimetableDay(day)}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </SelectField>
+            <FormField label="الحالة">
+              <SelectField
+                icon={<Activity />}
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">النشطة فقط</option>
+                <option value="inactive">غير النشطة فقط</option>
+              </SelectField>
+            </FormField>
           </div>
         </FilterDrawer>
 
@@ -772,9 +773,9 @@ export function TimetableEntriesWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الفصل الأكاديمي *</label>
+            <FormField label="الفصل الأكاديمي" required>
               <SelectField
+                icon={<CalendarClock />}
                 value={formState.academicTermId}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -785,19 +786,20 @@ export function TimetableEntriesWorkspace() {
                   }))
                 }
                 disabled={!canReadAcademicTerms}
+                required
               >
                 <option value="">اختر الفصل الدراسي</option>
                 {termOptions.map((term) => (
                   <option key={term.id} value={term.id}>
                     {term.name} ({term.code})
                   </option>
-                ))}
-              </SelectField>
-            </div>
+                  ))}
+                </SelectField>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">عرض المادة *</label>
+            <FormField label="عرض المادة" required>
               <SelectField
+                icon={<Type />}
                 value={formState.termSubjectOfferingId}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -807,6 +809,7 @@ export function TimetableEntriesWorkspace() {
                   }))
                 }
                 disabled={!canReadTermSubjectOfferings || !formState.academicTermId}
+                required
               >
                 <option value="">اختر الطرح</option>
                 {formOfferings.map((offering) => (
@@ -814,13 +817,13 @@ export function TimetableEntriesWorkspace() {
                     {offering.gradeLevelSubject.gradeLevel.code} -{" "}
                     {offering.gradeLevelSubject.subject.code}
                   </option>
-                ))}
-              </SelectField>
-            </div>
+                  ))}
+                </SelectField>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الشعبة *</label>
+            <FormField label="الشعبة" required>
               <SelectField
+                icon={<Type />}
                 value={formState.sectionId}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -829,20 +832,21 @@ export function TimetableEntriesWorkspace() {
                   }))
                 }
                 disabled={!canReadSections || !formState.termSubjectOfferingId}
+                required
               >
                 <option value="">اختر الشعبة</option>
                 {formSectionOptions.map((section) => (
                   <option key={section.id} value={section.id}>
                     {section.name} ({section.code})
                   </option>
-                ))}
-              </SelectField>
-            </div>
+                  ))}
+                </SelectField>
+            </FormField>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">اليوم *</label>
+              <FormField label="اليوم" required>
                 <SelectField
+                  icon={<CalendarDays />}
                   value={formState.dayOfWeek}
                   onChange={(event) =>
                     setFormState((prev) => ({
@@ -850,6 +854,7 @@ export function TimetableEntriesWorkspace() {
                       dayOfWeek: event.target.value as TimetableDay,
                     }))
                   }
+                  required
                 >
                   {DAY_OPTIONS.map((day) => (
                     <option key={day} value={day}>
@@ -857,11 +862,11 @@ export function TimetableEntriesWorkspace() {
                     </option>
                   ))}
                 </SelectField>
-              </div>
+              </FormField>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">رقم الحصة *</label>
+              <FormField label="رقم الحصة" required>
                 <Input
+                  icon={<Hash />}
                   type="number"
                   min={1}
                   max={20}
@@ -871,41 +876,39 @@ export function TimetableEntriesWorkspace() {
                   }
                   required
                 />
-              </div>
+              </FormField>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">اسم القاعة</label>
+            <FormField label="اسم القاعة">
               <Input
+                icon={<Type />}
                 value={formState.roomLabel}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, roomLabel: event.target.value }))
                 }
                 placeholder="A-204"
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
-              <Input
+            <FormField label="ملاحظات">
+              <TextareaField
+                icon={<Type />}
                 value={formState.notes}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, notes: event.target.value }))
                 }
                 placeholder="ملاحظات اختيارية"
+                rows={3}
               />
-            </div>
+            </FormField>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-              />
-            </label>
+            <FormBooleanField
+              label="نشط"
+              checked={formState.isActive}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({ ...prev, isActive: checked }))
+              }
+            />
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

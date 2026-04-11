@@ -9,6 +9,7 @@ import {
   Plus,
   RefreshCw,
   Trash2,
+  Type,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
@@ -22,7 +23,10 @@ import {
 } from "@/components/ui/card";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
@@ -334,51 +338,42 @@ export function FiscalYearsWorkspace() {
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
           title="فلاتر السنوات المالية"
-          actionButtons={
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
-            </div>
-          }
+          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.closed}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  closed: event.target.value as "all" | "closed" | "open",
-                }))
-              }
-            >
-              <option value="all">كل حالات الإغلاق</option>
-              <option value="open">مفتوحة</option>
-              <option value="closed">مغلقة</option>
-            </SelectField>
+            <FormField label="حالة الإغلاق">
+              <SelectField
+                icon={<CalendarDays />}
+                value={filterDraft.closed}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    closed: event.target.value as "all" | "closed" | "open",
+                  }))
+                }
+              >
+                <option value="all">كل حالات الإغلاق</option>
+                <option value="open">مفتوحة</option>
+                <option value="closed">مغلقة</option>
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل حالات التفعيل</option>
-              <option value="active">نشطة</option>
-              <option value="inactive">غير نشطة</option>
-            </SelectField>
+            <FormField label="التفعيل">
+              <SelectField
+                icon={<CalendarDays />}
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+              >
+                <option value="all">كل حالات التفعيل</option>
+                <option value="active">نشطة</option>
+                <option value="inactive">غير نشطة</option>
+              </SelectField>
+            </FormField>
           </div>
         </FilterDrawer>
 
@@ -534,9 +529,9 @@ export function FiscalYearsWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
+            <FormField label="الاسم" required>
               <Input
+                icon={<Type />}
                 value={form.nameAr}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, nameAr: event.target.value }))
@@ -544,14 +539,12 @@ export function FiscalYearsWorkspace() {
                 placeholder="السنة المالية 2026"
                 required
               />
-            </div>
+            </FormField>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  تاريخ البداية *
-                </label>
+              <FormField label="تاريخ البداية" required>
                 <Input
+                  icon={<CalendarDays />}
                   type="date"
                   value={form.startDate}
                   onChange={(event) =>
@@ -559,10 +552,10 @@ export function FiscalYearsWorkspace() {
                   }
                   required
                 />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">تاريخ النهاية *</label>
+              </FormField>
+              <FormField label="تاريخ النهاية" required>
                 <Input
+                  icon={<CalendarDays />}
                   type="date"
                   value={form.endDate}
                   onChange={(event) =>
@@ -570,43 +563,35 @@ export function FiscalYearsWorkspace() {
                   }
                   required
                 />
-              </div>
+              </FormField>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                معرف السنة الأكاديمية (اختياري)
-              </label>
+            <FormField label="معرف السنة الأكاديمية">
               <Input
+                icon={<CalendarDays />}
                 value={form.academicYearId ?? ""}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, academicYearId: event.target.value }))
                 }
                 placeholder="cmabc123year"
               />
-            </div>
+            </FormField>
 
             <div className="grid gap-2 md:grid-cols-2">
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>مغلقة</span>
-                <input
-                  type="checkbox"
-                  checked={form.isClosed ?? false}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, isClosed: event.target.checked }))
-                  }
-                />
-              </label>
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشطة</span>
-                <input
-                  type="checkbox"
-                  checked={form.isActive ?? true}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                />
-              </label>
+              <FormBooleanField
+                label="مغلقة"
+                checked={form.isClosed ?? false}
+                onCheckedChange={(checked) =>
+                  setForm((prev) => ({ ...prev, isClosed: checked }))
+                }
+              />
+              <FormBooleanField
+                label="نشطة"
+                checked={form.isActive ?? true}
+                onCheckedChange={(checked) =>
+                  setForm((prev) => ({ ...prev, isActive: checked }))
+                }
+              />
             </div>
 
             {formError ? (

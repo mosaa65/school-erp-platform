@@ -5,15 +5,17 @@ import {
   FIELD_ICON_CLASS_NAME,
   FIELD_ICON_BADGE_CLASS_NAME,
   FIELD_ICON_EDGE_RIGHT_CLASS_NAME,
-  FIELD_SURFACE_CLASS_NAME,
+  FIELD_TEXTAREA_SURFACE_CLASS_NAME,
 } from "@/components/ui/field-styles";
 
-export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+export interface TextareaFieldProps
+  extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   icon?: React.ReactNode;
+  containerClassName?: string;
 }
 
-const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, icon, ...props }, ref) => {
+const TextareaField = React.forwardRef<HTMLTextAreaElement, TextareaFieldProps>(
+  ({ className, containerClassName, icon, rows = 4, ...props }, ref) => {
     const resolvedIcon =
       icon ?? (props.required ? <Asterisk className="text-rose-500" /> : null);
     const renderedIcon =
@@ -28,26 +30,27 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         : resolvedIcon;
 
     return (
-      <div className="group relative w-full">
+      <div className={cn("group relative w-full", containerClassName)}>
         {renderedIcon ? (
           <div
             className={cn(
               FIELD_ICON_BADGE_CLASS_NAME,
               FIELD_ICON_EDGE_RIGHT_CLASS_NAME,
-              "group-focus-within:text-[color:var(--app-accent-color)]",
+              "top-4 translate-y-0 group-focus-within:text-[color:var(--app-accent-color)]",
             )}
           >
             {renderedIcon}
           </div>
         ) : null}
-        <input
-          type={type}
+        <textarea
+          ref={ref}
+          rows={rows}
           className={cn(
-            FIELD_SURFACE_CLASS_NAME,
+            FIELD_TEXTAREA_SURFACE_CLASS_NAME,
+            "resize-y",
             renderedIcon ? "pr-14" : "pr-4",
             className,
           )}
-          ref={ref}
           {...props}
         />
       </div>
@@ -55,6 +58,6 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
   },
 );
 
-Input.displayName = "Input";
+TextareaField.displayName = "TextareaField";
 
-export { Input };
+export { TextareaField };

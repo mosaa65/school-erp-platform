@@ -2,12 +2,16 @@
 
 import * as React from "react";
 import {
+  Activity,
+  GraduationCap,
+  Hash,
   Layers,
   LoaderCircle,
   PencilLine,
   Plus,
   RefreshCw,
   Trash2,
+  Type,
   WalletCards,
 } from "lucide-react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
@@ -17,7 +21,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { PageShell } from "@/components/ui/page-shell";
 import { SearchField } from "@/components/ui/search-field";
@@ -390,70 +397,76 @@ export function FeeStructuresWorkspace() {
         open={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
         title="فلاتر هياكل الرسوم"
-        actionButtons={
-          <div className="flex w-full gap-2">
-            <Button type="button" variant="outline" onClick={clearFilters} className="flex-1">
-              مسح
-            </Button>
-            <Button type="button" onClick={applyFilters} className="flex-1">
-              تطبيق
-            </Button>
-          </div>
-        }
+        actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
       >
         <div className="grid gap-3 sm:grid-cols-2">
-          <Input
-            value={filterDraft.academicYearId}
-            onChange={(event) =>
-              setFilterDraft((prev) => ({ ...prev, academicYearId: event.target.value }))
-            }
-            placeholder="معرّف السنة الأكاديمية"
-          />
-          <Input
-            value={filterDraft.gradeLevelId}
-            onChange={(event) =>
-              setFilterDraft((prev) => ({ ...prev, gradeLevelId: event.target.value }))
-            }
-            placeholder="معرّف المرحلة"
-          />
-          <SelectField
-            value={filterDraft.feeType}
-            onChange={(event) =>
-              setFilterDraft((prev) => ({
-                ...prev,
-                feeType: event.target.value as "all" | FeeType,
-              }))
-            }
-          >
-            <option value="all">كل الأنواع</option>
-            {Object.entries(FEE_TYPE_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </SelectField>
-          <Input
-            type="number"
-            min="1"
-            value={filterDraft.currencyId}
-            onChange={(event) =>
-              setFilterDraft((prev) => ({ ...prev, currencyId: event.target.value }))
-            }
-            placeholder="معرّف العملة"
-          />
-          <SelectField
-            value={filterDraft.isActive}
-            onChange={(event) =>
-              setFilterDraft((prev) => ({
-                ...prev,
-                isActive: event.target.value as "all" | "active" | "inactive",
-              }))
-            }
-          >
-            <option value="all">كل الحالات</option>
-            <option value="active">نشط</option>
-            <option value="inactive">غير نشط</option>
-          </SelectField>
+          <FormField label="معرّف السنة الأكاديمية">
+            <Input
+              icon={<GraduationCap />}
+              value={filterDraft.academicYearId}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, academicYearId: event.target.value }))
+              }
+              placeholder="معرّف السنة الأكاديمية"
+            />
+          </FormField>
+          <FormField label="معرّف المرحلة">
+            <Input
+              icon={<GraduationCap />}
+              value={filterDraft.gradeLevelId}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, gradeLevelId: event.target.value }))
+              }
+              placeholder="معرّف المرحلة"
+            />
+          </FormField>
+          <FormField label="نوع الرسوم">
+            <SelectField
+              icon={<WalletCards />}
+              value={filterDraft.feeType}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  feeType: event.target.value as "all" | FeeType,
+                }))
+              }
+            >
+              <option value="all">كل الأنواع</option>
+              {Object.entries(FEE_TYPE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </SelectField>
+          </FormField>
+          <FormField label="معرّف العملة">
+            <Input
+              icon={<Hash />}
+              type="number"
+              min="1"
+              value={filterDraft.currencyId}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, currencyId: event.target.value }))
+              }
+              placeholder="معرّف العملة"
+            />
+          </FormField>
+          <FormField label="الحالة">
+            <SelectField
+              icon={<Activity />}
+              value={filterDraft.isActive}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  isActive: event.target.value as "all" | "active" | "inactive",
+                }))
+              }
+            >
+              <option value="all">كل الحالات</option>
+              <option value="active">نشط</option>
+              <option value="inactive">غير نشط</option>
+            </SelectField>
+          </FormField>
         </div>
       </FilterDrawer>
 
@@ -563,11 +576,9 @@ export function FeeStructuresWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                السنة الأكاديمية *
-              </label>
+            <FormField label="السنة الأكاديمية" required>
               <Input
+                icon={<GraduationCap />}
                 value={form.academicYearId}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, academicYearId: event.target.value }))
@@ -575,26 +586,27 @@ export function FeeStructuresWorkspace() {
                 placeholder="معرّف السنة الأكاديمية"
                 required
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">المرحلة</label>
+            <FormField label="المرحلة">
               <Input
+                icon={<GraduationCap />}
                 value={form.gradeLevelId}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, gradeLevelId: event.target.value }))
                 }
                 placeholder="معرّف المرحلة (اختياري)"
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">نوع الرسوم *</label>
+            <FormField label="نوع الرسوم" required>
               <SelectField
+                icon={<WalletCards />}
                 value={form.feeType}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, feeType: event.target.value as FeeType }))
                 }
+                required
               >
                 {Object.entries(FEE_TYPE_LABELS).map(([value, label]) => (
                   <option key={value} value={value}>
@@ -602,22 +614,22 @@ export function FeeStructuresWorkspace() {
                   </option>
                 ))}
               </SelectField>
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
+            <FormField label="الاسم" required>
               <Input
+                icon={<Type />}
                 value={form.nameAr}
                 onChange={(event) => setForm((prev) => ({ ...prev, nameAr: event.target.value }))}
                 placeholder="اسم الهيكل"
                 required
               />
-            </div>
+            </FormField>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">القيمة *</label>
+              <FormField label="القيمة" required>
                 <Input
+                  icon={<Hash />}
                   type="number"
                   min="0"
                   value={form.amount}
@@ -627,10 +639,10 @@ export function FeeStructuresWorkspace() {
                   placeholder="0"
                   required
                 />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">العملة</label>
+              </FormField>
+              <FormField label="العملة">
                 <Input
+                  icon={<Hash />}
                   type="number"
                   min="1"
                   value={form.currencyId}
@@ -639,14 +651,12 @@ export function FeeStructuresWorkspace() {
                   }
                   placeholder="معرّف العملة (اختياري)"
                 />
-              </div>
+              </FormField>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                نسبة الضريبة (اختياري)
-              </label>
+            <FormField label="نسبة الضريبة (اختياري)">
               <Input
+                icon={<Hash />}
                 type="number"
                 min="0"
                 value={form.vatRate}
@@ -655,18 +665,15 @@ export function FeeStructuresWorkspace() {
                 }
                 placeholder="0"
               />
-            </div>
+            </FormField>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span className="flex items-center gap-2">نشط</span>
-              <input
-                type="checkbox"
-                checked={form.isActive}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-              />
-            </label>
+            <FormBooleanField
+              label="نشط"
+              checked={form.isActive}
+              onCheckedChange={(checked) =>
+                setForm((prev) => ({ ...prev, isActive: checked }))
+              }
+            />
 
             {formError ? (
               <FinanceAlert tone="error" className="p-2 text-xs">

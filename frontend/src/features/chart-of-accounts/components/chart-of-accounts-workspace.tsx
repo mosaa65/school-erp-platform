@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   ShieldX,
   Trash2,
+  Type,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
@@ -25,7 +26,10 @@ import {
 } from "@/components/ui/card";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
@@ -121,7 +125,10 @@ export function ChartOfAccountsWorkspace() {
   });
 
   const allAccountsQuery = useChartOfAccountsQuery({ page: 1, limit: 200 });
-  const allAccounts = allAccountsQuery.data?.data ?? [];
+  const allAccounts = React.useMemo(
+    () => allAccountsQuery.data?.data ?? [],
+    [allAccountsQuery.data?.data],
+  );
 
   const createMutation = useCreateChartOfAccountMutation();
   const updateMutation = useUpdateChartOfAccountMutation();
@@ -354,54 +361,45 @@ export function ChartOfAccountsWorkspace() {
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
           title="فلاتر دليل الحسابات"
-          actionButtons={
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
-            </div>
-          }
+          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">نشط</option>
-              <option value="inactive">غير نشط</option>
-            </SelectField>
+            <FormField label="الحالة">
+              <SelectField
+                icon={<ShieldCheck />}
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">نشط</option>
+                <option value="inactive">غير نشط</option>
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.type}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  type: event.target.value as AccountType | "all",
-                }))
-              }
-            >
-              <option value="all">كل الأنواع</option>
-              <option value="ASSET">أصول</option>
-              <option value="LIABILITY">التزامات</option>
-              <option value="EQUITY">حقوق ملكية</option>
-              <option value="REVENUE">إيرادات</option>
-              <option value="EXPENSE">مصروفات</option>
-            </SelectField>
+            <FormField label="نوع الحساب">
+              <SelectField
+                icon={<Network />}
+                value={filterDraft.type}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    type: event.target.value as AccountType | "all",
+                  }))
+                }
+              >
+                <option value="all">كل الأنواع</option>
+                <option value="ASSET">أصول</option>
+                <option value="LIABILITY">التزامات</option>
+                <option value="EQUITY">حقوق ملكية</option>
+                <option value="REVENUE">إيرادات</option>
+                <option value="EXPENSE">مصروفات</option>
+              </SelectField>
+            </FormField>
           </div>
         </FilterDrawer>
 
@@ -568,9 +566,9 @@ export function ChartOfAccountsWorkspace() {
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الاسم العربي *</label>
+              <FormField label="الاسم العربي" required>
                 <Input
+                  icon={<Type />}
                   value={form.nameAr}
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, nameAr: event.target.value }))
@@ -578,24 +576,23 @@ export function ChartOfAccountsWorkspace() {
                   placeholder="الصندوق"
                   required
                 />
-              </div>
+              </FormField>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الاسم الإنجليزي</label>
+              <FormField label="الاسم الإنجليزي">
                 <Input
+                  icon={<Type />}
                   value={form.nameEn ?? ""}
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, nameEn: event.target.value }))
                   }
                   placeholder="Cash"
                 />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">نوع الحساب *</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              </FormField>
+              <FormField label="نوع الحساب" required>
+                <SelectField
+                  icon={<Network />}
                   value={form.accountType}
                   onChange={(event) =>
                     setForm((prev) => ({
@@ -603,19 +600,20 @@ export function ChartOfAccountsWorkspace() {
                       accountType: event.target.value as AccountType,
                     }))
                   }
+                  required
                 >
                   <option value="ASSET">أصول</option>
                   <option value="LIABILITY">التزامات</option>
                   <option value="EQUITY">حقوق ملكية</option>
                   <option value="REVENUE">إيرادات</option>
                   <option value="EXPENSE">مصروفات</option>
-                </select>
-              </div>
+                </SelectField>
+              </FormField>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الحساب الأب</label>
+            <FormField label="الحساب الأب">
               <SelectField
+                icon={<BookOpenCheck />}
                 value={form.parentId ?? ""}
                 onChange={(event) =>
                   setForm((prev) => ({
@@ -633,48 +631,30 @@ export function ChartOfAccountsWorkspace() {
                     </option>
                   ))}
               </SelectField>
-            </div>
+            </FormField>
 
             <div className="grid gap-2 md:grid-cols-3">
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span className="flex items-center gap-2">
-                  <Network className="h-4 w-4" />
-                  حساب تحكمي
-                </span>
-                <input
-                  type="checkbox"
-                  checked={form.isHeader ?? false}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, isHeader: event.target.checked }))
-                  }
-                />
-              </label>
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span className="flex items-center gap-2">
-                  <BookOpenCheck className="h-4 w-4" />
-                  حساب بنكي
-                </span>
-                <input
-                  type="checkbox"
-                  checked={form.isBankAccount ?? false}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, isBankAccount: event.target.checked }))
-                  }
-                />
-              </label>
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4" />
-                  نشط
-                </span>
-                <input
-                  type="checkbox"
-                  checked={form.isActive ?? true}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                />
-              </label>
+              <FormBooleanField
+                label="حساب تحكمي"
+                checked={form.isHeader ?? false}
+                onCheckedChange={(checked) =>
+                  setForm((prev) => ({ ...prev, isHeader: checked }))
+                }
+              />
+              <FormBooleanField
+                label="حساب بنكي"
+                checked={form.isBankAccount ?? false}
+                onCheckedChange={(checked) =>
+                  setForm((prev) => ({ ...prev, isBankAccount: checked }))
+                }
+              />
+              <FormBooleanField
+                label="نشط"
+                checked={form.isActive ?? true}
+                onCheckedChange={(checked) =>
+                  setForm((prev) => ({ ...prev, isActive: checked }))
+                }
+              />
             </div>
 
             {formError ? (

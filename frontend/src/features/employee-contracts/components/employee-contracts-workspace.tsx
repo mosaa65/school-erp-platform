@@ -2,8 +2,11 @@
 
 import * as React from "react";
 import {
+  Activity,
   AlertTriangle,
   BellRing,
+  CalendarRange,
+  Hash,
   LoaderCircle,
   PencilLine,
   Plus,
@@ -11,6 +14,8 @@ import {
   RotateCcw,
   ScrollText,
   Trash2,
+  Type,
+  UserRound,
 } from "lucide-react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import { Badge } from "@/components/ui/badge";
@@ -26,9 +31,12 @@ import {
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
+import { TextareaField } from "@/components/ui/textarea-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateEmployeeContractRenewalDraftMutation,
@@ -512,63 +520,78 @@ export function EmployeeContractsWorkspace() {
           actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.employee}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, employee: event.target.value }))
-              }
-            >
-              <option value="all">كل الموظفين</option>
-              {(employeesQuery.data ?? []).map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.jobNumber ?? employee.fullName}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="الموظف">
+              <SelectField
+                icon={<UserRound />}
+                value={filterDraft.employee}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, employee: event.target.value }))
+                }
+              >
+                <option value="all">كل الموظفين</option>
+                {(employeesQuery.data ?? []).map((employee) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.jobNumber ?? employee.fullName}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <Input
-              type="date"
-              value={filterDraft.fromDate}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, fromDate: event.target.value }))
-              }
-            />
+            <FormField label="من تاريخ">
+              <Input
+                icon={<CalendarRange />}
+                type="date"
+                value={filterDraft.fromDate}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, fromDate: event.target.value }))
+                }
+              />
+            </FormField>
 
-            <Input
-              type="date"
-              value={filterDraft.toDate}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, toDate: event.target.value }))
-              }
-            />
+            <FormField label="إلى تاريخ">
+              <Input
+                icon={<CalendarRange />}
+                type="date"
+                value={filterDraft.toDate}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, toDate: event.target.value }))
+                }
+              />
+            </FormField>
 
-            <SelectField
-              value={filterDraft.current}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  current: event.target.value as "all" | "current" | "archived",
-                }))
-              }
-            >
-              <option value="all">كل العقود</option>
-              <option value="current">العقود الحالية</option>
-              <option value="archived">العقود المؤرشفة</option>
-            </SelectField>
+            <FormField label="نوع السجل">
+              <SelectField
+                icon={<RotateCcw />}
+                value={filterDraft.current}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    current: event.target.value as "all" | "current" | "archived",
+                  }))
+                }
+              >
+                <option value="all">كل العقود</option>
+                <option value="current">العقود الحالية</option>
+                <option value="archived">العقود المؤرشفة</option>
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </SelectField>
+            <FormField label="الحالة">
+              <SelectField
+                icon={<Activity />}
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">النشطة فقط</option>
+                <option value="inactive">غير النشطة فقط</option>
+              </SelectField>
+            </FormField>
           </div>
         </FilterDrawer>
 
@@ -818,15 +841,15 @@ export function EmployeeContractsWorkspace() {
               </div>
             ) : null}
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <FormField label="الموظف" required>
+              <SelectField
+                icon={<UserRound />}
                 value={formState.employeeId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
                 }
                 disabled={!canReadEmployees}
+                required
                 data-testid="contract-form-employee"
               >
                 <option value="">اختر الموظف</option>
@@ -835,12 +858,12 @@ export function EmployeeContractsWorkspace() {
                     {employee.fullName} ({employee.jobNumber ?? "غير متوفر"})
                   </option>
                 ))}
-              </select>
-            </div>
+              </SelectField>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">عنوان العقد *</label>
+            <FormField label="عنوان العقد" required>
               <Input
+                icon={<ScrollText />}
                 value={formState.contractTitle}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, contractTitle: event.target.value }))
@@ -849,11 +872,11 @@ export function EmployeeContractsWorkspace() {
                 required
                 data-testid="contract-form-title"
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">رقم العقد</label>
+            <FormField label="رقم العقد">
               <Input
+                icon={<Hash />}
                 value={formState.contractNumber}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, contractNumber: event.target.value }))
@@ -861,23 +884,24 @@ export function EmployeeContractsWorkspace() {
                 placeholder="CNT-2026-001"
                 data-testid="contract-form-number"
               />
-            </div>
+            </FormField>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">تاريخ البداية *</label>
+              <FormField label="تاريخ البداية" required>
                 <Input
+                  icon={<CalendarRange />}
                   type="date"
                   value={formState.contractStartDate}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, contractStartDate: event.target.value }))
                   }
+                  required
                   data-testid="contract-form-start-date"
                 />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">تاريخ النهاية</label>
+              </FormField>
+              <FormField label="تاريخ النهاية">
                 <Input
+                  icon={<CalendarRange />}
                   type="date"
                   value={formState.contractEndDate}
                   onChange={(event) =>
@@ -885,12 +909,12 @@ export function EmployeeContractsWorkspace() {
                   }
                   data-testid="contract-form-end-date"
                 />
-              </div>
+              </FormField>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الراتب المرجعي</label>
+            <FormField label="الراتب المرجعي">
               <Input
+                icon={<Hash />}
                 type="number"
                 min={0}
                 step="0.01"
@@ -901,43 +925,36 @@ export function EmployeeContractsWorkspace() {
                 placeholder="120000.00"
                 data-testid="contract-form-salary"
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
-              <Input
+            <FormField label="ملاحظات">
+              <TextareaField
+                icon={<Type />}
                 value={formState.notes}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, notes: event.target.value }))
                 }
                 placeholder="عقد قابل للتجديد وفق الحاجة"
+                rows={3}
                 data-testid="contract-form-notes"
               />
-            </div>
+            </FormField>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>العقد الحالي</span>
-              <input
-                type="checkbox"
-                checked={formState.isCurrent}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isCurrent: event.target.checked }))
-                }
-                data-testid="contract-form-current"
-              />
-            </label>
+            <FormBooleanField
+              label="العقد الحالي"
+              checked={formState.isCurrent}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({ ...prev, isCurrent: checked }))
+              }
+            />
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-                data-testid="contract-form-active"
-              />
-            </label>
+            <FormBooleanField
+              label="نشط"
+              checked={formState.isActive}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({ ...prev, isActive: checked }))
+              }
+            />
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

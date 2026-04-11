@@ -2,6 +2,7 @@ import * as React from "react";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
+  FIELD_ICON_CLASS_NAME,
   FIELD_ICON_BADGE_CLASS_NAME,
   FIELD_ICON_EDGE_RIGHT_CLASS_NAME,
   FIELD_SURFACE_CLASS_NAME,
@@ -25,7 +26,7 @@ export function SearchField({
           "group-focus-within:text-[color:var(--app-accent-color)]",
         )}
       >
-        <Search className="h-4.5 w-4.5 text-[color:var(--app-accent-color)]" />
+        <Search className={cn(FIELD_ICON_CLASS_NAME, "text-[color:var(--app-accent-color)]")} />
       </div>
       <input
         type="text"

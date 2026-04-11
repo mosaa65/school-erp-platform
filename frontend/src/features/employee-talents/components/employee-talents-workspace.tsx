@@ -9,10 +9,13 @@ import {
   RefreshCw,
   Sparkles,
   Trash2,
+  Type,
+  UserRound,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
@@ -26,6 +29,7 @@ import {
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { Fab } from "@/components/ui/fab";
+import { TextareaField } from "@/components/ui/textarea-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useEmployeeOptionsQuery } from "@/features/employee-talents/hooks/use-employee-options-query";
 import {
@@ -321,47 +325,56 @@ export function EmployeeTalentsWorkspace() {
           actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.employee}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, employee: event.target.value }))
-              }
-            >
-              <option value="all">كل الموظفين</option>
-              {(employeesQuery.data ?? []).map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="الموظف">
+              <SelectField
+                icon={<UserRound />}
+                value={filterDraft.employee}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, employee: event.target.value }))
+                }
+              >
+                <option value="all">كل الموظفين</option>
+                {(employeesQuery.data ?? []).map((employee) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.talent}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, talent: event.target.value }))
-              }
-            >
-              <option value="all">كل المواهب</option>
-              {(talentsQuery.data ?? []).map((talent) => (
-                <option key={talent.id} value={talent.id}>
-                  {talent.name} ({talent.code})
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="الموهبة">
+              <SelectField
+                icon={<Sparkles />}
+                value={filterDraft.talent}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, talent: event.target.value }))
+                }
+              >
+                <option value="all">كل المواهب</option>
+                {(talentsQuery.data ?? []).map((talent) => (
+                  <option key={talent.id} value={talent.id}>
+                    {talent.name} ({talent.code})
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </SelectField>
+            <FormField label="الحالة">
+              <SelectField
+                icon={<Sparkles />}
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">النشطة فقط</option>
+                <option value="inactive">غير النشطة فقط</option>
+              </SelectField>
+            </FormField>
           </div>
         </FilterDrawer>
 
@@ -525,15 +538,15 @@ export function EmployeeTalentsWorkspace() {
             <p className="text-sm text-muted-foreground">
               {isEditing ? "تحديث ربط الموظف بالموهبة." : "إضافة موهبة جديدة لموظف ضمن الموارد البشرية."}
             </p>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <FormField label="الموظف" required>
+              <SelectField
+                icon={<UserRound />}
                 value={formState.employeeId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
                 }
                 disabled={!canReadEmployees}
+                required
                 data-testid="talent-form-employee"
               >
                 <option value="">اختر الموظف</option>
@@ -542,18 +555,18 @@ export function EmployeeTalentsWorkspace() {
                     {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
                   </option>
                 ))}
-              </select>
-            </div>
+              </SelectField>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الموهبة *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <FormField label="الموهبة" required>
+              <SelectField
+                icon={<Sparkles />}
                 value={formState.talentId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, talentId: event.target.value }))
                 }
                 disabled={!canReadTalents}
+                required
                 data-testid="talent-form-talent"
               >
                 <option value="">اختر الموهبة</option>
@@ -562,32 +575,29 @@ export function EmployeeTalentsWorkspace() {
                     {talent.name} ({talent.code})
                   </option>
                 ))}
-              </select>
-            </div>
+              </SelectField>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
-              <Input
+            <FormField label="ملاحظات">
+              <TextareaField
+                icon={<Type />}
                 value={formState.notes}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, notes: event.target.value }))
                 }
                 placeholder="يقود ورش تحسين الخط"
+                rows={3}
                 data-testid="talent-form-notes"
               />
-            </div>
+            </FormField>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-                data-testid="talent-form-active"
-              />
-            </label>
+            <FormBooleanField
+              label="نشط"
+              checked={formState.isActive}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({ ...prev, isActive: checked }))
+              }
+            />
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

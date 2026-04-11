@@ -3,7 +3,10 @@
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
+  Activity,
   BookText,
+  CalendarDays,
+  GraduationCap,
   LoaderCircle,
   PencilLine,
   Plus,
@@ -25,8 +28,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
+import { TextareaField } from "@/components/ui/textarea-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateStudentBookMutation,
@@ -566,90 +573,86 @@ export function StudentBooksWorkspace() {
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
           title="فلاتر الكتب"
-          actionButtons={
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
-            </div>
-          }
+          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <StudentPickerSheet
-              scope="student-books"
-              variant="filter"
-              value={filterDraft.student}
-              selectedOption={filterDraftStudentOption}
-              onSelect={(option) => {
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  student: option?.id ?? "all",
-                  enrollment: option ? "all" : prev.enrollment,
-                }));
-                setFilterDraftStudentOption(option);
-              }}
-              disabled={!canReadStudents}
-            />
+            <FormField label="الطالب">
+              <StudentPickerSheet
+                scope="student-books"
+                variant="filter"
+                value={filterDraft.student}
+                selectedOption={filterDraftStudentOption}
+                onSelect={(option) => {
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    student: option?.id ?? "all",
+                    enrollment: option ? "all" : prev.enrollment,
+                  }));
+                  setFilterDraftStudentOption(option);
+                }}
+                disabled={!canReadStudents}
+              />
+            </FormField>
 
-            <SelectField
-              value={filterDraft.enrollment}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, enrollment: event.target.value }))
-              }
-              disabled={!canReadStudentEnrollments}
-            >
-              <option value="all">كل القيود</option>
-              {enrollmentOptions.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.displayLabel}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="القيد الطلابي">
+              <SelectField
+                icon={<GraduationCap />}
+                value={filterDraft.enrollment}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, enrollment: event.target.value }))
+                }
+                disabled={!canReadStudentEnrollments}
+              >
+                <option value="all">كل القيود</option>
+                {enrollmentOptions.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.displayLabel}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.subject}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, subject: event.target.value }))
-              }
-              disabled={!canReadSubjects}
-            >
-              <option value="all">كل المواد</option>
-              {(subjectsQuery.data ?? []).map((subject) => (
-                <option key={subject.id} value={subject.id}>
-                  {subject.code}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="المادة">
+              <SelectField
+                icon={<BookText />}
+                value={filterDraft.subject}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, subject: event.target.value }))
+                }
+                disabled={!canReadSubjects}
+              >
+                <option value="all">كل المواد</option>
+                {(subjectsQuery.data ?? []).map((subject) => (
+                  <option key={subject.id} value={subject.id}>
+                    {subject.code}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.status}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  status: event.target.value as StudentBookStatus | "all",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              {STATUS_OPTIONS.map((status) => (
-                <option key={status} value={status}>
-                  {translateStudentBookStatus(status)}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="الحالة">
+              <SelectField
+                icon={<Activity />}
+                value={filterDraft.status}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    status: event.target.value as StudentBookStatus | "all",
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                {STATUS_OPTIONS.map((status) => (
+                  <option key={status} value={status}>
+                    {translateStudentBookStatus(status)}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">من تاريخ التسليم</label>
+            <FormField label="من تاريخ التسليم">
               <Input
+                icon={<CalendarDays />}
                 type="date"
                 value={filterDraft.fromIssuedDate}
                 onChange={(event) =>
@@ -659,11 +662,11 @@ export function StudentBooksWorkspace() {
                   }))
                 }
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">إلى تاريخ التسليم</label>
+            <FormField label="إلى تاريخ التسليم">
               <Input
+                icon={<CalendarDays />}
                 type="date"
                 value={filterDraft.toIssuedDate}
                 onChange={(event) =>
@@ -673,21 +676,24 @@ export function StudentBooksWorkspace() {
                   }))
                 }
               />
-            </div>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </SelectField>
+            <FormField label="التفعيل">
+              <SelectField
+                icon={<BookText />}
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">النشطة فقط</option>
+                <option value="inactive">غير النشطة فقط</option>
+              </SelectField>
+            </FormField>
           </div>
         </FilterDrawer>
 
@@ -858,8 +864,7 @@ export function StudentBooksWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الطالب</label>
+            <FormField label="الطالب">
               <StudentPickerSheet
                 scope="student-books"
                 variant="narrow"
@@ -882,14 +887,15 @@ export function StudentBooksWorkspace() {
                 }}
                 disabled={!canReadStudents}
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                القيد الطلابي *
-              </label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <FormField
+              label="القيد الطلابي"
+              required
+              hint={selectedFormStudent ? "تم تقليص القيود بحسب الطالب المحدد." : undefined}
+            >
+              <SelectField
+                icon={<GraduationCap />}
                 value={formState.studentEnrollmentId}
                 onChange={(event) => {
                   const nextEnrollmentId = event.target.value;
@@ -915,6 +921,7 @@ export function StudentBooksWorkspace() {
                   }
                 }}
                 disabled={!canReadStudentEnrollments}
+                required
               >
                 <option value="">اختر القيد</option>
                 {formEnrollmentOptions.map((item) => (
@@ -922,23 +929,18 @@ export function StudentBooksWorkspace() {
                     {item.displayLabel}
                   </option>
                 ))}
-              </select>
-              {selectedFormStudent ? (
-                <p className="text-[11px] text-muted-foreground">
-                  تم تقليص القيود بحسب الطالب المحدد.
-                </p>
-              ) : null}
-            </div>
+              </SelectField>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">المادة *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <FormField label="المادة" required>
+              <SelectField
+                icon={<BookText />}
                 value={formState.subjectId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, subjectId: event.target.value }))
                 }
                 disabled={!canReadSubjects}
+                required
               >
                 <option value="">اختر المادة</option>
                 {(subjectsQuery.data ?? []).map((subject) => (
@@ -946,26 +948,24 @@ export function StudentBooksWorkspace() {
                     {subject.name} ({subject.code})
                   </option>
                 ))}
-              </select>
-            </div>
+              </SelectField>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">جزء الكتاب</label>
+            <FormField label="جزء الكتاب">
               <Input
+                icon={<BookText />}
                 value={formState.bookPart}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, bookPart: event.target.value }))
                 }
                 placeholder="مثال: الجزء الأول"
               />
-            </div>
+            </FormField>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  تاريخ التسليم *
-                </label>
+              <FormField label="تاريخ التسليم" required>
                 <Input
+                  icon={<CalendarDays />}
                   type="date"
                   value={formState.issuedDate}
                   onChange={(event) =>
@@ -973,38 +973,33 @@ export function StudentBooksWorkspace() {
                   }
                   required
                 />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  تاريخ الاستحقاق
-                </label>
+              </FormField>
+              <FormField label="تاريخ الاستحقاق">
                 <Input
+                  icon={<CalendarDays />}
                   type="date"
                   value={formState.dueDate}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, dueDate: event.target.value }))
                   }
                 />
-              </div>
+              </FormField>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  تاريخ الإرجاع
-                </label>
+              <FormField label="تاريخ الإرجاع">
                 <Input
+                  icon={<CalendarDays />}
                   type="date"
                   value={formState.returnedDate}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, returnedDate: event.target.value }))
                   }
                 />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الحالة *</label>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              </FormField>
+              <FormField label="الحالة" required>
+                <SelectField
+                  icon={<Activity />}
                   value={formState.status}
                   onChange={(event) =>
                     setFormState((prev) => ({
@@ -1012,37 +1007,36 @@ export function StudentBooksWorkspace() {
                       status: event.target.value as StudentBookStatus,
                     }))
                   }
+                  required
                 >
                   {STATUS_OPTIONS.map((status) => (
                     <option key={status} value={status}>
                       {translateStudentBookStatus(status)}
                     </option>
                   ))}
-                </select>
-              </div>
+                </SelectField>
+              </FormField>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ملاحظات</label>
-              <Input
+            <FormField label="ملاحظات">
+              <TextareaField
+                icon={<BookText />}
                 value={formState.notes}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, notes: event.target.value }))
                 }
                 placeholder="مثال: تم الاستلام بحالة جيدة"
+                rows={3}
               />
-            </div>
+            </FormField>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-              />
-            </label>
+            <FormBooleanField
+              label="نشط"
+              checked={formState.isActive}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({ ...prev, isActive: checked }))
+              }
+            />
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

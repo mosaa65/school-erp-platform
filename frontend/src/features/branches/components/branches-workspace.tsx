@@ -7,12 +7,14 @@ import {
   LoaderCircle,
   MapPin,
   PencilLine,
+  Phone,
   Plus,
   RefreshCw,
   ShieldCheck,
   ShieldX,
   Star,
   Trash2,
+  Type,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
@@ -26,7 +28,10 @@ import {
 } from "@/components/ui/card";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
@@ -314,51 +319,42 @@ export function BranchesWorkspace() {
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
           title="فلاتر الفروع"
-          actionButtons={
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
-            </div>
-          }
+          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">نشط</option>
-              <option value="inactive">غير نشط</option>
-            </SelectField>
+            <FormField label="الحالة">
+              <SelectField
+                icon={<ShieldCheck />}
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">نشط</option>
+                <option value="inactive">غير نشط</option>
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.headquarters}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  headquarters: event.target.value as "all" | "hq" | "branch",
-                }))
-              }
-            >
-              <option value="all">كل الفروع</option>
-              <option value="hq">المقر الرئيسي فقط</option>
-              <option value="branch">الفروع فقط</option>
-            </SelectField>
+            <FormField label="نوع الفرع">
+              <SelectField
+                icon={<Building2 />}
+                value={filterDraft.headquarters}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    headquarters: event.target.value as "all" | "hq" | "branch",
+                  }))
+                }
+              >
+                <option value="all">كل الفروع</option>
+                <option value="hq">المقر الرئيسي فقط</option>
+                <option value="branch">الفروع فقط</option>
+              </SelectField>
+            </FormField>
           </div>
         </FilterDrawer>
 
@@ -538,11 +534,9 @@ export function BranchesWorkspace() {
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  الاسم العربي *
-                </label>
+              <FormField label="الاسم العربي" required>
                 <Input
+                  icon={<Type />}
                   value={form.nameAr}
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, nameAr: event.target.value }))
@@ -550,71 +544,57 @@ export function BranchesWorkspace() {
                   placeholder="الفرع الرئيسي"
                   required
                 />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  الاسم الإنجليزي
-                </label>
+              </FormField>
+              <FormField label="الاسم الإنجليزي">
                 <Input
+                  icon={<Type />}
                   value={form.nameEn ?? ""}
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, nameEn: event.target.value }))
                   }
                   placeholder="Main Branch"
                 />
-              </div>
+              </FormField>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">العنوان</label>
+              <FormField label="العنوان">
                 <Input
+                  icon={<MapPin />}
                   value={form.address ?? ""}
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, address: event.target.value }))
                   }
                   placeholder="عنوان الفرع"
                 />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الهاتف</label>
+              </FormField>
+              <FormField label="الهاتف">
                 <Input
+                  icon={<Phone />}
                   value={form.phone ?? ""}
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, phone: event.target.value }))
                   }
                   placeholder="0111111111"
                 />
-              </div>
+              </FormField>
             </div>
 
             <div className="grid gap-2 md:grid-cols-2">
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
-                  مقر رئيسي
-                </span>
-                <input
-                  type="checkbox"
-                  checked={form.isHeadquarters ?? false}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, isHeadquarters: event.target.checked }))
-                  }
-                />
-              </label>
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4" />
-                  نشط
-                </span>
-                <input
-                  type="checkbox"
-                  checked={form.isActive}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                />
-              </label>
+              <FormBooleanField
+                label="مقر رئيسي"
+                checked={form.isHeadquarters ?? false}
+                onCheckedChange={(checked) =>
+                  setForm((prev) => ({ ...prev, isHeadquarters: checked }))
+                }
+              />
+              <FormBooleanField
+                label="نشط"
+                checked={form.isActive ?? true}
+                onCheckedChange={(checked) =>
+                  setForm((prev) => ({ ...prev, isActive: checked }))
+                }
+              />
             </div>
 
             {formError ? (

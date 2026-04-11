@@ -5,11 +5,18 @@ import {
   AlertTriangle,
   BellRing,
   BookOpenText,
+  CalendarDays,
+  FileText,
+  FileType,
+  Hash,
   LoaderCircle,
+  Link2,
   PencilLine,
   Plus,
   RefreshCw,
+  Tag,
   Trash2,
+  UserRound,
 } from "lucide-react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import { Badge } from "@/components/ui/badge";
@@ -25,9 +32,11 @@ import {
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
+import { TextareaField } from "@/components/ui/textarea-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateEmployeeDocumentMutation,
@@ -464,35 +473,44 @@ export function EmployeeDocumentsWorkspace() {
           actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.employee}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, employee: event.target.value }))
-              }
-            >
-              <option value="all">كل الموظفين</option>
-              {(employeesQuery.data ?? []).map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.jobNumber ?? employee.fullName}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="الموظف">
+              <SelectField
+                icon={<UserRound />}
+                value={filterDraft.employee}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, employee: event.target.value }))
+                }
+              >
+                <option value="all">كل الموظفين</option>
+                {(employeesQuery.data ?? []).map((employee) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.jobNumber ?? employee.fullName}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <Input
-              value={filterDraft.category}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, category: event.target.value }))
-              }
-              placeholder="مثال: هوية"
-            />
+            <FormField label="التصنيف">
+              <Input
+                icon={<Tag />}
+                value={filterDraft.category}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, category: event.target.value }))
+                }
+                placeholder="مثال: هوية"
+              />
+            </FormField>
 
-            <Input
-              value={filterDraft.fileType}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, fileType: event.target.value }))
-              }
-              placeholder="مثال: application/pdf"
-            />
+            <FormField label="نوع الملف">
+              <Input
+                icon={<FileType />}
+                value={filterDraft.fileType}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, fileType: event.target.value }))
+                }
+                placeholder="مثال: application/pdf"
+              />
+            </FormField>
           </div>
         </FilterDrawer>
 
@@ -691,15 +709,15 @@ export function EmployeeDocumentsWorkspace() {
                 : "إضافة مستند جديد للموظف عبر اسم الملف ومساره أو رابطه."}
             </p>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <FormField label="الموظف" required>
+              <SelectField
+                icon={<UserRound />}
                 value={formState.employeeId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
                 }
                 disabled={!canReadEmployees}
+                required
                 data-testid="document-form-employee"
               >
                 <option value="">اختر الموظف</option>
@@ -708,37 +726,39 @@ export function EmployeeDocumentsWorkspace() {
                     {employee.fullName} ({employee.jobNumber ?? "غير متوفر"})
                   </option>
                 ))}
-              </select>
-            </div>
+              </SelectField>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">اسم المستند *</label>
+            <FormField label="اسم المستند" required>
               <Input
+                icon={<FileText />}
                 value={formState.fileName}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, fileName: event.target.value }))
                 }
                 placeholder="صورة الهوية الوطنية.pdf"
+                required
                 data-testid="document-form-file-name"
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">مسار الملف أو رابطه *</label>
+            <FormField label="مسار الملف أو رابطه" required>
               <Input
+                icon={<Link2 />}
                 value={formState.filePath}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, filePath: event.target.value }))
                 }
                 placeholder="https://cdn.school.local/hr/employees/emp-1/id-card.pdf"
+                required
                 data-testid="document-form-file-path"
               />
-            </div>
+            </FormField>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">تصنيف المستند</label>
+              <FormField label="تصنيف المستند">
                 <Input
+                  icon={<Tag />}
                   value={formState.fileCategory}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, fileCategory: event.target.value }))
@@ -752,10 +772,10 @@ export function EmployeeDocumentsWorkspace() {
                     <option key={category} value={category} />
                   ))}
                 </datalist>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">نوع الملف</label>
+              </FormField>
+              <FormField label="نوع الملف">
                 <Input
+                  icon={<FileType />}
                   value={formState.fileType}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, fileType: event.target.value }))
@@ -763,12 +783,12 @@ export function EmployeeDocumentsWorkspace() {
                   placeholder="application/pdf"
                   data-testid="document-form-type"
                 />
-              </div>
+              </FormField>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">حجم الملف بالبايت</label>
+            <FormField label="حجم الملف بالبايت">
               <Input
+                icon={<Hash />}
                 type="number"
                 min={0}
                 value={formState.fileSize}
@@ -778,23 +798,31 @@ export function EmployeeDocumentsWorkspace() {
                 placeholder="245000"
                 data-testid="document-form-size"
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الوصف</label>
-              <Input
+            <FormField label="الوصف">
+              <TextareaField
+                icon={<BookOpenText />}
                 value={formState.description}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, description: event.target.value }))
                 }
                 placeholder="نسخة واضحة من بطاقة الهوية"
+                rows={3}
                 data-testid="document-form-description"
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">تاريخ الصلاحية</label>
+            <FormField
+              label="تاريخ الصلاحية"
+              hint={
+                EXPIRY_REQUIRED_CATEGORIES.has(formState.fileCategory.trim())
+                  ? "هذا التصنيف يتطلب تاريخ صلاحية حتى يمكن متابعته تشغيليًا."
+                  : undefined
+              }
+            >
               <Input
+                icon={<CalendarDays />}
                 type="date"
                 value={formState.expiresAt}
                 onChange={(event) =>
@@ -802,12 +830,7 @@ export function EmployeeDocumentsWorkspace() {
                 }
                 data-testid="document-form-expiry-date"
               />
-              {EXPIRY_REQUIRED_CATEGORIES.has(formState.fileCategory.trim()) ? (
-                <p className="text-xs text-amber-700 dark:text-amber-300">
-                  هذا التصنيف يتطلب تاريخ صلاحية حتى يمكن متابعته تشغيليًا.
-                </p>
-              ) : null}
-            </div>
+            </FormField>
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

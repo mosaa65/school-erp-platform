@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectField } from "@/components/ui/select-field";
@@ -583,8 +585,7 @@ export function SectionsWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1">
-              <Label required>الصف/المرحلة</Label>
+            <FormField label="الصف/المرحلة" required>
               <SelectField
                 value={formState.gradeLevelId}
                 onChange={(event) =>
@@ -604,11 +605,10 @@ export function SectionsWorkspace() {
                   </option>
                 ))}
               </SelectField>
-            </div>
+            </FormField>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-1">
-                <Label>السعة</Label>
+              <FormField label="السعة">
                 <Input
                   type="number"
                   min={1}
@@ -620,12 +620,11 @@ export function SectionsWorkspace() {
                   placeholder="30"
                   icon={<Users className="h-4 w-4" />}
                 />
-              </div>
+              </FormField>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-1">
-                <Label>المبنى</Label>
+              <FormField label="المبنى">
                 <SelectField
                   value={formState.buildingLookupId}
                   onChange={(event) =>
@@ -644,9 +643,8 @@ export function SectionsWorkspace() {
                     </option>
                   ))}
                 </SelectField>
-              </div>
-              <div className="space-y-1">
-                <Label>الغرفة/الفصل</Label>
+              </FormField>
+              <FormField label="الغرفة/الفصل">
                 <Input
                   value={formState.roomLabel}
                   onChange={(event) =>
@@ -655,11 +653,10 @@ export function SectionsWorkspace() {
                   placeholder="مثال: A-101"
                   icon={<DoorOpen className="h-4 w-4" />}
                 />
-              </div>
+              </FormField>
             </div>
 
-            <div className="space-y-1">
-              <Label required>الاسم</Label>
+            <FormField label="الاسم" required>
               <Input
                 value={formState.name}
                 onChange={(event) =>
@@ -669,24 +666,19 @@ export function SectionsWorkspace() {
                 icon={<Type className="h-4 w-4" />}
                 required
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1">
-              <Label>الحالة</Label>
-              <SelectField
-                value={formState.isActive ? "active" : "inactive"}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    isActive: event.target.value === "active",
-                  }))
-                }
-                icon={<Activity className="h-4 w-4" />}
-              >
-                <option value="active">نشط</option>
-                <option value="inactive">غير نشط</option>
-              </SelectField>
-            </div>
+            <FormBooleanField
+              label="نشطة"
+              description="يعرض هذا الخيار حالة تفعيل الشعبة داخل النظام."
+              checked={formState.isActive}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({
+                  ...prev,
+                  isActive: checked,
+                }))
+              }
+            />
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

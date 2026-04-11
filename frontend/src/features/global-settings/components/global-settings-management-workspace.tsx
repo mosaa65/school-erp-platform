@@ -5,11 +5,13 @@ import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   Eye,
   EyeOff,
+  KeyRound,
   LoaderCircle,
   PencilLine,
   RefreshCw,
   Settings2,
   Trash2,
+  Type,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +29,9 @@ import {
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
+import { TextareaField } from "@/components/ui/textarea-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateGlobalSettingMutation,
@@ -603,9 +608,9 @@ export function GlobalSettingsManagementWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">المفتاح *</label>
+            <FormField label="المفتاح" required>
               <Input
+                icon={<KeyRound />}
                 value={formState.key}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, key: event.target.value }))
@@ -614,12 +619,11 @@ export function GlobalSettingsManagementWorkspace() {
                 required
                 disabled={isEditing}
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">نوع القيمة</label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            <FormField label="نوع القيمة">
+              <SelectField
+                icon={<Settings2 />}
                 value={formState.valueType}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -634,33 +638,35 @@ export function GlobalSettingsManagementWorkspace() {
                     {option.label}
                   </option>
                 ))}
-              </select>
-            </div>
+              </SelectField>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">القيمة *</label>
+            <FormField label="القيمة" required>
               {formState.valueType === "JSON" ? (
-                <textarea
-                  className="min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                <TextareaField
+                  icon={<Settings2 />}
                   value={formState.valueInput}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, valueInput: event.target.value }))
                   }
                   placeholder='{ "primary": "#2563eb" }'
+                  required
                 />
               ) : formState.valueType === "BOOLEAN" ? (
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                <SelectField
+                  icon={<Eye />}
                   value={formState.valueInput.toLowerCase() === "true" ? "true" : "false"}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, valueInput: event.target.value }))
                   }
+                  required
                 >
                   <option value="true">نعم</option>
                   <option value="false">لا</option>
-                </select>
+                </SelectField>
               ) : (
                 <Input
+                  icon={<Type />}
                   value={formState.valueInput}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, valueInput: event.target.value }))
@@ -669,29 +675,26 @@ export function GlobalSettingsManagementWorkspace() {
                   required
                 />
               )}
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الوصف</label>
+            <FormField label="الوصف">
               <Input
+                icon={<Type />}
                 value={formState.description}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, description: event.target.value }))
                 }
                 placeholder="وصف مختصر للإعداد"
               />
-            </div>
+            </FormField>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>عام</span>
-              <input
-                type="checkbox"
-                checked={formState.isPublic}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isPublic: event.target.checked }))
-                }
-              />
-            </label>
+            <FormBooleanField
+              label="عام"
+              checked={formState.isPublic}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({ ...prev, isPublic: checked }))
+              }
+            />
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

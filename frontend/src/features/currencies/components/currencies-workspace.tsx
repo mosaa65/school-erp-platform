@@ -4,6 +4,7 @@ import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   Coins,
+  Hash,
   LoaderCircle,
   PencilLine,
   Plus,
@@ -12,6 +13,7 @@ import {
   ShieldX,
   Star,
   Trash2,
+  Type,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
@@ -25,7 +27,10 @@ import {
 } from "@/components/ui/card";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
@@ -308,51 +313,42 @@ export function CurrenciesWorkspace() {
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
           title="فلاتر العملات"
-          actionButtons={
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
-            </div>
-          }
+          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">نشط</option>
-              <option value="inactive">غير نشط</option>
-            </SelectField>
+            <FormField label="الحالة">
+              <SelectField
+                icon={<ShieldCheck />}
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">نشط</option>
+                <option value="inactive">غير نشط</option>
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.base}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  base: event.target.value as "all" | "base" | "secondary",
-                }))
-              }
-            >
-              <option value="all">كل العملات</option>
-              <option value="base">عملة الأساس</option>
-              <option value="secondary">عملات ثانوية</option>
-            </SelectField>
+            <FormField label="نوع العملة">
+              <SelectField
+                icon={<Star />}
+                value={filterDraft.base}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    base: event.target.value as "all" | "base" | "secondary",
+                  }))
+                }
+              >
+                <option value="all">كل العملات</option>
+                <option value="base">عملة الأساس</option>
+                <option value="secondary">عملات ثانوية</option>
+              </SelectField>
+            </FormField>
           </div>
         </FilterDrawer>
 
@@ -525,9 +521,9 @@ export function CurrenciesWorkspace() {
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
+              <FormField label="الاسم" required>
                 <Input
+                  icon={<Coins />}
                   value={form.nameAr}
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, nameAr: event.target.value }))
@@ -535,13 +531,13 @@ export function CurrenciesWorkspace() {
                   placeholder="ريال سعودي"
                   required
                 />
-              </div>
+              </FormField>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الرمز</label>
+              <FormField label="الرمز">
                 <Input
+                  icon={<Type />}
                   value={form.symbol}
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, symbol: event.target.value }))
@@ -549,10 +545,10 @@ export function CurrenciesWorkspace() {
                   placeholder="ر.س"
                   required
                 />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الخانات العشرية</label>
+              </FormField>
+              <FormField label="الخانات العشرية">
                 <Input
+                  icon={<Hash />}
                   type="number"
                   min={0}
                   max={6}
@@ -564,34 +560,24 @@ export function CurrenciesWorkspace() {
                     }))
                   }
                 />
-              </div>
+              </FormField>
             </div>
 
             <div className="grid gap-2 md:grid-cols-2">
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span className="flex items-center gap-2">
-                  <Star className="h-4 w-4" />
-                  عملة الأساس
-                </span>
-                <input
-                  type="checkbox"
-                  checked={form.isBase}
-                  onChange={(event) => setForm((prev) => ({ ...prev, isBase: event.target.checked }))}
-                />
-              </label>
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4" />
-                  نشط
-                </span>
-                <input
-                  type="checkbox"
-                  checked={form.isActive}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                />
-              </label>
+              <FormBooleanField
+                label="عملة الأساس"
+                checked={form.isBase}
+                onCheckedChange={(checked) =>
+                  setForm((prev) => ({ ...prev, isBase: checked }))
+                }
+              />
+              <FormBooleanField
+                label="نشط"
+                checked={form.isActive}
+                onCheckedChange={(checked) =>
+                  setForm((prev) => ({ ...prev, isActive: checked }))
+                }
+              />
             </div>
 
             {formError ? (

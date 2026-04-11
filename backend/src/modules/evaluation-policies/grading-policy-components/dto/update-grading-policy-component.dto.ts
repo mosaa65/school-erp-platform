@@ -52,25 +52,6 @@ export class UpdateGradingPolicyComponentDto {
   @IsBoolean()
   includeInSemester?: boolean;
 
-  @ApiPropertyOptional({ example: 0.25 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  weight?: number;
-
-  @ApiPropertyOptional({ example: 'AUTO_HOMEWORK' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(50)
-  autoSourceType?: string;
-
-  @ApiPropertyOptional({ example: true })
-  @IsOptional()
-  @Type(() => Boolean)
-  @IsBoolean()
-  isRequired?: boolean;
-
   @ApiPropertyOptional({ example: 1 })
   @IsOptional()
   @Type(() => Number)

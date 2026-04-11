@@ -9,6 +9,7 @@ import {
   Plus,
   RefreshCw,
   Trash2,
+  Type,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,8 +25,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateSubjectMutation,
@@ -378,54 +382,45 @@ export function SubjectsWorkspace() {
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
           title="فلاتر المواد"
-          actionButtons={
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
-            </div>
-          }
+          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.category}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  category: event.target.value as SubjectCategory | "all",
-                }))
-              }
-            >
-              <option value="all">كل التصنيفات</option>
-              {CATEGORY_OPTIONS.map((category) => (
-                <option key={category} value={category}>
-                  {categoryLabel(category)}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="التصنيف">
+              <SelectField
+                icon={<BookOpenText />}
+                value={filterDraft.category}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    category: event.target.value as SubjectCategory | "all",
+                  }))
+                }
+              >
+                <option value="all">كل التصنيفات</option>
+                {CATEGORY_OPTIONS.map((category) => (
+                  <option key={category} value={category}>
+                    {categoryLabel(category)}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </SelectField>
+            <FormField label="الحالة">
+              <SelectField
+                icon={<BookOpenText />}
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">النشطة فقط</option>
+                <option value="inactive">غير النشطة فقط</option>
+              </SelectField>
+            </FormField>
           </div>
         </FilterDrawer>
 
@@ -581,9 +576,9 @@ export function SubjectsWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
+            <FormField label="الاسم" required>
               <Input
+                icon={<Type />}
                 value={formState.name}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, name: event.target.value }))
@@ -591,23 +586,23 @@ export function SubjectsWorkspace() {
                 placeholder="الرياضيات"
                 required
               />
-            </div>
+            </FormField>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الاسم المختصر</label>
+              <FormField label="الاسم المختصر">
                 <Input
+                  icon={<Type />}
                   value={formState.shortName}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, shortName: event.target.value }))
                   }
                   placeholder="MATH"
                 />
-              </div>
+              </FormField>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">التصنيف *</label>
+              <FormField label="التصنيف" required>
                 <SelectField
+                  icon={<BookOpenText />}
                   value={formState.category}
                   onChange={(event) =>
                     setFormState((prev) => ({
@@ -615,6 +610,7 @@ export function SubjectsWorkspace() {
                       category: event.target.value as SubjectCategory,
                     }))
                   }
+                  required
                 >
                   {CATEGORY_OPTIONS.map((category) => (
                     <option key={category} value={category}>
@@ -622,19 +618,16 @@ export function SubjectsWorkspace() {
                     </option>
                   ))}
                 </SelectField>
-              </div>
+              </FormField>
             </div>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-              />
-            </label>
+            <FormBooleanField
+              label="نشط"
+              checked={formState.isActive}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({ ...prev, isActive: checked }))
+              }
+            />
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

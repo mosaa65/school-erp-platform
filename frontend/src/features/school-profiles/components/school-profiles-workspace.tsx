@@ -5,9 +5,13 @@ import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   Building,
   LoaderCircle,
+  Mail,
+  MapPin,
   PencilLine,
+  Phone,
   RefreshCw,
   Trash2,
+  Type,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +30,8 @@ import {
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateSchoolProfileMutation,
@@ -554,9 +560,9 @@ export function SchoolProfilesWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الاسم العربي *</label>
+            <FormField label="الاسم العربي" required>
               <Input
+                icon={<Type />}
                 value={formState.nameAr}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, nameAr: event.target.value }))
@@ -564,23 +570,23 @@ export function SchoolProfilesWorkspace() {
                 placeholder="اسم المدرسة بالعربية"
                 required
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الاسم الإنجليزي</label>
+            <FormField label="الاسم الإنجليزي">
               <Input
+                icon={<Type />}
                 value={formState.nameEn}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, nameEn: event.target.value }))
                 }
                 placeholder="اسم المدرسة بالإنجليزية"
               />
-            </div>
+            </FormField>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">نوع الملكية</label>
+              <FormField label="نوع الملكية">
                 <SelectField
+                  icon={<Building />}
                   value={formState.ownershipTypeId}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, ownershipTypeId: event.target.value }))
@@ -594,13 +600,13 @@ export function SchoolProfilesWorkspace() {
                     </option>
                   ))}
                 </SelectField>
-              </div>
+              </FormField>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الهاتف</label>
+              <FormField label="الهاتف">
                 <PhoneContactInput
+                  icon={<Phone />}
                   value={formState.phone}
                   onValueChange={(value) =>
                     setFormState((prev) => ({ ...prev, phone: value }))
@@ -609,10 +615,10 @@ export function SchoolProfilesWorkspace() {
                   className="h-10"
                   buttonTestId="school-profile-phone-contact-picker"
                 />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">البريد الإلكتروني</label>
+              </FormField>
+              <FormField label="البريد الإلكتروني">
                 <Input
+                  icon={<Mail />}
                   value={formState.email}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, email: event.target.value }))
@@ -620,30 +626,27 @@ export function SchoolProfilesWorkspace() {
                   placeholder="school@example.com"
                   type="email"
                 />
-              </div>
+              </FormField>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">العنوان</label>
+            <FormField label="العنوان">
               <Input
+                icon={<MapPin />}
                 value={formState.addressText}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, addressText: event.target.value }))
                 }
                 placeholder="عنوان المدرسة"
               />
-            </div>
+            </FormField>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-              />
-            </label>
+            <FormBooleanField
+              label="نشط"
+              checked={formState.isActive}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({ ...prev, isActive: checked }))
+              }
+            />
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

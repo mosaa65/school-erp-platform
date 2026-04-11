@@ -3,7 +3,10 @@
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
+  Activity,
   Cable,
+  CalendarRange,
+  Hash,
   LoaderCircle,
   PencilLine,
   Plus,
@@ -12,7 +15,10 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
@@ -24,6 +30,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
@@ -424,102 +431,98 @@ export function TermSubjectOfferingsWorkspace() {
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
           title="فلاتر عروض المواد"
-          actionButtons={
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button
-                type="button"
-                onClick={applyFilters}
-                className="flex-1 gap-1.5"
-                data-testid="offering-filters-submit"
-              >
-                تطبيق
-              </Button>
-            </div>
-          }
+          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.year}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  year: event.target.value,
-                  term: "all",
-                  mapping: "all",
-                }))
-              }
-              disabled={!canReadAcademicYears}
-              data-testid="offering-filter-year"
-            >
-              <option value="all">كل السنوات</option>
-              {yearOptions.map((year) => (
-                <option key={year.id} value={year.id}>
-                  {year.code}
-                </option>
-              ))}
-            </SelectField>
+            <div className="space-y-1.5">
+              <Label>السنة الأكاديمية</Label>
+              <SelectField
+                value={filterDraft.year}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    year: event.target.value,
+                    term: "all",
+                    mapping: "all",
+                  }))
+                }
+                disabled={!canReadAcademicYears}
+                icon={<CalendarRange className="h-4 w-4" />}
+                data-testid="offering-filter-year"
+              >
+                <option value="all">كل السنوات</option>
+                {yearOptions.map((year) => (
+                  <option key={year.id} value={year.id}>
+                    {year.code}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
 
-            <SelectField
-              value={filterDraft.term}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  term: event.target.value,
-                }))
-              }
-              disabled={!canReadAcademicTerms}
-              data-testid="offering-filter-term"
-            >
-              <option value="all">كل الفصول</option>
-              {filterTermOptions.map((term) => (
-                <option key={term.id} value={term.id}>
-                  {term.code}
-                </option>
-              ))}
-            </SelectField>
+            <div className="space-y-1.5">
+              <Label>الفصل الأكاديمي</Label>
+              <SelectField
+                value={filterDraft.term}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    term: event.target.value,
+                  }))
+                }
+                disabled={!canReadAcademicTerms}
+                icon={<CalendarRange className="h-4 w-4" />}
+                data-testid="offering-filter-term"
+              >
+                <option value="all">كل الفصول</option>
+                {filterTermOptions.map((term) => (
+                  <option key={term.id} value={term.id}>
+                    {term.code}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
 
-            <SelectField
-              value={filterDraft.mapping}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  mapping: event.target.value,
-                }))
-              }
-              disabled={!canReadGradeLevelSubjects}
-              data-testid="offering-filter-mapping"
-            >
-              <option value="all">كل الربوط</option>
-              {filterMappingOptions.map((mapping) => (
-                <option key={mapping.id} value={mapping.id}>
-                  {mapping.gradeLevel.code} - {mapping.subject.code}
-                </option>
-              ))}
-            </SelectField>
+            <div className="space-y-1.5">
+              <Label>ربط الصف مع المادة</Label>
+              <SelectField
+                value={filterDraft.mapping}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    mapping: event.target.value,
+                  }))
+                }
+                disabled={!canReadGradeLevelSubjects}
+                icon={<Cable className="h-4 w-4" />}
+                data-testid="offering-filter-mapping"
+              >
+                <option value="all">كل الربوط</option>
+                {filterMappingOptions.map((mapping) => (
+                  <option key={mapping.id} value={mapping.id}>
+                    {mapping.gradeLevel.code} - {mapping.subject.code}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
 
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-              data-testid="offering-filter-active"
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </SelectField>
+            <div className="space-y-1.5">
+              <Label>الحالة</Label>
+              <SelectField
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+                icon={<Activity className="h-4 w-4" />}
+                data-testid="offering-filter-active"
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">النشطة فقط</option>
+                <option value="inactive">غير النشطة فقط</option>
+              </SelectField>
+            </div>
           </div>
         </FilterDrawer>
 
@@ -686,8 +689,7 @@ export function TermSubjectOfferingsWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="offering-form">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الفصل الأكاديمي *</label>
+            <FormField label="الفصل الأكاديمي" required>
               <SelectField
                 value={formState.academicTermId}
                 onChange={(event) =>
@@ -698,6 +700,8 @@ export function TermSubjectOfferingsWorkspace() {
                   }))
                 }
                 disabled={!canReadAcademicTerms}
+                icon={<CalendarRange className="h-4 w-4" />}
+                required
                 data-testid="offering-form-term"
               >
                 <option value="">اختر الفصل الدراسي</option>
@@ -707,10 +711,9 @@ export function TermSubjectOfferingsWorkspace() {
                   </option>
                 ))}
               </SelectField>
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">ربط الصف مع المادة *</label>
+            <FormField label="ربط الصف مع المادة" required>
               <SelectField
                 value={formState.gradeLevelSubjectId}
                 onChange={(event) =>
@@ -720,6 +723,8 @@ export function TermSubjectOfferingsWorkspace() {
                   }))
                 }
                 disabled={!canReadGradeLevelSubjects || !formState.academicTermId}
+                icon={<Cable className="h-4 w-4" />}
+                required
                 data-testid="offering-form-mapping"
               >
                 <option value="">اختر الربط</option>
@@ -729,11 +734,10 @@ export function TermSubjectOfferingsWorkspace() {
                   </option>
                 ))}
               </SelectField>
-            </div>
+            </FormField>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الحصص الأسبوعية *</label>
+              <FormField label="الحصص الأسبوعية" required>
                 <Input
                   type="number"
                   min={1}
@@ -746,11 +750,11 @@ export function TermSubjectOfferingsWorkspace() {
                     }))
                   }
                   required
+                  icon={<Hash className="h-4 w-4" />}
                   data-testid="offering-form-weekly-periods"
                 />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">ترتيب العرض</label>
+              </FormField>
+              <FormField label="ترتيب العرض">
                 <Input
                   type="number"
                   min={1}
@@ -763,22 +767,20 @@ export function TermSubjectOfferingsWorkspace() {
                     }))
                   }
                   placeholder="1"
+                  icon={<Hash className="h-4 w-4" />}
                   data-testid="offering-form-display-order"
                 />
-              </div>
+              </FormField>
             </div>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-                data-testid="offering-form-active"
-              />
-            </label>
+            <FormBooleanField
+              label="نشط"
+              description="يعرض هذا الخيار حالة تفعيل الربط في الخطة التشغيلية للفصل."
+              checked={formState.isActive}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({ ...prev, isActive: checked }))
+              }
+            />
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

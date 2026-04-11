@@ -2,12 +2,16 @@
 
 import * as React from "react";
 import {
+  Activity,
+  CalendarRange,
+  GraduationCap,
   Plus,
   Lock,
   LockOpen,
   PencilLine,
   RefreshCw,
   Trash2,
+  Type,
 } from "lucide-react";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +19,8 @@ import { Button } from "@/components/ui/button";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { Input } from "@/components/ui/input";
 import {
@@ -545,101 +551,119 @@ export function ExamPeriodsWorkspace() {
         actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
       >
         <div className="space-y-4">
-          <SelectField
-            value={filterDraft.academicYearId}
-            onChange={(event) =>
-              setFilterDraft((prev) => ({
-                ...prev,
-                academicYearId: event.target.value,
-                academicTermId: "all",
-              }))
-            }
-          >
-            <option value="all">كل السنوات</option>
-            {(yearsQuery.data ?? []).map((year) => (
-              <option key={year.id} value={year.id}>
-                {formatNameCodeLabel(year.name, year.code)}
-              </option>
-            ))}
-          </SelectField>
+          <FormField label="السنة الأكاديمية">
+            <SelectField
+              icon={<GraduationCap />}
+              value={filterDraft.academicYearId}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  academicYearId: event.target.value,
+                  academicTermId: "all",
+                }))
+              }
+            >
+              <option value="all">كل السنوات</option>
+              {(yearsQuery.data ?? []).map((year) => (
+                <option key={year.id} value={year.id}>
+                  {formatNameCodeLabel(year.name, year.code)}
+                </option>
+              ))}
+            </SelectField>
+          </FormField>
 
-          <SelectField
-            value={filterDraft.academicTermId}
-            onChange={(event) =>
-              setFilterDraft((prev) => ({ ...prev, academicTermId: event.target.value }))
-            }
-            disabled={!filterDraft.academicYearId || filterDraft.academicYearId === "all"}
-          >
-            <option value="all">كل الفصول</option>
-            {termsForFilter.map((term) => (
-              <option key={term.id} value={term.id}>
-                {formatNameCodeLabel(term.name, term.code)}
-              </option>
-            ))}
-          </SelectField>
+          <FormField label="الفصل الأكاديمي">
+            <SelectField
+              icon={<GraduationCap />}
+              value={filterDraft.academicTermId}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({ ...prev, academicTermId: event.target.value }))
+              }
+              disabled={!filterDraft.academicYearId || filterDraft.academicYearId === "all"}
+            >
+              <option value="all">كل الفصول</option>
+              {termsForFilter.map((term) => (
+                <option key={term.id} value={term.id}>
+                  {formatNameCodeLabel(term.name, term.code)}
+                </option>
+              ))}
+            </SelectField>
+          </FormField>
 
-          <SelectField
-            value={filterDraft.assessmentType}
-            onChange={(event) =>
-              setFilterDraft((prev) => ({
-                ...prev,
-                assessmentType: event.target.value as AssessmentType | "all",
-              }))
-            }
-          >
-            <option value="all">كل الأنواع</option>
-            {ASSESSMENT_TYPE_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {translateAssessmentType(option)}
-              </option>
-            ))}
-          </SelectField>
+          <FormField label="نوع التقييم">
+            <SelectField
+              icon={<Type />}
+              value={filterDraft.assessmentType}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  assessmentType: event.target.value as AssessmentType | "all",
+                }))
+              }
+            >
+              <option value="all">كل الأنواع</option>
+              {ASSESSMENT_TYPE_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {translateAssessmentType(option)}
+                </option>
+              ))}
+            </SelectField>
+          </FormField>
 
-          <SelectField
-            value={filterDraft.status}
-            onChange={(event) =>
-              setFilterDraft((prev) => ({
-                ...prev,
-                status: event.target.value as GradingWorkflowStatus | "all",
-              }))
-            }
-          >
-            <option value="all">كل الحالات</option>
-            {WORKFLOW_STATUS_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {translateGradingWorkflowStatus(option)}
-              </option>
-            ))}
-          </SelectField>
+          <FormField label="الحالة">
+            <SelectField
+              icon={<Activity />}
+              value={filterDraft.status}
+              onChange={(event) =>
+                setFilterDraft((prev) => ({
+                  ...prev,
+                  status: event.target.value as GradingWorkflowStatus | "all",
+                }))
+              }
+            >
+              <option value="all">كل الحالات</option>
+              {WORKFLOW_STATUS_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {translateGradingWorkflowStatus(option)}
+                </option>
+              ))}
+            </SelectField>
+          </FormField>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.locked}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  locked: event.target.value as "all" | "locked" | "unlocked",
-                }))
-              }
-            >
-              <option value="all">القفل: الكل</option>
-              <option value="locked">مقفل</option>
-              <option value="unlocked">غير مقفل</option>
-            </SelectField>
+            <FormField label="القفل">
+              <SelectField
+                icon={<Lock />}
+                value={filterDraft.locked}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    locked: event.target.value as "all" | "locked" | "unlocked",
+                  }))
+                }
+              >
+                <option value="all">القفل: الكل</option>
+                <option value="locked">مقفل</option>
+                <option value="unlocked">غير مقفل</option>
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">الحالة: الكل</option>
-              <option value="active">نشط</option>
-              <option value="inactive">غير نشط</option>
-            </SelectField>
+            <FormField label="نشاط السجل">
+              <SelectField
+                icon={<Activity />}
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+              >
+                <option value="all">الحالة: الكل</option>
+                <option value="active">نشط</option>
+                <option value="inactive">غير نشط</option>
+              </SelectField>
+            </FormField>
           </div>
         </div>
       </FilterDrawer>
@@ -655,9 +679,9 @@ export function ExamPeriodsWorkspace() {
       >
         <div className="space-y-4">
           <div className="grid gap-3 md:grid-cols-2">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">السنة *</label>
+            <FormField label="السنة" required>
               <SelectField
+                icon={<GraduationCap />}
                 value={formState.academicYearId}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -667,38 +691,40 @@ export function ExamPeriodsWorkspace() {
                   }))
                 }
                 disabled={!canReadAcademicYears}
+                required
               >
-                <option value="">اختر السنة *</option>
+                <option value="">اختر السنة</option>
                 {(yearsQuery.data ?? []).map((year) => (
                   <option key={year.id} value={year.id}>
                     {formatNameCodeLabel(year.name, year.code)}
                   </option>
                 ))}
               </SelectField>
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الفصل *</label>
+            <FormField label="الفصل" required>
               <SelectField
+                icon={<GraduationCap />}
                 value={formState.academicTermId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, academicTermId: event.target.value }))
                 }
                 disabled={!canReadAcademicTerms || !formState.academicYearId}
+                required
               >
-                <option value="">اختر الفصل *</option>
+                <option value="">اختر الفصل</option>
                 {termsForForm.map((term) => (
                   <option key={term.id} value={term.id}>
                     {formatNameCodeLabel(term.name, term.code)}
                   </option>
                 ))}
               </SelectField>
-            </div>
+            </FormField>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">اسم الفترة *</label>
+          <FormField label="اسم الفترة" required>
             <Input
+              icon={<Type />}
               value={formState.name}
               onChange={(event) =>
                 setFormState((prev) => ({ ...prev, name: event.target.value }))
@@ -706,12 +732,12 @@ export function ExamPeriodsWorkspace() {
               placeholder="اختبار شهري - محرم"
               required
             />
-          </div>
+          </FormField>
 
           <div className="grid gap-3 md:grid-cols-2">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">نوع التقييم *</label>
+            <FormField label="نوع التقييم" required>
               <SelectField
+                icon={<Type />}
                 value={formState.assessmentType}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -719,6 +745,7 @@ export function ExamPeriodsWorkspace() {
                     assessmentType: event.target.value as AssessmentType,
                   }))
                 }
+                required
               >
                 {ASSESSMENT_TYPE_OPTIONS.map((option) => (
                   <option key={option} value={option}>
@@ -726,11 +753,11 @@ export function ExamPeriodsWorkspace() {
                   </option>
                 ))}
               </SelectField>
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الحالة *</label>
+            <FormField label="الحالة" required>
               <SelectField
+                icon={<Activity />}
                 value={formState.status}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -738,6 +765,7 @@ export function ExamPeriodsWorkspace() {
                     status: event.target.value as GradingWorkflowStatus,
                   }))
                 }
+                required
               >
                 {WORKFLOW_STATUS_OPTIONS.map((option) => (
                   <option key={option} value={option}>
@@ -745,53 +773,49 @@ export function ExamPeriodsWorkspace() {
                   </option>
                 ))}
               </SelectField>
-            </div>
+            </FormField>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">بداية الفترة *</label>
+            <FormField label="بداية الفترة" required>
               <Input
+                icon={<CalendarRange />}
                 type="datetime-local"
                 value={formState.startDate}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, startDate: event.target.value }))
                 }
+                required
               />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">نهاية الفترة *</label>
+            </FormField>
+            <FormField label="نهاية الفترة" required>
               <Input
+                icon={<CalendarRange />}
                 type="datetime-local"
                 value={formState.endDate}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, endDate: event.target.value }))
                 }
+                required
               />
-            </div>
+            </FormField>
           </div>
 
           <div className="grid gap-2 md:grid-cols-2">
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>مقفل</span>
-              <input
-                type="checkbox"
-                checked={formState.isLocked}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isLocked: event.target.checked }))
-                }
-              />
-            </label>
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-              />
-            </label>
+            <FormBooleanField
+              label="مقفل"
+              checked={formState.isLocked}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({ ...prev, isLocked: checked }))
+              }
+            />
+            <FormBooleanField
+              label="نشط"
+              checked={formState.isActive}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({ ...prev, isActive: checked }))
+              }
+            />
           </div>
 
           {formError ? (

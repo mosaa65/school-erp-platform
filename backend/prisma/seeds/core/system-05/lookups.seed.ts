@@ -238,16 +238,6 @@ export async function seedSystem05Lookups(prisma: PrismaClient) {
     },
   ];
 
-  const defaultAssessmentTypes = [
-    { code: 'MONTHLY', name: 'شهري', description: 'تقييم شهري', category: 'PERIOD' },
-    { code: 'MIDTERM', name: 'نصفي', description: 'تقييم نصف الفصل', category: 'PERIOD' },
-    { code: 'FINAL', name: 'نهائي', description: 'تقييم نهائي', category: 'PERIOD' },
-    { code: 'QUIZ', name: 'سؤال قصير', description: 'اختبار قصير', category: 'EXAM' },
-    { code: 'ORAL', name: 'شفوي', description: 'تقييم شفوي', category: 'EXAM' },
-    { code: 'PRACTICAL', name: 'عملي', description: 'تقييم عملي', category: 'EXAM' },
-    { code: 'PROJECT', name: 'مشروع', description: 'تقييم مشروع', category: 'EXAM' },
-  ];
-
   for (const promotionDecision of defaultPromotionDecisions) {
     await prisma.promotionDecisionLookup.upsert({
       where: {
@@ -267,54 +257,6 @@ export async function seedSystem05Lookups(prisma: PrismaClient) {
         description: promotionDecision.description,
         isSystem: true,
         isActive: true,
-      },
-    });
-  }
-
-  // Seed lookup for assessment types (enables dynamic assessment type configuration per school)
-  const assessmentTypeMap = new Map<string, string>();
-  for (const assessmentType of defaultAssessmentTypes) {
-    const record = await prisma.assessmentTypeLookup.upsert({
-      where: { code: assessmentType.code },
-      update: {
-        name: assessmentType.name,
-        description: assessmentType.description,
-        category: assessmentType.category,
-        isSystem: true,
-        isActive: true,
-      },
-      create: {
-        code: assessmentType.code,
-        name: assessmentType.name,
-        description: assessmentType.description,
-        category: assessmentType.category,
-        isSystem: true,
-        isActive: true,
-      },
-    });
-
-    assessmentTypeMap.set(assessmentType.code, record.id);
-  }
-
-  // Backfill existing grading policies / exam periods to reference the lookup table.
-  for (const [code, id] of assessmentTypeMap.entries()) {
-    await prisma.gradingPolicy.updateMany({
-      where: {
-        assessmentType: code as any,
-        assessmentTypeLookupId: null,
-      },
-      data: {
-        assessmentTypeLookupId: id,
-      },
-    });
-
-    await prisma.examPeriod.updateMany({
-      where: {
-        assessmentType: code as any,
-        assessmentTypeLookupId: null,
-      },
-      data: {
-        assessmentTypeLookupId: id,
       },
     });
   }

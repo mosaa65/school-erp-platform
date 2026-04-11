@@ -1,5 +1,9 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import {
+  FIELD_LABEL_CLASS_NAME,
+  FIELD_REQUIRED_MARK_CLASS_NAME,
+} from "@/components/ui/field-styles";
 
 export interface LabelProps extends React.LabelHTMLAttributes<HTMLLabelElement> {
   required?: boolean;
@@ -10,13 +14,13 @@ const Label = React.forwardRef<HTMLLabelElement, LabelProps>(
     <label
       ref={ref}
       className={cn(
-        "text-[12px] font-black uppercase tracking-widest text-primary/60 dark:text-primary/70 mb-2 block px-1 transition-colors group-focus-within:text-primary",
+        FIELD_LABEL_CLASS_NAME,
         className
       )}
       {...props}
     >
       {children}
-      {required && <span className="text-destructive ml-1 animate-pulse">*</span>}
+      {required && <span className={FIELD_REQUIRED_MARK_CLASS_NAME}>*</span>}
     </label>
   )
 );
