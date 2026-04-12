@@ -14,13 +14,10 @@ import {
   StudentGender,
 } from '@prisma/client';
 import { json } from 'express';
-import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter';
-
-const ADMIN_EMAIL = 'admin@school.local';
-const ADMIN_PASSWORD = 'ChangeMe123!';
+import { loginAsKnownAdmin } from './e2e-auth';
 
 (BigInt.prototype as unknown as { toJSON?: () => string }).toJSON =
   function toJSON() {
@@ -99,15 +96,8 @@ export async function bootstrapFinanceE2eContext(): Promise<FinanceE2eContext> {
   const prisma = new PrismaClient();
   const httpServer = () => app.getHttpServer();
 
-  const loginResponse = await request(httpServer())
-    .post('/auth/login')
-    .send({
-      email: ADMIN_EMAIL,
-      password: ADMIN_PASSWORD,
-    })
-    .expect(200);
-
-  const loginBody = loginResponse.body as LoginBody;
+  const adminLogin = await loginAsKnownAdmin(httpServer);
+  const loginBody = adminLogin.body as LoginBody;
 
   return {
     app,

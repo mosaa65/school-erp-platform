@@ -95,7 +95,8 @@ test.describe("finance smoke", () => {
     });
 
     await expect(page.getByText("قائمة العملات")).toBeVisible();
-    await expect(page.getByText("ريال سعودي (SAR)")).toBeVisible();
+    await expect(page.getByText("ريال سعودي", { exact: true })).toBeVisible();
+    await expect(page.getByText("الرمز: ر.س · الدقة: 2")).toBeVisible();
     await expect(page.getByText("عملة الأساس")).toBeVisible();
     await expect(page.getByText("نشط")).toBeVisible();
     await expect(page.getByText("الإجمالي: 1")).toBeVisible();
@@ -145,8 +146,8 @@ test.describe("finance smoke", () => {
     });
 
     await expect(page.getByText("تنظيم الحسابات المالية وتصنيفها وربطها بالحسابات الأب.")).toBeVisible();
-    await expect(page.getByText("الصندوق (1101)")).toBeVisible();
-    await expect(page.getByText("النوع: أصول · الأب: 1100")).toBeVisible();
+    await expect(page.getByText("الصندوق", { exact: true })).toBeVisible();
+    await expect(page.getByText("النوع: أصول · الأب: الأصول المتداولة")).toBeVisible();
     await expect(page.getByText("تفصيلي")).toBeVisible();
     await expect(page.getByText("الإجمالي: 2")).toBeVisible();
   });
@@ -492,7 +493,7 @@ test.describe("finance smoke", () => {
 
     await expect(page.getByText("النظام 07 - المحاسبة والخزينة")).toBeVisible();
     await expect(page.getByText("حساب بنك الراجحي")).toBeVisible();
-    await expect(page.getByText("1121")).toBeVisible();
+    await expect(page.getByText("رصيد البنك: 15,000 • رصيد الدفاتر: 14,800")).toBeVisible();
     await expect(page.getByText("مفتوحة")).toBeVisible();
     await expect(page.getByText(/الفرق:/)).toBeVisible();
     await expect(page.getByText(/الإجمالي:\s*1/)).toBeVisible();

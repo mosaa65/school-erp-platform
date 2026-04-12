@@ -5,6 +5,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter';
+import { loginAsKnownAdmin } from './e2e-auth';
 
 type LoginBody = {
   accessToken: string;
@@ -15,8 +16,6 @@ type EmployeeBody = {
   fullName: string;
 };
 
-const ADMIN_EMAIL = 'admin@school.local';
-const ADMIN_PASSWORD = 'ChangeMe123!';
 const UNIQUE_SUFFIX = `${Date.now()}_${Math.floor(Math.random() * 10000)}`;
 const HR_YEAR_CODE = `ay.hr.${UNIQUE_SUFFIX}`;
 const HR_GRADE_CODE = `grade.hr.${UNIQUE_SUFFIX}`;
@@ -28,6 +27,7 @@ const HR_FINANCIAL_NUMBER = `FIN-HR-${UNIQUE_SUFFIX}`;
 const HR_REPORTER_JOB_NUMBER = `EMP-HR-REP-${UNIQUE_SUFFIX}`;
 const HR_REPORTER_FINANCIAL_NUMBER = `FIN-HR-REP-${UNIQUE_SUFFIX}`;
 const HR_USER_EMAIL = `hr.user.${UNIQUE_SUFFIX}@school.local`;
+const HR_USER_PHONE = `777${UNIQUE_SUFFIX.replace(/\D+/g, '').slice(-6)}`;
 
 jest.setTimeout(30000);
 
@@ -121,15 +121,8 @@ describe('System 03 HR Core (e2e)', () => {
 
     prisma = new PrismaClient();
 
-    const loginResponse = await request(httpServer())
-      .post('/auth/login')
-      .send({
-        email: ADMIN_EMAIL,
-        password: ADMIN_PASSWORD,
-      })
-      .expect(200);
-
-    const loginBody = loginResponse.body as LoginBody;
+    const adminLogin = await loginAsKnownAdmin(httpServer);
+    const loginBody = adminLogin.body as LoginBody;
     accessToken = loginBody.accessToken;
   });
 
@@ -320,9 +313,12 @@ describe('System 03 HR Core (e2e)', () => {
       .set('Authorization', `Bearer ${accessToken}`)
       .send({
         email: HR_USER_EMAIL,
-        password: 'ChangeMe123!',
+        username: `hr_user_${UNIQUE_SUFFIX}`,
+        phoneCountryCode: '+967',
+        phoneNationalNumber: HR_USER_PHONE,
         firstName: 'HR',
         lastName: 'LinkedUser',
+        isActive: true,
       })
       .expect(201);
 

@@ -1066,7 +1066,9 @@ model AuditLog {
   updatedBy User? @relation("audit_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
 
   @@index([resource, resourceId])
+  @@index([resource, resourceId, occurredAt], map: "audit_logs_resource_resource_id_occurred_at_idx")
   @@index([actorUserId, occurredAt])
+  @@index([deletedAt, occurredAt], map: "audit_logs_deleted_at_occurred_at_idx")
   @@index([deletedAt])
   @@map("audit_logs")
 }
