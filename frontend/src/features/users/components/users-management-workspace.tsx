@@ -349,19 +349,21 @@ export function UsersManagementWorkspace({
         ...basePayload,
         guardianId: toOptionalString(formState.guardianId),
       },
-      {
-        onSuccess: (createdUser) => {
-          resetForm();
-          setPage(1);
-          setActionSuccess("تم إنشاء المستخدم بنجاح.");
-          setCreatedActivationSummary(
-            `كلمة المرور الأولية لمرة واحدة: ${createdUser.activationSetup.initialOneTimePassword} | تنتهي: ${new Date(
-              createdUser.activationSetup.expiresAt,
-            ).toLocaleString("ar-EG")}`,
-          );
+        {
+          onSuccess: (createdUser) => {
+            resetForm();
+            setPage(1);
+            setActionSuccess("تم إنشاء المستخدم بنجاح.");
+            setCreatedActivationSummary(
+              `تم إرسال كلمة المرور الأولية إلى إشعارات مدير النظام فقط. تنتهي الصلاحية: ${new Date(
+                createdUser.activationSetup.expiresAt,
+              ).toLocaleString("ar-EG")} | عدد المدراء الذين تم إشعارهم: ${
+                createdUser.activationSetup.notifiedSystemAdminsCount ?? 0
+              }`,
+            );
+          },
         },
-      },
-    );
+      );
   };
 
   const handleToggleActive = (user: UserListItem) => {
@@ -983,9 +985,9 @@ export function UsersManagementWorkspace({
             ) : null}
             {createdActivationSummary ? (
               <div className="space-y-2 rounded-md border border-sky-300/40 bg-sky-500/10 p-3 text-xs text-sky-700 dark:text-sky-300">
-                <p className="font-medium">تم إصدار كلمة المرور الأولية لمرة واحدة.</p>
-                <p>شاركها مع المستخدم عبر قناة آمنة فقط، ولن تُعرض مرة أخرى بعد إغلاق هذه النافذة.</p>
-                <p className="break-all font-mono text-[11px] leading-6" dir="ltr">
+                <p className="font-medium">تم إصدار كلمة المرور الأولية بنجاح.</p>
+                <p>تم إرسال كلمة المرور مباشرة إلى إشعارات مدير النظام فقط، ولن تظهر هنا حفاظًا على الأمان.</p>
+                <p className="leading-6">
                   {createdActivationSummary}
                 </p>
               </div>

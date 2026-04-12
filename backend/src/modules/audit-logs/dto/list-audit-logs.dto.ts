@@ -5,6 +5,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  MaxLength,
   Max,
   Min,
 } from 'class-validator';
@@ -37,6 +38,25 @@ export class ListAuditLogsDto {
   @IsString()
   action?: string;
 
+  @ApiPropertyOptional({
+    example: 'UPDATE',
+    description: 'Normalized action type (supports suffix match, e.g. USER_UPDATE)',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  actionType?: string;
+
+  @ApiPropertyOptional({
+    example: 'students',
+    description:
+      'Domain filter (attendance, grades, fees, students, teachers, permissions, notifications, system)',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  domain?: string;
+
   @ApiPropertyOptional({ enum: AuditStatus, example: AuditStatus.SUCCESS })
   @IsOptional()
   @IsEnum(AuditStatus)
@@ -46,6 +66,25 @@ export class ListAuditLogsDto {
   @IsOptional()
   @IsString()
   actorUserId?: string;
+
+  @ApiPropertyOptional({
+    example: 'admin@example.com',
+    description: 'Searchable actor input (id, email, first name, last name)',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(191)
+  user?: string;
+
+  @ApiPropertyOptional({
+    example: 'finance',
+    description:
+      'Text search over action, resource, actor fields, resourceId, ip, and userAgent',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(191)
+  search?: string;
 
   @ApiPropertyOptional({ example: '2026-02-20T00:00:00.000Z' })
   @IsOptional()

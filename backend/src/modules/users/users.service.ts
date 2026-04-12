@@ -4,7 +4,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AuditStatus, Prisma, UserActivationStatus, type User } from '@prisma/client';
+import {
+  AuditStatus,
+  Prisma,
+  UserActivationStatus,
+  UserNotificationType,
+  type User,
+} from '@prisma/client';
 import * as argon2 from 'argon2';
 import { randomBytes } from 'crypto';
 import {
@@ -14,6 +20,7 @@ import {
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { EmployeesService } from '../employees/employees.service';
 import { GuardiansService } from '../guardians/guardians.service';
+import { UserNotificationsService } from '../user-notifications/user-notifications.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { ListUsersDto } from './dto/list-users.dto';
@@ -70,6 +77,17 @@ const userPublicSelect = {
   },
 } as const;
 
+const SYSTEM_ADMIN_ROLE_CODES = ['super_admin', 'school_admin'] as const;
+const INITIAL_PASSWORD_NOTIFICATION_TITLE = 'كلمة مرور أولية لمستخدم جديد';
+
+type UserIdentitySnapshot = {
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  username?: string | null;
+  phoneE164?: string | null;
+};
+
 @Injectable()
 export class UsersService {
   private readonly initialPasswordTtlHours = this.parseIntEnv(
@@ -82,6 +100,7 @@ export class UsersService {
     private readonly auditLogsService: AuditLogsService,
     private readonly employeesService: EmployeesService,
     private readonly guardiansService: GuardiansService,
+    private readonly userNotificationsService: UserNotificationsService,
   ) {}
 
   async create(createUserDto: CreateUserDto, actorUserId: string) {
@@ -165,12 +184,27 @@ export class UsersService {
         },
       });
 
+      const notificationDelivery =
+        await this.safelyNotifySystemAdminsWithInitialPassword({
+          actorUserId,
+          createdUserId: user.id,
+          initialPassword,
+          initialPasswordExpiresAt,
+          createdUser: {
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            username: user.username,
+            phoneE164: user.phoneE164,
+          },
+        });
+
       return {
         ...user,
         activationSetup: {
-          initialOneTimePassword: initialPassword,
           expiresAt: initialPasswordExpiresAt,
           activationStatus: user.activationStatus,
+          notifiedSystemAdminsCount: notificationDelivery.sentCount,
         },
       };
     } catch (error) {
@@ -588,9 +622,8 @@ export class UsersService {
   }
 
   private resolveDefaultPhoneRegion(): CountryCode {
-    const configuredValue = process.env.AUTH_DEFAULT_PHONE_REGION
-      ?.trim()
-      .toUpperCase();
+    const configuredValue =
+      process.env.AUTH_DEFAULT_PHONE_REGION?.trim().toUpperCase();
 
     if (configuredValue && /^[A-Z]{2}$/.test(configuredValue)) {
       return configuredValue as CountryCode;
@@ -631,6 +664,203 @@ export class UsersService {
 
     const phoneSlug = phoneE164.replace(/\D+/g, '');
     return `pending-user-${phoneSlug}@local.invalid`;
+  }
+
+  private async safelyNotifySystemAdminsWithInitialPassword(input: {
+    actorUserId: string;
+    createdUserId: string;
+    initialPassword: string;
+    initialPasswordExpiresAt: Date;
+    createdUser: UserIdentitySnapshot;
+  }): Promise<{ sentCount: number }> {
+    try {
+      return await this.notifySystemAdminsWithInitialPassword(input);
+    } catch (error) {
+      await this.auditLogsService.record({
+        actorUserId: input.actorUserId,
+        action: 'USER_CREATE_INITIAL_PASSWORD_NOTIFICATION_FAILED',
+        resource: 'users',
+        resourceId: input.createdUserId,
+        status: AuditStatus.FAILURE,
+        details: {
+          reason: this.extractErrorMessage(error),
+        },
+      });
+
+      return { sentCount: 0 };
+    }
+  }
+
+  private async notifySystemAdminsWithInitialPassword(input: {
+    actorUserId: string;
+    createdUserId: string;
+    initialPassword: string;
+    initialPasswordExpiresAt: Date;
+    createdUser: UserIdentitySnapshot;
+  }): Promise<{ sentCount: number }> {
+    const recipients = await this.prisma.user.findMany({
+      where: {
+        deletedAt: null,
+        isActive: true,
+        userRoles: {
+          some: {
+            deletedAt: null,
+            role: {
+              deletedAt: null,
+              isActive: true,
+              code: {
+                in: [...SYSTEM_ADMIN_ROLE_CODES],
+              },
+            },
+          },
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (recipients.length === 0) {
+      await this.auditLogsService.record({
+        actorUserId: input.actorUserId,
+        action: 'USER_CREATE_INITIAL_PASSWORD_NOTIFICATION_SKIPPED',
+        resource: 'users',
+        resourceId: input.createdUserId,
+        status: AuditStatus.FAILURE,
+        details: {
+          reason: 'No active system admin recipients found',
+          roleCodes: [...SYSTEM_ADMIN_ROLE_CODES],
+        },
+      });
+
+      return { sentCount: 0 };
+    }
+
+    const actorUser = await this.prisma.user.findFirst({
+      where: {
+        id: input.actorUserId,
+        deletedAt: null,
+      },
+      select: {
+        firstName: true,
+        lastName: true,
+        email: true,
+        username: true,
+        phoneE164: true,
+      },
+    });
+
+    const targetIdentity = this.formatUserIdentity(input.createdUser);
+    const actorIdentity = actorUser
+      ? this.formatUserIdentity(actorUser)
+      : input.actorUserId;
+    const expirationLabel = input.initialPasswordExpiresAt.toISOString();
+    const message = [
+      `تم إنشاء حساب جديد للمستخدم: ${targetIdentity}.`,
+      `كلمة المرور الأولية: ${input.initialPassword}.`,
+      `تنتهي الصلاحية: ${expirationLabel}.`,
+      `أنشأ الحساب: ${actorIdentity}.`,
+      'يرجى تسليم كلمة المرور عبر قناة آمنة، وإلزام المستخدم بتغييرها فور تسجيل الدخول.',
+    ].join(' ');
+
+    const dispatchResults = await Promise.all(
+      recipients.map(async (recipient) => {
+        try {
+          const createdNotification =
+            await this.userNotificationsService.createForUser({
+              userId: recipient.id,
+              title: INITIAL_PASSWORD_NOTIFICATION_TITLE,
+              message,
+              notificationType: UserNotificationType.ACTION_REQUIRED,
+              resource: 'users',
+              resourceId: input.createdUserId,
+              actionUrl: '/app/users',
+              triggeredByUserId: input.actorUserId,
+            });
+
+          return {
+            userId: recipient.id,
+            sent: Boolean(createdNotification),
+            skipped: createdNotification === null,
+            reason: null as string | null,
+          };
+        } catch (error) {
+          return {
+            userId: recipient.id,
+            sent: false,
+            skipped: false,
+            reason: this.extractErrorMessage(error),
+          };
+        }
+      }),
+    );
+
+    const sentCount = dispatchResults.filter((result) => result.sent).length;
+    const skippedCount = dispatchResults.filter(
+      (result) => result.skipped,
+    ).length;
+    const failedRecipients = dispatchResults
+      .filter((result) => result.reason)
+      .map((result) => ({
+        userId: result.userId,
+        reason: result.reason,
+      }));
+
+    await this.auditLogsService.record({
+      actorUserId: input.actorUserId,
+      action: 'USER_CREATE_INITIAL_PASSWORD_NOTIFICATION_SENT',
+      resource: 'users',
+      resourceId: input.createdUserId,
+      details: {
+        recipientsCount: sentCount,
+        skippedCount,
+        attemptedCount: recipients.length,
+        roleCodes: [...SYSTEM_ADMIN_ROLE_CODES],
+        expiresAt: expirationLabel,
+      },
+    });
+
+    if (failedRecipients.length > 0) {
+      await this.auditLogsService.record({
+        actorUserId: input.actorUserId,
+        action: 'USER_CREATE_INITIAL_PASSWORD_NOTIFICATION_PARTIAL_FAILURE',
+        resource: 'users',
+        resourceId: input.createdUserId,
+        status: AuditStatus.FAILURE,
+        details: {
+          sentCount,
+          skippedCount,
+          failedCount: failedRecipients.length,
+          failedRecipients,
+        },
+      });
+    }
+
+    return { sentCount };
+  }
+
+  private formatUserIdentity(user: UserIdentitySnapshot): string {
+    const fullName = [user.firstName, user.lastName]
+      .map((value) => value?.trim())
+      .filter((value): value is string => Boolean(value))
+      .join(' ');
+    const identifiers = [user.email, user.username, user.phoneE164]
+      .map((value) => value?.trim())
+      .filter((value): value is string => Boolean(value));
+
+    if (fullName && identifiers.length > 0) {
+      return `${fullName} (${identifiers.join(' | ')})`;
+    }
+
+    if (fullName) {
+      return fullName;
+    }
+
+    if (identifiers.length > 0) {
+      return identifiers.join(' | ');
+    }
+
+    return 'مستخدم غير محدد';
   }
 
   private generateInitialPassword(): string {

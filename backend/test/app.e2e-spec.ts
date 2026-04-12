@@ -6,6 +6,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter';
+import { loginAsKnownAdmin } from './e2e-auth';
 
 jest.setTimeout(30000);
 
@@ -99,8 +100,6 @@ type ErrorEnvelope = {
   };
 };
 
-const ADMIN_EMAIL = 'admin@school.local';
-const ADMIN_PASSWORD = 'ChangeMe123!';
 const UNIQUE_SUFFIX = `${Date.now()}_${Math.floor(Math.random() * 10000)}`;
 const LIMITED_USER_EMAIL = `e2e.readonly.${UNIQUE_SUFFIX}@school.local`;
 const LIMITED_USER_PASSWORD = 'ChangeMe123!';
@@ -119,6 +118,8 @@ describe('System 01 + 02 (e2e)', () => {
   let app: INestApplication<App> | null = null;
   let prisma: PrismaClient | null = null;
   let adminAccessToken = '';
+  let adminCredentialEmail = '';
+  let adminCredentialPassword = '';
   let limitedAccessToken = '';
   let limitedUserId = '';
   let limitedRoleId = '';
@@ -231,16 +232,11 @@ describe('System 01 + 02 (e2e)', () => {
       },
     });
 
-    const adminLoginResponse = await request(httpServer())
-      .post('/auth/login')
-      .send({
-        email: ADMIN_EMAIL,
-        password: ADMIN_PASSWORD,
-      })
-      .expect(200);
-
-    const adminLoginBody = adminLoginResponse.body as LoginBody;
+    const adminLogin = await loginAsKnownAdmin(httpServer);
+    const adminLoginBody = adminLogin.body as LoginBody;
     adminAccessToken = adminLoginBody.accessToken;
+    adminCredentialEmail = adminLogin.credential.email;
+    adminCredentialPassword = adminLogin.credential.password;
 
     const globalSettingsReadPermission = await prisma.permission.findUnique({
       where: {
@@ -450,15 +446,15 @@ describe('System 01 + 02 (e2e)', () => {
     const response = await request(httpServer())
       .post('/auth/login')
       .send({
-        email: ADMIN_EMAIL,
-        password: ADMIN_PASSWORD,
+        email: adminCredentialEmail,
+        password: adminCredentialPassword,
       })
       .expect(200);
 
     const body = response.body as LoginBody;
 
     expect(body.accessToken).toBeDefined();
-    expect(body.user.email).toBe('admin@school.local');
+    expect(body.user.email).toBe(adminCredentialEmail);
     expect(Array.isArray(body.user.permissionCodes)).toBe(true);
   });
 

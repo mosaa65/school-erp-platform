@@ -8,6 +8,7 @@ import { json } from 'express';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { StructuredLogger } from './common/logger/structured-logger.service';
+import { requestContextMiddleware } from './common/request-context/request-context';
 
 // Ensure BigInt values serialize safely in JSON responses.
 (BigInt.prototype as unknown as { toJSON?: () => string }).toJSON = function () {
@@ -81,6 +82,8 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
   });
+
+  app.use(requestContextMiddleware);
 
   app.use((req: Request, _res: Response, next: NextFunction) => {
     const coerceBoolean = (value: unknown): unknown => {
