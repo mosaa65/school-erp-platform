@@ -3,18 +3,25 @@
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
+  Activity,
   AlertTriangle,
+  CalendarRange,
   LoaderCircle,
   PencilLine,
   Plus,
   RefreshCw,
   Trash2,
+  Type,
+  UserRound,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
+import { TextareaField } from "@/components/ui/textarea-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
@@ -442,80 +449,98 @@ export function EmployeeViolationsWorkspace() {
           actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.employee}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, employee: event.target.value }))
-              }
-            >
-              <option value="all">كل الموظفين</option>
-              {(employeesQuery.data ?? []).map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.jobNumber ?? employee.fullName}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="الموظف">
+              <SelectField
+                icon={<UserRound />}
+                value={filterDraft.employee}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, employee: event.target.value }))
+                }
+              >
+                <option value="all">كل الموظفين</option>
+                {(employeesQuery.data ?? []).map((employee) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.jobNumber ?? employee.fullName}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.reporter}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, reporter: event.target.value }))
-              }
-            >
-              <option value="all">كل المبلغين</option>
-              {(employeesQuery.data ?? []).map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.jobNumber ?? employee.fullName}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="المبلّغ">
+              <SelectField
+                icon={<UserRound />}
+                value={filterDraft.reporter}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, reporter: event.target.value }))
+                }
+              >
+                <option value="all">كل المبلغين</option>
+                {(employeesQuery.data ?? []).map((employee) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.jobNumber ?? employee.fullName}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.severity}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  severity: event.target.value as ViolationSeverity | "all",
-                }))
-              }
-            >
-              <option value="all">كل درجات المخالفة</option>
-              {SEVERITY_OPTIONS.map((severity) => (
-                <option key={severity} value={severity}>
-                  {translateViolationSeverity(severity)}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="درجة المخالفة">
+              <SelectField
+                icon={<AlertTriangle />}
+                value={filterDraft.severity}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    severity: event.target.value as ViolationSeverity | "all",
+                  }))
+                }
+              >
+                <option value="all">كل درجات المخالفة</option>
+                {SEVERITY_OPTIONS.map((severity) => (
+                  <option key={severity} value={severity}>
+                    {translateViolationSeverity(severity)}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <Input
-              type="date"
-              value={filterDraft.fromDate}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, fromDate: event.target.value }))
-              }
-            />
+            <FormField label="من تاريخ">
+              <Input
+                icon={<CalendarRange />}
+                type="date"
+                value={filterDraft.fromDate}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, fromDate: event.target.value }))
+                }
+              />
+            </FormField>
 
-            <Input
-              type="date"
-              value={filterDraft.toDate}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, toDate: event.target.value }))
-              }
-            />
+            <FormField label="إلى تاريخ">
+              <Input
+                icon={<CalendarRange />}
+                type="date"
+                value={filterDraft.toDate}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, toDate: event.target.value }))
+                }
+              />
+            </FormField>
 
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">نشط فقط</option>
-              <option value="inactive">غير نشط فقط</option>
-            </SelectField>
+            <FormField label="الحالة">
+              <SelectField
+                icon={<Activity />}
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">نشط فقط</option>
+                <option value="inactive">غير نشط فقط</option>
+              </SelectField>
+            </FormField>
           </div>
           {filtersError ? (
             <div className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
@@ -701,16 +726,16 @@ export function EmployeeViolationsWorkspace() {
                   ? "عدّل بيانات المخالفة الحالية."
                   : "أدخل بيانات المخالفة الجديدة لإنشاء سجل جديد."}
               </p>
-              <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
-              <select
+              <FormField label="الموظف" required>
+                <SelectField
+                  icon={<UserRound />}
                 data-testid="violation-form-employee"
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                 value={formState.employeeId}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
                 }
                 disabled={!canReadEmployees}
+                required
               >
                 <option value="">اختر الموظف</option>
                 {(employeesQuery.data ?? []).map((employee) => (
@@ -718,14 +743,12 @@ export function EmployeeViolationsWorkspace() {
                     {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
                   </option>
                 ))}
-              </select>
-            </div>
+                </SelectField>
+              </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                تاريخ المخالفة *
-              </label>
+            <FormField label="تاريخ المخالفة" required>
               <Input
+                icon={<CalendarRange />}
                 data-testid="violation-form-date"
                 type="date"
                 value={formState.violationDate}
@@ -737,13 +760,11 @@ export function EmployeeViolationsWorkspace() {
                 }
                 required
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                نوع المخالفة *
-              </label>
+            <FormField label="نوع المخالفة" required>
               <Input
+                icon={<AlertTriangle />}
                 data-testid="violation-form-aspect"
                 value={formState.violationAspect}
                 onChange={(event) =>
@@ -755,13 +776,11 @@ export function EmployeeViolationsWorkspace() {
                 placeholder="اكتب نوع المخالفة"
                 required
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                وصف المخالفة *
-              </label>
-              <Input
+            <FormField label="وصف المخالفة" required>
+              <TextareaField
+                icon={<Type />}
                 data-testid="violation-form-text"
                 value={formState.violationText}
                 onChange={(event) =>
@@ -772,12 +791,13 @@ export function EmployeeViolationsWorkspace() {
                 }
                 placeholder="اكتب تفاصيل المخالفة بحد أدنى 20 حرفًا"
                 required
+                rows={3}
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الإجراء المتخذ</label>
+            <FormField label="الإجراء المتخذ">
               <Input
+                icon={<Type />}
                 data-testid="violation-form-action-taken"
                 value={formState.actionTaken}
                 onChange={(event) =>
@@ -785,13 +805,12 @@ export function EmployeeViolationsWorkspace() {
                 }
                 placeholder="إن وجد اكتب الإجراء المتخذ"
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الدرجة</label>
-              <select
+            <FormField label="الدرجة">
+              <SelectField
+                icon={<AlertTriangle />}
                 data-testid="violation-form-severity"
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                 value={formState.severity}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -805,21 +824,18 @@ export function EmployeeViolationsWorkspace() {
                     {translateViolationSeverity(severity)}
                   </option>
                 ))}
-              </select>
+              </SelectField>
               {formState.severity === "HIGH" || formState.severity === "CRITICAL" ? (
                 <p className="text-xs text-destructive">
                   المخالفات الشديدة تتطلب متابعة فورية من الإدارة.
                 </p>
               ) : null}
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                المبلّغ
-              </label>
-              <select
+            <FormField label="المبلّغ">
+              <SelectField
+                icon={<UserRound />}
                 data-testid="violation-form-reporter"
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                 value={formState.reportedByEmployeeId}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -835,46 +851,37 @@ export function EmployeeViolationsWorkspace() {
                     {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
                   </option>
                 ))}
-              </select>
-            </div>
+              </SelectField>
+            </FormField>
 
             <div className="grid gap-2 md:grid-cols-3">
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>يوجد إنذار</span>
-                <input
-                  type="checkbox"
-                  checked={formState.hasWarning}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      hasWarning: event.target.checked,
-                    }))
-                  }
-                />
-              </label>
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>يوجد محضر</span>
-                <input
-                  type="checkbox"
-                  checked={formState.hasMinutes}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      hasMinutes: event.target.checked,
-                    }))
-                  }
-                />
-              </label>
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشطة</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                />
-              </label>
+              <FormBooleanField
+                label="يوجد إنذار"
+                checked={formState.hasWarning}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    hasWarning: checked,
+                  }))
+                }
+              />
+              <FormBooleanField
+                label="يوجد محضر"
+                checked={formState.hasMinutes}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    hasMinutes: checked,
+                  }))
+                }
+              />
+              <FormBooleanField
+                label="نشطة"
+                checked={formState.isActive}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({ ...prev, isActive: checked }))
+                }
+              />
             </div>
 
             {formError ? (

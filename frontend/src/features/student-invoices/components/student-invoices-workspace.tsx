@@ -18,10 +18,9 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Input } from "@/components/ui/input";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { PageShell } from "@/components/ui/page-shell";
-import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
@@ -506,36 +505,34 @@ export function StudentInvoicesWorkspace() {
         ثم استخدم البحث برقم الفاتورة للوصول المباشر قبل فتح الفلاتر التفصيلية.
       </FinanceInlineHint>
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <SearchField
-            containerClassName="max-w-md"
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            placeholder="بحث برقم الفاتورة..."
-          />
-          <SelectField
-            value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value as "all" | InvoiceStatus)}
-            className="max-w-[180px]"
-          >
-            <option value="all">كل الحالات</option>
-            <option value="DRAFT">مسودة</option>
-            <option value="ISSUED">صادرة</option>
-            <option value="PARTIAL">جزئي</option>
-            <option value="PAID">مسدد</option>
-            <option value="CANCELLED">ملغاة</option>
-            <option value="CREDITED">مُعادة</option>
-          </SelectField>
-          <Badge variant="secondary" className="h-10">
-            النتائج: {pagination?.total ?? invoices.length}
-          </Badge>
-        </div>
-        <FilterTriggerButton
-          count={activeFiltersCount}
-          onClick={() => setIsFilterOpen((prev) => !prev)}
-        />
-      </div>
+      <ManagementToolbar
+        searchValue={searchInput}
+        onSearchChange={(event) => setSearchInput(event.target.value)}
+        searchPlaceholder="بحث برقم الفاتورة..."
+        filterCount={activeFiltersCount}
+        onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+        searchWrapperClassName="max-w-md"
+        actions={
+          <>
+            <SelectField
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value as "all" | InvoiceStatus)}
+              className="max-w-[180px]"
+            >
+              <option value="all">كل الحالات</option>
+              <option value="DRAFT">مسودة</option>
+              <option value="ISSUED">صادرة</option>
+              <option value="PARTIAL">جزئي</option>
+              <option value="PAID">مسدد</option>
+              <option value="CANCELLED">ملغاة</option>
+              <option value="CREDITED">مُعادة</option>
+            </SelectField>
+            <Badge variant="secondary" className="h-10">
+              النتائج: {pagination?.total ?? invoices.length}
+            </Badge>
+          </>
+        }
+      />
 
       <div className="flex flex-wrap gap-2">
         {STATUS_FILTER_OPTIONS.map((option) => {

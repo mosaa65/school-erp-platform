@@ -11,8 +11,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { StudentPickerSheet } from "@/components/ui/student-picker-sheet";
 import { useHealthSummaryQuery } from "@/features/health-visits/hooks/use-health-summary-query";
 import { useHealthVisitsQuery } from "@/features/health-visits/hooks/use-health-visits-query";
@@ -152,15 +152,13 @@ export function HealthVisitsWorkspace() {
                 className="mt-1"
               />
             </label>
-            <label className="flex items-center gap-3 text-sm font-medium text-muted-foreground">
-              <span>متابعة مطلوبة</span>
-              <Switch
-                checked={formState.followUpRequired}
-                onCheckedChange={(checked) =>
-                  setFormState((prev) => ({ ...prev, followUpRequired: checked }))
-                }
-              />
-            </label>
+            <FormBooleanField
+              label="متابعة مطلوبة"
+              checked={formState.followUpRequired}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({ ...prev, followUpRequired: checked }))
+              }
+            />
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">

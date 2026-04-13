@@ -20,10 +20,11 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SearchField } from "@/components/ui/search-field";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import { StudentPickerSheet } from "@/components/ui/student-picker-sheet";
+import { SystemMessageInline } from "@/components/feedback/system-message-inline";
 import {
   Card,
   CardContent,
@@ -33,11 +34,11 @@ import {
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
 import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { FormField } from "@/components/ui/form-field";
 import { TextareaField } from "@/components/ui/textarea-field";
+import { useSystemMessage } from "@/hooks/use-system-message";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useLookupEnrollmentStatusesQuery } from "@/features/lookup-enrollment-statuses/hooks/use-lookup-enrollment-statuses-query";
 import { useGradeLevelOptionsQuery } from "@/features/student-enrollments/hooks/use-grade-level-options-query";
@@ -157,6 +158,18 @@ function formatDate(value: string | null): string {
   return date.toLocaleDateString("ar-SA");
 }
 
+function getErrorMessage(error: unknown, fallbackMessage: string): string {
+  if (error instanceof Error) {
+    if (error.message.trim().toLowerCase() === "internal server error") {
+      return fallbackMessage;
+    }
+
+    return error.message;
+  }
+
+  return fallbackMessage;
+}
+
 function toFormState(enrollment: StudentEnrollmentListItem): EnrollmentFormState {
   return {
     studentId: enrollment.studentId,
@@ -199,6 +212,7 @@ function buildStudentPickerOptionFromEnrollment(
 export function StudentEnrollmentsWorkspace() {
   const router = useRouter();
   const { hasPermission } = useRbac();
+  const { notify, preferences } = useSystemMessage();
   const canCreate = hasPermission("student-enrollments.create");
   const canUpdate = hasPermission("student-enrollments.update");
   const canDelete = hasPermission("student-enrollments.delete");
@@ -246,7 +260,6 @@ export function StudentEnrollmentsWorkspace() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<EnrollmentFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
-  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
   const [selectedFormStudent, setSelectedFormStudent] = React.useState<StudentPickerOption | null>(
     null,
   );
@@ -317,12 +330,6 @@ export function StudentEnrollmentsWorkspace() {
   const hasDependenciesReadPermissions =
     canReadStudents && canReadAcademicYears && canReadSections && canReadGradeLevels;
 
-  const mutationError =
-    (createMutation.error as Error | null)?.message ??
-    (updateMutation.error as Error | null)?.message ??
-    (deleteMutation.error as Error | null)?.message ??
-    null;
-
   React.useEffect(() => {
     if (!isEditing) {
       return;
@@ -380,10 +387,10 @@ export function StudentEnrollmentsWorkspace() {
 
   const handleStartCreate = () => {
     if (!canCreate) {
+      notify.warning("لا تملك الصلاحية المطلوبة: student-enrollments.create.");
       return;
     }
 
-    setActionSuccess(null);
     setFormError(null);
     setEditingEnrollmentId(null);
     setFormState(DEFAULT_FORM_STATE);
@@ -413,9 +420,8 @@ export function StudentEnrollmentsWorkspace() {
     return true;
   };
 
-  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmitForm = async (event?: React.FormEvent<HTMLFormElement>) => {
     event?.preventDefault();
-    setActionSuccess(null);
 
     if (!validateForm()) {
       return;
@@ -440,45 +446,64 @@ export function StudentEnrollmentsWorkspace() {
 
     if (isEditing && editingEnrollmentId) {
       if (!canUpdate) {
-        setFormError("لا تملك الصلاحية المطلوبة: student-enrollments.update.");
+        const message = "لا تملك الصلاحية المطلوبة: student-enrollments.update.";
+        setFormError(message);
+        notify.error(message);
         return;
       }
 
-      updateMutation.mutate(
-        {
-          enrollmentId: editingEnrollmentId,
-          payload,
-        },
-        {
-          onSuccess: () => {
-            resetForm();
-            setActionSuccess("تم تحديث قيد الطالب بنجاح.");
+      try {
+        await notify.promise(
+          () =>
+            updateMutation.mutateAsync({
+              enrollmentId: editingEnrollmentId,
+              payload,
+            }),
+          {
+            loading: "جارٍ تحديث قيد الطالب...",
+            success: "تم تحديث قيد الطالب بنجاح.",
+            error: (error) => ({
+              message: getErrorMessage(error, "تعذر تحديث قيد الطالب."),
+              persistent: true,
+            }),
           },
-        },
-      );
+        );
+        resetForm();
+      } catch (error) {
+        setFormError(getErrorMessage(error, "تعذر تحديث قيد الطالب."));
+      }
       return;
     }
 
     if (!canCreate) {
-      setFormError("لا تملك الصلاحية المطلوبة: student-enrollments.create.");
+      const message = "لا تملك الصلاحية المطلوبة: student-enrollments.create.";
+      setFormError(message);
+      notify.error(message);
       return;
     }
 
-    createMutation.mutate(payload, {
-      onSuccess: () => {
-        resetForm();
-        setPage(1);
-        setActionSuccess("تم إنشاء قيد الطالب بنجاح.");
-      },
-    });
+    try {
+      await notify.promise(() => createMutation.mutateAsync(payload), {
+        loading: "جارٍ إنشاء قيد الطالب...",
+        success: "تم إنشاء قيد الطالب بنجاح.",
+        error: (error) => ({
+          message: getErrorMessage(error, "تعذر إنشاء قيد الطالب."),
+          persistent: true,
+        }),
+      });
+      resetForm();
+      setPage(1);
+    } catch (error) {
+      setFormError(getErrorMessage(error, "تعذر إنشاء قيد الطالب."));
+    }
   };
 
   const handleStartEdit = (enrollment: StudentEnrollmentListItem) => {
     if (!canUpdate) {
+      notify.warning("لا تملك الصلاحية المطلوبة: student-enrollments.update.");
       return;
     }
 
-    setActionSuccess(null);
     setFormError(null);
     setEditingEnrollmentId(enrollment.id);
     setFormState(toFormState(enrollment));
@@ -486,30 +511,42 @@ export function StudentEnrollmentsWorkspace() {
     setIsFormOpen(true);
   };
 
-  const handleToggleActive = (enrollment: StudentEnrollmentListItem) => {
+  const handleToggleActive = async (enrollment: StudentEnrollmentListItem) => {
     if (!canUpdate) {
+      notify.warning("لا تملك الصلاحية المطلوبة: student-enrollments.update.");
       return;
     }
 
-    updateMutation.mutate(
-      {
-        enrollmentId: enrollment.id,
-        payload: {
-          isActive: !enrollment.isActive,
+    try {
+      await notify.promise(
+        () =>
+          updateMutation.mutateAsync({
+            enrollmentId: enrollment.id,
+            payload: {
+              isActive: !enrollment.isActive,
+            },
+          }),
+        {
+          loading: enrollment.isActive
+            ? "جارٍ تعطيل قيد الطالب..."
+            : "جارٍ تفعيل قيد الطالب...",
+          success: enrollment.isActive
+            ? "تم تعطيل القيد بنجاح."
+            : "تم تفعيل القيد بنجاح.",
+          error: (error) => ({
+            message: getErrorMessage(error, "تعذر تحديث حالة القيد."),
+            persistent: true,
+          }),
         },
-      },
-      {
-        onSuccess: () => {
-          setActionSuccess(
-            enrollment.isActive ? "تم تعطيل القيد بنجاح." : "تم تفعيل القيد بنجاح.",
-          );
-        },
-      },
-    );
+      );
+    } catch {
+      // handled by unified messages
+    }
   };
 
-  const handleDelete = (enrollment: StudentEnrollmentListItem) => {
+  const handleDelete = async (enrollment: StudentEnrollmentListItem) => {
     if (!canDelete) {
+      notify.warning("لا تملك الصلاحية المطلوبة: student-enrollments.delete.");
       return;
     }
 
@@ -520,14 +557,23 @@ export function StudentEnrollmentsWorkspace() {
       return;
     }
 
-    deleteMutation.mutate(enrollment.id, {
-      onSuccess: () => {
-        if (editingEnrollmentId === enrollment.id) {
-          resetForm();
-        }
-        setActionSuccess("تم حذف قيد الطالب بنجاح.");
-      },
-    });
+    try {
+      await notify.promise(() => deleteMutation.mutateAsync(enrollment.id), {
+        loading: `جارٍ حذف قيد الطالب ${enrollment.student.fullName}...`,
+        success: "تم حذف قيد الطالب بنجاح.",
+        error: (error) => ({
+          message: getErrorMessage(error, "تعذر حذف قيد الطالب."),
+          persistent: true,
+        }),
+      });
+      if (editingEnrollmentId === enrollment.id) {
+        resetForm();
+      }
+    } catch (error) {
+      if (editingEnrollmentId === enrollment.id) {
+        setFormError(getErrorMessage(error, "تعذر حذف قيد الطالب."));
+      }
+    }
   };
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
@@ -561,8 +607,9 @@ export function StudentEnrollmentsWorkspace() {
       enrollment.gradeLevelId ?? enrollment.gradeLevel?.id ?? enrollment.section?.gradeLevel.id;
 
     if (!gradeLevelId) {
-      setActionSuccess(null);
-      setFormError("لا يمكن فتح شاشة التوزيع قبل توفر الصف على هذا القيد.");
+      const message = "لا يمكن فتح شاشة التوزيع قبل توفر الصف على هذا القيد.";
+      setFormError(message);
+      notify.warning(message);
       return;
     }
 
@@ -573,8 +620,9 @@ export function StudentEnrollmentsWorkspace() {
     router.push(`/app/student-distributions?${query.toString()}`);
   };
 
-  const handleReturnToPendingDistribution = (enrollment: StudentEnrollmentListItem) => {
+  const handleReturnToPendingDistribution = async (enrollment: StudentEnrollmentListItem) => {
     if (!canUpdate) {
+      notify.warning("لا تملك الصلاحية المطلوبة: student-enrollments.update.");
       return;
     }
 
@@ -582,26 +630,56 @@ export function StudentEnrollmentsWorkspace() {
       enrollment.gradeLevelId ?? enrollment.gradeLevel?.id ?? enrollment.section?.gradeLevel.id;
 
     if (!gradeLevelId) {
-      setActionSuccess(null);
-      setFormError("لا يمكن إعادة القيد إلى الانتظار قبل معرفة الصف المرتبط به.");
+      const message = "لا يمكن إعادة القيد إلى الانتظار قبل معرفة الصف المرتبط به.";
+      setFormError(message);
+      notify.warning(message);
       return;
     }
 
-    updateMutation.mutate(
-      {
-        enrollmentId: enrollment.id,
-        payload: {
-          gradeLevelId,
-          sectionId: "",
-          distributionStatus: "PENDING_DISTRIBUTION",
+    try {
+      await notify.promise(
+        () =>
+          updateMutation.mutateAsync({
+            enrollmentId: enrollment.id,
+            payload: {
+              gradeLevelId,
+              sectionId: "",
+              distributionStatus: "PENDING_DISTRIBUTION",
+            },
+          }),
+        {
+          loading: "جارٍ إعادة القيد إلى انتظار التوزيع...",
+          success: "تمت إعادة القيد إلى انتظار التوزيع بنجاح.",
+          error: (error) => ({
+            message: getErrorMessage(error, "تعذر إعادة القيد إلى انتظار التوزيع."),
+            persistent: true,
+          }),
         },
-      },
-      {
-        onSuccess: () => {
-          setActionSuccess("تمت إعادة القيد إلى انتظار التوزيع بنجاح.");
-        },
-      },
-    );
+      );
+    } catch {
+      // handled by unified messages
+    }
+  };
+
+  const handleRefresh = async () => {
+    try {
+      await notify.promise(async () => {
+        const result = await enrollmentsQuery.refetch();
+        if (result.error) {
+          throw result.error;
+        }
+        return result;
+      }, {
+        loading: "جارٍ تحديث قيود الطلاب...",
+        success: "تم تحديث قيود الطلاب.",
+        error: (error) => ({
+          message: getErrorMessage(error, "تعذّر تحميل بيانات قيود الطلاب."),
+          persistent: true,
+        }),
+      });
+    } catch {
+      // handled by unified messages
+    }
   };
 
   const applyFilters = () => {
@@ -640,29 +718,32 @@ export function StudentEnrollmentsWorkspace() {
     studentFilter,
   ]);
 
+  const hasActiveFilters = activeFiltersCount > 0;
+  const inlineMessageProps = {
+    colorMode: preferences.colorMode,
+    variant: preferences.variant,
+    dismissible: false,
+  } as const;
+  const emptyStateMessage = hasActiveFilters
+    ? "لا توجد نتائج مطابقة للفلاتر الحالية."
+    : canCreate
+      ? "لا توجد قيود طلاب بعد. يمكنك البدء بإنشاء أول قيد."
+      : "لا توجد قيود طلاب متاحة حاليًا.";
+
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
-            <SearchField
-              containerClassName="flex-1"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="بحث بالطالب/رقم الطالب/رقم القيد السنوي/الصف/الشعبة/السنة..."
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterTriggerButton
-              count={activeFiltersCount}
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-            />
-          </div>
-        </div>
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="بحث بالطالب/رقم الطالب/رقم القيد السنوي/الصف/الشعبة/السنة..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+        />
 
         <FilterDrawer
-          open={isFilterOpen}
-          onClose={() => setIsFilterOpen(false)}
+            open={isFilterOpen}
+            onClose={() => setIsFilterOpen(false)}
           title="فلاتر القيود"
           actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
@@ -809,42 +890,56 @@ export function StudentEnrollmentsWorkspace() {
           </CardHeader>
 
           <CardContent className="space-y-3">
-          {actionSuccess ? (
-            <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">
-              {actionSuccess}
-            </div>
-          ) : null}
-
-          {mutationError && !isFormOpen ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {mutationError}
-            </div>
-          ) : null}
-
           {formError && !isFormOpen ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {formError}
-            </div>
+            <SystemMessageInline
+              tone="warning"
+              message={formError}
+              densityPreset={preferences.densityPreset}
+              {...inlineMessageProps}
+            />
           ) : null}
 
           {enrollmentsQuery.isPending ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ تحميل البيانات...
-            </div>
+            <SystemMessageInline
+              tone="loading"
+              message="جارٍ تحميل بيانات قيود الطلاب..."
+              densityPreset={preferences.densityPreset}
+              {...inlineMessageProps}
+            />
           ) : null}
 
           {enrollmentsQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {enrollmentsQuery.error instanceof Error
-                ? enrollmentsQuery.error.message
-                : "تعذّر تحميل البيانات."}
-            </div>
+            <SystemMessageInline
+              tone="error"
+              message={getErrorMessage(enrollmentsQuery.error, "تعذّر تحميل البيانات.")}
+              densityPreset={preferences.densityPreset}
+              action={{ label: "إعادة المحاولة", dismissOnClick: false }}
+              onAction={() => void handleRefresh()}
+              {...inlineMessageProps}
+            />
           ) : null}
 
-          {!enrollmentsQuery.isPending && enrollments.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              لا توجد نتائج مطابقة.
-            </div>
+          {!enrollmentsQuery.isPending && !enrollmentsQuery.error && enrollments.length === 0 ? (
+            <SystemMessageInline
+              tone="neutral"
+              message={emptyStateMessage}
+              densityPreset={preferences.densityPreset}
+              action={
+                hasActiveFilters
+                  ? { label: "مسح الفلاتر", dismissOnClick: false }
+                  : canCreate
+                    ? { label: "إنشاء قيد", dismissOnClick: false }
+                    : undefined
+              }
+              onAction={
+                hasActiveFilters
+                  ? clearFilters
+                  : canCreate
+                    ? handleStartCreate
+                    : undefined
+              }
+              {...inlineMessageProps}
+            />
           ) : null}
 
           {enrollments.map((enrollment) => (
@@ -981,7 +1076,7 @@ export function StudentEnrollmentsWorkspace() {
                 variant="ghost"
                 size="sm"
                 className="gap-1.5"
-                onClick={() => void enrollmentsQuery.refetch()}
+                onClick={() => void handleRefresh()}
                 disabled={enrollmentsQuery.isFetching}
               >
                 <RefreshCw
@@ -1013,9 +1108,12 @@ export function StudentEnrollmentsWorkspace() {
         showFooter={false}
       >
         {!canCreate && !isEditing ? (
-          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            لا تملك الصلاحية المطلوبة: <code>student-enrollments.create</code>.
-          </div>
+          <SystemMessageInline
+            tone="warning"
+            message="لا تملك الصلاحية المطلوبة: student-enrollments.create."
+            densityPreset={preferences.densityPreset}
+            {...inlineMessageProps}
+          />
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
             <FormField label="الطالب" required>
@@ -1204,28 +1302,21 @@ export function StudentEnrollmentsWorkspace() {
             />
 
             {formError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                {formError}
-              </div>
-            ) : null}
-
-            {mutationError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                {mutationError}
-              </div>
-            ) : null}
-            {actionSuccess ? (
-              <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
-                {actionSuccess}
-              </div>
+              <SystemMessageInline
+                tone="warning"
+                message={formError}
+                densityPreset="compact"
+                {...inlineMessageProps}
+              />
             ) : null}
 
             {!hasDependenciesReadPermissions ? (
-              <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                يتطلب هذا الجزء صلاحيات القراءة: <code>students.read</code>,{" "}
-                <code>academic-years.read</code>, <code>grade-levels.read</code>,{" "}
-                <code>sections.read</code>.
-              </div>
+              <SystemMessageInline
+                tone="neutral"
+                message="يتطلب هذا الجزء صلاحيات القراءة: students.read, academic-years.read, grade-levels.read, sections.read."
+                densityPreset="compact"
+                {...inlineMessageProps}
+              />
             ) : null}
 
             <div className="flex gap-2">

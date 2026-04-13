@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
-import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
   CardContent,
@@ -539,7 +539,7 @@ export function AcademicYearsWorkspace() {
         disabled={!canCreate}
       />
 
-      <CrudFormSheet
+      <BottomSheetForm
         open={isFormOpen}
         title={isEditing ? "تعديل سنة أكاديمية" : "إنشاء سنة أكاديمية"}
         onClose={resetForm}
@@ -659,7 +659,7 @@ export function AcademicYearsWorkspace() {
             </div>
           </form>
         )}
-      </CrudFormSheet>
+      </BottomSheetForm>
     </>
   );
 }

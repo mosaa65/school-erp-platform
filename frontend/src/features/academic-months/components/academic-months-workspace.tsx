@@ -16,8 +16,9 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { Input } from "@/components/ui/input";
-import { SearchField } from "@/components/ui/search-field";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
@@ -28,7 +29,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
 import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { FormField } from "@/components/ui/form-field";
@@ -423,132 +423,118 @@ export function AcademicMonthsWorkspace() {
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-1 flex-wrap items-center gap-2 min-w-0 sm:min-w-[240px] max-w-lg">
-            <SearchField
-              containerClassName="flex-1"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="بحث..."
-              data-testid="academic-month-filter-search"
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterTriggerButton
-              count={activeFiltersCount}
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-            />
-          </div>
-        </div>
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="بحث..."
+          searchInputProps={{ "data-testid": "academic-month-filter-search" }}
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+        />
 
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
           title="فلاتر الأشهر الأكاديمية"
-          actionButtons={
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button
-                type="button"
-                onClick={applyFilters}
-                className="flex-1 gap-1.5"
-                data-testid="academic-month-filters-submit"
-              >
-                تطبيق
-              </Button>
-            </div>
-          }
+          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.year}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  year: event.target.value,
-                  term: "all",
-                }))
-              }
-              data-testid="academic-month-filter-year"
-            >
-              <option value="all">كل السنوات</option>
-              {yearOptions.map((year) => (
-                <option key={year.id} value={year.id}>
-                  {year.code}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="السنة الأكاديمية">
+              <SelectField
+                icon={<CalendarClock />}
+                value={filterDraft.year}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    year: event.target.value,
+                    term: "all",
+                  }))
+                }
+                data-testid="academic-month-filter-year"
+              >
+                <option value="all">كل السنوات</option>
+                {yearOptions.map((year) => (
+                  <option key={year.id} value={year.id}>
+                    {year.code}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.term}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, term: event.target.value }))
-              }
-              data-testid="academic-month-filter-term"
-            >
-              <option value="all">كل الفصول</option>
-              {termOptions.map((term) => (
-                <option key={term.id} value={term.id}>
-                  {term.code}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="الفصل الأكاديمي">
+              <SelectField
+                icon={<CalendarDays />}
+                value={filterDraft.term}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, term: event.target.value }))
+                }
+                data-testid="academic-month-filter-term"
+              >
+                <option value="all">كل الفصول</option>
+                {termOptions.map((term) => (
+                  <option key={term.id} value={term.id}>
+                    {term.code}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.status}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  status: event.target.value as GradingWorkflowStatus | "all",
-                }))
-              }
-              data-testid="academic-month-filter-status"
-            >
-              <option value="all">كل الحالات</option>
-              {WORKFLOW_OPTIONS.map((status) => (
-                <option key={status} value={status}>
-                  {translateGradingWorkflowStatus(status)}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="حالة سير العمل">
+              <SelectField
+                icon={<Activity />}
+                value={filterDraft.status}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    status: event.target.value as GradingWorkflowStatus | "all",
+                  }))
+                }
+                data-testid="academic-month-filter-status"
+              >
+                <option value="all">كل الحالات</option>
+                {WORKFLOW_OPTIONS.map((status) => (
+                  <option key={status} value={status}>
+                    {translateGradingWorkflowStatus(status)}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.current}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  current: event.target.value as "all" | "current" | "not-current",
-                }))
-              }
-              data-testid="academic-month-filter-current"
-            >
-              <option value="all">الكل</option>
-              <option value="current">الحالي فقط</option>
-              <option value="not-current">غير الحالي</option>
-            </SelectField>
+            <FormField label="الحالية">
+              <SelectField
+                icon={<CalendarClock />}
+                value={filterDraft.current}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    current: event.target.value as "all" | "current" | "not-current",
+                  }))
+                }
+                data-testid="academic-month-filter-current"
+              >
+                <option value="all">الكل</option>
+                <option value="current">الحالي فقط</option>
+                <option value="not-current">غير الحالي</option>
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-              data-testid="academic-month-filter-active"
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </SelectField>
+            <FormField label="التفعيل">
+              <SelectField
+                icon={<Activity />}
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+                data-testid="academic-month-filter-active"
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">النشطة فقط</option>
+                <option value="inactive">غير النشطة فقط</option>
+              </SelectField>
+            </FormField>
           </div>
         </FilterDrawer>
 

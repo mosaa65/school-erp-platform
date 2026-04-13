@@ -66,6 +66,18 @@ const neutralSurface: ThemeSurfaceTemplate = {
     "border-slate-500/20 bg-slate-500/10 text-slate-700 dark:text-slate-300",
 };
 
+const customSurface: ThemeSurfaceTemplate = {
+  panelClassName: "border-[color:var(--app-accent-strong)] bg-background/55",
+  activeGlowClassName:
+    "from-[color:var(--app-accent-strong)] via-[color:var(--app-accent-soft)] to-transparent",
+  headerClassName:
+    "border-[color:var(--app-accent-strong)] bg-gradient-to-l from-[color:var(--app-accent-soft)] via-background/92 to-background/78 shadow-[0_22px_55px_-34px_color-mix(in_oklab,var(--app-accent-color)_42%,transparent)]",
+  headerIconClassName:
+    "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]",
+  headerBadgeClassName:
+    "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]",
+};
+
 const violetSurface: ThemeSurfaceTemplate = {
   panelClassName: "border-violet-500/20 bg-background/55",
   activeGlowClassName: "from-violet-500/18 via-violet-500/7 to-transparent",
@@ -154,6 +166,31 @@ const PRESET_DEFINITIONS: Record<ColorPresetId, ColorPresetDefinition> = {
           soft: "rgba(148, 163, 184, 0.12)",
           strong: "rgba(148, 163, 184, 0.22)",
           ring: "rgba(148, 163, 184, 0.3)",
+        },
+      },
+    },
+  ),
+  custom: createPresetDefinition(
+    "custom",
+    "لون مخصص",
+    "يطبق لونًا موحدًا تختاره يدويًا على النظام كاملًا.",
+    {
+      light: {
+        surface: customSurface,
+        accent: {
+          color: "var(--app-accent-color)",
+          soft: "var(--app-accent-soft)",
+          strong: "var(--app-accent-strong)",
+          ring: "var(--app-accent-ring)",
+        },
+      },
+      dark: {
+        surface: customSurface,
+        accent: {
+          color: "var(--app-accent-color)",
+          soft: "var(--app-accent-soft)",
+          strong: "var(--app-accent-strong)",
+          ring: "var(--app-accent-ring)",
         },
       },
     },

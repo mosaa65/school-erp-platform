@@ -24,6 +24,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
@@ -584,43 +585,34 @@ export function GradingPolicyComponentsWorkspace() {
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-3">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={formState.includeInMonthly}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      includeInMonthly: event.target.checked,
-                    }))
-                  }
-                />
-                يدخل في المحصلة الشهرية
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={formState.includeInSemester}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      includeInSemester: event.target.checked,
-                    }))
-                  }
-                />
-                يدخل في نتيجة الفصل
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                />
-                نشط
-              </label>
+            <div className="grid gap-3 md:grid-cols-3">
+              <FormBooleanField
+                label="يدخل في المحصلة الشهرية"
+                checked={formState.includeInMonthly}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    includeInMonthly: checked,
+                  }))
+                }
+              />
+              <FormBooleanField
+                label="يدخل في نتيجة الفصل"
+                checked={formState.includeInSemester}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    includeInSemester: checked,
+                  }))
+                }
+              />
+              <FormBooleanField
+                label="نشط"
+                checked={formState.isActive}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({ ...prev, isActive: checked }))
+                }
+              />
             </div>
 
             {formError ? <p className="text-sm text-destructive">{formError}</p> : null}

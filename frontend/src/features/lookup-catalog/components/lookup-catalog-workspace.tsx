@@ -3,20 +3,31 @@
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
+  Activity,
   BadgeCheck,
+  Hash,
+  ListFilter,
   LoaderCircle,
+  Palette,
   PencilLine,
   Plus,
   RefreshCw,
+  Type,
   Trash2,
 } from "lucide-react";
 import type {
   CreateLookupCatalogItemPayload,
   LookupCatalogListItem,
 } from "@/lib/api/client";
-import type { LookupCatalogDefinition } from "@/features/lookup-catalog/config/lookup-catalog-config";
+import type {
+  LookupCatalogDefinition,
+  LookupCatalogField,
+} from "@/features/lookup-catalog/config/lookup-catalog-config";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
@@ -149,6 +160,22 @@ function resolveDisplayValue(item: LookupCatalogListItem, key: string): string {
   }
 
   return String(value);
+}
+
+function resolveFieldIcon(field: LookupCatalogField): React.ReactElement {
+  if (field.type === "number") {
+    return <Hash />;
+  }
+
+  if (field.type === "color") {
+    return <Palette />;
+  }
+
+  if (field.type === "select") {
+    return <ListFilter />;
+  }
+
+  return <Type />;
 }
 
 export function LookupCatalogWorkspace({ definition }: { definition: LookupCatalogDefinition }) {
@@ -442,37 +469,25 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
           title="فلاتر البحث"
-          actionButtons={
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
-            </div>
-          }
+          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft}
-              onChange={(event) =>
-                setFilterDraft(
-                  event.target.value as "all" | "active" | "inactive" | "deleted",
-                )
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">نشط فقط</option>
-              <option value="inactive">غير نشط فقط</option>
-              <option value="deleted">محذوف فقط</option>
-            </SelectField>
+            <FormField label="الحالة">
+              <SelectField
+                icon={<Activity />}
+                value={filterDraft}
+                onChange={(event) =>
+                  setFilterDraft(
+                    event.target.value as "all" | "active" | "inactive" | "deleted",
+                  )
+                }
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">نشط فقط</option>
+                <option value="inactive">غير نشط فقط</option>
+                <option value="deleted">محذوف فقط</option>
+              </SelectField>
+            </FormField>
           </div>
         </FilterDrawer>
 
@@ -637,34 +652,28 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
 
               if (field.type === "checkbox") {
                 return (
-                  <label
-                    key={field.key}
-                    className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
-                  >
-                    <span>{field.label}</span>
-                    <input
-                      data-testid={`lookup-catalog-form-${field.key}`}
-                      type="checkbox"
+                  <div key={field.key} data-testid={`lookup-catalog-form-${field.key}`}>
+                    <FormBooleanField
+                      label={field.label}
+                      required={field.required}
                       checked={Boolean((formState as Record<string, unknown>)[field.key])}
-                      onChange={(event) =>
+                      onCheckedChange={(checked) =>
                         setFormState((prev) => ({
                           ...prev,
-                          [field.key]: event.target.checked,
+                          [field.key]: checked,
                         }))
                       }
                     />
-                  </label>
+                  </div>
                 );
               }
 
               if (field.type === "select") {
                 return (
-                  <div key={field.key} className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground">
-                      {field.label}
-                      {field.required ? " *" : ""}
-                    </label>
+                  <FormField key={field.key} label={field.label} required={field.required}>
                     <SelectField
+                      icon={resolveFieldIcon(field)}
+                      required={field.required}
                       data-testid={`lookup-catalog-form-${field.key}`}
                       value={String((formState as Record<string, unknown>)[field.key] ?? "")}
                       onChange={(event) =>
@@ -680,7 +689,7 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
                         </option>
                       ))}
                     </SelectField>
-                  </div>
+                  </FormField>
                 );
               }
 
@@ -688,12 +697,9 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
                 field.type === "number" ? "number" : field.type === "color" ? "color" : "text";
 
               return (
-                <div key={field.key} className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    {field.label}
-                    {field.required ? " *" : ""}
-                  </label>
+                <FormField key={field.key} label={field.label} required={field.required}>
                   <Input
+                    icon={resolveFieldIcon(field)}
                     data-testid={`lookup-catalog-form-${field.key}`}
                     type={inputType}
                     value={String((formState as Record<string, unknown>)[field.key] ?? "")}
@@ -706,21 +712,19 @@ export function LookupCatalogWorkspace({ definition }: { definition: LookupCatal
                     placeholder={field.placeholder}
                     required={field.required}
                   />
-                </div>
+                </FormField>
               );
             })}
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                data-testid="lookup-catalog-form-is-active"
-                type="checkbox"
+            <div data-testid="lookup-catalog-form-is-active">
+              <FormBooleanField
+                label="نشط"
                 checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({ ...prev, isActive: checked }))
                 }
               />
-            </label>
+            </div>
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

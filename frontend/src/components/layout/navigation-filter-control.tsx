@@ -118,7 +118,7 @@ export function NavigationFilterControl({
             </p>
           </div>
 
-          <div className="grid gap-2">
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {groups.map((group) => {
               const selected = draftValue.selectedGroupIds.includes(group.id);
               return (

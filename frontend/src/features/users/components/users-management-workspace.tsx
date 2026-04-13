@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
@@ -938,19 +939,16 @@ export function UsersManagementWorkspace({
               </div>
             </div>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    isActive: event.target.checked,
-                  }))
-                }
-              />
-            </label>
+            <FormBooleanField
+              label="نشط"
+              checked={formState.isActive}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({
+                  ...prev,
+                  isActive: checked,
+                }))
+              }
+            />
 
             <div className="space-y-1">
               <Label>البريد الإلكتروني (اختياري)</Label>

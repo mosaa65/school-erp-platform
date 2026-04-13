@@ -26,11 +26,10 @@ import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
-import { SearchField } from "@/components/ui/search-field";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
 import { TextareaField } from "@/components/ui/textarea-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
@@ -640,23 +639,13 @@ export function SectionClassroomAssignmentsWorkspace({
           </div>
         ) : null}
 
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex min-w-0 sm:min-w-[240px] max-w-lg flex-1 flex-wrap items-center gap-2">
-            <SearchField
-              containerClassName="flex-1"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="بحث بالشعبة أو الغرفة أو السنة..."
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterTriggerButton
-              count={activeFiltersCount}
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-            />
-          </div>
-        </div>
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="بحث بالشعبة أو الغرفة أو السنة..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+        />
 
         {actionSuccess ? (
           <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">

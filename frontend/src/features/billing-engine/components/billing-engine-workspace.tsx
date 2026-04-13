@@ -4,6 +4,7 @@ import { BadgeCheck, BookOpenCheck, ReceiptText, RotateCcw, Settings2, UserRound
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { Input } from "@/components/ui/input";
 import { PageShell } from "@/components/ui/page-shell";
 import { FinanceEmptyState } from "@/features/finance/shared/finance-ui";
@@ -136,16 +137,13 @@ export function BillingEngineWorkspace() {
                 />
               </div>
 
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>تطبيق خصم الأشقاء تلقائياً</span>
-                <input
-                  type="checkbox"
-                  checked={bulkForm.applySiblingDiscount}
-                  onChange={(event) =>
-                    setBulkForm((prev) => ({ ...prev, applySiblingDiscount: event.target.checked }))
-                  }
-                />
-              </label>
+              <FormBooleanField
+                label="تطبيق خصم الأشقاء تلقائياً"
+                checked={bulkForm.applySiblingDiscount}
+                onCheckedChange={(checked) =>
+                  setBulkForm((prev) => ({ ...prev, applySiblingDiscount: checked }))
+                }
+              />
 
               <Button type="submit" className="w-full gap-2">
                 <BadgeCheck className="h-4 w-4" />

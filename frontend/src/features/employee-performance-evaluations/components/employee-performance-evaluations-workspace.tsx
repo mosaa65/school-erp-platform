@@ -3,6 +3,11 @@
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
+  Activity,
+  CalendarRange,
+  GraduationCap,
+  Type,
+  UserRound,
   LoaderCircle,
   Medal,
   PencilLine,
@@ -12,10 +17,13 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
+import { TextareaField } from "@/components/ui/textarea-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
@@ -452,78 +460,93 @@ export function EmployeePerformanceEvaluationsWorkspace() {
           actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.employee}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, employee: event.target.value }))
-              }
-            >
-              <option value="all">كل الموظفين</option>
-              {(employeesQuery.data ?? []).map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.jobNumber ?? employee.fullName}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="الموظف">
+              <SelectField
+                icon={<UserRound />}
+                value={filterDraft.employee}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, employee: event.target.value }))
+                }
+              >
+                <option value="all">كل الموظفين</option>
+                {(employeesQuery.data ?? []).map((employee) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.jobNumber ?? employee.fullName}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.academicYear}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, academicYear: event.target.value }))
-              }
-            >
-              <option value="all">كل السنوات</option>
-              {(academicYearsQuery.data ?? []).map((year) => (
-                <option key={year.id} value={year.id}>
-                  {year.code}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="السنة الأكاديمية">
+              <SelectField
+                icon={<GraduationCap />}
+                value={filterDraft.academicYear}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, academicYear: event.target.value }))
+                }
+              >
+                <option value="all">كل السنوات</option>
+                {(academicYearsQuery.data ?? []).map((year) => (
+                  <option key={year.id} value={year.id}>
+                    {year.code}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.rating}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  rating: event.target.value as PerformanceRatingLevel | "all",
-                }))
-              }
-            >
-              <option value="all">كل التقديرات</option>
-              {RATING_OPTIONS.map((rating) => (
-                <option key={rating} value={rating}>
-                  {translatePerformanceRatingLevel(rating)}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="التقدير">
+              <SelectField
+                icon={<Medal />}
+                value={filterDraft.rating}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    rating: event.target.value as PerformanceRatingLevel | "all",
+                  }))
+                }
+              >
+                <option value="all">كل التقديرات</option>
+                {RATING_OPTIONS.map((rating) => (
+                  <option key={rating} value={rating}>
+                    {translatePerformanceRatingLevel(rating)}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.evaluator}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, evaluator: event.target.value }))
-              }
-            >
-              <option value="all">كل المقيّمين</option>
-              {(employeesQuery.data ?? []).map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.jobNumber ?? employee.fullName}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="المقيّم">
+              <SelectField
+                icon={<UserRound />}
+                value={filterDraft.evaluator}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, evaluator: event.target.value }))
+                }
+              >
+                <option value="all">كل المقيّمين</option>
+                {(employeesQuery.data ?? []).map((employee) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.jobNumber ?? employee.fullName}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">نشط فقط</option>
-              <option value="inactive">غير نشط فقط</option>
-            </SelectField>
+            <FormField label="الحالة">
+              <SelectField
+                icon={<Activity />}
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">نشط فقط</option>
+                <option value="inactive">غير نشط فقط</option>
+              </SelectField>
+            </FormField>
           </div>
         </FilterDrawer>
 
@@ -696,16 +719,16 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                   ? "عدّل بيانات التقييم الحالية."
                   : "أدخل بيانات التقييم لإنشاء سجل جديد."}
               </p>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الموظف *</label>
-                <select
+              <FormField label="الموظف" required>
+                <SelectField
+                  icon={<UserRound />}
                   data-testid="evaluation-form-employee"
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={formState.employeeId}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, employeeId: event.target.value }))
                   }
                   disabled={!canReadEmployees}
+                  required
                 >
                   <option value="">اختر الموظف</option>
                   {(employeesQuery.data ?? []).map((employee) => (
@@ -713,16 +736,13 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                       {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
                     </option>
                   ))}
-                </select>
-              </div>
+                </SelectField>
+              </FormField>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  السنة الأكاديمية *
-                </label>
-                <select
+              <FormField label="السنة الأكاديمية" required>
+                <SelectField
+                  icon={<GraduationCap />}
                   data-testid="evaluation-form-academic-year"
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={formState.academicYearId}
                   onChange={(event) =>
                     setFormState((prev) => ({
@@ -731,6 +751,7 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                     }))
                   }
                   disabled={!canReadAcademicYears}
+                  required
                 >
                   <option value="">اختر السنة الدراسية</option>
                   {(academicYearsQuery.data ?? []).map((year) => (
@@ -738,15 +759,13 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                       {year.name} ({year.code})
                     </option>
                   ))}
-                </select>
-              </div>
+                </SelectField>
+              </FormField>
 
               <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    تاريخ التقييم *
-                  </label>
+                <FormField label="تاريخ التقييم" required>
                   <Input
+                    icon={<CalendarRange />}
                     data-testid="evaluation-form-date"
                     type="date"
                     value={formState.evaluationDate}
@@ -758,10 +777,10 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                     }
                     required
                   />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">الدرجة *</label>
+                </FormField>
+                <FormField label="الدرجة" required>
                   <Input
+                    icon={<Medal />}
                     data-testid="evaluation-form-score"
                     type="number"
                     min={0}
@@ -772,7 +791,7 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                     }
                     required
                   />
-                </div>
+                </FormField>
               </div>
 
               <div className="rounded-md border border-dashed p-2 text-xs">
@@ -785,11 +804,10 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                 </p>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">مستوى التقييم</label>
-                <select
+              <FormField label="مستوى التقييم">
+                <SelectField
+                  icon={<Medal />}
                   data-testid="evaluation-form-rating-level"
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={formState.ratingLevel}
                   onChange={(event) =>
                     setFormState((prev) => ({
@@ -804,22 +822,19 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                       {translatePerformanceRatingLevel(rating)}
                     </option>
                   ))}
-                </select>
+                </SelectField>
                 {hasRatingMismatch && computedRating ? (
                   <p className="text-xs text-destructive">
                     مستوى التقييم الحالي لا يطابق الدرجة. المتوقع:{" "}
                     {translatePerformanceRatingLevel(computedRating)}.
                   </p>
                 ) : null}
-              </div>
+              </FormField>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  الموظف المقيّم
-                </label>
-                <select
+              <FormField label="الموظف المقيّم">
+                <SelectField
+                  icon={<UserRound />}
                   data-testid="evaluation-form-evaluator"
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={formState.evaluatorEmployeeId}
                   onChange={(event) =>
                     setFormState((prev) => ({
@@ -835,38 +850,38 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                       {employee.fullName} ({employee.jobNumber ?? "بدون رقم"})
                     </option>
                   ))}
-                </select>
-              </div>
+                </SelectField>
+              </FormField>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">نقاط القوة</label>
-                <Input
+              <FormField label="نقاط القوة">
+                <TextareaField
+                  icon={<Type />}
                   data-testid="evaluation-form-strengths"
                   value={formState.strengths}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, strengths: event.target.value }))
                   }
                   placeholder="إدارة صفية قوية"
+                  rows={3}
                 />
-              </div>
+              </FormField>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">نقاط التحسين</label>
-                <Input
+              <FormField label="نقاط التحسين">
+                <TextareaField
+                  icon={<Type />}
                   data-testid="evaluation-form-weaknesses"
                   value={formState.weaknesses}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, weaknesses: event.target.value }))
                   }
                   placeholder="يحتاج إلى تحسين تخطيط التقييم"
+                  rows={3}
                 />
-              </div>
+              </FormField>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  التوصيات
-                </label>
-                <Input
+              <FormField label="التوصيات">
+                <TextareaField
+                  icon={<Type />}
                   data-testid="evaluation-form-recommendations"
                   value={formState.recommendations}
                   onChange={(event) =>
@@ -876,19 +891,17 @@ export function EmployeePerformanceEvaluationsWorkspace() {
                     }))
                   }
                   placeholder="إكمال تدريب متقدم في أساليب التدريس"
+                  rows={3}
                 />
-              </div>
+              </FormField>
 
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشط</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                />
-              </label>
+              <FormBooleanField
+                label="نشط"
+                checked={formState.isActive}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({ ...prev, isActive: checked }))
+                }
+              />
 
               {formError ? (
                 <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

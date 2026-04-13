@@ -20,9 +20,9 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       resolvedIcon && React.isValidElement(resolvedIcon)
         ? React.cloneElement(resolvedIcon as React.ReactElement<{ className?: string }>, {
             className: cn(
+              (resolvedIcon as React.ReactElement<{ className?: string }>).props.className,
+              "text-[color:var(--app-accent-color)]",
               FIELD_ICON_CLASS_NAME,
-              (resolvedIcon as React.ReactElement<{ className?: string }>).props.className ??
-                "text-[color:var(--app-accent-color)]",
             ),
           })
         : resolvedIcon;

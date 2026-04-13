@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { Input } from "@/components/ui/input";
 import {
   Card,
@@ -267,17 +268,14 @@ export function TalentsWorkspace() {
                 />
               </div>
 
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشط</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                  data-testid="talent-catalog-form-active"
-                />
-              </label>
+              <FormBooleanField
+                label="نشط"
+                checked={formState.isActive}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({ ...prev, isActive: checked }))
+                }
+                data-testid="talent-catalog-form-active"
+              />
 
               {formError ? (
                 <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

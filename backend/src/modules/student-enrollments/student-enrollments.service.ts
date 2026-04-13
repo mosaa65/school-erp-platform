@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import {
@@ -12,6 +13,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import type { RecordAuditLogInput } from '../audit-logs/audit-logs.service';
 import { StudentsService } from '../students/students.service';
 import {
   formatYearlyEnrollmentNo,
@@ -131,6 +133,8 @@ const distributionBoardEnrollmentSelect = {
 
 @Injectable()
 export class StudentEnrollmentsService {
+  private readonly logger = new Logger(StudentEnrollmentsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLogsService: AuditLogsService,
@@ -235,7 +239,7 @@ export class StudentEnrollmentsService {
         });
       });
 
-      await this.auditLogsService.record({
+      await this.recordAuditSafely({
         actorUserId,
         action: 'STUDENT_ENROLLMENT_CREATE',
         resource: 'student-enrollments',
@@ -253,7 +257,7 @@ export class StudentEnrollmentsService {
 
       return enrollment;
     } catch (error) {
-      await this.auditLogsService.record({
+      await this.recordAuditSafely({
         actorUserId,
         action: 'STUDENT_ENROLLMENT_CREATE_FAILED',
         resource: 'student-enrollments',
@@ -688,7 +692,7 @@ export class StudentEnrollmentsService {
       );
     }
 
-    await this.auditLogsService.record({
+    await this.recordAuditSafely({
       actorUserId,
       action: 'STUDENT_ENROLLMENT_AUTO_DISTRIBUTE',
       resource: 'student-enrollments',
@@ -860,7 +864,7 @@ export class StudentEnrollmentsService {
       }),
     );
 
-    await this.auditLogsService.record({
+    await this.recordAuditSafely({
       actorUserId,
       action: 'STUDENT_ENROLLMENT_MANUAL_DISTRIBUTE',
       resource: 'student-enrollments',
@@ -1010,7 +1014,7 @@ export class StudentEnrollmentsService {
       ),
     );
 
-    await this.auditLogsService.record({
+    await this.recordAuditSafely({
       actorUserId,
       action: 'STUDENT_ENROLLMENT_SECTION_TRANSFER',
       resource: 'student-enrollments',
@@ -1120,7 +1124,7 @@ export class StudentEnrollmentsService {
       ),
     );
 
-    await this.auditLogsService.record({
+    await this.recordAuditSafely({
       actorUserId,
       action: 'STUDENT_ENROLLMENT_RETURN_TO_PENDING',
       resource: 'student-enrollments',
@@ -1262,7 +1266,7 @@ export class StudentEnrollmentsService {
         });
       });
 
-      await this.auditLogsService.record({
+      await this.recordAuditSafely({
         actorUserId,
         action: 'STUDENT_ENROLLMENT_UPDATE',
         resource: 'student-enrollments',
@@ -1290,7 +1294,7 @@ export class StudentEnrollmentsService {
       },
     });
 
-    await this.auditLogsService.record({
+    await this.recordAuditSafely({
       actorUserId,
       action: 'STUDENT_ENROLLMENT_DELETE',
       resource: 'student-enrollments',
@@ -1504,6 +1508,17 @@ export class StudentEnrollmentsService {
           .filter((value): value is string => typeof value === 'string'),
       ),
     );
+  }
+
+  private async recordAuditSafely(input: RecordAuditLogInput) {
+    try {
+      await this.auditLogsService.record(input);
+    } catch (error) {
+      this.logger.error(
+        `Failed to record audit log for action ${input.action}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+    }
   }
 
   private throwKnownDatabaseErrors(error: unknown): never {

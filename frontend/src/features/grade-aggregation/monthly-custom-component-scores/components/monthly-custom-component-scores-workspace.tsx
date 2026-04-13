@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/card";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Input } from "@/components/ui/input";
 import { SearchField } from "@/components/ui/search-field";
@@ -666,10 +667,13 @@ export function MonthlyCustomComponentScoresWorkspace() {
           <Input type="number" min={0} step={0.01} value={form.score} onChange={(event) => setForm((prev) => ({ ...prev, score: event.target.value }))} placeholder="الدرجة *" />
           <Input value={form.notes} onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))} placeholder="ملاحظات" />
 
-          <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-            <span>نشط</span>
-            <input type="checkbox" checked={form.isActive} onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))} />
-          </label>
+          <FormBooleanField
+            label="نشط"
+            checked={form.isActive}
+            onCheckedChange={(checked) =>
+              setForm((prev) => ({ ...prev, isActive: checked }))
+            }
+          />
 
           {formError ? (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

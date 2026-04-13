@@ -28,6 +28,7 @@ import {
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
@@ -1147,17 +1148,15 @@ export function EmployeeLifecycleChecklistsWorkspace() {
               />
             </div>
 
-            <label className="flex items-center gap-2 pt-7 text-sm">
-              <input
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-                data-testid="lifecycle-form-active"
-              />
-              المهمة نشطة
-            </label>
+            <FormBooleanField
+              label="المهمة نشطة"
+              checked={formState.isActive}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({ ...prev, isActive: checked }))
+              }
+              data-testid="lifecycle-form-active"
+              className="mt-7"
+            />
           </div>
 
           <div className="space-y-1">

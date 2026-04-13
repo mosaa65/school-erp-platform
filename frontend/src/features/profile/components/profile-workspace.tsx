@@ -25,11 +25,13 @@ import {
 import { useRouter } from "next/navigation";
 import { startRegistration } from "@simplewebauthn/browser";
 import { ProfileAppearanceSection } from "@/components/layout/profile-appearance-section";
+import { ProfileMessagePreferences } from "@/components/layout/profile-message-preferences";
 import { ProfileNavigationSection } from "@/components/layout/profile-navigation-section";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InternationalPhoneField } from "@/components/ui/international-phone-field";
 import { PasswordFieldWithBiometricAction } from "@/components/ui/password-field-with-biometric-action";
+import { Switch } from "@/components/ui/switch";
 import { useAppearance } from "@/hooks/use-appearance";
 import { useBranchMode } from "@/hooks/use-branch-mode";
 import { useAuth } from "@/features/auth/providers/auth-provider";
@@ -129,41 +131,6 @@ function detectCurrentDeviceName(): string {
   if (/Windows NT/i.test(ua)) return "Windows PC";
   if (/Linux/i.test(ua)) return "Linux";
   return "";
-}
-
-/** iOS-style toggle switch */
-function IOSToggle({
-  checked,
-  onChange,
-  disabled,
-}: {
-  checked: boolean;
-  onChange: (value: boolean) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-      className={cn(
-        "relative inline-flex h-[30px] w-[52px] flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus-visible:outline-none",
-        checked
-          ? "bg-[color:var(--app-accent-color)]"
-          : "bg-slate-200 dark:bg-white/20",
-        disabled && "cursor-not-allowed opacity-50",
-      )}
-    >
-      <span
-        className={cn(
-          "pointer-events-none inline-block h-[26px] w-[26px] transform rounded-full bg-white shadow-[0_2px_8px_rgba(0,0,0,0.28)] ring-0 transition-transform duration-300",
-          checked ? "translate-x-[22px]" : "translate-x-0",
-        )}
-      />
-    </button>
-  );
 }
 
 function ProfileSection({
@@ -570,6 +537,7 @@ export function ProfileWorkspace() {
           onToggle={() => toggleSection("appearance")}
         >
           <ProfileAppearanceSection />
+          <ProfileMessagePreferences className="mt-3" />
           <Button
             type="button"
             variant="ghost"
@@ -898,11 +866,11 @@ export function ProfileWorkspace() {
               <span className="text-sm font-medium text-slate-800 dark:text-white/90">
                 تفعيل البصمة كعامل ثانوي
               </span>
-              <IOSToggle
+              <Switch
                 checked={profileDraft.webAuthnRequired}
                 disabled={!profile?.hasWebAuthnCredentials}
-                onChange={(value) =>
-                  setProfileDraft((prev) => ({ ...prev, webAuthnRequired: value }))
+                onCheckedChange={(checked) =>
+                  setProfileDraft((prev) => ({ ...prev, webAuthnRequired: checked }))
                 }
               />
             </div>

@@ -4,12 +4,14 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  ArrowRight,
   BellRing,
   ChevronDown,
   Compass,
   GraduationCap,
   Menu,
   PanelRightClose,
+  PanelRightOpen,
   UserCircle2,
   X,
 } from "lucide-react";
@@ -219,7 +221,9 @@ export function AppShell({ children }: AppShellProps) {
   const restoreTimeoutIdsRef = React.useRef<number[]>([]);
   const [isSidebarOpen, setSidebarOpen] = React.useState(false);
   const [isNavigationDrawerOpen, setNavigationDrawerOpen] = React.useState(false);
+  const [isDesktopSidebarHidden, setDesktopSidebarHidden] = React.useState(false);
   const [expandedGroupIds, setExpandedGroupIds] = React.useState<string[]>([]);
+  const [selectedSidebarGroupId, setSelectedSidebarGroupId] = React.useState<string | null>(null);
   const [navSearch, setNavSearch] = React.useState("");
   const [navFilter, setNavFilter] = React.useState<NavigationFilterValue>({
     currentGroupOnly: false,
@@ -227,6 +231,8 @@ export function AppShell({ children }: AppShellProps) {
   });
   const isHubMode = navigationPreferences.layoutMode === "hub";
   const isRailMode = navigationPreferences.layoutMode === "rail";
+  const isFocusedSystemMode =
+    navigationPreferences.systemsViewMode === "focused-system";
   const isNavigationHubPage = pathname === "/app/navigation";
   const isNavigationHubLanding =
     pathname === "/app" &&
@@ -468,6 +474,30 @@ export function AppShell({ children }: AppShellProps) {
     [visibleNavGroups],
   );
 
+  const selectedSidebarGroup = React.useMemo(
+    () =>
+      selectedSidebarGroupId
+        ? visibleNavGroups.find((group) => group.id === selectedSidebarGroupId) ?? null
+        : null,
+    [selectedSidebarGroupId, visibleNavGroups],
+  );
+
+  const focusedSidebarItems = React.useMemo(() => {
+    if (!selectedSidebarGroup) {
+      return [];
+    }
+
+    const query = normalizeText(navSearch);
+    if (!query) {
+      return selectedSidebarGroup.items;
+    }
+
+    return selectedSidebarGroup.items.filter((item) => {
+      const haystack = normalizeText([item.label, item.href].join(" "));
+      return haystack.includes(query);
+    });
+  }, [navSearch, selectedSidebarGroup]);
+
   const pathActiveGroupId = React.useMemo(
     () =>
       visibleNavGroups.find((group) =>
@@ -513,6 +543,17 @@ export function AppShell({ children }: AppShellProps) {
     [activeThemeGroupId, appearance.preset, appearance.resolvedSurfaceMode],
   );
   const unreadNotificationsCount = unreadNotificationsQuery.data?.unreadCount ?? 0;
+  const appShellStyle = React.useMemo<React.CSSProperties>(
+    () => ({
+      ...(appearance.preset === "custom" ? {} : activeGroupTheme.accentVars),
+      ["--app-mobile-sidebar-offset" as string]:
+        !isHubMode && isSidebarOpen ? "20rem" : "0px",
+      ["--app-desktop-sidebar-offset" as string]:
+        !isHubMode && !isDesktopSidebarHidden ? (isRailMode ? "104px" : "300px") : "0px",
+      ["--app-footer-dock-offset" as string]: "5.9rem",
+    }),
+    [activeGroupTheme.accentVars, appearance.preset, isDesktopSidebarHidden, isHubMode, isRailMode, isSidebarOpen],
+  );
   const navigateTo = React.useCallback(
     (href: string) => {
       persistNavScrollPosition();
@@ -520,6 +561,36 @@ export function AppShell({ children }: AppShellProps) {
     },
     [persistNavScrollPosition, router],
   );
+
+  React.useEffect(() => {
+    if (!isFocusedSystemMode) {
+      setSelectedSidebarGroupId(null);
+      return;
+    }
+
+    if (pathname === "/app" || pathname === "/app/navigation") {
+      return;
+    }
+
+    if (activeGroupId) {
+      setSelectedSidebarGroupId((previous) =>
+        previous === activeGroupId ? previous : activeGroupId,
+      );
+    }
+  }, [activeGroupId, isFocusedSystemMode, pathname]);
+
+  React.useEffect(() => {
+    if (!selectedSidebarGroupId) {
+      return;
+    }
+
+    const stillVisible = visibleNavGroups.some(
+      (group) => group.id === selectedSidebarGroupId,
+    );
+    if (!stillVisible) {
+      setSelectedSidebarGroupId(null);
+    }
+  }, [selectedSidebarGroupId, visibleNavGroups]);
 
   React.useEffect(() => {
     setExpandedGroupIds((previous) => {
@@ -545,6 +616,10 @@ export function AppShell({ children }: AppShellProps) {
         next.add(activeGroupId);
       }
 
+      if (isFocusedSystemMode && selectedSidebarGroupId) {
+        return [selectedSidebarGroupId];
+      }
+
       const nextIds = Array.from(next);
       const isSame =
         nextIds.length === previous.length &&
@@ -552,7 +627,9 @@ export function AppShell({ children }: AppShellProps) {
 
       return isSame ? previous : nextIds;
     });
-  }, [activeGroupId, isRailMode, visibleNavGroups]);
+  }, [activeGroupId, isFocusedSystemMode, isRailMode, selectedSidebarGroupId, visibleNavGroups]);
+
+  const navGroupCount = isRailMode ? visibleNavGroups.length : filteredNavGroups.length;
 
   React.useLayoutEffect(() => {
     if (typeof window === "undefined") {
@@ -566,7 +643,7 @@ export function AppShell({ children }: AppShellProps) {
   }, [
     clearScheduledNavRestore,
     expandedGroupIds,
-    isRailMode ? visibleNavGroups.length : filteredNavGroups.length,
+    navGroupCount,
     isSidebarOpen,
     pathname,
     scheduleNavScrollRestore,
@@ -613,21 +690,26 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <div
       className={cn(
-        "relative min-h-screen",
+        "relative h-screen overflow-hidden",
         !isHubMode ? "md:grid" : "",
         !isHubMode
-          ? isRailMode
+          ? isDesktopSidebarHidden
+            ? "md:grid-cols-[0px_1fr]"
+            : isRailMode
             ? "md:grid-cols-[104px_1fr]"
             : "md:grid-cols-[300px_1fr]"
           : "",
       )}
-      style={activeGroupTheme.accentVars}
+      style={appShellStyle}
     >
       {!isHubMode ? (
         <aside
           className={cn(
-            "fixed inset-y-0 right-0 z-40 flex w-80 flex-col overflow-hidden border-l border-border/70 bg-card/95 p-4 shadow-lg backdrop-blur-sm transition-transform duration-200 md:static md:translate-x-0 md:border-l-0 md:border-r",
+            "fixed inset-y-0 right-0 z-40 flex w-80 flex-col overflow-hidden border-l border-border/70 bg-card/95 p-4 shadow-lg backdrop-blur-sm transition-transform duration-200 md:static md:h-full md:translate-x-0 md:border-l-0 md:border-r",
             isRailMode ? "md:w-[104px] md:px-3 md:py-4" : "md:w-auto",
+            isDesktopSidebarHidden
+              ? "md:w-0 md:border-0 md:p-0 md:opacity-0 md:pointer-events-none"
+              : "",
             isSidebarOpen ? "translate-x-0" : "translate-x-full",
           )}
         >
@@ -644,9 +726,16 @@ export function AppShell({ children }: AppShellProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden"
-            onClick={() => setSidebarOpen(false)}
-            aria-label="إغلاق الشريط الجانبي"
+            className="rounded-2xl"
+            onClick={() => {
+              if (typeof window !== "undefined" && window.innerWidth >= 768) {
+                setDesktopSidebarHidden(true);
+                return;
+              }
+
+              setSidebarOpen(false);
+            }}
+            aria-label="إخفاء الشريط الجانبي"
           >
             <PanelRightClose className="h-5 w-5" />
           </Button>
@@ -694,33 +783,35 @@ export function AppShell({ children }: AppShellProps) {
           </div>
         </button>
 
-        <div className={cn("relative mb-4", isRailMode ? "md:hidden" : "")}>
-          <SearchField
-            value={navSearch}
-            onChange={(event) => setNavSearch(event.target.value)}
-            placeholder="ابحث عن صفحة أو نظام..."
-            className={cn(
-              navDensityClasses.searchClassName,
-              "rounded-2xl border-border/70 bg-background/70 pr-9 pl-10",
-            )}
-          />
-          {navSearch ? (
-            <button
-              type="button"
-              className="absolute left-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-              aria-label="مسح البحث"
-              onClick={() => setNavSearch("")}
-            >
-              <X className="h-4 w-4" />
-            </button>
-          ) : null}
-          <div className="mt-2 flex justify-end">
+        <div className={cn("mb-4", isRailMode ? "md:hidden" : "")}>
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <SearchField
+                value={navSearch}
+                onChange={(event) => setNavSearch(event.target.value)}
+                placeholder="ابحث عن صفحة أو نظام..."
+                className={cn(
+                  navDensityClasses.searchClassName,
+                  "rounded-2xl border-border/70 bg-background/70 pr-9 pl-10",
+                )}
+              />
+              {navSearch ? (
+                <button
+                  type="button"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                  aria-label="مسح البحث"
+                  onClick={() => setNavSearch("")}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              ) : null}
+            </div>
             <NavigationFilterControl
               groups={filterGroups}
               value={navFilter}
               onChange={setNavFilter}
               activeGroupId={pathActiveGroupId}
-              className="h-9 rounded-xl px-2.5 text-[11px]"
+              className="h-9 shrink-0 rounded-xl px-2.5 text-[11px]"
             />
           </div>
         </div>
@@ -735,13 +826,166 @@ export function AppShell({ children }: AppShellProps) {
           }}
         >
           <nav className="space-y-2">
-            {filteredNavGroups.length === 0 ? (
+            {isFocusedSystemMode && selectedSidebarGroup ? (
+              <section className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => setSelectedSidebarGroupId(null)}
+                  className="flex w-full items-center justify-between rounded-2xl border border-border/70 bg-background/70 px-3 py-3 text-right transition hover:bg-muted/60"
+                >
+                  <span className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-border/70 bg-background/80 text-muted-foreground shadow-sm">
+                      <ArrowRight className="h-4 w-4" />
+                    </span>
+                    <span className="flex flex-col items-start leading-tight">
+                      <span className="text-sm font-semibold">الرجوع إلى الأنظمة</span>
+                      <span className="text-[11px] text-muted-foreground">
+                        اعرض كل الأنظمة من جديد
+                      </span>
+                    </span>
+                  </span>
+                </button>
+
+                <section
+                  className={cn(
+                    "relative overflow-hidden rounded-2xl border p-2.5 transition-colors",
+                    `${resolveGroupTheme(
+                      selectedSidebarGroup.id,
+                      appearance.preset,
+                      appearance.resolvedSurfaceMode,
+                    ).panelClassName} shadow-sm ring-1 ring-border/40`,
+                  )}
+                >
+                  <div className="mb-2 flex items-center gap-3 px-2 py-1">
+                    <span
+                      className={cn(
+                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border shadow-sm",
+                        selectedSidebarGroup.iconClassName ??
+                          "border-primary/20 bg-primary/10 text-primary",
+                      )}
+                    >
+                      <selectedSidebarGroup.icon className="h-4 w-4" />
+                    </span>
+                    <span className="flex flex-col items-start leading-tight">
+                      <span className="text-sm font-semibold">
+                        {selectedSidebarGroup.label}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {focusedSidebarItems.length} صفحة
+                      </span>
+                    </span>
+                  </div>
+
+                  {focusedSidebarItems.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-border/70 bg-background/50 p-4 text-center text-xs text-muted-foreground">
+                      لا توجد صفحات مطابقة داخل هذا النظام.
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {focusedSidebarItems.map((item) => {
+                        const active = isNavItemActive(pathname, item.href);
+                        const itemIconClassName = resolveNavItemIconClassName(
+                          item,
+                          selectedSidebarGroup.iconClassName,
+                        );
+
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={() => {
+                              persistNavScrollPosition();
+                            }}
+                            className={cn(
+                              "flex items-center rounded-xl border text-sm transition-colors",
+                              navDensityClasses.itemClassName,
+                              active
+                                ? "border-primary/40 bg-primary/10 text-primary"
+                                : "border-transparent text-muted-foreground hover:border-border hover:bg-muted/60 hover:text-foreground",
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border bg-background/80 shadow-sm",
+                                itemIconClassName,
+                              )}
+                            >
+                              <item.icon className="h-4 w-4" />
+                            </span>
+                            <span className="flex-1">{item.label}</span>
+                            {active ? (
+                              <span className="h-2 w-2 rounded-full bg-current/80" />
+                            ) : null}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </section>
+              </section>
+            ) : isFocusedSystemMode ? (
+              <>
+                {filteredNavGroups.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-border/70 bg-background/50 p-4 text-center text-xs text-muted-foreground">
+                    لا توجد أنظمة مطابقة للبحث الحالي.
+                  </div>
+                ) : null}
+
+                <div className="grid grid-cols-1 gap-2">
+                  {filteredNavGroups.map((group) => {
+                    const hasActiveItem = group.items.some((item) =>
+                      isNavItemActive(pathname, item.href),
+                    );
+                    const groupTheme = resolveGroupTheme(
+                      group.id,
+                      appearance.preset,
+                      appearance.resolvedSurfaceMode,
+                    );
+
+                    return (
+                      <button
+                        key={group.id}
+                        type="button"
+                        onClick={() => setSelectedSidebarGroupId(group.id)}
+                        className={cn(
+                          "relative overflow-hidden rounded-2xl border p-3 text-right transition-colors",
+                          hasActiveItem
+                            ? `${groupTheme.panelClassName} shadow-sm ring-1 ring-border/40`
+                            : "border-border/60 bg-background/50 hover:bg-muted/60",
+                        )}
+                      >
+                        <span className="flex items-center gap-3">
+                          <span
+                            className={cn(
+                              "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border shadow-sm",
+                              group.iconClassName ??
+                                "border-primary/20 bg-primary/10 text-primary",
+                            )}
+                          >
+                            <group.icon className="h-4 w-4" />
+                          </span>
+                          <span className="flex min-w-0 flex-1 flex-col items-start leading-tight">
+                            <span className="truncate text-sm font-semibold">
+                              {group.label}
+                            </span>
+                            <span className="text-[11px] text-muted-foreground">
+                              {group.items.length} صفحة
+                            </span>
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            ) : filteredNavGroups.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border/70 bg-background/50 p-4 text-center text-xs text-muted-foreground">
                 لا توجد عناصر مطابقة للبحث الحالي.
               </div>
             ) : null}
 
-            {filteredNavGroups.map((group) => {
+            {!isFocusedSystemMode
+              ? filteredNavGroups.map((group) => {
               const isExpanded = navSearch ? true : expandedGroupIds.includes(group.id);
               const hasActiveItem = group.items.some((item) =>
                 isNavItemActive(pathname, item.href),
@@ -853,7 +1097,8 @@ export function AppShell({ children }: AppShellProps) {
                   </div>
                 </section>
               );
-            })}
+            })
+              : null}
           </nav>
         </div>
 
@@ -864,9 +1109,56 @@ export function AppShell({ children }: AppShellProps) {
             onScroll={(event) => {
               persistNavScrollPosition(event.currentTarget.scrollTop);
             }}
-          >
+        >
             <nav className={cn("flex flex-col items-center", navDensityClasses.railGapClassName)}>
-              {visibleNavGroups.map((group) => {
+              {isFocusedSystemMode && selectedSidebarGroup ? (
+                <>
+                  <button
+                    type="button"
+                    title="الرجوع إلى الأنظمة"
+                    onClick={() => setSelectedSidebarGroupId(null)}
+                    className="flex h-11 w-11 items-center justify-center rounded-[1rem] border border-border/70 bg-background/80 text-muted-foreground shadow-sm transition-all hover:scale-[1.02] hover:bg-muted/60"
+                  >
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                  {focusedSidebarItems.map((item) => {
+                    const active = isNavItemActive(pathname, item.href);
+                    const itemIconClassName = resolveNavItemIconClassName(
+                      item,
+                      selectedSidebarGroup.iconClassName,
+                    );
+
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        title={item.label}
+                        onClick={() => {
+                          persistNavScrollPosition();
+                        }}
+                        className={cn(
+                          "relative flex items-center justify-center rounded-[1rem] border shadow-sm transition-all hover:scale-[1.02]",
+                          navDensityClasses.railItemClassName,
+                          active
+                            ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
+                            : cn(
+                                "border-border/70 bg-background/78 text-muted-foreground hover:border-[color:var(--app-accent-strong)] hover:bg-[color:var(--app-accent-soft)]/35 hover:text-foreground",
+                                itemIconClassName,
+                              ),
+                        )}
+                      >
+                        <item.icon className="h-4 w-4" />
+                        <span className="sr-only">{item.label}</span>
+                        {active ? (
+                          <span className="absolute -bottom-1 h-1.5 w-1.5 rounded-full bg-current" />
+                        ) : null}
+                      </Link>
+                    );
+                  })}
+                </>
+              ) : null}
+
+              {(isFocusedSystemMode && !selectedSidebarGroup ? filteredNavGroups : visibleNavGroups).map((group) => {
                 const isExpanded = expandedGroupIds.includes(group.id);
                 const hasActiveItem = group.items.some((item) =>
                   isNavItemActive(pathname, item.href),
@@ -897,12 +1189,19 @@ export function AppShell({ children }: AppShellProps) {
                         group.iconClassName ?? "border-primary/20 bg-primary/10 text-primary",
                         hasActiveItem ? "ring-2 ring-[color:var(--app-accent-ring)]" : "",
                       )}
-                      onClick={() => toggleGroup(group.id)}
+                      onClick={() => {
+                        if (isFocusedSystemMode) {
+                          setSelectedSidebarGroupId(group.id);
+                          return;
+                        }
+
+                        toggleGroup(group.id);
+                      }}
                     >
                       <group.icon className="h-4 w-4" />
                     </button>
 
-                    {isExpanded ? (
+                    {!isFocusedSystemMode && isExpanded ? (
                       <div
                         className={cn(
                           "mt-2 flex flex-col items-center",
@@ -963,7 +1262,20 @@ export function AppShell({ children }: AppShellProps) {
         />
       ) : null}
 
-      <div className="flex min-h-screen flex-col">
+      {!isHubMode && isDesktopSidebarHidden ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="fixed right-4 top-4 z-30 hidden rounded-2xl border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)] shadow-sm hover:bg-[color:var(--app-accent-strong)] hover:text-[color:var(--app-accent-color)] md:inline-flex"
+          onClick={() => setDesktopSidebarHidden(false)}
+          aria-label="إظهار الشريط الجانبي"
+        >
+          <PanelRightOpen className="h-5 w-5" />
+        </Button>
+      ) : null}
+
+      <div className="flex h-full min-h-0 flex-col overflow-hidden">
         <header className="sticky top-0 z-20 px-4 py-3 md:px-6 md:py-4">
           <div
             className={cn(
@@ -1059,7 +1371,9 @@ export function AppShell({ children }: AppShellProps) {
           </div>
         </header>
 
-        <main className="flex-1 px-4 py-5 pb-32 md:px-6 md:py-6 md:pb-36">{children}</main>
+        <main className="min-h-0 flex-1 overflow-y-auto px-4 py-5 pb-32 md:px-6 md:py-6 md:pb-36">
+          {children}
+        </main>
       </div>
 
       <NavigationDrawer

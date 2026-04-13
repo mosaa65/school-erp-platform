@@ -3,13 +3,16 @@
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
+  Activity,
   CalendarCheck2,
+  CalendarRange,
   LoaderCircle,
   Lock,
   PencilLine,
   Plus,
   RefreshCw,
   Trash2,
+  Type,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
@@ -24,10 +27,14 @@ import {
 } from "@/components/ui/card";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
+import { TextareaField } from "@/components/ui/textarea-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateStudentExamScoreMutation,
@@ -448,84 +455,81 @@ export function StudentExamScoresWorkspace() {
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
           title="مرشحات درجات الاختبارات"
-          actionButtons={
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
-            </div>
-          }
+          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.examPeriod}
-              onChange={(event) => {
-                const nextValue = event.target.value;
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  examPeriod: nextValue,
-                  assessment: "all",
-                }));
-              }}
-            >
-              <option value="all">كل الفترات</option>
-              {(examPeriodsQuery.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name} ({translateAssessmentType(item.assessmentType)})
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="الفترة">
+              <SelectField
+                icon={<CalendarRange />}
+                value={filterDraft.examPeriod}
+                onChange={(event) => {
+                  const nextValue = event.target.value;
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    examPeriod: nextValue,
+                    assessment: "all",
+                  }));
+                }}
+              >
+                <option value="all">كل الفترات</option>
+                {(examPeriodsQuery.data ?? []).map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name} ({translateAssessmentType(item.assessmentType)})
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.assessment}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({ ...prev, assessment: event.target.value }))
-              }
-            >
-              <option value="all">كل التقييمات</option>
-              {(assessmentsForFilterQuery.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.title}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="التقييم">
+              <SelectField
+                icon={<CalendarCheck2 />}
+                value={filterDraft.assessment}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({ ...prev, assessment: event.target.value }))
+                }
+              >
+                <option value="all">كل التقييمات</option>
+                {(assessmentsForFilterQuery.data ?? []).map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.title}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.presence}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  presence: event.target.value as "all" | "present" | "absent",
-                }))
-              }
-            >
-              <option value="all">الحضور: الكل</option>
-              <option value="present">موجود</option>
-              <option value="absent">غائب</option>
-            </SelectField>
+            <FormField label="الحضور">
+              <SelectField
+                icon={<CalendarCheck2 />}
+                value={filterDraft.presence}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    presence: event.target.value as "all" | "present" | "absent",
+                  }))
+                }
+              >
+                <option value="all">الحضور: الكل</option>
+                <option value="present">موجود</option>
+                <option value="absent">غائب</option>
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">الكل</option>
-              <option value="active">نشط</option>
-              <option value="inactive">غير نشط</option>
-            </SelectField>
+            <FormField label="الحالة">
+              <SelectField
+                icon={<Activity />}
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+              >
+                <option value="all">الكل</option>
+                <option value="active">نشط</option>
+                <option value="inactive">غير نشط</option>
+              </SelectField>
+            </FormField>
           </div>
         </FilterDrawer>
 
@@ -689,8 +693,9 @@ export function StudentExamScoresWorkspace() {
         showFooter={false}
       >
         <form className="space-y-3" onSubmit={handleSubmit}>
-            <select
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+          <FormField label="الفترة" required>
+            <SelectField
+              icon={<CalendarRange />}
               value={form.examPeriodId}
               onChange={(event) => {
                 setForm((prev) => ({
@@ -701,17 +706,20 @@ export function StudentExamScoresWorkspace() {
                 }));
                 setSelectedEnrollmentOption(null);
               }}
+              required
             >
-            <option value="">اختر الفترة *</option>
-            {(examPeriodsQuery.data ?? []).map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name} ({translateAssessmentType(item.assessmentType)})
-              </option>
-            ))}
-          </select>
+              <option value="">اختر الفترة</option>
+              {(examPeriodsQuery.data ?? []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name} ({translateAssessmentType(item.assessmentType)})
+                </option>
+              ))}
+            </SelectField>
+          </FormField>
 
-            <select
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+          <FormField label="التقييم" required>
+            <SelectField
+              icon={<CalendarCheck2 />}
               value={form.examAssessmentId}
               onChange={(event) => {
                 setForm((prev) => ({
@@ -721,99 +729,109 @@ export function StudentExamScoresWorkspace() {
                 }));
                 setSelectedEnrollmentOption(null);
               }}
+              required
             >
-            <option value="">اختر التقييم *</option>
-            {(assessmentsForFormQuery.data ?? []).map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.title} ({formatSectionWithGradeLabel(item.section)} / {formatNameCodeLabel(item.subject.name, item.subject.code)})
-              </option>
-            ))}
-          </select>
+              <option value="">اختر التقييم</option>
+              {(assessmentsForFormQuery.data ?? []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.title} ({formatSectionWithGradeLabel(item.section)} / {formatNameCodeLabel(item.subject.name, item.subject.code)})
+                </option>
+              ))}
+            </SelectField>
+          </FormField>
 
-          <StudentEnrollmentPickerSheet
-            value={form.studentEnrollmentId}
-            selectedOption={selectedEnrollmentOption}
-            onSelect={(option) => {
-              setSelectedEnrollmentOption(option);
-              setForm((prev) => ({ ...prev, studentEnrollmentId: option?.id ?? "" }));
-            }}
-            scope="exams-student-exam-scores"
-            variant="form"
-            academicYearId={selectedAssessment?.examPeriod.academicYearId}
-            sectionId={selectedAssessment?.sectionId ?? undefined}
-            placeholder="اختر الطالب *"
-            title="اختيار الطالب"
-            searchPlaceholder="ابحث بالاسم أو رقم الطالب"
-            allowEmptySelection={false}
-          />
+          <FormField label="الطالب" required>
+            <StudentEnrollmentPickerSheet
+              value={form.studentEnrollmentId}
+              selectedOption={selectedEnrollmentOption}
+              onSelect={(option) => {
+                setSelectedEnrollmentOption(option);
+                setForm((prev) => ({ ...prev, studentEnrollmentId: option?.id ?? "" }));
+              }}
+              scope="exams-student-exam-scores"
+              variant="form"
+              academicYearId={selectedAssessment?.examPeriod.academicYearId}
+              sectionId={selectedAssessment?.sectionId ?? undefined}
+              placeholder="اختر الطالب"
+              title="اختيار الطالب"
+              searchPlaceholder="ابحث بالاسم أو رقم الطالب"
+              allowEmptySelection={false}
+            />
+          </FormField>
 
           <div className="grid gap-3 md:grid-cols-2">
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>موجود</span>
-              <input
-                type="checkbox"
-                checked={form.isPresent}
+            <FormBooleanField
+              label="موجود"
+              checked={form.isPresent}
+              onCheckedChange={(checked) =>
+                setForm((prev) => ({
+                  ...prev,
+                  isPresent: checked,
+                  score: checked ? prev.score : "0",
+                }))
+              }
+            />
+            <FormField label="الدرجة">
+              <Input
+                icon={<CalendarCheck2 />}
+                type="number"
+                min={0}
+                step={0.01}
+                value={form.score}
+                onChange={(event) => setForm((prev) => ({ ...prev, score: event.target.value }))}
+                placeholder="الدرجة"
+                disabled={!form.isPresent}
+              />
+            </FormField>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <FormField label="نوع الغياب">
+              <SelectField
+                icon={<Type />}
+                value={form.absenceType}
                 onChange={(event) =>
                   setForm((prev) => ({
                     ...prev,
-                    isPresent: event.target.checked,
-                    score: event.target.checked ? prev.score : "0",
+                    absenceType: event.target.value as ExamAbsenceType,
                   }))
                 }
+                disabled={form.isPresent}
+              >
+                <option value="UNEXCUSED">{translateExamAbsenceType("UNEXCUSED")}</option>
+                <option value="EXCUSED">{translateExamAbsenceType("EXCUSED")}</option>
+              </SelectField>
+            </FormField>
+            <FormField label="تفاصيل العذر">
+              <Input
+                icon={<Type />}
+                value={form.excuseDetails}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, excuseDetails: event.target.value }))
+                }
+                placeholder="تفاصيل العذر"
+                disabled={form.isPresent}
               />
-            </label>
-            <Input
-              type="number"
-              min={0}
-              step={0.01}
-              value={form.score}
-              onChange={(event) => setForm((prev) => ({ ...prev, score: event.target.value }))}
-              placeholder="الدرجة"
-              disabled={!form.isPresent}
-            />
+            </FormField>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={form.absenceType}
+          <FormField label="ملاحظات المدرس">
+            <TextareaField
+              icon={<Type />}
+              value={form.teacherNotes}
               onChange={(event) =>
-                setForm((prev) => ({
-                  ...prev,
-                  absenceType: event.target.value as ExamAbsenceType,
-                }))
+                setForm((prev) => ({ ...prev, teacherNotes: event.target.value }))
               }
-              disabled={form.isPresent}
-            >
-              <option value="UNEXCUSED">{translateExamAbsenceType("UNEXCUSED")}</option>
-              <option value="EXCUSED">{translateExamAbsenceType("EXCUSED")}</option>
-            </select>
-            <Input
-              value={form.excuseDetails}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, excuseDetails: event.target.value }))
-              }
-              placeholder="تفاصيل العذر"
-              disabled={form.isPresent}
+              placeholder="ملاحظات المدرس"
+              rows={3}
             />
-          </div>
+          </FormField>
 
-          <Input
-            value={form.teacherNotes}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, teacherNotes: event.target.value }))
-            }
-            placeholder="ملاحظات المدرس"
+          <FormBooleanField
+            label="نشط"
+            checked={form.isActive}
+            onCheckedChange={(checked) => setForm((prev) => ({ ...prev, isActive: checked }))}
           />
-
-          <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-            <span>نشط</span>
-            <input
-              type="checkbox"
-              checked={form.isActive}
-              onChange={(event) => setForm((prev) => ({ ...prev, isActive: event.target.checked }))}
-            />
-          </label>
 
           {formError ? (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

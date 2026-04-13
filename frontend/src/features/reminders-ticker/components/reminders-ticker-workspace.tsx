@@ -12,7 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SearchField } from "@/components/ui/search-field";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
@@ -23,6 +23,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
@@ -344,23 +345,14 @@ export function RemindersTickerWorkspace() {
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
-            <SearchField
-              containerClassName="flex-1"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="ابحث في المحتوى..."
-              data-testid="reminder-filter-search"
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterTriggerButton
-              count={activeFiltersCount}
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-            />
-          </div>
-        </div>
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="ابحث في المحتوى..."
+          searchInputProps={{ "data-testid": "reminder-filter-search" }}
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+        />
 
         <FilterDrawer
           open={isFilterOpen}
@@ -622,17 +614,14 @@ export function RemindersTickerWorkspace() {
               </div>
             </div>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-                data-testid="reminder-form-active"
-              />
-            </label>
+            <FormBooleanField
+              label="نشط"
+              checked={formState.isActive}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({ ...prev, isActive: checked }))
+              }
+              data-testid="reminder-form-active"
+            />
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

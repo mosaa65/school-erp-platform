@@ -3,7 +3,12 @@
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
+  Activity,
+  BookOpenText,
   Cable,
+  CalendarClock,
+  GraduationCap,
+  Hash,
   LoaderCircle,
   PencilLine,
   Plus,
@@ -12,8 +17,11 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
-import { SearchField } from "@/components/ui/search-field";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
@@ -24,7 +32,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
@@ -356,127 +363,117 @@ export function GradeLevelSubjectsWorkspace() {
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-1 flex-wrap items-center gap-2 min-w-0 sm:min-w-[240px] max-w-lg">
-            <SearchField
-              containerClassName="flex-1"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="بحث بالسنة أو الصف أو المادة..."
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterTriggerButton
-              count={activeFiltersCount}
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-            />
-          </div>
-        </div>
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="بحث بالسنة أو الصف أو المادة..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+        />
 
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
           title="فلاتر ربط الصفوف بالمواد"
-          actionButtons={
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
-            </div>
-          }
+          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.year}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  year: event.target.value,
-                }))
-              }
-              disabled={!canReadAcademicYears}
-            >
-              <option value="all">كل السنوات</option>
-              {yearOptions.map((year) => (
-                <option key={year.id} value={year.id}>
-                  {year.code}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="السنة الأكاديمية">
+              <SelectField
+                icon={<CalendarClock />}
+                value={filterDraft.year}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    year: event.target.value,
+                  }))
+                }
+                disabled={!canReadAcademicYears}
+              >
+                <option value="all">كل السنوات</option>
+                {yearOptions.map((year) => (
+                  <option key={year.id} value={year.id}>
+                    {year.code}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.gradeLevel}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  gradeLevel: event.target.value,
-                }))
-              }
-              disabled={!canReadGradeLevels}
-            >
-              <option value="all">كل المستويات</option>
-              {gradeLevelOptions.map((gradeLevel) => (
-                <option key={gradeLevel.id} value={gradeLevel.id}>
-                  {gradeLevel.code}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="المستوى الدراسي">
+              <SelectField
+                icon={<GraduationCap />}
+                value={filterDraft.gradeLevel}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    gradeLevel: event.target.value,
+                  }))
+                }
+                disabled={!canReadGradeLevels}
+              >
+                <option value="all">كل المستويات</option>
+                {gradeLevelOptions.map((gradeLevel) => (
+                  <option key={gradeLevel.id} value={gradeLevel.id}>
+                    {gradeLevel.code}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.subject}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  subject: event.target.value,
-                }))
-              }
-              disabled={!canReadSubjects}
-            >
-              <option value="all">كل المواد</option>
-              {subjectOptions.map((subject) => (
-                <option key={subject.id} value={subject.id}>
-                  {subject.code}
-                </option>
-              ))}
-            </SelectField>
+            <FormField label="المادة">
+              <SelectField
+                icon={<BookOpenText />}
+                value={filterDraft.subject}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    subject: event.target.value,
+                  }))
+                }
+                disabled={!canReadSubjects}
+              >
+                <option value="all">كل المواد</option>
+                {subjectOptions.map((subject) => (
+                  <option key={subject.id} value={subject.id}>
+                    {subject.code}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.mandatory}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  mandatory: event.target.value as "all" | "mandatory" | "optional",
-                }))
-              }
-            >
-              <option value="all">كل الأنواع</option>
-              <option value="mandatory">إلزامية</option>
-              <option value="optional">اختيارية</option>
-            </SelectField>
+            <FormField label="نوع المادة">
+              <SelectField
+                icon={<Cable />}
+                value={filterDraft.mandatory}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    mandatory: event.target.value as "all" | "mandatory" | "optional",
+                  }))
+                }
+              >
+                <option value="all">كل الأنواع</option>
+                <option value="mandatory">إلزامية</option>
+                <option value="optional">اختيارية</option>
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </SelectField>
+            <FormField label="الحالة">
+              <SelectField
+                icon={<Activity />}
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">النشطة فقط</option>
+                <option value="inactive">غير النشطة فقط</option>
+              </SelectField>
+            </FormField>
           </div>
         </FilterDrawer>
 
@@ -642,9 +639,9 @@ export function GradeLevelSubjectsWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">السنة الأكاديمية *</label>
+            <FormField label="السنة الأكاديمية" required>
               <SelectField
+                icon={<CalendarClock />}
                 value={formState.academicYearId}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -652,6 +649,7 @@ export function GradeLevelSubjectsWorkspace() {
                     academicYearId: event.target.value,
                   }))
                 }
+                required
                 disabled={!canReadAcademicYears}
               >
                 <option value="">اختر السنة الدراسية</option>
@@ -661,11 +659,11 @@ export function GradeLevelSubjectsWorkspace() {
                   </option>
                 ))}
               </SelectField>
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">المستوى الدراسي *</label>
+            <FormField label="المستوى الدراسي" required>
               <SelectField
+                icon={<GraduationCap />}
                 value={formState.gradeLevelId}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -673,6 +671,7 @@ export function GradeLevelSubjectsWorkspace() {
                     gradeLevelId: event.target.value,
                   }))
                 }
+                required
                 disabled={!canReadGradeLevels}
               >
                 <option value="">اختر المستوى الدراسي</option>
@@ -682,11 +681,11 @@ export function GradeLevelSubjectsWorkspace() {
                   </option>
                 ))}
               </SelectField>
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">المادة *</label>
+            <FormField label="المادة" required>
               <SelectField
+                icon={<BookOpenText />}
                 value={formState.subjectId}
                 onChange={(event) =>
                   setFormState((prev) => ({
@@ -694,6 +693,7 @@ export function GradeLevelSubjectsWorkspace() {
                     subjectId: event.target.value,
                   }))
                 }
+                required
                 disabled={!canReadSubjects}
               >
                 <option value="">اختر المادة</option>
@@ -703,12 +703,12 @@ export function GradeLevelSubjectsWorkspace() {
                   </option>
                 ))}
               </SelectField>
-            </div>
+            </FormField>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الحصص الأسبوعية *</label>
+              <FormField label="الحصص الأسبوعية" required>
                 <Input
+                  icon={<Hash />}
                   type="number"
                   min={1}
                   max={60}
@@ -721,10 +721,10 @@ export function GradeLevelSubjectsWorkspace() {
                   }
                   required
                 />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">ترتيب العرض</label>
+              </FormField>
+              <FormField label="ترتيب العرض">
                 <Input
+                  icon={<Hash />}
                   type="number"
                   min={1}
                   max={500}
@@ -737,36 +737,30 @@ export function GradeLevelSubjectsWorkspace() {
                   }
                   placeholder="1"
                 />
-              </div>
+              </FormField>
             </div>
 
             <div className="grid gap-2 md:grid-cols-2">
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>إلزامية</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isMandatory}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      isMandatory: event.target.checked,
-                    }))
-                  }
-                />
-              </label>
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشط</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      isActive: event.target.checked,
-                    }))
-                  }
-                />
-              </label>
+              <FormBooleanField
+                label="إلزامية"
+                checked={formState.isMandatory}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    isMandatory: checked,
+                  }))
+                }
+              />
+              <FormBooleanField
+                label="نشط"
+                checked={formState.isActive}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    isActive: checked,
+                  }))
+                }
+              />
             </div>
 
             {formError ? (

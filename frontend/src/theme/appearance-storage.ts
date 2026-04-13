@@ -17,6 +17,7 @@ export type AppearancePreferences = {
   surfaceMode: AppearanceSurfaceMode;
   fontFamily: AppearanceFontFamily;
   fontScale: AppearanceFontScale;
+  customAccentHex: string;
 };
 
 export type AppearanceResolvedTokens = {
@@ -46,14 +47,16 @@ export type AppearanceFontScaleDefinition = {
   scale: number;
 };
 
-const STORAGE_VERSION = 1;
+const STORAGE_VERSION = 2;
 const STORAGE_KEY = "school-erp.appearance.v1";
+const DEFAULT_CUSTOM_ACCENT_HEX = "#6366f1";
 
 export const DEFAULT_APPEARANCE_PREFERENCES: AppearancePreferences = {
   colorPreset: "adaptive",
   surfaceMode: "system",
   fontFamily: "cairo",
   fontScale: "comfortable",
+  customAccentHex: DEFAULT_CUSTOM_ACCENT_HEX,
 };
 
 export const APPEARANCE_COLOR_PRESETS: AppearancePresetDefinition[] = COLOR_PRESETS.map(
@@ -133,6 +136,18 @@ function isAppearanceFontScale(value: unknown): value is AppearanceFontScale {
   return APPEARANCE_FONT_SCALES.some((item) => item.value === value);
 }
 
+function isHexColor(value: unknown): value is string {
+  return typeof value === "string" && /^#[0-9a-fA-F]{6}$/.test(value);
+}
+
+function toRgbChannels(hex: string) {
+  return {
+    r: Number.parseInt(hex.slice(1, 3), 16),
+    g: Number.parseInt(hex.slice(3, 5), 16),
+    b: Number.parseInt(hex.slice(5, 7), 16),
+  };
+}
+
 function normalizePreferences(
   input: Partial<AppearancePreferences> | undefined,
 ): AppearancePreferences {
@@ -149,6 +164,9 @@ function normalizePreferences(
     fontScale: isAppearanceFontScale(input?.fontScale)
       ? input.fontScale
       : DEFAULT_APPEARANCE_PREFERENCES.fontScale,
+    customAccentHex: isHexColor(input?.customAccentHex)
+      ? input.customAccentHex
+      : DEFAULT_APPEARANCE_PREFERENCES.customAccentHex,
   };
 }
 
@@ -236,9 +254,22 @@ export function resolveSurfaceMode(
 export function resolveAppearanceTokens(
   preset: AppearanceColorPreset,
   scheme: ColorScheme,
+  customAccentHex = DEFAULT_CUSTOM_ACCENT_HEX,
 ): AppearanceResolvedTokens | null {
   if (preset === "adaptive") {
     return null;
+  }
+
+  if (preset === "custom") {
+    const { r, g, b } = toRgbChannels(customAccentHex);
+    const ringAlpha = scheme === "dark" ? 0.4 : 0.34;
+
+    return {
+      accentColor: `rgb(${r} ${g} ${b})`,
+      accentSoft: `rgba(${r}, ${g}, ${b}, 0.12)`,
+      accentStrong: `rgba(${r}, ${g}, ${b}, 0.24)`,
+      accentRing: `rgba(${r}, ${g}, ${b}, ${ringAlpha})`,
+    };
   }
 
   return toResolvedTokens(resolvePresetThemeTokens(preset, scheme).accent);

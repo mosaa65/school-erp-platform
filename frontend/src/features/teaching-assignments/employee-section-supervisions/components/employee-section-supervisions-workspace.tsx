@@ -13,7 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
-import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
   CardContent,
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { SelectField } from "@/components/ui/select-field";
 import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
@@ -578,7 +579,7 @@ export function EmployeeSectionSupervisionsWorkspace() {
         disabled={!canCreate}
       />
 
-      <CrudFormSheet
+      <BottomSheetForm
         open={isFormOpen}
         title={isEditing ? "تعديل إشراف شعبة" : "إضافة إشراف شعبة"}
         submitLabel={isEditing ? "حفظ التعديلات" : "حفظ إشراف الشعبة"}
@@ -685,58 +686,46 @@ export function EmployeeSectionSupervisionsWorkspace() {
               <p className="text-xs font-medium text-muted-foreground">
                 الصلاحيات
               </p>
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>عرض الطلاب</span>
-                <input
-                  type="checkbox"
-                  checked={formState.canViewStudents}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      canViewStudents: event.target.checked,
-                    }))
-                  }
-                />
-              </label>
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>إدارة الواجبات</span>
-                <input
-                  type="checkbox"
-                  checked={formState.canManageHomeworks}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      canManageHomeworks: event.target.checked,
-                    }))
-                  }
-                />
-              </label>
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>إدارة الدرجات</span>
-                <input
-                  type="checkbox"
-                  checked={formState.canManageGrades}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      canManageGrades: event.target.checked,
-                    }))
-                  }
-                />
-              </label>
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشط</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      isActive: event.target.checked,
-                    }))
-                  }
-                />
-              </label>
+              <FormBooleanField
+                label="عرض الطلاب"
+                checked={formState.canViewStudents}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    canViewStudents: checked,
+                  }))
+                }
+              />
+              <FormBooleanField
+                label="إدارة الواجبات"
+                checked={formState.canManageHomeworks}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    canManageHomeworks: checked,
+                  }))
+                }
+              />
+              <FormBooleanField
+                label="إدارة الدرجات"
+                checked={formState.canManageGrades}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    canManageGrades: checked,
+                  }))
+                }
+              />
+              <FormBooleanField
+                label="نشط"
+                checked={formState.isActive}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    isActive: checked,
+                  }))
+                }
+              />
             </div>
 
             {formError ? (
@@ -773,7 +762,7 @@ export function EmployeeSectionSupervisionsWorkspace() {
             </div>
           </form>
         )}
-      </CrudFormSheet>
+      </BottomSheetForm>
     </>
   );
 }

@@ -17,6 +17,7 @@ import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import { Button } from "@/components/ui/button";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Input } from "@/components/ui/input";
 import {
@@ -464,10 +465,13 @@ export function SemesterGradesWorkspace() {
                 {(subjectsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
               </select>
             </div>
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>استبدال الدرجات اليدوية</span>
-              <input type="checkbox" checked={calcForm.overwrite} onChange={(event) => setCalcForm((prev) => ({ ...prev, overwrite: event.target.checked }))} />
-            </label>
+            <FormBooleanField
+              label="استبدال الدرجات اليدوية"
+              checked={calcForm.overwrite}
+              onCheckedChange={(checked) =>
+                setCalcForm((prev) => ({ ...prev, overwrite: checked }))
+              }
+            />
             <Button type="button" variant="outline" className="w-full gap-2" disabled={!canCalculate || calculateMutation.isPending} onClick={() => {
               setCalcInfo(null);
               if (!calcForm.academicTermId || !calcForm.sectionId || !calcForm.subjectId) {
@@ -498,10 +502,13 @@ export function SemesterGradesWorkspace() {
                 {(subjectsQuery.data ?? []).map((item) => <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>)}
               </select>
             </div>
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>استبدال القيم الحالية</span>
-              <input type="checkbox" checked={fillForm.overwrite} onChange={(event) => setFillForm((prev) => ({ ...prev, overwrite: event.target.checked }))} />
-            </label>
+            <FormBooleanField
+              label="استبدال القيم الحالية"
+              checked={fillForm.overwrite}
+              onCheckedChange={(checked) =>
+                setFillForm((prev) => ({ ...prev, overwrite: checked }))
+              }
+            />
             <Button type="button" variant="outline" className="w-full gap-2" disabled={!canFillFinalExam || fillFinalMutation.isPending} onClick={() => {
               setFillInfo(null);
               if (!fillForm.academicTermId || !fillForm.sectionId || !fillForm.subjectId) {
@@ -783,16 +790,13 @@ export function SemesterGradesWorkspace() {
             placeholder="ملاحظات"
           />
 
-          <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-            <span>نشط</span>
-            <input
-              type="checkbox"
-              checked={form.isActive}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, isActive: event.target.checked }))
-              }
-            />
-          </label>
+          <FormBooleanField
+            label="نشط"
+            checked={form.isActive}
+            onCheckedChange={(checked) =>
+              setForm((prev) => ({ ...prev, isActive: checked }))
+            }
+          />
 
           {formError ? (
             <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

@@ -16,6 +16,7 @@ import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import { Button } from "@/components/ui/button";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Input } from "@/components/ui/input";
 import {
@@ -773,39 +774,36 @@ export function AnnualGradesWorkspace() {
               />
             </div>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>إدخال مجموعات الفصول بدلًا من فصل 1/2</span>
-              <input
-                type="checkbox"
-                checked={form.useTermTotals}
-                onChange={(event) => {
-                  const nextUse = event.target.checked;
-                  setForm((prev) => {
-                    if (!nextUse) {
-                      return {
-                        ...prev,
-                        useTermTotals: false,
-                        termTotals: {},
-                      };
-                    }
-
-                    const nextTermTotals = academicTermOptions.reduce<Record<string, string>>(
-                      (acc, term) => {
-                        acc[term.id] = prev.termTotals[term.id] ?? "";
-                        return acc;
-                      },
-                      {},
-                    );
-
+            <FormBooleanField
+              label="إدخال مجموعات الفصول بدلًا من فصل 1/2"
+              checked={form.useTermTotals}
+              onCheckedChange={(checked) => {
+                const nextUse = checked;
+                setForm((prev) => {
+                  if (!nextUse) {
                     return {
                       ...prev,
-                      useTermTotals: true,
-                      termTotals: nextTermTotals,
+                      useTermTotals: false,
+                      termTotals: {},
                     };
-                  });
-                }}
-              />
-            </label>
+                  }
+
+                  const nextTermTotals = academicTermOptions.reduce<Record<string, string>>(
+                    (acc, term) => {
+                      acc[term.id] = prev.termTotals[term.id] ?? "";
+                      return acc;
+                    },
+                    {},
+                  );
+
+                  return {
+                    ...prev,
+                    useTermTotals: true,
+                    termTotals: nextTermTotals,
+                  };
+                });
+              }}
+            />
 
             {form.useTermTotals ? (
               <div className="grid gap-2 md:grid-cols-2">
@@ -918,16 +916,13 @@ export function AnnualGradesWorkspace() {
               placeholder="ملاحظات"
             />
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={form.isActive}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-              />
-            </label>
+            <FormBooleanField
+              label="نشط"
+              checked={form.isActive}
+              onCheckedChange={(checked) =>
+                setForm((prev) => ({ ...prev, isActive: checked }))
+              }
+            />
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

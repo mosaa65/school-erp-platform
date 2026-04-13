@@ -20,12 +20,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { PageShell } from "@/components/ui/page-shell";
-import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
@@ -411,18 +410,14 @@ export function DiscountRulesWorkspace() {
         </CardHeader>
       </Card>
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <SearchField
-          containerClassName="max-w-md"
-          value={searchInput}
-          onChange={(event) => setSearchInput(event.target.value)}
-          placeholder="بحث بالاسم..."
-        />
-        <FilterTriggerButton
-          count={activeFiltersCount}
-          onClick={() => setIsFilterOpen((prev) => !prev)}
-        />
-      </div>
+      <ManagementToolbar
+        searchValue={searchInput}
+        onSearchChange={(event) => setSearchInput(event.target.value)}
+        searchPlaceholder="بحث بالاسم..."
+        filterCount={activeFiltersCount}
+        onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+        searchWrapperClassName="max-w-md"
+      />
 
       <FilterDrawer
         open={isFilterOpen}

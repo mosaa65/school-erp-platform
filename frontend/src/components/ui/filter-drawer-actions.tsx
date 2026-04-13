@@ -24,9 +24,9 @@ export function FilterDrawerActions({
     <div className="flex w-full gap-2">
       <Button
         type="button"
-        variant="outline"
+        variant="destructive"
         onClick={onClear}
-        className="flex-1 gap-1.5"
+        className="flex-1 gap-1.5 rounded-2xl"
         data-testid={clearTestId}
       >
         <Trash2 className="h-4 w-4" />
@@ -35,7 +35,7 @@ export function FilterDrawerActions({
       <Button
         type="button"
         onClick={onApply}
-        className="flex-1 gap-1.5"
+        className="flex-1 gap-1.5 rounded-2xl"
         data-testid={applyTestId}
       >
         {applyLabel}
