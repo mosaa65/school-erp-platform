@@ -618,6 +618,7 @@ export function AcademicTermsWorkspace() {
         onSubmit={() => handleSubmitForm()}
         isSubmitting={isFormSubmitting}
         submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء فصل أكاديمي"}
+        showFooter={false}
       >
         {!canCreate && !isEditing ? (
           <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">

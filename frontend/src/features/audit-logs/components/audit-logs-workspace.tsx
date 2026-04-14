@@ -4,16 +4,24 @@ import * as React from "react";
 import {
   CalendarClock,
   Eye,
+  Layers3,
   RefreshCw,
+  Search,
   Settings2,
   ShieldAlert,
   ShieldCheck,
   Undo2,
+  UserRound,
+  Workflow,
 } from "lucide-react";
+import { SystemMessageInline } from "@/components/feedback/system-message-inline";
 import { Badge } from "@/components/ui/badge";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
+import { PageShell } from "@/components/ui/page-shell";
 import { SelectField } from "@/components/ui/select-field";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -25,13 +33,13 @@ import {
 } from "@/components/ui/card";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import {
   useAuditLogDetailsQuery,
   useAuditLogRetentionPolicyQuery,
   useAuditLogTimelineQuery,
   useAuditLogsQuery,
 } from "@/features/audit-logs/hooks/use-audit-logs-query";
+import { useSystemMessage } from "@/hooks/use-system-message";
 import {
   useRollbackAuditLogMutation,
   useUpdateAuditLogRetentionPolicyMutation,
@@ -42,6 +50,7 @@ import type {
   AuditLogTimelineItem,
   AuditStatus,
 } from "@/lib/api/client";
+import { resolveSystemMessageIconVisibility } from "@/theme/system-message-tokens";
 
 type ActionFilterValue =
   | "CREATE"
@@ -702,10 +711,20 @@ export function AuditLogsWorkspace() {
   });
   const rollbackMutation = useRollbackAuditLogMutation();
   const updateRetentionPolicyMutation = useUpdateAuditLogRetentionPolicyMutation();
+  const { preferences } = useSystemMessage();
 
   const logs = React.useMemo(() => logsQuery.data?.data ?? [], [logsQuery.data?.data]);
   const pagination = logsQuery.data?.pagination;
   const retentionPolicy = updateRetentionPolicyMutation.data ?? retentionPolicyQuery.data;
+  const visibleLogsCount = logs.length;
+  const successLogsCount = React.useMemo(
+    () => logs.filter((item) => item.status === "SUCCESS").length,
+    [logs],
+  );
+  const failureLogsCount = React.useMemo(
+    () => logs.filter((item) => item.status === "FAILURE").length,
+    [logs],
+  );
 
   const activeFiltersCount = React.useMemo(() => {
     return [
@@ -718,6 +737,52 @@ export function AuditLogsWorkspace() {
       appliedFilters.to ? 1 : 0,
     ].reduce((total, current) => total + current, 0);
   }, [appliedFilters]);
+
+  const appliedFilterBadges = React.useMemo(() => {
+    const items: string[] = [];
+    if (appliedFilters.search) {
+      items.push(`بحث: ${appliedFilters.search}`);
+    }
+    if (appliedFilters.user) {
+      items.push(`مستخدم: ${appliedFilters.user}`);
+    }
+    if (appliedFilters.actionType) {
+      items.push(
+        `العملية: ${ACTION_FILTER_OPTIONS.find((option) => option.value === appliedFilters.actionType)?.label ?? appliedFilters.actionType}`,
+      );
+    }
+    if (appliedFilters.domain) {
+      items.push(
+        `المجال: ${DOMAIN_FILTER_OPTIONS.find((option) => option.value === appliedFilters.domain)?.label ?? appliedFilters.domain}`,
+      );
+    }
+    if (appliedFilters.status) {
+      items.push(`الحالة: ${appliedFilters.status === "SUCCESS" ? "ناجحة" : "فاشلة"}`);
+    }
+    if (draftFilters.fromDate) {
+      items.push(`من: ${draftFilters.fromDate}`);
+    }
+    if (draftFilters.toDate) {
+      items.push(`إلى: ${draftFilters.toDate}`);
+    }
+    return items;
+  }, [appliedFilters, draftFilters.fromDate, draftFilters.toDate]);
+
+  const inlineMessageProps = React.useMemo(
+    () => ({
+      colorMode: preferences.colorMode,
+      densityPreset: preferences.densityPreset,
+      variant: preferences.variant,
+      dismissible: false,
+    }),
+    [preferences.colorMode, preferences.densityPreset, preferences.variant],
+  );
+
+  const resolveInlineIcon = React.useCallback(
+    (tone: "success" | "error" | "warning" | "info" | "neutral" | "loading", hasAction = false) =>
+      resolveSystemMessageIconVisibility(preferences.iconMode, tone, hasAction),
+    [preferences.iconMode],
+  );
 
   const selectedLogFromList = React.useMemo(() => {
     if (!selectedLogId) {
@@ -810,6 +875,16 @@ export function AuditLogsWorkspace() {
       to: toIsoDateBoundary(draftFilters.toDate, "end"),
     });
     setIsFilterOpen(false);
+  };
+
+  const handleToolbarSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setPage(1);
+    setDraftFilters((prev) => ({ ...prev, search: value }));
+    setAppliedFilters((prev) => ({
+      ...prev,
+      search: toOptionalString(value),
+    }));
   };
 
   const clearFilters = () => {
@@ -907,6 +982,14 @@ export function AuditLogsWorkspace() {
     setIsRetentionPolicyOpen(false);
   };
 
+  const handleRefresh = async () => {
+    await logsQuery.refetch();
+    if (selectedLogId) {
+      void detailsQuery.refetch();
+      void timelineQuery.refetch();
+    }
+  };
+
   const submitRetentionPolicy = async () => {
     if (retentionEnabledDraft) {
       const parsedDays = Number(retentionDaysDraft);
@@ -957,19 +1040,14 @@ export function AuditLogsWorkspace() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <FilterTriggerButton
-            count={activeFiltersCount}
-            onClick={() => setIsFilterOpen((prev) => !prev)}
-            data-testid="audit-log-open-filters"
-          />
-          <Badge variant="outline">الأحدث أولًا</Badge>
-          <Badge variant="secondary">مناسب للإدارة والتحقيق</Badge>
-          <Badge variant={retentionPolicy?.autoDeleteEnabled ? "secondary" : "outline"}>
-            {retentionSummaryText}
-          </Badge>
+    <>
+      <PageShell
+      title="سجل التدقيق"
+      subtitle="واجهة إدارية أوضح لتتبع العمليات، مراجعة التغييرات، والتحكم في الاحتفاظ بالسجلات دون ازدحام بصري."
+      eyebrow="Audit Log"
+      actions={
+        <>
+          <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           <Button
             type="button"
             size="sm"
@@ -981,16 +1059,102 @@ export function AuditLogsWorkspace() {
             <Settings2 className="h-4 w-4" />
             سياسة الحذف التلقائي
           </Button>
-          {logsQuery.isFetching && !logsQuery.isPending ? (
-            <Badge variant="outline" className="gap-1.5">
-              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-              تحديث تدريجي...
-            </Badge>
-          ) : null}
-        </div>
-      </div>
+        </>
+      }
+    >
+        <div className="space-y-4">
+        <ManagementToolbar
+          searchValue={draftFilters.search}
+          onSearchChange={handleToolbarSearchChange}
+          searchPlaceholder="ابحث بالمستخدم أو العملية أو المورد أو معرف السجل..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+          filterButtonTestId="audit-log-open-filters"
+          actions={
+            <>
+              <Badge variant="outline">الأحدث أولًا</Badge>
+              <Badge variant={retentionPolicy?.autoDeleteEnabled ? "secondary" : "outline"}>
+                {retentionSummaryText}
+              </Badge>
+              {logsQuery.isFetching && !logsQuery.isPending ? (
+                <Badge variant="outline" className="gap-1.5">
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  تحديث تدريجي...
+                </Badge>
+              ) : null}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => void handleRefresh()}
+                disabled={logsQuery.isFetching}
+              >
+                <RefreshCw className={`h-4 w-4 ${logsQuery.isFetching ? "animate-spin" : ""}`} />
+                تحديث
+              </Button>
+            </>
+          }
+        />
 
-      <FilterDrawer
+        {activeFiltersCount > 0 ? (
+          <div className="flex flex-wrap items-center gap-2 rounded-[1.5rem] border border-[color:var(--app-accent-strong)]/25 bg-[color:var(--app-accent-soft)]/30 px-4 py-3">
+            <span className="text-xs font-semibold text-[color:var(--app-accent-color)]">
+              الفلاتر المطبقة
+            </span>
+            {appliedFilterBadges.map((label) => (
+              <Badge key={label} variant="outline" className="max-w-full truncate">
+                {label}
+              </Badge>
+            ))}
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="ms-auto"
+              onClick={clearFilters}
+            >
+              مسح الكل
+            </Button>
+          </div>
+        ) : null}
+
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <Card className="border-[color:var(--app-accent-strong)]/25 bg-gradient-to-br from-[color:var(--app-accent-soft)]/35 via-background/95 to-background/85">
+            <CardContent className="space-y-1 p-4">
+              <p className="text-xs text-muted-foreground">السجلات المعروضة</p>
+              <p className="text-2xl font-semibold">{visibleLogsCount}</p>
+              <p className="text-xs text-muted-foreground">الصفحة الحالية من نتائج البحث والفلترة.</p>
+            </CardContent>
+          </Card>
+          <Card className="border-emerald-500/20 bg-emerald-500/[0.04]">
+            <CardContent className="space-y-1 p-4">
+              <p className="text-xs text-muted-foreground">عمليات ناجحة</p>
+              <p className="text-2xl font-semibold text-emerald-700 dark:text-emerald-300">
+                {successLogsCount}
+              </p>
+              <p className="text-xs text-muted-foreground">عدد السجلات الناجحة في الصفحة الحالية.</p>
+            </CardContent>
+          </Card>
+          <Card className="border-rose-500/20 bg-rose-500/[0.04]">
+            <CardContent className="space-y-1 p-4">
+              <p className="text-xs text-muted-foreground">عمليات فاشلة</p>
+              <p className="text-2xl font-semibold text-rose-700 dark:text-rose-300">
+                {failureLogsCount}
+              </p>
+              <p className="text-xs text-muted-foreground">تحتاج متابعة أو تحقيق أدق.</p>
+            </CardContent>
+          </Card>
+          <Card className="border-border/70 bg-card/78">
+            <CardContent className="space-y-1 p-4">
+              <p className="text-xs text-muted-foreground">الاحتفاظ التلقائي</p>
+              <p className="text-lg font-semibold">{retentionSummaryText}</p>
+              <p className="text-xs text-muted-foreground">يمكن تعديل السياسة من الزر أعلى الصفحة.</p>
+            </CardContent>
+          </Card>
+        </div>
+
+          <FilterDrawer
         open={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
         title="فلترة سجل التدقيق"
@@ -1004,123 +1168,164 @@ export function AuditLogsWorkspace() {
         }
       >
         <div className="grid gap-3 sm:grid-cols-2">
-          <Input
-            placeholder="بحث نصي (عملية، مستخدم، مورد...)"
-            value={draftFilters.search}
-            data-testid="audit-log-filter-search"
-            onChange={(event) =>
-              setDraftFilters((prev) => ({ ...prev, search: event.target.value }))
-            }
-          />
-          <Input
-            placeholder="المستخدم (اسم، بريد، أو معرف)"
-            value={draftFilters.user}
-            data-testid="audit-log-filter-user"
-            onChange={(event) =>
-              setDraftFilters((prev) => ({ ...prev, user: event.target.value }))
-            }
-          />
-          <SelectField
-            value={draftFilters.actionType}
-            data-testid="audit-log-filter-action-type"
-            onChange={(event) =>
-              setDraftFilters((prev) => ({
-                ...prev,
-                actionType: event.target.value as DraftFilters["actionType"],
-              }))
-            }
-          >
-            <option value="all">كل أنواع العمليات</option>
-            {ACTION_FILTER_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </SelectField>
-          <SelectField
-            value={draftFilters.domain}
-            data-testid="audit-log-filter-domain"
-            onChange={(event) =>
-              setDraftFilters((prev) => ({
-                ...prev,
-                domain: event.target.value as DraftFilters["domain"],
-              }))
-            }
-          >
-            <option value="all">كل المجالات</option>
-            {DOMAIN_FILTER_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </SelectField>
-          <SelectField
-            value={draftFilters.status}
-            data-testid="audit-log-filter-status"
-            onChange={(event) =>
-              setDraftFilters((prev) => ({
-                ...prev,
-                status: event.target.value as DraftFilters["status"],
-              }))
-            }
-          >
-            <option value="all">كل الحالات</option>
-            <option value="SUCCESS">ناجحة</option>
-            <option value="FAILURE">فاشلة</option>
-          </SelectField>
-          <Input
-            type="date"
-            value={draftFilters.fromDate}
-            data-testid="audit-log-filter-from-date"
-            onChange={(event) =>
-              setDraftFilters((prev) => ({ ...prev, fromDate: event.target.value }))
-            }
-          />
-          <Input
-            type="date"
-            value={draftFilters.toDate}
-            data-testid="audit-log-filter-to-date"
-            onChange={(event) =>
-              setDraftFilters((prev) => ({ ...prev, toDate: event.target.value }))
-            }
-          />
+          <FormField label="بحث نصي">
+            <Input
+              icon={<Search />}
+              placeholder="عملية، مستخدم، مورد، أو رقم سجل"
+              value={draftFilters.search}
+              data-testid="audit-log-filter-search"
+              onChange={(event) =>
+                setDraftFilters((prev) => ({ ...prev, search: event.target.value }))
+              }
+            />
+          </FormField>
+          <FormField label="المستخدم">
+            <Input
+              icon={<UserRound />}
+              placeholder="اسم، بريد، أو معرف"
+              value={draftFilters.user}
+              data-testid="audit-log-filter-user"
+              onChange={(event) =>
+                setDraftFilters((prev) => ({ ...prev, user: event.target.value }))
+              }
+            />
+          </FormField>
+          <FormField label="نوع العملية">
+            <SelectField
+              icon={<Workflow />}
+              value={draftFilters.actionType}
+              data-testid="audit-log-filter-action-type"
+              onChange={(event) =>
+                setDraftFilters((prev) => ({
+                  ...prev,
+                  actionType: event.target.value as DraftFilters["actionType"],
+                }))
+              }
+            >
+              <option value="all">كل أنواع العمليات</option>
+              {ACTION_FILTER_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </SelectField>
+          </FormField>
+          <FormField label="المجال">
+            <SelectField
+              icon={<Layers3 />}
+              value={draftFilters.domain}
+              data-testid="audit-log-filter-domain"
+              onChange={(event) =>
+                setDraftFilters((prev) => ({
+                  ...prev,
+                  domain: event.target.value as DraftFilters["domain"],
+                }))
+              }
+            >
+              <option value="all">كل المجالات</option>
+              {DOMAIN_FILTER_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </SelectField>
+          </FormField>
+          <FormField label="الحالة">
+            <SelectField
+              icon={<ShieldCheck />}
+              value={draftFilters.status}
+              data-testid="audit-log-filter-status"
+              onChange={(event) =>
+                setDraftFilters((prev) => ({
+                  ...prev,
+                  status: event.target.value as DraftFilters["status"],
+                }))
+              }
+            >
+              <option value="all">كل الحالات</option>
+              <option value="SUCCESS">ناجحة</option>
+              <option value="FAILURE">فاشلة</option>
+            </SelectField>
+          </FormField>
+          <FormField label="من تاريخ">
+            <Input
+              type="date"
+              icon={<CalendarClock />}
+              value={draftFilters.fromDate}
+              data-testid="audit-log-filter-from-date"
+              onChange={(event) =>
+                setDraftFilters((prev) => ({ ...prev, fromDate: event.target.value }))
+              }
+            />
+          </FormField>
+          <FormField label="إلى تاريخ">
+            <Input
+              type="date"
+              icon={<CalendarClock />}
+              value={draftFilters.toDate}
+              data-testid="audit-log-filter-to-date"
+              onChange={(event) =>
+                setDraftFilters((prev) => ({ ...prev, toDate: event.target.value }))
+              }
+            />
+          </FormField>
         </div>
       </FilterDrawer>
 
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+          <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <CardTitle className="flex items-center gap-2">
               <CalendarClock className="h-5 w-5 text-primary" />
-              سجل التدقيق
+              التسلسل الزمني للعمليات
             </CardTitle>
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <CardDescription>
-            تظهر العمليات بشكل مختصر، وتُعرض التفاصيل الكاملة فقط عبر زر
-            &quot;عرض التفاصيل&quot;.
+            تظهر العمليات هنا بشكل موجز ومنظّم، مع الدخول للتفاصيل أو التراجع فقط عند الحاجة.
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-3">
           {logsQuery.isPending ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ تحميل السجلات...
-            </div>
+            <SystemMessageInline
+              tone="loading"
+              message="جارٍ تحميل سجلات التدقيق..."
+              showIcon={resolveInlineIcon("loading")}
+              {...inlineMessageProps}
+            />
           ) : null}
 
           {logsQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {logsQuery.error instanceof Error
-                ? logsQuery.error.message
-                : "تعذر تحميل سجلات التدقيق."}
-            </div>
+            <SystemMessageInline
+              tone="error"
+              message={
+                logsQuery.error instanceof Error
+                  ? logsQuery.error.message
+                  : "تعذر تحميل سجلات التدقيق."
+              }
+              showIcon={resolveInlineIcon("error", true)}
+              action={{ label: "إعادة المحاولة", onClick: () => void handleRefresh() }}
+              {...inlineMessageProps}
+            />
           ) : null}
 
           {!logsQuery.isPending && logs.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              لا توجد سجلات مطابقة للفلاتر الحالية.
-            </div>
+            <SystemMessageInline
+              tone={activeFiltersCount > 0 ? "warning" : "neutral"}
+              message={
+                activeFiltersCount > 0
+                  ? "لا توجد سجلات مطابقة للفلاتر الحالية."
+                  : "لا توجد سجلات تدقيق لعرضها حاليًا."
+              }
+              showIcon={resolveInlineIcon(activeFiltersCount > 0 ? "warning" : "neutral", activeFiltersCount > 0)}
+              action={
+                activeFiltersCount > 0
+                  ? { label: "مسح الفلاتر", onClick: clearFilters }
+                  : undefined
+              }
+              {...inlineMessageProps}
+            />
           ) : null}
 
           {logs.map((log) => {
@@ -1148,7 +1353,7 @@ export function AuditLogsWorkspace() {
               <div
                 key={log.id}
                 data-testid="audit-log-item"
-                className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+                className="space-y-3 rounded-[1.5rem] border border-border/70 bg-gradient-to-br from-background/95 to-background/72 p-4 shadow-[0_18px_46px_-34px_rgba(15,23,42,0.35)]"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="space-y-2">
@@ -1169,9 +1374,10 @@ export function AuditLogsWorkspace() {
                       {buildExecutiveSummary(log, parsedRowDetails)}
                     </p>
                     <p className="text-xs text-muted-foreground">{timelineSummaryText}</p>
-                    <p className="text-xs text-muted-foreground">
-                      وقت العملية: {formatDateTime(log.occurredAt)}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                      <span>وقت العملية: {formatDateTime(log.occurredAt)}</span>
+                      <span>المورد: {translateResource(log.resource)}</span>
+                    </div>
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     {statusBadge}
@@ -1238,7 +1444,7 @@ export function AuditLogsWorkspace() {
                 variant="ghost"
                 size="sm"
                 className="gap-1.5"
-                onClick={() => void logsQuery.refetch()}
+                onClick={() => void handleRefresh()}
                 disabled={logsQuery.isFetching}
               >
                 <RefreshCw
@@ -1249,7 +1455,9 @@ export function AuditLogsWorkspace() {
             </div>
           </div>
         </CardContent>
-      </Card>
+          </Card>
+        </div>
+      </PageShell>
 
       <BottomSheetForm
         open={isRetentionPolicyOpen}
@@ -1265,27 +1473,32 @@ export function AuditLogsWorkspace() {
       >
         <div className="space-y-4">
           {retentionPolicyQuery.isFetching && !retentionPolicy ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              جارٍ تحميل السياسة الحالية...
-            </div>
+            <SystemMessageInline
+              tone="loading"
+              message="جارٍ تحميل السياسة الحالية..."
+              showIcon={resolveInlineIcon("loading")}
+              {...inlineMessageProps}
+            />
           ) : null}
 
           {retentionPolicyQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {getErrorText(retentionPolicyQuery.error, "تعذر تحميل سياسة الحذف التلقائي.")}
-            </div>
+            <SystemMessageInline
+              tone="error"
+              message={getErrorText(retentionPolicyQuery.error, "تعذر تحميل سياسة الحذف التلقائي.")}
+              showIcon={resolveInlineIcon("error")}
+              {...inlineMessageProps}
+            />
           ) : null}
 
           {retentionFeedback ? (
-            <div
-              className={
-                retentionFeedback.type === "success"
-                  ? "rounded-md border border-emerald-300/50 bg-emerald-500/10 p-3 text-sm text-emerald-700"
-                  : "rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
-              }
-            >
-              {retentionFeedback.message}
-            </div>
+            <SystemMessageInline
+              tone={retentionFeedback.type === "success" ? "success" : "error"}
+              message={retentionFeedback.message}
+              showIcon={resolveInlineIcon(
+                retentionFeedback.type === "success" ? "success" : "error",
+              )}
+              {...inlineMessageProps}
+            />
           ) : null}
 
           <section className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-4">
@@ -1346,23 +1559,34 @@ export function AuditLogsWorkspace() {
       >
         <div className="space-y-4">
           {detailsQuery.isFetching ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              جارٍ تحميل أحدث التفاصيل...
-            </div>
+            <SystemMessageInline
+              tone="loading"
+              message="جارٍ تحميل أحدث التفاصيل..."
+              showIcon={resolveInlineIcon("loading")}
+              {...inlineMessageProps}
+            />
           ) : null}
 
           {detailsQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {detailsQuery.error instanceof Error
-                ? detailsQuery.error.message
-                : "تعذر تحميل تفاصيل السجل."}
-            </div>
+            <SystemMessageInline
+              tone="error"
+              message={
+                detailsQuery.error instanceof Error
+                  ? detailsQuery.error.message
+                  : "تعذر تحميل تفاصيل السجل."
+              }
+              showIcon={resolveInlineIcon("error")}
+              {...inlineMessageProps}
+            />
           ) : null}
 
           {!selectedLog ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              لم يتم العثور على تفاصيل العملية.
-            </div>
+            <SystemMessageInline
+              tone="neutral"
+              message="لم يتم العثور على تفاصيل العملية."
+              showIcon={resolveInlineIcon("neutral")}
+              {...inlineMessageProps}
+            />
           ) : (
             <>
               <section className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-4">
@@ -1433,23 +1657,34 @@ export function AuditLogsWorkspace() {
                 </div>
 
                 {timelineQuery.isFetching ? (
-                  <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-                    جارٍ تحميل التسلسل...
-                  </div>
+                  <SystemMessageInline
+                    tone="loading"
+                    message="جارٍ تحميل التسلسل..."
+                    showIcon={resolveInlineIcon("loading")}
+                    {...inlineMessageProps}
+                  />
                 ) : null}
 
                 {timelineQuery.error ? (
-                  <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                    {timelineQuery.error instanceof Error
-                      ? timelineQuery.error.message
-                      : "تعذر تحميل تسلسل التغييرات."}
-                  </div>
+                  <SystemMessageInline
+                    tone="error"
+                    message={
+                      timelineQuery.error instanceof Error
+                        ? timelineQuery.error.message
+                        : "تعذر تحميل تسلسل التغييرات."
+                    }
+                    showIcon={resolveInlineIcon("error")}
+                    {...inlineMessageProps}
+                  />
                 ) : null}
 
                 {!timelineQuery.isFetching && timelineItems.length === 0 ? (
-                  <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-                    لا توجد تغييرات متاحة لهذا السجل.
-                  </div>
+                  <SystemMessageInline
+                    tone="neutral"
+                    message="لا توجد تغييرات متاحة لهذا السجل."
+                    showIcon={resolveInlineIcon("neutral")}
+                    {...inlineMessageProps}
+                  />
                 ) : null}
 
                 <div className="space-y-2">
@@ -1572,33 +1807,41 @@ export function AuditLogsWorkspace() {
       >
         <div className="space-y-4">
           {rollbackFeedback ? (
-            <div
-              className={
-                rollbackFeedback.type === "success"
-                  ? "rounded-md border border-emerald-300/50 bg-emerald-500/10 p-3 text-sm text-emerald-700"
-                  : "rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
-              }
-            >
-              {rollbackFeedback.message}
-            </div>
+            <SystemMessageInline
+              tone={rollbackFeedback.type === "success" ? "success" : "error"}
+              message={rollbackFeedback.message}
+              showIcon={resolveInlineIcon(
+                rollbackFeedback.type === "success" ? "success" : "error",
+              )}
+              {...inlineMessageProps}
+            />
           ) : null}
 
           {rollbackTimelineQuery.isFetching ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              جارٍ تحميل آخر 10 تغييرات...
-            </div>
+            <SystemMessageInline
+              tone="loading"
+              message="جارٍ تحميل آخر 10 تغييرات..."
+              showIcon={resolveInlineIcon("loading")}
+              {...inlineMessageProps}
+            />
           ) : null}
 
           {rollbackTimelineQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {getErrorText(rollbackTimelineQuery.error, "تعذر تحميل تسلسل التغييرات.")}
-            </div>
+            <SystemMessageInline
+              tone="error"
+              message={getErrorText(rollbackTimelineQuery.error, "تعذر تحميل تسلسل التغييرات.")}
+              showIcon={resolveInlineIcon("error")}
+              {...inlineMessageProps}
+            />
           ) : null}
 
           {!rollbackTimelineQuery.isFetching && rollbackTimelineItems.length === 0 ? (
-            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              لا توجد بيانات تسلسل متاحة لهذا السجل.
-            </div>
+            <SystemMessageInline
+              tone="neutral"
+              message="لا توجد بيانات تسلسل متاحة لهذا السجل."
+              showIcon={resolveInlineIcon("neutral")}
+              {...inlineMessageProps}
+            />
           ) : null}
 
           {rollbackTimelineItems.length > 0 ? (
@@ -1690,6 +1933,6 @@ export function AuditLogsWorkspace() {
           </div>
         </div>
       </BottomSheetForm>
-    </div>
+    </>
   );
 }

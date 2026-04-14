@@ -785,6 +785,18 @@ export function AppShell({ children }: AppShellProps) {
 
         <div className={cn("mb-4", isRailMode ? "md:hidden" : "")}>
           <div className="flex items-center gap-2">
+            {isFocusedSystemMode && selectedSidebarGroup ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-11 w-11 shrink-0 rounded-2xl border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)] shadow-sm"
+                onClick={() => setSelectedSidebarGroupId(null)}
+                aria-label="الرجوع إلى الأنظمة"
+              >
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            ) : null}
             <div className="relative flex-1">
               <SearchField
                 value={navSearch}
@@ -792,7 +804,7 @@ export function AppShell({ children }: AppShellProps) {
                 placeholder="ابحث عن صفحة أو نظام..."
                 className={cn(
                   navDensityClasses.searchClassName,
-                  "rounded-2xl border-border/70 bg-background/70 pr-9 pl-10",
+                  "rounded-2xl border-border/70 bg-background/70 pr-14 pl-10",
                 )}
               />
               {navSearch ? (
@@ -811,7 +823,7 @@ export function AppShell({ children }: AppShellProps) {
               value={navFilter}
               onChange={setNavFilter}
               activeGroupId={pathActiveGroupId}
-              className="h-9 shrink-0 rounded-xl px-2.5 text-[11px]"
+              className="shrink-0"
             />
           </div>
         </div>
@@ -828,24 +840,6 @@ export function AppShell({ children }: AppShellProps) {
           <nav className="space-y-2">
             {isFocusedSystemMode && selectedSidebarGroup ? (
               <section className="space-y-3">
-                <button
-                  type="button"
-                  onClick={() => setSelectedSidebarGroupId(null)}
-                  className="flex w-full items-center justify-between rounded-2xl border border-border/70 bg-background/70 px-3 py-3 text-right transition hover:bg-muted/60"
-                >
-                  <span className="flex items-center gap-3">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-border/70 bg-background/80 text-muted-foreground shadow-sm">
-                      <ArrowRight className="h-4 w-4" />
-                    </span>
-                    <span className="flex flex-col items-start leading-tight">
-                      <span className="text-sm font-semibold">الرجوع إلى الأنظمة</span>
-                      <span className="text-[11px] text-muted-foreground">
-                        اعرض كل الأنظمة من جديد
-                      </span>
-                    </span>
-                  </span>
-                </button>
-
                 <section
                   className={cn(
                     "relative overflow-hidden rounded-2xl border p-2.5 transition-colors",
@@ -867,12 +861,7 @@ export function AppShell({ children }: AppShellProps) {
                       <selectedSidebarGroup.icon className="h-4 w-4" />
                     </span>
                     <span className="flex flex-col items-start leading-tight">
-                      <span className="text-sm font-semibold">
-                        {selectedSidebarGroup.label}
-                      </span>
-                      <span className="text-[11px] text-muted-foreground">
-                        {focusedSidebarItems.length} صفحة
-                      </span>
+                      <span className="text-sm font-semibold">{selectedSidebarGroup.label}</span>
                     </span>
                   </div>
 
@@ -965,12 +954,7 @@ export function AppShell({ children }: AppShellProps) {
                             <group.icon className="h-4 w-4" />
                           </span>
                           <span className="flex min-w-0 flex-1 flex-col items-start leading-tight">
-                            <span className="truncate text-sm font-semibold">
-                              {group.label}
-                            </span>
-                            <span className="text-[11px] text-muted-foreground">
-                              {group.items.length} صفحة
-                            </span>
+                            <span className="truncate text-sm font-semibold">{group.label}</span>
                           </span>
                         </span>
                       </button>
@@ -1041,9 +1025,6 @@ export function AppShell({ children }: AppShellProps) {
                         </span>
                         <span className="flex flex-col items-start leading-tight">
                           <span className="text-sm font-semibold">{group.label}</span>
-                          <span className="text-[11px] text-muted-foreground">
-                            {group.items.length} صفحة
-                          </span>
                         </span>
                       </span>
                       <ChevronDown

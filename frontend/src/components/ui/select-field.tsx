@@ -60,7 +60,7 @@ export function SelectField({
       <select
         className={cn(
           FIELD_SURFACE_CLASS_NAME,
-          "appearance-none px-4",
+          "appearance-none px-4 text-ellipsis",
           hasIcon ? "pr-14" : "pr-4",
           "pl-14",
           className,

@@ -546,6 +546,7 @@ export function AcademicYearsWorkspace() {
         onSubmit={() => handleSubmitForm()}
         isSubmitting={isFormSubmitting}
         submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء سنة أكاديمية"}
+        showFooter={false}
       >
         {!canCreate && !isEditing ? (
           <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">

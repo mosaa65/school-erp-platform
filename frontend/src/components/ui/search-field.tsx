@@ -19,7 +19,7 @@ export function SearchField({
   ...props
 }: SearchFieldProps) {
   return (
-    <div className={cn("group relative w-full min-w-0", containerClassName)}>
+    <div className={cn("group relative w-full min-w-0 overflow-hidden", containerClassName)}>
       <div
         className={cn(
           FIELD_ICON_SMALL_BADGE_CLASS_NAME,
@@ -33,7 +33,7 @@ export function SearchField({
         type="text"
         className={cn(
           FIELD_SURFACE_CLASS_NAME,
-          "pr-13 pl-4",
+          "pr-14 pl-10",
           className,
         )}
         {...props}

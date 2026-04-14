@@ -5,8 +5,6 @@ import {
   ArrowRight,
   ArrowLeft,
   ChevronDown,
-  Compass,
-  Menu,
   Search,
   Sparkles,
   X,
@@ -165,11 +163,6 @@ export function NavigationDrawer({
     searchValue,
   ]);
 
-  const totalItems = React.useMemo(
-    () => visibleGroups.reduce((count, group) => count + group.items.length, 0),
-    [visibleGroups],
-  );
-
   const selectedGroup = React.useMemo(
     () =>
       selectedGroupId
@@ -244,11 +237,6 @@ export function NavigationDrawer({
       return activeGroup?.id ? [activeGroup.id] : [];
     });
   }, [activeGroup?.id, isFocusedSystemMode, selectedGroupId, visibleGroups]);
-
-  const visibleSystemsCount =
-    isFocusedSystemMode && selectedGroup ? 1 : visibleGroups.length;
-  const visiblePagesCount =
-    isFocusedSystemMode && selectedGroup ? focusedGroupItems.length : totalItems;
 
   React.useEffect(() => {
     if (!open || !isBottomSheet) {
@@ -368,13 +356,25 @@ export function NavigationDrawer({
 
         <div className={cn("border-b border-border/70", isBottomSheet ? "px-4 py-3 sm:px-5" : "px-5 py-4 sm:px-6")}>
           <div className="flex items-center gap-2">
+            {isFocusedSystemMode && selectedGroup ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-11 w-11 shrink-0 rounded-2xl border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)] shadow-sm"
+                onClick={() => setSelectedGroupId(null)}
+                aria-label="الرجوع إلى الأنظمة"
+              >
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            ) : null}
             <div className="relative flex-1">
               <Input
                 value={searchValue}
                 onChange={(event) => setSearchValue(event.target.value)}
                 placeholder="ابحث عن نظام أو صفحة..."
                 className={cn(
-                  "rounded-2xl border-border/70 bg-background/75 pr-10 pl-10",
+                  "rounded-2xl border-border/70 bg-background/75 pr-14 pl-10",
                   useTightMode ? "h-9 text-xs" : "h-11",
                 )}
               />
@@ -395,25 +395,10 @@ export function NavigationDrawer({
               value={navFilter}
               onChange={setNavFilter}
               activeGroupId={activeGroup?.id}
-              className="h-9 shrink-0 rounded-xl px-2.5 text-[11px]"
+              className="shrink-0"
             />
           </div>
 
-          <div
-            className={cn(
-              "mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground",
-              isBottomSheet ? "mt-2" : "",
-            )}
-          >
-            <span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/70 px-3 py-1.5">
-              <Menu className="h-3 w-3 text-[color:var(--app-accent-color)]" />
-              {visibleSystemsCount} نظام
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/70 px-3 py-1.5">
-              <Compass className="h-3 w-3 text-[color:var(--app-accent-color)]" />
-              {visiblePagesCount} صفحة
-            </span>
-          </div>
         </div>
 
         <div
@@ -425,25 +410,6 @@ export function NavigationDrawer({
         >
           {isFocusedSystemMode && selectedGroup ? (
             <div className="space-y-3">
-              <button
-                type="button"
-                onClick={() => setSelectedGroupId(null)}
-                className={cn(
-                  "flex w-full items-center gap-3 rounded-2xl border border-border/70 bg-background/70 text-right transition hover:bg-muted/60",
-                  useTightMode ? "px-3 py-2.5" : "px-4 py-3",
-                )}
-              >
-                <span className="flex items-center justify-center rounded-xl border border-border/70 bg-background/80 text-muted-foreground shadow-sm h-9 w-9">
-                  <ArrowRight className="h-4 w-4" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold">الرجوع إلى الأنظمة</span>
-                  <span className="block text-[11px] text-muted-foreground">
-                    اعرض كل الأنظمة من جديد
-                  </span>
-                </span>
-              </button>
-
               <section
                 className={cn(
                   "rounded-[24px] border bg-background/55",
@@ -464,9 +430,6 @@ export function NavigationDrawer({
                     <h3 className={cn("truncate font-semibold", useTightMode ? "text-xs" : "text-sm")}>
                       {selectedGroup.label}
                     </h3>
-                    <p className={cn("mt-0.5 text-muted-foreground", useTightMode ? "text-[10px]" : "text-[11px]")}>
-                      {focusedGroupItems.length} صفحة
-                    </p>
                   </div>
                 </div>
 
@@ -475,7 +438,7 @@ export function NavigationDrawer({
                     لا توجد صفحات مطابقة داخل هذا النظام.
                   </div>
                 ) : (
-                  <div className={cn("grid gap-2", isBottomSheet ? "grid-cols-1" : "sm:grid-cols-2")}>
+                  <div className={cn("grid gap-2", isBottomSheet ? "grid-cols-2" : "sm:grid-cols-2")}>
                     {focusedGroupItems.map((item) => {
                       const active = isPathActive(activePath, item.href);
 
@@ -555,18 +518,16 @@ export function NavigationDrawer({
                 );
                 const isExpanded = expandedGroupIds.includes(group.id);
 
-                return (
-                  <section
-                    key={group.id}
-                    className={cn(
-                      "relative overflow-hidden border transition-all",
-                      useTightMode ? "rounded-[22px] p-2" : "rounded-[28px] p-3",
-                      "self-start",
-                      groupHasActiveItem
-                        ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)]/30 shadow-[0_18px_42px_-28px_rgba(15,23,42,0.5)]"
-                        : "border-border/70 bg-background/55 hover:border-border/90",
-                    )}
-                  >
+                const cardClassName = cn(
+                  "relative overflow-hidden border transition-all self-start",
+                  useTightMode ? "rounded-[22px] p-2" : "rounded-[28px] p-3",
+                  groupHasActiveItem
+                    ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)]/30 shadow-[0_18px_42px_-28px_rgba(15,23,42,0.5)]"
+                    : "border-border/70 bg-background/55 hover:border-border/90",
+                );
+
+                const cardContent = (
+                  <>
                     {groupHasActiveItem ? (
                       <div className="pointer-events-none absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-[color:var(--app-accent-strong)] via-[color:var(--app-accent-soft)] to-transparent opacity-80" />
                     ) : null}
@@ -594,18 +555,6 @@ export function NavigationDrawer({
                                 {group.label}
                               </h3>
                             </div>
-                            <p
-                              className={cn(
-                                "mt-0.5 text-muted-foreground",
-                                useTightMode ? "text-[10px]" : "text-[11px]",
-                              )}
-                            >
-                              {isFocusedSystemMode
-                                ? "اضغط لعرض صفحات هذا النظام فقط"
-                                : isExpanded
-                                  ? "اضغط السهم لإخفاء الصفحات"
-                                  : "اضغط السهم لإظهار الصفحات"}
-                            </p>
                           </div>
                         </div>
                         {isFocusedSystemMode ? null : (
@@ -637,18 +586,9 @@ export function NavigationDrawer({
                       </div>
 
                       {isFocusedSystemMode ? (
-                        <button
-                          type="button"
-                          onClick={() => setSelectedGroupId(group.id)}
-                          className={cn(
-                            "flex w-full items-center justify-center rounded-2xl border border-border/70 bg-background/75 text-center font-medium transition hover:border-[color:var(--app-accent-strong)] hover:bg-[color:var(--app-accent-soft)]/35",
-                            useTightMode ? "px-3 py-2 text-xs" : "px-4 py-3 text-sm",
-                          )}
-                        >
-                          عرض صفحات النظام
-                        </button>
+                        null
                       ) : isExpanded ? (
-                        <div className={cn("grid gap-2", isBottomSheet ? "grid-cols-1" : "sm:grid-cols-2")}>
+                        <div className={cn("grid gap-2", isBottomSheet ? "grid-cols-2" : "sm:grid-cols-2")}>
                           {group.items.map((item) => {
                             const active = isPathActive(activePath, item.href);
 
@@ -706,6 +646,26 @@ export function NavigationDrawer({
                         </div>
                       ) : null}
                     </div>
+                  </>
+                );
+
+                if (isFocusedSystemMode) {
+                  return (
+                    <button
+                      key={group.id}
+                      type="button"
+                      onClick={() => setSelectedGroupId(group.id)}
+                      className={cn(cardClassName, "block w-full text-right")}
+                      aria-label={`عرض صفحات ${group.label}`}
+                    >
+                      {cardContent}
+                    </button>
+                  );
+                }
+
+                return (
+                  <section key={group.id} className={cardClassName}>
+                    {cardContent}
                   </section>
                 );
               })}

@@ -77,7 +77,7 @@ export function NavigationFilterControl({
       <FilterTriggerButton
         count={activeCount}
         label="فلترة"
-        className={cn("h-10 rounded-2xl px-3 text-xs", className)}
+        className={cn("h-11 -translate-y-px rounded-full px-3.5 text-xs", className)}
         onClick={() => setOpen(true)}
       />
 
@@ -118,7 +118,7 @@ export function NavigationFilterControl({
             </p>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
             {groups.map((group) => {
               const selected = draftValue.selectedGroupIds.includes(group.id);
               return (

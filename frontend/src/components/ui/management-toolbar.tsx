@@ -21,6 +21,7 @@ type ManagementToolbarProps = {
   searchFieldClassName?: string;
   actionsClassName?: string;
   filterButtonClassName?: string;
+  filterButtonTestId?: string;
   actions?: React.ReactNode;
 };
 
@@ -37,6 +38,7 @@ export function ManagementToolbar({
   searchFieldClassName,
   actionsClassName,
   filterButtonClassName,
+  filterButtonTestId,
   actions,
 }: ManagementToolbarProps) {
   return (
@@ -48,12 +50,12 @@ export function ManagementToolbar({
     >
       <div
         className={cn(
-          "flex flex-col gap-2 md:flex-row md:items-center md:justify-between",
+          "flex items-center gap-2",
         )}
       >
         <div
           className={cn(
-            "flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:min-w-[240px]",
+            "flex min-w-0 flex-1 items-center gap-2",
           searchWrapperClassName,
         )}
         >
@@ -65,12 +67,13 @@ export function ManagementToolbar({
             {...searchInputProps}
           />
         </div>
-        <div className={cn("flex flex-wrap items-center gap-2", actionsClassName)}>
+        <div className={cn("flex shrink-0 items-center gap-2", actionsClassName)}>
           {showFilterButton ? (
             <FilterTriggerButton
               count={filterCount}
               onClick={onFilterClick}
               className={filterButtonClassName}
+              data-testid={filterButtonTestId}
             />
           ) : null}
           {actions}
