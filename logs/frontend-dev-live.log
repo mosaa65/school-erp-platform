@@ -1,0 +1,29 @@
+
+> frontend@0.1.0 predev
+> node scripts/swc-workaround.cjs
+
+
+> frontend@0.1.0 dev
+> node scripts/run-next.cjs dev
+
+  ▲ Next.js 14.2.28
+  - Local:        http://localhost:3001
+  - Network:      http://0.0.0.0:3001
+  - Environments: .env.local, .env
+
+ ✓ Starting...
+ ✓ Ready in 6.5s
+ ○ Compiling /auth/login ...
+ ✓ Compiled /auth/login in 8.1s (819 modules)
+ GET /auth/login 200 in 9347ms
+ ✓ Compiled in 1301ms (406 modules)
+ ✓ Compiled in 463ms (392 modules)
+ GET /auth/login 200 in 91ms
+ ○ Compiling /app ...
+ ✓ Compiled /app in 1074ms (445 modules)
+ ✓ Compiled in 3.8s (494 modules)
+ GET /favicon.ico 200 in 5892ms
+ ○ Compiling /app/audit-logs ...
+ ✓ Compiled /app/audit-logs in 1057ms (1052 modules)
+ ○ Compiling /app/user-notifications ...
+ ✓ Compiled /app/user-notifications in 707ms (1069 modules)

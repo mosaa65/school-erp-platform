@@ -68,6 +68,8 @@ const AUDIT_LOG_RETENTION_CLEANUP_DEFAULT_INTERVAL_MS = 60 * 60 * 1000;
 const AUDIT_LOG_RETENTION_CLEANUP_MIN_INTERVAL_MS = 60 * 1000;
 const AUDIT_LOG_RETENTION_DELETE_BATCH_SIZE = 500;
 const AUDIT_LOG_RETENTION_DELETE_MAX_BATCHES = 20;
+const AUDIT_LOG_RETENTION_SOFT_DELETE_GRACE_DAYS = 30;
+const AUDIT_LOG_RETENTION_ROLLBACK_PROTECTION_EXTRA_DAYS = 30;
 
 const AUDIT_ROLLBACK_BLOCKED_FIELDS = new Set([
   'id',
@@ -103,7 +105,42 @@ const AUDIT_ROLLBACK_RESOURCE_MODEL_MAP: Record<
   homeworks: { delegate: 'homework', idType: 'string' },
   'global-settings': { delegate: 'globalSetting', idType: 'string' },
   'system-settings': { delegate: 'systemSetting', idType: 'number' },
+  branches: { delegate: 'branch', idType: 'number' },
+  budgets: { delegate: 'budget', idType: 'number' },
+  'chart-of-accounts': { delegate: 'chartOfAccount', idType: 'number' },
+  currencies: { delegate: 'currency', idType: 'number' },
+  'currency-exchange-rates': { delegate: 'currencyExchangeRate', idType: 'number' },
+  'fiscal-years': { delegate: 'fiscalYear', idType: 'number' },
+  'fiscal-periods': { delegate: 'fiscalPeriod', idType: 'number' },
+  'cost-centers': { delegate: 'costCenter', idType: 'number' },
+  expenses: { delegate: 'expense', idType: 'number' },
+  'fee-structures': { delegate: 'feeStructure', idType: 'number' },
+  'financial-categories': { delegate: 'financialCategory', idType: 'number' },
+  'financial-funds': { delegate: 'financialFund', idType: 'number' },
+  'discount-rules': { delegate: 'discountRule', idType: 'number' },
+  'payment-gateways': { delegate: 'paymentGateway', idType: 'number' },
+  'tax-configurations': { delegate: 'taxCode', idType: 'number' },
+  revenues: { delegate: 'revenue', idType: 'number' },
+  'audit-trail': { delegate: 'auditTrail', idType: 'bigint' },
+  'bank-reconciliations': { delegate: 'bankReconciliation', idType: 'bigint' },
+  'bank-reconciliation-items': { delegate: 'reconciliationItem', idType: 'bigint' },
+  'community-contributions': { delegate: 'communityContribution', idType: 'bigint' },
+  'credit-debit-notes': { delegate: 'creditDebitNote', idType: 'bigint' },
+  'invoice-installments': { delegate: 'invoiceInstallment', idType: 'bigint' },
+  'payment-transactions': { delegate: 'paymentTransaction', idType: 'bigint' },
+  'student-invoices': { delegate: 'studentInvoice', idType: 'bigint' },
+  'payment-webhooks': { delegate: 'paymentWebhookEvent', idType: 'string' },
+  'recurring-journals': { delegate: 'recurringJournalTemplate', idType: 'number' },
 };
+
+const AUDIT_ROLLBACK_BLOCKED_RESOURCES: Record<string, string> = {
+  'journal-entries':
+    'Rollback is blocked for "journal-entries". Please use the journal reversal flow.',
+};
+
+const AUDIT_ROLLBACK_PROTECTED_RESOURCES = new Set(
+  Object.keys(AUDIT_ROLLBACK_RESOURCE_MODEL_MAP),
+);
 
 export interface RecordAuditLogInput {
   actorUserId?: string;
@@ -243,23 +280,29 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
   }
 
   async record(input: RecordAuditLogInput) {
+    return this.prisma.auditLog.create({
+      data: this.buildAuditLogCreateData(input),
+    });
+  }
+
+  private buildAuditLogCreateData(
+    input: RecordAuditLogInput,
+  ): Prisma.AuditLogUncheckedCreateInput {
     const requestContext = getRequestContext();
     const details = mergeRequestContextIntoDetails(input.details);
 
-    return this.prisma.auditLog.create({
-      data: {
-        actorUserId: input.actorUserId,
-        action: input.action,
-        resource: input.resource,
-        resourceId: input.resourceId,
-        status: input.status ?? AuditStatus.SUCCESS,
-        details,
-        ipAddress: input.ipAddress ?? requestContext?.ip,
-        userAgent: input.userAgent ?? requestContext?.userAgent,
-        createdById: input.createdById ?? input.actorUserId,
-        updatedById: input.updatedById ?? input.actorUserId,
-      },
-    });
+    return {
+      actorUserId: input.actorUserId,
+      action: input.action,
+      resource: input.resource,
+      resourceId: input.resourceId,
+      status: input.status ?? AuditStatus.SUCCESS,
+      details,
+      ipAddress: input.ipAddress ?? requestContext?.ip,
+      userAgent: input.userAgent ?? requestContext?.userAgent,
+      createdById: input.createdById ?? input.actorUserId,
+      updatedById: input.updatedById ?? input.actorUserId,
+    };
   }
 
   async findAll(query: ListAuditLogsDto) {
@@ -337,6 +380,7 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
         id: true,
         resource: true,
         resourceId: true,
+        occurredAt: true,
       },
     });
 
@@ -381,6 +425,19 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
       deletedAt: null,
       resource: anchorLog.resource,
       resourceId: anchorLog.resourceId,
+      OR: [
+        {
+          occurredAt: {
+            lt: anchorLog.occurredAt,
+          },
+        },
+        {
+          occurredAt: anchorLog.occurredAt,
+          id: {
+            lte: anchorLog.id,
+          },
+        },
+      ],
     };
 
     const [total, items] = await this.prisma.$transaction([
@@ -432,15 +489,7 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
       targetAuditLogId: payload.targetAuditLogId,
       timelineItems: timeline.data,
     });
-    const rollbackSnapshot = this.extractRollbackSnapshotFromDetails(
-      targetItem.details,
-    );
-
-    if (!rollbackSnapshot) {
-      throw new BadRequestException(
-        'No usable previous state found in audit details for rollback.',
-      );
-    }
+    this.assertTimelineItemRollbackEligible(targetItem.details);
 
     const resourceResolver = this.resolveRollbackResource(timeline.resource);
     const prismaDelegate = (this.prisma as unknown as Record<string, unknown>)[
@@ -472,38 +521,123 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
       [whereKey]: parsedResourceId,
     } satisfies Record<string, string | number | bigint>;
 
-    const rollbackPatch = this.extractRollbackPatchData(
-      rollbackSnapshot,
-      whereKey,
-    );
-    const appliedFields = Object.keys(rollbackPatch);
-
-    if (appliedFields.length === 0) {
-      throw new BadRequestException(
-        'Rollback snapshot does not contain editable scalar fields.',
-      );
-    }
-
-    let currentEntity: Record<string, unknown> | null = null;
-    let updatedEntity: Record<string, unknown> | null = null;
+    let rollbackPatchSnapshot: Record<string, Prisma.InputJsonValue | null> = {};
+    let rollbackAuditLog:
+      | {
+          id: string;
+          occurredAt: Date;
+        }
+      | undefined;
+    let appliedFields: string[] = [];
 
     try {
-      currentEntity = await prismaDelegate.findUnique({
-        where,
+      const txResult = await this.prisma.$transaction(async (tx) => {
+        const txDelegate = (tx as unknown as Record<string, unknown>)[
+          resourceResolver.delegate
+        ] as
+          | {
+              findUnique: (args: {
+                where: Record<string, string | number | bigint>;
+              }) => Promise<Record<string, unknown> | null>;
+              update: (args: {
+                where: Record<string, string | number | bigint>;
+                data: Record<string, unknown>;
+              }) => Promise<Record<string, unknown>>;
+            }
+          | undefined;
+
+        if (!txDelegate?.findUnique || !txDelegate?.update) {
+          throw new BadRequestException(
+            `Rollback is not supported for resource "${timeline.resource}" yet.`,
+          );
+        }
+
+        const currentEntity = await txDelegate.findUnique({
+          where,
+        });
+
+        if (!currentEntity) {
+          throw new NotFoundException('Target resource record not found.');
+        }
+
+        const rollbackSnapshot = this.resolveRollbackSnapshot({
+          targetItem,
+          timelineItems: timeline.data,
+        });
+
+        let rollbackPatch = rollbackSnapshot
+          ? this.extractRollbackPatchData(rollbackSnapshot, whereKey)
+          : {};
+
+        rollbackPatch = this.filterRollbackPatchByCurrentEntity(
+          rollbackPatch,
+          currentEntity,
+          whereKey,
+        );
+        rollbackPatch = this.applyRollbackLifecyclePatch({
+          patch: rollbackPatch,
+          currentEntity,
+          targetAction: targetItem.action,
+        });
+        const computedAppliedFields = Object.keys(rollbackPatch);
+
+        if (computedAppliedFields.length === 0) {
+          if (!rollbackSnapshot) {
+            throw new BadRequestException(
+              'No usable previous state found in audit details for rollback.',
+            );
+          }
+
+          throw new BadRequestException(
+            'Rollback snapshot does not contain editable scalar fields.',
+          );
+        }
+
+        rollbackPatchSnapshot = rollbackPatch;
+
+        const updatedEntity = await txDelegate.update({
+          where,
+          data: rollbackPatch as Record<string, unknown>,
+        });
+
+        const beforeSnapshot = this.toInputJsonValue(currentEntity) ?? null;
+        const afterSnapshot = this.toInputJsonValue(updatedEntity) ?? null;
+
+        const createdRollbackAuditLog = await tx.auditLog.create({
+          data: this.buildAuditLogCreateData({
+            actorUserId,
+            action: 'ROLLBACK',
+            resource: timeline.resource,
+            resourceId: timeline.resourceId,
+            status: AuditStatus.SUCCESS,
+            details: {
+              description: 'Rollback completed successfully',
+              rollbackMode: mode,
+              anchorAuditLogId: id,
+              targetAuditLogId: targetItem.id,
+              rollbackPatch: rollbackPatchSnapshot as Prisma.InputJsonObject,
+              before: beforeSnapshot,
+              after: afterSnapshot,
+            } satisfies Prisma.InputJsonObject,
+            createdById: actorUserId,
+            updatedById: actorUserId,
+          }),
+          select: {
+            id: true,
+            occurredAt: true,
+          },
+        });
+
+        return {
+          rollbackAuditLog: createdRollbackAuditLog,
+          appliedFields: computedAppliedFields,
+        };
       });
 
-      if (!currentEntity) {
-        throw new NotFoundException('Target resource record not found.');
-      }
-
-      updatedEntity = await prismaDelegate.update({
-        where,
-        data: rollbackPatch as Record<string, unknown>,
-      });
+      rollbackAuditLog = txResult.rollbackAuditLog;
+      appliedFields = txResult.appliedFields;
     } catch (error) {
       const errorMessage = this.extractErrorMessage(error);
-
-      const rollbackPatchSnapshot = rollbackPatch;
       try {
         await this.record({
           actorUserId,
@@ -537,28 +671,11 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
         `Failed to rollback the target resource: ${errorMessage}`,
       );
     }
-
-    const beforeSnapshot = this.toInputJsonValue(currentEntity) ?? null;
-    const afterSnapshot = this.toInputJsonValue(updatedEntity) ?? null;
-
-    const rollbackAuditLog = await this.record({
-      actorUserId,
-      action: 'ROLLBACK',
-      resource: timeline.resource,
-      resourceId: timeline.resourceId,
-      status: AuditStatus.SUCCESS,
-      details: {
-        description: 'Rollback completed successfully',
-        rollbackMode: mode,
-        anchorAuditLogId: id,
-        targetAuditLogId: targetItem.id,
-        rollbackPatch: rollbackPatch as Prisma.InputJsonObject,
-        before: beforeSnapshot,
-        after: afterSnapshot,
-      } satisfies Prisma.InputJsonObject,
-      createdById: actorUserId,
-      updatedById: actorUserId,
-    });
+    if (!rollbackAuditLog) {
+      throw new InternalServerErrorException(
+        'Rollback failed due to an unexpected transaction state.',
+      );
+    }
 
     return {
       success: true,
@@ -1003,11 +1120,34 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
       return null;
     }
 
+    const rollbackRecord = this.toRecord(detailsRecord.rollback);
+    if (rollbackRecord) {
+      const rollbackAfterRecord = this.pickFirstRecord(rollbackRecord, [
+        'after',
+        'target',
+        'snapshot',
+        'state',
+      ]);
+      if (rollbackAfterRecord) {
+        return rollbackAfterRecord;
+      }
+
+      const rollbackBeforeRecord = this.pickFirstRecord(rollbackRecord, [
+        'before',
+        'previous',
+      ]);
+      if (rollbackBeforeRecord) {
+        return rollbackBeforeRecord;
+      }
+    }
+
     const afterRecord = this.pickFirstRecord(detailsRecord, [
       'after',
+      'afterState',
       'afterData',
       'current',
       'newValue',
+      'newData',
       'new',
       'dataAfter',
     ]);
@@ -1017,12 +1157,90 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
 
     return this.pickFirstRecord(detailsRecord, [
       'before',
+      'beforeState',
       'beforeData',
       'previous',
       'oldValue',
+      'oldData',
+      'old',
+      'dataBefore',
+    ]) ?? detailsRecord;
+  }
+
+  private extractBeforeSnapshotFromDetails(
+    details: Prisma.JsonValue | null,
+  ): Record<string, unknown> | null {
+    const detailsRecord = this.toRecord(details);
+    if (!detailsRecord) {
+      return null;
+    }
+
+    const rollbackRecord = this.toRecord(detailsRecord.rollback);
+    if (rollbackRecord) {
+      const rollbackBeforeRecord = this.pickFirstRecord(rollbackRecord, [
+        'before',
+        'previous',
+      ]);
+      if (rollbackBeforeRecord) {
+        return rollbackBeforeRecord;
+      }
+    }
+
+    return this.pickFirstRecord(detailsRecord, [
+      'before',
+      'beforeState',
+      'beforeData',
+      'previous',
+      'oldValue',
+      'oldData',
       'old',
       'dataBefore',
     ]);
+  }
+
+  private resolveRollbackSnapshot(input: {
+    targetItem: AuditLogTimelineItem;
+    timelineItems: AuditLogTimelineItem[];
+  }): Record<string, unknown> | null {
+    const directSnapshot = this.extractRollbackSnapshotFromDetails(
+      input.targetItem.details,
+    );
+    if (directSnapshot) {
+      return directSnapshot;
+    }
+
+    const targetIndex = input.timelineItems.findIndex(
+      (item) => item.id === input.targetItem.id,
+    );
+    if (targetIndex > 0) {
+      const newerItem = input.timelineItems[targetIndex - 1];
+      const newerBeforeSnapshot = this.extractBeforeSnapshotFromDetails(
+        newerItem.details,
+      );
+      if (newerBeforeSnapshot) {
+        return newerBeforeSnapshot;
+      }
+    }
+
+    return null;
+  }
+
+  private assertTimelineItemRollbackEligible(details: Prisma.JsonValue | null): void {
+    const detailsRecord = this.toRecord(details);
+    if (!detailsRecord) {
+      return;
+    }
+
+    const rollbackRecord = this.toRecord(detailsRecord.rollback);
+    if (!rollbackRecord) {
+      return;
+    }
+
+    if (rollbackRecord.eligible === false) {
+      throw new BadRequestException(
+        'The selected timeline change is marked as not eligible for rollback.',
+      );
+    }
   }
 
   private extractRollbackPatchData(
@@ -1046,29 +1264,74 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
     return patch;
   }
 
+  private filterRollbackPatchByCurrentEntity(
+    patch: Record<string, Prisma.InputJsonValue | null>,
+    currentEntity: Record<string, unknown>,
+    whereKey: string,
+  ): Record<string, Prisma.InputJsonValue | null> {
+    const entityKeys = new Set(Object.keys(currentEntity));
+    const filteredPatch: Record<string, Prisma.InputJsonValue | null> = {};
+
+    for (const [key, value] of Object.entries(patch)) {
+      if (!entityKeys.has(key)) {
+        continue;
+      }
+
+      if (AUDIT_ROLLBACK_BLOCKED_FIELDS.has(key) || key === whereKey) {
+        continue;
+      }
+
+      filteredPatch[key] = value;
+    }
+
+    return filteredPatch;
+  }
+
+  private applyRollbackLifecyclePatch(input: {
+    patch: Record<string, Prisma.InputJsonValue | null>;
+    currentEntity: Record<string, unknown>;
+    targetAction: string;
+  }): Record<string, Prisma.InputJsonValue | null> {
+    const { patch, currentEntity, targetAction } = input;
+    const actionVerb = this.extractActionVerb(targetAction);
+    const nextPatch = { ...patch };
+
+    if (
+      actionVerb !== 'DELETE' &&
+      Object.prototype.hasOwnProperty.call(currentEntity, 'deletedAt') &&
+      currentEntity.deletedAt !== null &&
+      currentEntity.deletedAt !== undefined
+    ) {
+      nextPatch.deletedAt = null;
+    }
+
+    if (
+      actionVerb === 'CREATE' &&
+      Object.prototype.hasOwnProperty.call(currentEntity, 'isActive') &&
+      typeof currentEntity.isActive === 'boolean' &&
+      currentEntity.isActive === false &&
+      nextPatch.isActive === undefined
+    ) {
+      nextPatch.isActive = true;
+    }
+
+    return nextPatch;
+  }
+
   private resolveRollbackResource(resource: string): {
     delegate: string;
     idType: 'string' | 'number' | 'bigint';
     whereKey?: string;
   } {
     const normalized = resource.trim().toLowerCase();
+    const blockedReason = AUDIT_ROLLBACK_BLOCKED_RESOURCES[normalized];
+    if (blockedReason) {
+      throw new BadRequestException(blockedReason);
+    }
+
     const mappedResource = AUDIT_ROLLBACK_RESOURCE_MODEL_MAP[normalized];
     if (mappedResource) {
       return mappedResource;
-    }
-
-    const tailResourceSegment = normalized.split('/').filter(Boolean).pop();
-    if (tailResourceSegment) {
-      const guessedDelegate = this.toPrismaDelegateName(tailResourceSegment);
-      const delegateValue = (this.prisma as unknown as Record<string, unknown>)[
-        guessedDelegate
-      ] as { update?: unknown } | undefined;
-      if (delegateValue?.update) {
-        return {
-          delegate: guessedDelegate,
-          idType: 'string',
-        };
-      }
     }
 
     throw new BadRequestException(
@@ -1102,24 +1365,6 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
         `Resource ID "${value}" is not a valid bigint ID.`,
       );
     }
-  }
-
-  private toPrismaDelegateName(segment: string): string {
-    const normalized = segment
-      .replace(/[^a-zA-Z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-    const singular = normalized.endsWith('s')
-      ? normalized.slice(0, -1)
-      : normalized;
-    const parts = singular.split('-').filter(Boolean);
-
-    return parts
-      .map((part, index) =>
-        index === 0
-          ? part.toLowerCase()
-          : `${part.charAt(0).toUpperCase()}${part.slice(1).toLowerCase()}`,
-      )
-      .join('');
   }
 
   private pickFirstRecord(
@@ -1156,6 +1401,25 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
     }
 
     return Array.isArray(value) || this.toRecord(value) !== null;
+  }
+
+  private extractActionVerb(action: string): string {
+    const normalized = action.trim().toUpperCase();
+    if (!normalized) {
+      return 'UNKNOWN';
+    }
+
+    const parts = normalized.split(/[_\s-]+/).filter(Boolean);
+    return parts[parts.length - 1] ?? normalized;
+  }
+
+  private isSoftDeletedEntity(entity: Record<string, unknown>): boolean {
+    if (!Object.prototype.hasOwnProperty.call(entity, 'deletedAt')) {
+      return false;
+    }
+
+    const deletedAtValue = entity.deletedAt;
+    return deletedAtValue !== null && deletedAtValue !== undefined;
   }
 
   private buildRetentionPolicyResponse(
@@ -1231,6 +1495,34 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
     return null;
   }
 
+  private resolveSoftDeleteGraceDays(): number {
+    const configured = Number(
+      this.configService?.get<string>(
+        'AUDIT_LOG_RETENTION_SOFT_DELETE_GRACE_DAYS',
+      ),
+    );
+
+    if (Number.isFinite(configured) && configured >= 1) {
+      return Math.floor(configured);
+    }
+
+    return AUDIT_LOG_RETENTION_SOFT_DELETE_GRACE_DAYS;
+  }
+
+  private resolveRollbackProtectionExtraDays(): number {
+    const configured = Number(
+      this.configService?.get<string>(
+        'AUDIT_LOG_RETENTION_ROLLBACK_PROTECTION_EXTRA_DAYS',
+      ),
+    );
+
+    if (Number.isFinite(configured) && configured >= 0) {
+      return Math.floor(configured);
+    }
+
+    return AUDIT_LOG_RETENTION_ROLLBACK_PROTECTION_EXTRA_DAYS;
+  }
+
   private resolveRetentionCleanupInterval(): number {
     const configured = Number(
       this.configService?.get<string>(
@@ -1263,7 +1555,7 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
       const result = await this.purgeExpiredAuditLogs(retentionDays);
       if (result.deletedCount > 0) {
         this.logger.log(
-          `Deleted ${result.deletedCount} audit logs older than ${retentionDays} days (cutoff ${result.cutoff.toISOString()}).`,
+          `Audit retention cleanup completed: soft-deleted ${result.softDeletedCount}, hard-deleted ${result.hardDeletedCount}, retention cutoff ${result.cutoff.toISOString()}, hard-delete cutoff ${result.hardDeleteCutoff.toISOString()}.`,
         );
       }
     } catch (error) {
@@ -1290,9 +1582,61 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
 
   private async purgeExpiredAuditLogs(
     retentionDays: number,
-  ): Promise<{ deletedCount: number; cutoff: Date }> {
-    const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
-    let deletedCount = 0;
+  ): Promise<{
+    deletedCount: number;
+    softDeletedCount: number;
+    hardDeletedCount: number;
+    cutoff: Date;
+    protectedCutoff: Date;
+    hardDeleteCutoff: Date;
+  }> {
+    const dayMs = 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const rollbackProtectionExtraDays =
+      this.resolveRollbackProtectionExtraDays();
+    const softDeleteGraceDays = this.resolveSoftDeleteGraceDays();
+
+    const cutoff = new Date(now - retentionDays * dayMs);
+    const protectedCutoff = new Date(
+      now - (retentionDays + rollbackProtectionExtraDays) * dayMs,
+    );
+    const hardDeleteCutoff = new Date(now - softDeleteGraceDays * dayMs);
+    const rollbackProtectedResources = Array.from(
+      AUDIT_ROLLBACK_PROTECTED_RESOURCES,
+    );
+    const softDeleteNow = new Date();
+
+    let softDeletedCount = 0;
+    let hardDeletedCount = 0;
+
+    const softDeleteWhere: Prisma.AuditLogWhereInput = {
+      deletedAt: null,
+      OR: [
+        {
+          occurredAt: {
+            lt: cutoff,
+          },
+          resource:
+            rollbackProtectedResources.length > 0
+              ? {
+                  notIn: rollbackProtectedResources,
+                }
+              : undefined,
+        },
+        ...(rollbackProtectedResources.length > 0
+          ? [
+              {
+                resource: {
+                  in: rollbackProtectedResources,
+                },
+                occurredAt: {
+                  lt: protectedCutoff,
+                },
+              } satisfies Prisma.AuditLogWhereInput,
+            ]
+          : []),
+      ],
+    };
 
     for (
       let batchIndex = 0;
@@ -1300,12 +1644,7 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
       batchIndex += 1
     ) {
       const expiredRows = await this.prisma.auditLog.findMany({
-        where: {
-          deletedAt: null,
-          occurredAt: {
-            lt: cutoff,
-          },
-        },
+        where: softDeleteWhere,
         select: {
           id: true,
         },
@@ -1317,23 +1656,69 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
         break;
       }
 
-      const batchDeleteResult = await this.prisma.auditLog.deleteMany({
+      const batchSoftDeleteResult = await this.prisma.auditLog.updateMany({
         where: {
           id: {
             in: expiredRows.map((item) => item.id),
           },
+          deletedAt: null,
+        },
+        data: {
+          deletedAt: softDeleteNow,
         },
       });
-      deletedCount += batchDeleteResult.count;
+      softDeletedCount += batchSoftDeleteResult.count;
 
       if (expiredRows.length < AUDIT_LOG_RETENTION_DELETE_BATCH_SIZE) {
         break;
       }
     }
 
+    for (
+      let batchIndex = 0;
+      batchIndex < AUDIT_LOG_RETENTION_DELETE_MAX_BATCHES;
+      batchIndex += 1
+    ) {
+      const softDeletedRows = await this.prisma.auditLog.findMany({
+        where: {
+          deletedAt: {
+            lt: hardDeleteCutoff,
+          },
+        },
+        select: {
+          id: true,
+        },
+        orderBy: [{ deletedAt: 'asc' }, { id: 'asc' }],
+        take: AUDIT_LOG_RETENTION_DELETE_BATCH_SIZE,
+      });
+
+      if (softDeletedRows.length === 0) {
+        break;
+      }
+
+      const batchHardDeleteResult = await this.prisma.auditLog.deleteMany({
+        where: {
+          id: {
+            in: softDeletedRows.map((item) => item.id),
+          },
+        },
+      });
+      hardDeletedCount += batchHardDeleteResult.count;
+
+      if (softDeletedRows.length < AUDIT_LOG_RETENTION_DELETE_BATCH_SIZE) {
+        break;
+      }
+    }
+
+    const deletedCount = softDeletedCount + hardDeletedCount;
+
     return {
       deletedCount,
+      softDeletedCount,
+      hardDeletedCount,
       cutoff,
+      protectedCutoff,
+      hardDeleteCutoff,
     };
   }
 

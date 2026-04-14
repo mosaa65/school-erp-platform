@@ -11,6 +11,7 @@ describe('AuditLogsService timeline', () => {
       count: jest.fn(),
       groupBy: jest.fn(),
       create: jest.fn(),
+      updateMany: jest.fn(),
       deleteMany: jest.fn(),
     },
     systemSetting: {
@@ -21,6 +22,10 @@ describe('AuditLogsService timeline', () => {
       findUnique: jest.fn(),
       update: jest.fn(),
     },
+    financialFund: {
+      findUnique: jest.fn(),
+      update: jest.fn(),
+    },
     $transaction: jest.fn(),
   };
 
@@ -28,22 +33,23 @@ describe('AuditLogsService timeline', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    prismaMock.$transaction.mockImplementation(async (arg: unknown) => {
+      if (typeof arg === 'function') {
+        return (arg as (tx: unknown) => unknown)(prismaMock);
+      }
+
+      return Promise.all(arg as Promise<unknown>[]);
+    });
     service = new AuditLogsService(prismaMock as never);
   });
 
   it('returns maximum 10 items even when a larger limit is requested', async () => {
+    const anchorOccurredAt = new Date('2026-04-12T10:10:00.000Z');
     prismaMock.auditLog.findFirst.mockResolvedValueOnce({
       id: 'audit-1',
       resource: 'students',
       resourceId: 'stu-1',
-    });
-
-    prismaMock.$transaction.mockImplementationOnce(async (operations) => {
-      const [, findManyOperation] = operations;
-      return [
-        18,
-        await findManyOperation,
-      ];
+      occurredAt: anchorOccurredAt,
     });
 
     prismaMock.auditLog.count.mockResolvedValue(18);
@@ -70,7 +76,22 @@ describe('AuditLogsService timeline', () => {
     expect(prismaMock.auditLog.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         take: 10,
+        where: expect.objectContaining({
+          resource: 'students',
+          resourceId: 'stu-1',
+        }),
       }),
+    );
+
+    const timelineFindManyInput = prismaMock.auditLog.findMany.mock.calls[0]?.[0];
+    expect(timelineFindManyInput?.where?.OR).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          occurredAt: expect.objectContaining({
+            lt: anchorOccurredAt,
+          }),
+        }),
+      ]),
     );
     expect(result.limit).toBe(10);
     expect(result.total).toBe(18);
@@ -84,6 +105,7 @@ describe('AuditLogsService timeline', () => {
         id: 'audit-5',
         resource: 'auth/login',
         resourceId: null,
+        occurredAt: new Date('2026-04-12T11:00:00.000Z'),
       })
       .mockResolvedValueOnce({
         id: 'audit-5',
@@ -122,6 +144,7 @@ describe('AuditLogsService timeline', () => {
       id: 'audit-only',
       resource: 'students',
       resourceId: 'stu-77',
+      occurredAt: new Date('2026-04-12T12:00:00.000Z'),
     });
     prismaMock.auditLog.count.mockResolvedValue(1);
     prismaMock.auditLog.findMany.mockResolvedValue([
@@ -145,9 +168,6 @@ describe('AuditLogsService timeline', () => {
         actorUser: null,
       },
     ]);
-    prismaMock.$transaction.mockImplementationOnce(async (operations) =>
-      Promise.all(operations),
-    );
 
     await expect(
       service.rollbackFromTimeline('audit-only', 'actor-1', {
@@ -156,11 +176,12 @@ describe('AuditLogsService timeline', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('applies TARGET rollback using timeline snapshot and writes rollback audit entry', async () => {
+  it('applies TARGET rollback using timeline snapshot and writes rollback audit entry in transaction', async () => {
     prismaMock.auditLog.findFirst.mockResolvedValueOnce({
       id: 'audit-latest',
       resource: 'students',
       resourceId: 'stu-42',
+      occurredAt: new Date('2026-04-12T12:10:00.000Z'),
     });
     prismaMock.auditLog.count.mockResolvedValue(2);
     prismaMock.auditLog.findMany.mockResolvedValue([
@@ -174,11 +195,14 @@ describe('AuditLogsService timeline', () => {
         ipAddress: '10.0.0.8',
         userAgent: 'Edge',
         details: {
-          before: {
-            fullName: 'الاسم السابق',
-          },
-          after: {
-            fullName: 'الاسم الحالي',
+          rollback: {
+            schemaVersion: 1,
+            eligible: true,
+            after: {
+              id: 'stu-42',
+              fullName: 'الاسم الحالي',
+              isActive: true,
+            },
           },
         },
         occurredAt: new Date('2026-04-12T12:10:00.000Z'),
@@ -196,10 +220,14 @@ describe('AuditLogsService timeline', () => {
         ipAddress: '10.0.0.5',
         userAgent: 'Chrome',
         details: {
-          after: {
-            id: 'stu-42',
-            fullName: 'الاسم المستهدف للتراجع',
-            isActive: true,
+          rollback: {
+            schemaVersion: 1,
+            eligible: true,
+            after: {
+              id: 'stu-42',
+              fullName: 'الاسم المستهدف للتراجع',
+              isActive: true,
+            },
           },
         },
         occurredAt: new Date('2026-04-12T11:10:00.000Z'),
@@ -208,18 +236,17 @@ describe('AuditLogsService timeline', () => {
         actorUser: null,
       },
     ]);
-    prismaMock.$transaction.mockImplementationOnce(async (operations) =>
-      Promise.all(operations),
-    );
     prismaMock.student.findUnique.mockResolvedValueOnce({
       id: 'stu-42',
       fullName: 'الاسم الحالي',
       isActive: true,
+      deletedAt: null,
     });
     prismaMock.student.update.mockResolvedValueOnce({
       id: 'stu-42',
       fullName: 'الاسم المستهدف للتراجع',
       isActive: true,
+      deletedAt: null,
     });
     prismaMock.auditLog.create.mockResolvedValueOnce({
       id: 'rollback-audit-1',
@@ -242,10 +269,213 @@ describe('AuditLogsService timeline', () => {
         }),
       }),
     );
+    expect(
+      prismaMock.$transaction.mock.calls.some(
+        (callArgs) => typeof callArgs[0] === 'function',
+      ),
+    ).toBe(true);
     expect(result.success).toBe(true);
     expect(result.mode).toBe(AuditRollbackMode.TARGET);
     expect(result.targetAuditLogId).toBe('audit-old');
     expect(result.rollbackAuditLogId).toBe('rollback-audit-1');
+  });
+
+  it('rolls back CREATE target when details do not include before/after and re-activates soft deleted boolean state', async () => {
+    prismaMock.auditLog.findFirst.mockResolvedValueOnce({
+      id: 'audit-fund-delete',
+      resource: 'financial-funds',
+      resourceId: '7',
+      occurredAt: new Date('2026-04-12T15:10:00.000Z'),
+    });
+    prismaMock.auditLog.count.mockResolvedValue(2);
+    prismaMock.auditLog.findMany.mockResolvedValue([
+      {
+        id: 'audit-fund-delete',
+        actorUserId: 'actor-2',
+        action: 'FINANCIAL_FUND_DELETE',
+        resource: 'financial-funds',
+        resourceId: '7',
+        status: AuditStatus.SUCCESS,
+        ipAddress: '10.0.0.8',
+        userAgent: 'Edge',
+        details: null,
+        occurredAt: new Date('2026-04-12T15:10:00.000Z'),
+        createdAt: new Date('2026-04-12T15:10:00.000Z'),
+        updatedAt: new Date('2026-04-12T15:10:00.000Z'),
+        actorUser: null,
+      },
+      {
+        id: 'audit-fund-create',
+        actorUserId: 'actor-1',
+        action: 'FINANCIAL_FUND_CREATE',
+        resource: 'financial-funds',
+        resourceId: '7',
+        status: AuditStatus.SUCCESS,
+        ipAddress: '10.0.0.5',
+        userAgent: 'Chrome',
+        details: {
+          nameAr: 'الصندوق الرئيسي',
+          fundType: 'MAIN',
+        },
+        occurredAt: new Date('2026-04-12T14:10:00.000Z'),
+        createdAt: new Date('2026-04-12T14:10:00.000Z'),
+        updatedAt: new Date('2026-04-12T14:10:00.000Z'),
+        actorUser: null,
+      },
+    ]);
+    prismaMock.financialFund.findUnique.mockResolvedValueOnce({
+      id: 7,
+      nameAr: 'الصندوق الرئيسي',
+      fundType: 'MAIN',
+      isActive: false,
+    });
+    prismaMock.financialFund.update.mockResolvedValueOnce({
+      id: 7,
+      nameAr: 'الصندوق الرئيسي',
+      fundType: 'MAIN',
+      isActive: true,
+    });
+    prismaMock.auditLog.create.mockResolvedValueOnce({
+      id: 'rollback-audit-fund-1',
+      occurredAt: new Date('2026-04-12T15:20:00.000Z'),
+    });
+
+    const result = await service.rollbackFromTimeline('audit-fund-delete', 'actor-9', {
+      mode: AuditRollbackMode.PREVIOUS,
+    });
+
+    expect(prismaMock.financialFund.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: 7,
+        },
+        data: expect.objectContaining({
+          nameAr: 'الصندوق الرئيسي',
+          fundType: 'MAIN',
+          isActive: true,
+        }),
+      }),
+    );
+    expect(result.success).toBe(true);
+    expect(result.mode).toBe(AuditRollbackMode.PREVIOUS);
+    expect(result.targetAuditLogId).toBe('audit-fund-create');
+    expect(result.appliedFields).toEqual(
+      expect.arrayContaining(['nameAr', 'fundType', 'isActive']),
+    );
+  });
+
+  it('blocks rollback for journal-entries resource', async () => {
+    prismaMock.auditLog.findFirst.mockResolvedValueOnce({
+      id: 'audit-j1',
+      resource: 'journal-entries',
+      resourceId: 'je-1',
+      occurredAt: new Date('2026-04-12T14:10:00.000Z'),
+    });
+    prismaMock.auditLog.count.mockResolvedValue(2);
+    prismaMock.auditLog.findMany.mockResolvedValue([
+      {
+        id: 'audit-j1',
+        actorUserId: 'actor-3',
+        action: 'JOURNAL_ENTRY_UPDATE',
+        resource: 'journal-entries',
+        resourceId: 'je-1',
+        status: AuditStatus.SUCCESS,
+        ipAddress: '10.0.0.8',
+        userAgent: 'Edge',
+        details: {
+          after: {
+            description: 'latest',
+          },
+        },
+        occurredAt: new Date('2026-04-12T14:10:00.000Z'),
+        createdAt: new Date('2026-04-12T14:10:00.000Z'),
+        updatedAt: new Date('2026-04-12T14:10:00.000Z'),
+        actorUser: null,
+      },
+      {
+        id: 'audit-j0',
+        actorUserId: 'actor-2',
+        action: 'JOURNAL_ENTRY_UPDATE',
+        resource: 'journal-entries',
+        resourceId: 'je-1',
+        status: AuditStatus.SUCCESS,
+        ipAddress: '10.0.0.5',
+        userAgent: 'Chrome',
+        details: {
+          after: {
+            description: 'older',
+          },
+        },
+        occurredAt: new Date('2026-04-12T13:10:00.000Z'),
+        createdAt: new Date('2026-04-12T13:10:00.000Z'),
+        updatedAt: new Date('2026-04-12T13:10:00.000Z'),
+        actorUser: null,
+      },
+    ]);
+
+    await expect(
+      service.rollbackFromTimeline('audit-j1', 'actor-7', {
+        mode: AuditRollbackMode.TARGET,
+        targetAuditLogId: 'audit-j0',
+      }),
+    ).rejects.toThrow('journal-entries');
+  });
+
+  it('rejects rollback for unsupported resource', async () => {
+    prismaMock.auditLog.findFirst.mockResolvedValueOnce({
+      id: 'audit-x1',
+      resource: 'mystery-resources',
+      resourceId: 'm-1',
+      occurredAt: new Date('2026-04-12T14:10:00.000Z'),
+    });
+    prismaMock.auditLog.count.mockResolvedValue(2);
+    prismaMock.auditLog.findMany.mockResolvedValue([
+      {
+        id: 'audit-x1',
+        actorUserId: 'actor-3',
+        action: 'MYSTERY_UPDATE',
+        resource: 'mystery-resources',
+        resourceId: 'm-1',
+        status: AuditStatus.SUCCESS,
+        ipAddress: '10.0.0.8',
+        userAgent: 'Edge',
+        details: {
+          after: {
+            title: 'latest',
+          },
+        },
+        occurredAt: new Date('2026-04-12T14:10:00.000Z'),
+        createdAt: new Date('2026-04-12T14:10:00.000Z'),
+        updatedAt: new Date('2026-04-12T14:10:00.000Z'),
+        actorUser: null,
+      },
+      {
+        id: 'audit-x0',
+        actorUserId: 'actor-2',
+        action: 'MYSTERY_UPDATE',
+        resource: 'mystery-resources',
+        resourceId: 'm-1',
+        status: AuditStatus.SUCCESS,
+        ipAddress: '10.0.0.5',
+        userAgent: 'Chrome',
+        details: {
+          after: {
+            title: 'older',
+          },
+        },
+        occurredAt: new Date('2026-04-12T13:10:00.000Z'),
+        createdAt: new Date('2026-04-12T13:10:00.000Z'),
+        updatedAt: new Date('2026-04-12T13:10:00.000Z'),
+        actorUser: null,
+      },
+    ]);
+
+    await expect(
+      service.rollbackFromTimeline('audit-x1', 'actor-7', {
+        mode: AuditRollbackMode.TARGET,
+        targetAuditLogId: 'audit-x0',
+      }),
+    ).rejects.toThrow('not supported');
   });
 
   it('returns disabled retention policy when no setting is configured', async () => {

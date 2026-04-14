@@ -50,6 +50,40 @@ const chartOfAccountInclude: Prisma.ChartOfAccountInclude = {
   },
 };
 
+const chartOfAccountRollbackSnapshotSelect = {
+  nameAr: true,
+  nameEn: true,
+  accountType: true,
+  parentId: true,
+  hierarchyLevel: true,
+  isHeader: true,
+  isBankAccount: true,
+  defaultCurrencyId: true,
+  branchId: true,
+  normalBalance: true,
+  isActive: true,
+} satisfies Prisma.ChartOfAccountSelect;
+
+type ChartOfAccountRollbackSnapshot = Prisma.ChartOfAccountGetPayload<{
+  select: typeof chartOfAccountRollbackSnapshotSelect;
+}>;
+
+const CHART_OF_ACCOUNT_ROLLBACK_FIELDS: Array<
+  keyof ChartOfAccountRollbackSnapshot
+> = [
+  'nameAr',
+  'nameEn',
+  'accountType',
+  'parentId',
+  'hierarchyLevel',
+  'isHeader',
+  'isBankAccount',
+  'defaultCurrencyId',
+  'branchId',
+  'normalBalance',
+  'isActive',
+];
+
 @Injectable()
 export class ChartOfAccountsService {
   constructor(
@@ -91,15 +125,25 @@ export class ChartOfAccountsService {
         } as Prisma.ChartOfAccountUncheckedCreateInput,
         include: chartOfAccountInclude,
       });
+      const afterSnapshot = this.toChartOfAccountRollbackSnapshot(account);
+      const changedFields = this.computeChartOfAccountChangedFields(
+        null,
+        afterSnapshot,
+      );
 
       await this.auditLogsService.record({
         actorUserId,
         action: 'CHART_OF_ACCOUNT_CREATE',
         resource: 'chart-of-accounts',
         resourceId: String(account.id),
-        details: {
-          accountType: account.accountType,
-        },
+        details: this.buildChartOfAccountRollbackDetails({
+          before: null,
+          after: afterSnapshot,
+          changedFields,
+          additionalDetails: {
+            accountType: account.accountType,
+          },
+        }),
       });
 
       return account;
@@ -197,6 +241,10 @@ export class ChartOfAccountsService {
     payload: UpdateChartOfAccountDto,
     actorUserId: string,
   ) {
+    const beforeSnapshot = await this.getChartOfAccountRollbackSnapshotOrThrow(
+      id,
+    );
+
     if (payload.parentId && payload.parentId === id) {
       throw new BadRequestException('Parent account cannot be the same account');
     }
@@ -242,13 +290,23 @@ export class ChartOfAccountsService {
         },
         include: chartOfAccountInclude,
       });
+      const afterSnapshot = this.toChartOfAccountRollbackSnapshot(updated);
+      const changedFields = this.computeChartOfAccountChangedFields(
+        beforeSnapshot,
+        afterSnapshot,
+      );
 
       await this.auditLogsService.record({
         actorUserId,
         action: 'CHART_OF_ACCOUNT_UPDATE',
         resource: 'chart-of-accounts',
         resourceId: String(id),
-        details: payload as Prisma.InputJsonValue,
+        details: this.buildChartOfAccountRollbackDetails({
+          before: beforeSnapshot,
+          after: afterSnapshot,
+          changedFields,
+          additionalDetails: this.extractChartOfAccountRequestedChanges(payload),
+        }),
       });
 
       return updated;
@@ -258,22 +316,35 @@ export class ChartOfAccountsService {
   }
 
   async remove(id: number, actorUserId: string) {
-    await this.ensureAccountExists(id);
+    const beforeSnapshot = await this.getChartOfAccountRollbackSnapshotOrThrow(
+      id,
+    );
 
-    await this.prisma.chartOfAccount.update({
+    const removed = await this.prisma.chartOfAccount.update({
       where: { id },
       data: {
         isActive: false,
         deletedAt: new Date(),
         updatedById: actorUserId,
       },
+      select: chartOfAccountRollbackSnapshotSelect,
     });
+    const afterSnapshot = this.toChartOfAccountRollbackSnapshot(removed);
+    const changedFields = this.computeChartOfAccountChangedFields(
+      beforeSnapshot,
+      afterSnapshot,
+    );
 
     await this.auditLogsService.record({
       actorUserId,
       action: 'CHART_OF_ACCOUNT_DELETE',
       resource: 'chart-of-accounts',
       resourceId: String(id),
+      details: this.buildChartOfAccountRollbackDetails({
+        before: beforeSnapshot,
+        after: afterSnapshot,
+        changedFields,
+      }),
     });
 
     return {
@@ -299,6 +370,134 @@ export class ChartOfAccountsService {
     }
 
     return account;
+  }
+
+  private async getChartOfAccountRollbackSnapshotOrThrow(
+    id: number,
+  ): Promise<ChartOfAccountRollbackSnapshot> {
+    const account = await this.prisma.chartOfAccount.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+      },
+      select: chartOfAccountRollbackSnapshotSelect,
+    });
+
+    if (!account) {
+      throw new NotFoundException('Chart of account not found');
+    }
+
+    return this.toChartOfAccountRollbackSnapshot(account);
+  }
+
+  private toChartOfAccountRollbackSnapshot(source: {
+    nameAr: string;
+    nameEn: string | null;
+    accountType: AccountType;
+    parentId: number | null;
+    hierarchyLevel: number;
+    isHeader: boolean;
+    isBankAccount: boolean;
+    defaultCurrencyId: number | null;
+    branchId: number | null;
+    normalBalance: NormalBalance;
+    isActive: boolean;
+  }): ChartOfAccountRollbackSnapshot {
+    return {
+      nameAr: source.nameAr,
+      nameEn: source.nameEn,
+      accountType: source.accountType,
+      parentId: source.parentId,
+      hierarchyLevel: source.hierarchyLevel,
+      isHeader: source.isHeader,
+      isBankAccount: source.isBankAccount,
+      defaultCurrencyId: source.defaultCurrencyId,
+      branchId: source.branchId,
+      normalBalance: source.normalBalance,
+      isActive: source.isActive,
+    };
+  }
+
+  private computeChartOfAccountChangedFields(
+    before: ChartOfAccountRollbackSnapshot | null,
+    after: ChartOfAccountRollbackSnapshot | null,
+  ): string[] {
+    if (!before && !after) {
+      return [];
+    }
+
+    if (!before && after) {
+      return [...CHART_OF_ACCOUNT_ROLLBACK_FIELDS];
+    }
+
+    if (before && !after) {
+      return [...CHART_OF_ACCOUNT_ROLLBACK_FIELDS];
+    }
+
+    return CHART_OF_ACCOUNT_ROLLBACK_FIELDS.filter(
+      (field) => before![field] !== after![field],
+    );
+  }
+
+  private extractChartOfAccountRequestedChanges(
+    payload: UpdateChartOfAccountDto,
+  ): Record<string, Prisma.InputJsonValue> {
+    const details: Record<string, Prisma.InputJsonValue> = {};
+
+    if (payload.nameAr !== undefined) {
+      details.nameAr = payload.nameAr;
+    }
+    if (payload.nameEn !== undefined) {
+      details.nameEn = payload.nameEn;
+    }
+    if (payload.accountType !== undefined) {
+      details.accountType = payload.accountType;
+    }
+    if (payload.parentId !== undefined) {
+      details.parentId = payload.parentId;
+    }
+    if (payload.isHeader !== undefined) {
+      details.isHeader = payload.isHeader;
+    }
+    if (payload.isBankAccount !== undefined) {
+      details.isBankAccount = payload.isBankAccount;
+    }
+    if (payload.defaultCurrencyId !== undefined) {
+      details.defaultCurrencyId = payload.defaultCurrencyId;
+    }
+    if (payload.branchId !== undefined) {
+      details.branchId = payload.branchId;
+    }
+    if (payload.normalBalance !== undefined) {
+      details.normalBalance = payload.normalBalance;
+    }
+    if (payload.isActive !== undefined) {
+      details.isActive = payload.isActive;
+    }
+
+    return details;
+  }
+
+  private buildChartOfAccountRollbackDetails(input: {
+    before: ChartOfAccountRollbackSnapshot | null;
+    after: ChartOfAccountRollbackSnapshot | null;
+    changedFields: string[];
+    additionalDetails?: Record<string, Prisma.InputJsonValue>;
+  }): Prisma.InputJsonValue {
+    const { before, after, changedFields, additionalDetails } = input;
+
+    return {
+      ...(additionalDetails ?? {}),
+      before,
+      after,
+      rollback: {
+        schemaVersion: 1,
+        eligible: true,
+        before,
+        after,
+        changedFields,
+      },
+    } as Prisma.InputJsonValue;
   }
 
   private normalizeRequiredText(value: string, fieldName: string): string {

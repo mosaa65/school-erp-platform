@@ -71,6 +71,8 @@ FINANCE_SYSTEM_USER_ID=""
 RECURRING_JOURNAL_INTERVAL_MS=900000
 AUDIT_LOG_RETENTION_CLEANUP_ENABLED=true
 AUDIT_LOG_RETENTION_CLEANUP_INTERVAL_MS=3600000
+AUDIT_LOG_RETENTION_SOFT_DELETE_GRACE_DAYS=30
+AUDIT_LOG_RETENTION_ROLLBACK_PROTECTION_EXTRA_DAYS=30
 SEED_ADMIN_EMAIL="admin@school.local"
 SEED_ADMIN_PASSWORD="ChangeMe123!"
 ```
@@ -79,6 +81,8 @@ SEED_ADMIN_PASSWORD="ChangeMe123!"
 - `SEED_ADMIN_EMAIL` و `SEED_ADMIN_PASSWORD` (اختياري) لإنشاء حساب المدير في البذور الأساسية.
 - `FINANCE_SYSTEM_USER_ID` مطلوب فقط لبعض عمليات المالية المؤتمتة مثل webhooks والقيود الدورية. يمكن تركه فارغًا في التشغيل المحلي إذا كنت لا تستخدم هذه المسارات.
 - `AUDIT_LOG_RETENTION_CLEANUP_ENABLED` للتحكم بتفعيل الحذف التلقائي الدوري لسجل التدقيق (يقرأ مدة الاحتفاظ من إعداد النظام `audit_logs_retention_days`).
+- `AUDIT_LOG_RETENTION_SOFT_DELETE_GRACE_DAYS` عدد الأيام قبل الحذف النهائي للسجلات المحذوفة منطقيًا.
+- `AUDIT_LOG_RETENTION_ROLLBACK_PROTECTION_EXTRA_DAYS` أيام إضافية لحماية موارد التراجع من الحذف المبكر.
 
 ## Local Run
 
