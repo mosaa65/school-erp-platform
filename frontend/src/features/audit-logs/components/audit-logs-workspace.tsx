@@ -771,6 +771,7 @@ export function AuditLogsWorkspace() {
     );
   }, [
     isRetentionPolicyOpen,
+    retentionPolicy,
     retentionPolicy?.autoDeleteEnabled,
     retentionPolicy?.retentionDays,
     retentionPolicy?.recommendedRetentionDays,

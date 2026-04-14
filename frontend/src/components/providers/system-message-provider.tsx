@@ -231,19 +231,6 @@ export function SystemMessageProvider({ children }: SystemMessageProviderProps) 
     }
   }, []);
 
-  const scheduleAutoDismiss = React.useCallback(
-    (id: string, duration: number) => {
-      clearAutoDismissTimeout(id);
-      autoDismissRemaining.current.set(id, duration);
-      autoDismissDeadlines.current.set(id, Date.now() + duration);
-      const timeoutId = window.setTimeout(() => {
-        removeMessage(id);
-      }, duration);
-      autoDismissTimeouts.current.set(id, timeoutId);
-    },
-    [clearAutoDismissTimeout],
-  );
-
   const removeMessage = React.useCallback((id: string) => {
     clearAutoDismissTimeout(id);
     autoDismissDeadlines.current.delete(id);
@@ -266,6 +253,19 @@ export function SystemMessageProvider({ children }: SystemMessageProviderProps) 
 
     exitTimeouts.current.set(id, exitTimeout);
   }, [clearAutoDismissTimeout, preferences.reducedMotion]);
+
+  const scheduleAutoDismiss = React.useCallback(
+    (id: string, duration: number) => {
+      clearAutoDismissTimeout(id);
+      autoDismissRemaining.current.set(id, duration);
+      autoDismissDeadlines.current.set(id, Date.now() + duration);
+      const timeoutId = window.setTimeout(() => {
+        removeMessage(id);
+      }, duration);
+      autoDismissTimeouts.current.set(id, timeoutId);
+    },
+    [clearAutoDismissTimeout, removeMessage],
+  );
 
   const pauseMessage = React.useCallback(
     (id: string) => {
