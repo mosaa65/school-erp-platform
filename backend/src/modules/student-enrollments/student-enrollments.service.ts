@@ -21,7 +21,11 @@ import {
 } from '../../common/utils/student-numbering';
 import { AutoDistributeStudentEnrollmentsDto } from './dto/auto-distribute-student-enrollments.dto';
 import { CreateStudentEnrollmentDto } from './dto/create-student-enrollment.dto';
-import { ListStudentEnrollmentsDto } from './dto/list-student-enrollments.dto';
+import {
+  ListStudentEnrollmentsDto,
+  StudentEnrollmentSortBy,
+  StudentEnrollmentSortDirection,
+} from './dto/list-student-enrollments.dto';
 import { ManualDistributeStudentEnrollmentsDto } from './dto/manual-distribute-student-enrollments.dto';
 import { ReturnStudentEnrollmentsToPendingDto } from './dto/return-student-enrollments-to-pending.dto';
 import { StudentEnrollmentDistributionBoardDto } from './dto/student-enrollment-distribution-board.dto';
@@ -360,16 +364,7 @@ export class StudentEnrollmentsService {
       this.prisma.studentEnrollment.findMany({
         where,
         include: studentEnrollmentInclude,
-        orderBy: [
-          {
-            academicYear: {
-              startDate: 'desc',
-            },
-          },
-          {
-            createdAt: 'desc',
-          },
-        ],
+        orderBy: this.buildFindAllOrderBy(query),
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -384,6 +379,169 @@ export class StudentEnrollmentsService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  private buildFindAllOrderBy(
+    query: ListStudentEnrollmentsDto,
+  ): Prisma.StudentEnrollmentOrderByWithRelationInput[] {
+    const sortByList = this.parseSortByList(query.sortBy);
+    const sortDirectionList = this.parseSortDirectionList(query.sortDirection);
+    const criteria =
+      sortByList.length > 0
+        ? sortByList
+        : [StudentEnrollmentSortBy.ACADEMIC_YEAR_START_DATE];
+    const orderBy: Prisma.StudentEnrollmentOrderByWithRelationInput[] = [];
+
+    for (const [index, sortBy] of criteria.entries()) {
+      const direction =
+        sortDirectionList[index] ??
+        (index === 0
+          ? StudentEnrollmentSortDirection.DESC
+          : StudentEnrollmentSortDirection.ASC);
+
+      for (const entry of this.mapSortCriterionToOrderBy(sortBy, direction)) {
+        this.pushUniqueOrderBy(orderBy, entry);
+      }
+    }
+
+    const fallbackOrderBy: Prisma.StudentEnrollmentOrderByWithRelationInput[] = [
+      {
+        academicYear: {
+          startDate: 'desc',
+        },
+      },
+      {
+        student: {
+          fullName: 'asc',
+        },
+      },
+      {
+        createdAt: 'desc',
+      },
+    ];
+
+    for (const entry of fallbackOrderBy) {
+      this.pushUniqueOrderBy(orderBy, entry);
+    }
+
+    return orderBy;
+  }
+
+  private parseSortByList(sortBy?: string): StudentEnrollmentSortBy[] {
+    if (!sortBy) {
+      return [];
+    }
+
+    const validValues = new Set<string>(Object.values(StudentEnrollmentSortBy));
+
+    return sortBy
+      .split(',')
+      .map((value) => value.trim())
+      .filter((value): value is StudentEnrollmentSortBy => validValues.has(value));
+  }
+
+  private parseSortDirectionList(
+    sortDirection?: string,
+  ): StudentEnrollmentSortDirection[] {
+    if (!sortDirection) {
+      return [];
+    }
+
+    const validValues = new Set<string>(
+      Object.values(StudentEnrollmentSortDirection),
+    );
+
+    return sortDirection
+      .split(',')
+      .map((value) => value.trim().toLowerCase())
+      .filter(
+        (value): value is StudentEnrollmentSortDirection =>
+          validValues.has(value),
+      );
+  }
+
+  private mapSortCriterionToOrderBy(
+    sortBy: StudentEnrollmentSortBy,
+    direction: Prisma.SortOrder,
+  ): Prisma.StudentEnrollmentOrderByWithRelationInput[] {
+    switch (sortBy) {
+      case StudentEnrollmentSortBy.ENROLLMENT_DATE:
+        return [{ enrollmentDate: direction }];
+      case StudentEnrollmentSortBy.STUDENT_NAME:
+        return [
+          {
+            student: {
+              fullName: direction,
+            },
+          },
+          {
+            student: {
+              admissionNo: direction,
+            },
+          },
+        ];
+      case StudentEnrollmentSortBy.ADMISSION_NO:
+        return [
+          {
+            student: {
+              admissionNo: direction,
+            },
+          },
+        ];
+      case StudentEnrollmentSortBy.YEARLY_ENROLLMENT_NO:
+        return [{ yearlyEnrollmentNo: direction }];
+      case StudentEnrollmentSortBy.GRADE_LEVEL:
+        return [
+          {
+            gradeLevel: {
+              sequence: direction,
+            },
+          },
+          {
+            gradeLevel: {
+              name: direction,
+            },
+          },
+        ];
+      case StudentEnrollmentSortBy.SECTION_NAME:
+        return [
+          {
+            section: {
+              name: direction,
+            },
+          },
+        ];
+      case StudentEnrollmentSortBy.STATUS:
+        return [{ status: direction }];
+      case StudentEnrollmentSortBy.DISTRIBUTION_STATUS:
+        return [{ distributionStatus: direction }];
+      case StudentEnrollmentSortBy.ACTIVE_STATE:
+        return [{ isActive: direction }];
+      case StudentEnrollmentSortBy.CREATED_AT:
+        return [{ createdAt: direction }];
+      case StudentEnrollmentSortBy.UPDATED_AT:
+        return [{ updatedAt: direction }];
+      case StudentEnrollmentSortBy.ACADEMIC_YEAR_START_DATE:
+      default:
+        return [
+          {
+            academicYear: {
+              startDate: direction,
+            },
+          },
+        ];
+    }
+  }
+
+  private pushUniqueOrderBy(
+    target: Prisma.StudentEnrollmentOrderByWithRelationInput[],
+    entry: Prisma.StudentEnrollmentOrderByWithRelationInput,
+  ) {
+    const entryKey = JSON.stringify(entry);
+
+    if (!target.some((current) => JSON.stringify(current) === entryKey)) {
+      target.push(entry);
+    }
   }
 
   async findOne(id: string) {

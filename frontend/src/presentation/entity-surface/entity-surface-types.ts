@@ -6,9 +6,17 @@ export type EntitySurfaceViewMode = "dense-row" | "list" | "grid" | "smart-card"
 export type EntityDetailsMode = "none" | "inline" | "sheet" | "dialog" | "page";
 export type EntitySurfaceDensity = "comfortable" | "balanced" | "compact";
 export type EntitySurfaceRichness = "minimal" | "balanced" | "rich";
-export type EntitySurfaceVisualStyle = "soft" | "glass" | "outline" | "solid-soft";
+export type EntitySurfaceVisualStyle = "soft" | "glass" | "outline" | "solid-soft" | "transparent";
 export type EntitySurfaceEffectsPreset = "subtle" | "balanced" | "rich";
 export type EntitySurfaceShapePreset = "soft" | "rounded" | "geometric";
+export type EntitySurfaceColorMode =
+  | "accent"
+  | "system"
+  | "custom"
+  | "ocean"
+  | "emerald"
+  | "sunset"
+  | "berry";
 export type EntitySurfaceAvatarMode = "auto" | "fallback-only" | "hidden";
 export type EntitySurfaceInlineActionsMode = "always" | "hover" | "minimal";
 export type EntitySurfaceLongPressMode =
@@ -107,6 +115,9 @@ export type EntitySurfacePreferences = {
   defaultViewMode: EntitySurfaceViewMode;
   density: EntitySurfaceDensity;
   richness: EntitySurfaceRichness;
+  showExtendedDetailsInCards: boolean;
+  colorMode: EntitySurfaceColorMode;
+  customColorHex: string;
   visualStyle: EntitySurfaceVisualStyle;
   effectsPreset: EntitySurfaceEffectsPreset;
   shapePreset: EntitySurfaceShapePreset;

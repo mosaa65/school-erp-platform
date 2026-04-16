@@ -13,6 +13,7 @@ import {
 } from "@/presentation/entity-surface/entity-surface-tokens";
 import type {
   EntitySurfaceAvatarData,
+  EntitySurfaceColorMode,
   EntitySurfaceDensity,
   EntitySurfaceEffectsPreset,
   EntitySurfaceField,
@@ -32,15 +33,18 @@ type EntitySurfaceCardProps = {
   subtitle?: React.ReactNode;
   description?: React.ReactNode;
   avatar?: EntitySurfaceAvatarData;
+  headerActions?: React.ReactNode;
   fields?: EntitySurfaceField[];
   statusChips?: EntitySurfaceStatusChip[];
   quickActions?: EntitySurfaceQuickAction[];
   viewMode: EntitySurfaceViewMode;
   density: EntitySurfaceDensity;
   richness: EntitySurfaceRichness;
+  colorMode?: EntitySurfaceColorMode;
   visualStyle: EntitySurfaceVisualStyle;
   effectsPreset: EntitySurfaceEffectsPreset;
   shapePreset: EntitySurfaceShapePreset;
+  entityKey?: string;
   inlineActionsMode?: EntitySurfaceInlineActionsMode;
   motionPreset?: EntitySurfaceMotionPreset;
   reducedMotion?: boolean;
@@ -58,15 +62,18 @@ export function EntitySurfaceCard({
   subtitle,
   description,
   avatar,
+  headerActions,
   fields,
   statusChips,
   quickActions,
   viewMode,
   density,
   richness,
+  colorMode = "system",
   visualStyle,
   effectsPreset,
   shapePreset,
+  entityKey,
   inlineActionsMode = "always",
   motionPreset = "elegant",
   reducedMotion = false,
@@ -81,9 +88,11 @@ export function EntitySurfaceCard({
   const tokens = resolveEntitySurfaceTokens({
     density,
     richness,
+    colorMode,
     visualStyle,
     effectsPreset,
     shapePreset,
+    entityKey,
     viewMode,
     inlineActionsMode,
   });
@@ -155,32 +164,48 @@ export function EntitySurfaceCard({
         onPointerCancel={handlePointerUp}
         onKeyDown={handleKeyDown}
       >
+        <span
+          className={cn(
+            "pointer-events-none absolute inset-0 opacity-100",
+            tokens.tintOverlayClassName,
+          )}
+        />
+        <span
+          className={cn(
+            "pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r",
+            tokens.accentStripeClassName,
+          )}
+        />
         <div className={cn("flex items-start justify-between", tokens.contentGapClassName)}>
           <div className={cn("min-w-0 flex-1", tokens.contentGapClassName, viewMode === "smart-card" ? "space-y-3" : "space-y-2.5")}>
-            <div className={cn("flex items-start", tokens.contentGapClassName)}>
+            <div className={cn("flex items-center", tokens.contentGapClassName)}>
               <EntitySurfaceAvatar
                 avatar={avatar}
                 sizeClassName={tokens.avatarSizeClassName}
                 mode={avatarMode}
+                className={tokens.avatarToneClassName}
               />
 
               <div className="min-w-0 flex-1 space-y-1">
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className={cn("truncate", tokens.titleClassName)}>{title}</p>
                     {subtitle ? (
                       <p className={cn("mt-0.5 truncate", tokens.subtitleClassName)}>{subtitle}</p>
                     ) : null}
                   </div>
-                  {detailsAffordance ? (
-                    <span className={cn("mt-0.5 inline-flex shrink-0", tokens.mutedTextClassName)}>
-                      <ChevronLeft className="h-4 w-4" />
-                    </span>
-                  ) : quickActions && quickActions.length > 0 ? (
-                    <span className={cn("mt-0.5 inline-flex shrink-0", tokens.mutedTextClassName)}>
-                      <MoreHorizontal className="h-4 w-4" />
-                    </span>
-                  ) : null}
+                  <div className="flex shrink-0 items-center gap-1 px-1.5 sm:px-2">
+                    {headerActions}
+                    {detailsAffordance ? (
+                      <span className={cn("inline-flex", tokens.mutedTextClassName)}>
+                        <ChevronLeft className="h-3.5 w-3.5" />
+                      </span>
+                    ) : quickActions && quickActions.length > 0 ? (
+                      <span className={cn("inline-flex", tokens.mutedTextClassName)}>
+                        <MoreHorizontal className="h-3.5 w-3.5" />
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
 
                 <EntitySurfaceStatusChips items={statusChips} />
@@ -210,7 +235,12 @@ export function EntitySurfaceCard({
         ) : null}
 
         {contextOpen ? (
-          <span className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-[color:var(--app-accent-strong)] to-transparent" />
+          <span
+            className={cn(
+              "pointer-events-none absolute inset-x-4 bottom-0 h-px bg-gradient-to-r",
+              tokens.accentStripeClassName,
+            )}
+          />
         ) : null}
       </div>
 

@@ -1188,6 +1188,24 @@ export type StudentEnrollmentDistributionStatus =
   | "ASSIGNED"
   | "TRANSFERRED";
 
+export type StudentEnrollmentSortBy =
+  | "ACADEMIC_YEAR_START_DATE"
+  | "ENROLLMENT_DATE"
+  | "STUDENT_NAME"
+  | "ADMISSION_NO"
+  | "YEARLY_ENROLLMENT_NO"
+  | "GRADE_LEVEL"
+  | "SECTION_NAME"
+  | "STATUS"
+  | "DISTRIBUTION_STATUS"
+  | "ACTIVE_STATE"
+  | "CREATED_AT"
+  | "UPDATED_AT";
+
+export type StudentEnrollmentSortDirection = "asc" | "desc";
+
+export type StudentEnrollmentGroupBy = "NONE" | StudentEnrollmentSortBy;
+
 export type StudentListItem = {
   id: string;
   admissionNo: string | null;
@@ -9130,6 +9148,10 @@ export const apiClient = {
     status?: StudentEnrollmentStatus;
     distributionStatus?: StudentEnrollmentDistributionStatus;
     isActive?: boolean;
+    sortBy?: StudentEnrollmentSortBy | StudentEnrollmentSortBy[];
+    sortDirection?:
+      | StudentEnrollmentSortDirection
+      | StudentEnrollmentSortDirection[];
   }) =>
     request<PaginatedResponse<StudentEnrollmentListItem>>(
       `/student-enrollments${buildQueryString({
@@ -9143,6 +9165,10 @@ export const apiClient = {
         status: query?.status,
         distributionStatus: query?.distributionStatus,
         isActive: query?.isActive,
+        sortBy: Array.isArray(query?.sortBy) ? query.sortBy.join(",") : query?.sortBy,
+        sortDirection: Array.isArray(query?.sortDirection)
+          ? query.sortDirection.join(",")
+          : query?.sortDirection,
       })}`,
       "GET",
       {

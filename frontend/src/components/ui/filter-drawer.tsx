@@ -27,6 +27,7 @@ export type FilterDrawerProps = {
   open: boolean;
   onClose: () => void;
   title?: string;
+  eyebrow?: string;
   children: React.ReactNode;
   actionButtons?: React.ReactNode;
   className?: string;
@@ -38,6 +39,7 @@ export function FilterDrawer({
   open,
   onClose,
   title = "فلترة",
+  eyebrow = "فلترة",
   children,
   actionButtons,
   className,
@@ -91,7 +93,7 @@ export function FilterDrawer({
           <div className="flex items-center justify-between gap-3">
             <div className="space-y-1">
               <p className="text-xs font-medium uppercase tracking-[0.2em] text-[color:var(--app-accent-color)]">
-                فلترة
+                {eyebrow}
               </p>
               <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
             </div>

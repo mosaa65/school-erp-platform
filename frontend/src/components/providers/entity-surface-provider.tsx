@@ -5,6 +5,7 @@ import {
   clearEntitySurfacePreferences,
   DEFAULT_ENTITY_SURFACE_PREFERENCES,
   ENTITY_SURFACE_AVATAR_OPTIONS,
+  ENTITY_SURFACE_COLOR_OPTIONS,
   ENTITY_SURFACE_DENSITY_OPTIONS,
   ENTITY_SURFACE_DETAILS_OPEN_MODE_OPTIONS,
   ENTITY_SURFACE_EFFECTS_OPTIONS,
@@ -20,6 +21,7 @@ import {
 } from "@/presentation/entity-surface/entity-surface-preferences";
 import type {
   EntitySurfaceAvatarMode,
+  EntitySurfaceColorMode,
   EntitySurfaceDensity,
   EntitySurfaceDetailsOpenMode,
   EntitySurfaceEffectsPreset,
@@ -39,6 +41,9 @@ export type EntitySurfaceContextValue = {
   defaultViewMode: EntitySurfaceViewMode;
   density: EntitySurfaceDensity;
   richness: EntitySurfaceRichness;
+  showExtendedDetailsInCards: boolean;
+  colorMode: EntitySurfaceColorMode;
+  customColorHex: string;
   visualStyle: EntitySurfaceVisualStyle;
   effectsPreset: EntitySurfaceEffectsPreset;
   shapePreset: EntitySurfaceShapePreset;
@@ -51,6 +56,7 @@ export type EntitySurfaceContextValue = {
   viewModeOptions: typeof ENTITY_SURFACE_VIEW_MODE_OPTIONS;
   densityOptions: typeof ENTITY_SURFACE_DENSITY_OPTIONS;
   richnessOptions: typeof ENTITY_SURFACE_RICHNESS_OPTIONS;
+  colorOptions: typeof ENTITY_SURFACE_COLOR_OPTIONS;
   visualStyleOptions: typeof ENTITY_SURFACE_VISUAL_STYLE_OPTIONS;
   effectsOptions: typeof ENTITY_SURFACE_EFFECTS_OPTIONS;
   shapeOptions: typeof ENTITY_SURFACE_SHAPE_OPTIONS;
@@ -62,6 +68,9 @@ export type EntitySurfaceContextValue = {
   setDefaultViewMode: (value: EntitySurfaceViewMode) => void;
   setDensity: (value: EntitySurfaceDensity) => void;
   setRichness: (value: EntitySurfaceRichness) => void;
+  setShowExtendedDetailsInCards: (value: boolean) => void;
+  setColorMode: (value: EntitySurfaceColorMode) => void;
+  setCustomColorHex: (value: string) => void;
   setVisualStyle: (value: EntitySurfaceVisualStyle) => void;
   setEffectsPreset: (value: EntitySurfaceEffectsPreset) => void;
   setShapePreset: (value: EntitySurfaceShapePreset) => void;
@@ -91,6 +100,11 @@ function applyEntitySurfacePreferencesToDocument(preferences: EntitySurfacePrefe
   root.dataset.entitySurfaceViewMode = preferences.defaultViewMode;
   root.dataset.entitySurfaceDensity = preferences.density;
   root.dataset.entitySurfaceRichness = preferences.richness;
+  root.dataset.entitySurfaceExtendedDetails = preferences.showExtendedDetailsInCards
+    ? "true"
+    : "false";
+  root.dataset.entitySurfaceColorMode = preferences.colorMode;
+  root.dataset.entitySurfaceCustomColor = preferences.customColorHex;
   root.dataset.entitySurfaceVisualStyle = preferences.visualStyle;
   root.dataset.entitySurfaceEffects = preferences.effectsPreset;
   root.dataset.entitySurfaceShape = preferences.shapePreset;
@@ -100,6 +114,10 @@ function applyEntitySurfacePreferencesToDocument(preferences: EntitySurfacePrefe
   root.dataset.entitySurfaceLongPress = preferences.longPressMode;
   root.dataset.entitySurfaceMotion = preferences.motionPreset;
   root.dataset.entitySurfaceReducedMotion = preferences.reducedMotion ? "true" : "false";
+  root.style.setProperty("--entity-surface-custom-color", preferences.customColorHex);
+  root.style.setProperty("--entity-surface-custom-soft", `${preferences.customColorHex}18`);
+  root.style.setProperty("--entity-surface-custom-strong", `${preferences.customColorHex}5c`);
+  root.style.setProperty("--entity-surface-custom-ring", `${preferences.customColorHex}66`);
 }
 
 export function EntitySurfaceProvider({ children }: EntitySurfaceProviderProps) {
@@ -135,6 +153,22 @@ export function EntitySurfaceProvider({ children }: EntitySurfaceProviderProps) 
 
   const setRichness = (value: EntitySurfaceRichness) => {
     setPreferences((current) => ({ ...current, richness: value }));
+  };
+
+  const setShowExtendedDetailsInCards = (value: boolean) => {
+    setPreferences((current) => ({ ...current, showExtendedDetailsInCards: value }));
+  };
+
+  const setColorMode = (value: EntitySurfaceColorMode) => {
+    setPreferences((current) => ({ ...current, colorMode: value }));
+  };
+
+  const setCustomColorHex = (value: string) => {
+    if (!/^#[0-9a-fA-F]{6}$/.test(value)) {
+      return;
+    }
+
+    setPreferences((current) => ({ ...current, customColorHex: value, colorMode: "custom" }));
   };
 
   const setVisualStyle = (value: EntitySurfaceVisualStyle) => {
@@ -185,6 +219,9 @@ export function EntitySurfaceProvider({ children }: EntitySurfaceProviderProps) 
       defaultViewMode: preferences.defaultViewMode,
       density: preferences.density,
       richness: preferences.richness,
+      showExtendedDetailsInCards: preferences.showExtendedDetailsInCards,
+      colorMode: preferences.colorMode,
+      customColorHex: preferences.customColorHex,
       visualStyle: preferences.visualStyle,
       effectsPreset: preferences.effectsPreset,
       shapePreset: preferences.shapePreset,
@@ -197,6 +234,7 @@ export function EntitySurfaceProvider({ children }: EntitySurfaceProviderProps) 
       viewModeOptions: ENTITY_SURFACE_VIEW_MODE_OPTIONS,
       densityOptions: ENTITY_SURFACE_DENSITY_OPTIONS,
       richnessOptions: ENTITY_SURFACE_RICHNESS_OPTIONS,
+      colorOptions: ENTITY_SURFACE_COLOR_OPTIONS,
       visualStyleOptions: ENTITY_SURFACE_VISUAL_STYLE_OPTIONS,
       effectsOptions: ENTITY_SURFACE_EFFECTS_OPTIONS,
       shapeOptions: ENTITY_SURFACE_SHAPE_OPTIONS,
@@ -208,6 +246,9 @@ export function EntitySurfaceProvider({ children }: EntitySurfaceProviderProps) 
       setDefaultViewMode,
       setDensity,
       setRichness,
+      setShowExtendedDetailsInCards,
+      setColorMode,
+      setCustomColorHex,
       setVisualStyle,
       setEffectsPreset,
       setShapePreset,

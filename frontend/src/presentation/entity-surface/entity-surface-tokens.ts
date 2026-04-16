@@ -1,6 +1,8 @@
 "use client";
 
+import { cn } from "@/lib/utils";
 import type {
+  EntitySurfaceColorMode,
   EntitySurfaceDensity,
   EntitySurfaceEffectsPreset,
   EntitySurfaceInlineActionsMode,
@@ -14,9 +16,11 @@ import type {
 type EntitySurfaceTokenInput = {
   density: EntitySurfaceDensity;
   richness: EntitySurfaceRichness;
+  colorMode?: EntitySurfaceColorMode;
   visualStyle: EntitySurfaceVisualStyle;
   effectsPreset: EntitySurfaceEffectsPreset;
   shapePreset: EntitySurfaceShapePreset;
+  entityKey?: string;
   viewMode?: EntitySurfaceViewMode;
   inlineActionsMode?: EntitySurfaceInlineActionsMode;
 };
@@ -32,6 +36,7 @@ export type ResolvedEntitySurfaceTokens = {
   descriptionClassName: string;
   fieldTextClassName: string;
   mutedTextClassName: string;
+  avatarToneClassName: string;
   quickActionsContainerClassName: string;
   quickActionSizeClassName: string;
   overlayClassName: string;
@@ -39,8 +44,21 @@ export type ResolvedEntitySurfaceTokens = {
   gridClassName: string;
   focusRingClassName: string;
   longPressScaleClassName: string;
+  accentStripeClassName: string;
+  tintOverlayClassName: string;
   showDescription: boolean;
   maxFields: number;
+};
+
+type ResolvedEntitySurfacePalette = {
+  borderClassName: string;
+  softBackgroundClassName: string;
+  strongBackgroundClassName: string;
+  focusRingClassName: string;
+  stripeClassName: string;
+  accentTextClassName: string;
+  mutedTextClassName: string;
+  fieldTextClassName: string;
 };
 
 function resolveShapeClassName(shapePreset: EntitySurfaceShapePreset): string {
@@ -56,6 +74,7 @@ function resolveShapeClassName(shapePreset: EntitySurfaceShapePreset): string {
 }
 
 function resolveVisualStyleClassName(
+  palette: ResolvedEntitySurfacePalette,
   visualStyle: EntitySurfaceVisualStyle,
   effectsPreset: EntitySurfaceEffectsPreset,
 ): string {
@@ -68,14 +87,102 @@ function resolveVisualStyleClassName(
 
   switch (visualStyle) {
     case "soft":
-      return `border border-white/70 bg-background/80 ${effectClassName} dark:border-white/10 dark:bg-black/25`;
+      return `border ${palette.borderClassName} bg-background/82 ${effectClassName} dark:bg-black/25`;
     case "outline":
-      return `border border-[color:var(--app-accent-strong)]/55 bg-transparent ${effectClassName}`;
+      return `border ${palette.borderClassName} bg-transparent ${effectClassName}`;
     case "solid-soft":
-      return `border border-[color:var(--app-accent-strong)]/45 bg-[color:var(--app-accent-soft)]/55 ${effectClassName}`;
+      return `border ${palette.borderClassName} ${palette.strongBackgroundClassName} ${effectClassName}`;
+    case "transparent":
+      return `border ${palette.borderClassName} bg-transparent ${effectClassName}`;
     case "glass":
     default:
-      return `border border-white/70 bg-white/72 backdrop-blur-xl ${effectClassName} dark:border-white/10 dark:bg-white/[0.05]`;
+      return `border ${palette.borderClassName} bg-white/72 backdrop-blur-xl ${effectClassName} dark:bg-white/[0.05]`;
+  }
+}
+
+export function resolveEntitySurfacePaletteClasses(
+  colorMode: EntitySurfaceColorMode = "system",
+  entityKey?: string,
+): ResolvedEntitySurfacePalette {
+  const systemColorMode: EntitySurfaceColorMode =
+    colorMode === "system"
+      ? entityKey === "guardians"
+        ? "emerald"
+        : entityKey === "student-enrollments"
+          ? "sunset"
+          : "ocean"
+      : colorMode;
+
+  switch (systemColorMode) {
+    case "accent":
+      return {
+        borderClassName: "border-[color:var(--app-accent-strong)]/45 dark:border-[color:var(--app-accent-strong)]/50",
+        softBackgroundClassName: "bg-[color:var(--app-accent-soft)]/16 dark:bg-[color:var(--app-accent-soft)]/14",
+        strongBackgroundClassName: "bg-[color:var(--app-accent-soft)]/58 dark:bg-[color:var(--app-accent-soft)]/24",
+        focusRingClassName: "ring-[color:var(--app-accent-strong)]/70",
+        stripeClassName:
+          "from-[color:var(--app-accent-color)]/12 via-[color:var(--app-accent-color)]/78 to-[color:var(--app-accent-color)]/12",
+        accentTextClassName: "text-[color:var(--app-accent-color)]",
+        mutedTextClassName: "text-[color:var(--app-accent-color)]/78",
+        fieldTextClassName: "text-[color:var(--app-accent-color)]/88",
+      };
+    case "custom":
+      return {
+        borderClassName: "border-[color:var(--entity-surface-custom-strong)]/55 dark:border-[color:var(--entity-surface-custom-strong)]/60",
+        softBackgroundClassName: "bg-[color:var(--entity-surface-custom-soft)]",
+        strongBackgroundClassName: "bg-[color:var(--entity-surface-custom-soft)]/70",
+        focusRingClassName: "ring-[color:var(--entity-surface-custom-ring)]",
+        stripeClassName:
+          "from-[color:var(--entity-surface-custom-color)]/10 via-[color:var(--entity-surface-custom-color)]/80 to-[color:var(--entity-surface-custom-color)]/10",
+        accentTextClassName: "text-[color:var(--entity-surface-custom-color)]",
+        mutedTextClassName: "text-[color:var(--entity-surface-custom-color)]/78",
+        fieldTextClassName: "text-[color:var(--entity-surface-custom-color)]/88",
+      };
+    case "emerald":
+      return {
+        borderClassName: "border-emerald-500/28 dark:border-emerald-400/32",
+        softBackgroundClassName: "bg-emerald-500/10 dark:bg-emerald-400/10",
+        strongBackgroundClassName: "bg-emerald-500/14 dark:bg-emerald-400/14",
+        focusRingClassName: "ring-emerald-500/55 dark:ring-emerald-400/55",
+        stripeClassName: "from-emerald-400/20 via-emerald-500/85 to-emerald-400/20",
+        accentTextClassName: "text-emerald-700 dark:text-emerald-300",
+        mutedTextClassName: "text-emerald-700/80 dark:text-emerald-300/80",
+        fieldTextClassName: "text-emerald-800/90 dark:text-emerald-200/88",
+      };
+    case "sunset":
+      return {
+        borderClassName: "border-amber-500/28 dark:border-orange-400/32",
+        softBackgroundClassName: "bg-amber-500/10 dark:bg-orange-400/10",
+        strongBackgroundClassName: "bg-amber-500/16 dark:bg-orange-400/14",
+        focusRingClassName: "ring-amber-500/55 dark:ring-orange-400/55",
+        stripeClassName: "from-amber-400/20 via-orange-500/85 to-amber-400/20",
+        accentTextClassName: "text-amber-700 dark:text-orange-300",
+        mutedTextClassName: "text-amber-700/80 dark:text-orange-300/80",
+        fieldTextClassName: "text-amber-800/90 dark:text-orange-200/88",
+      };
+    case "berry":
+      return {
+        borderClassName: "border-fuchsia-500/26 dark:border-rose-400/30",
+        softBackgroundClassName: "bg-fuchsia-500/10 dark:bg-rose-400/10",
+        strongBackgroundClassName: "bg-fuchsia-500/15 dark:bg-rose-400/14",
+        focusRingClassName: "ring-fuchsia-500/55 dark:ring-rose-400/55",
+        stripeClassName: "from-fuchsia-400/20 via-rose-500/85 to-fuchsia-400/20",
+        accentTextClassName: "text-fuchsia-700 dark:text-rose-300",
+        mutedTextClassName: "text-fuchsia-700/80 dark:text-rose-300/80",
+        fieldTextClassName: "text-fuchsia-800/90 dark:text-rose-200/88",
+      };
+    case "ocean":
+    default:
+      return {
+        borderClassName: "border-sky-500/26 dark:border-cyan-400/30",
+        softBackgroundClassName: "bg-sky-500/10 dark:bg-cyan-400/10",
+        strongBackgroundClassName: "bg-sky-500/14 dark:bg-cyan-400/14",
+        focusRingClassName: "ring-sky-500/55 dark:ring-cyan-400/55",
+        stripeClassName: "from-sky-400/20 via-cyan-500/85 to-sky-400/20",
+        accentTextClassName: "text-sky-700 dark:text-cyan-300",
+        mutedTextClassName: "text-sky-700/80 dark:text-cyan-300/80",
+        fieldTextClassName: "text-sky-800/90 dark:text-cyan-200/88",
+      };
   }
 }
 
@@ -85,13 +192,13 @@ function resolvePaddingClassName(
 ): string {
   if (viewMode === "dense-row") {
     return density === "compact"
-      ? "px-3 py-2.5"
+      ? "px-2.75 py-2"
       : density === "comfortable"
-        ? "px-4 py-3.5"
-        : "px-3.5 py-3";
+        ? "px-3.5 py-2.75"
+        : "px-3 py-2.35";
   }
 
-  return density === "compact" ? "p-3" : density === "comfortable" ? "p-5" : "p-4";
+  return density === "compact" ? "p-2.75" : density === "comfortable" ? "p-4" : "p-3.25";
 }
 
 function resolveAvatarSizeClassName(
@@ -100,17 +207,17 @@ function resolveAvatarSizeClassName(
 ): string {
   if (viewMode === "smart-card") {
     return density === "compact"
-      ? "h-14 w-14"
+      ? "h-12 w-12"
       : density === "comfortable"
-        ? "h-20 w-20"
-        : "h-16 w-16";
+        ? "h-16 w-16"
+        : "h-14 w-14";
   }
 
   if (viewMode === "dense-row") {
-    return density === "comfortable" ? "h-12 w-12" : "h-10 w-10";
+    return density === "comfortable" ? "h-10 w-10" : "h-8.5 w-8.5";
   }
 
-  return density === "compact" ? "h-11 w-11" : density === "comfortable" ? "h-14 w-14" : "h-12 w-12";
+  return density === "compact" ? "h-9 w-9" : density === "comfortable" ? "h-11 w-11" : "h-10 w-10";
 }
 
 function resolveGridClassName(viewMode: EntitySurfaceViewMode): string {
@@ -128,34 +235,51 @@ export function resolveEntitySurfaceTokens(input: EntitySurfaceTokenInput): Reso
   const {
     density,
     richness,
+    colorMode = "system",
     visualStyle,
     effectsPreset,
     shapePreset,
+    entityKey,
     viewMode = "list",
     inlineActionsMode = "always",
   } = input;
+  const palette = resolveEntitySurfacePaletteClasses(colorMode, entityKey);
   const shapeClassName = resolveShapeClassName(shapePreset);
-  const visualStyleClassName = resolveVisualStyleClassName(visualStyle, effectsPreset);
+  const visualStyleClassName = resolveVisualStyleClassName(
+    palette,
+    visualStyle,
+    effectsPreset,
+  );
   const showDescription = richness !== "minimal" && viewMode !== "dense-row";
   const maxFields = richness === "minimal" ? 2 : richness === "rich" ? 4 : 3;
   const quickActionSizeClassName =
-    density === "compact" ? "h-8 rounded-xl px-2.5 text-[11px]" : "h-9 rounded-2xl px-3 text-xs";
+    density === "compact" ? "h-7 rounded-full px-2 text-[11px]" : "h-8 rounded-full px-2.5 text-xs";
+  const usesTransparentStyle = visualStyle === "transparent";
 
   return {
     containerClassName: `${shapeClassName} ${visualStyleClassName} relative overflow-hidden text-slate-900 transition-all duration-300 dark:text-white`,
-    elevatedContainerClassName: `${shapeClassName} ${visualStyleClassName} relative overflow-hidden text-slate-900 ring-1 ring-[color:var(--app-accent-strong)]/70 transition-all duration-300 dark:text-white`,
+    elevatedContainerClassName: `${shapeClassName} ${visualStyleClassName} relative overflow-hidden text-slate-900 ring-1 ${palette.focusRingClassName} transition-all duration-300 dark:text-white`,
     contentGapClassName:
       density === "compact" ? "gap-2" : density === "comfortable" ? "gap-4" : "gap-3",
     paddingClassName: resolvePaddingClassName(density, viewMode),
     avatarSizeClassName: resolveAvatarSizeClassName(density, viewMode),
     titleClassName:
       viewMode === "smart-card"
-        ? "text-sm font-extrabold sm:text-base"
-        : "text-sm font-bold sm:text-[15px]",
-    subtitleClassName: "text-[11px] text-slate-500 dark:text-white/55",
-    descriptionClassName: "text-[11px] leading-5 text-slate-600 dark:text-white/65",
-    fieldTextClassName: "text-[11px] leading-5 text-slate-700 dark:text-white/75",
-    mutedTextClassName: "text-[11px] text-slate-500 dark:text-white/50",
+        ? cn("text-sm font-extrabold sm:text-base", usesTransparentStyle ? palette.accentTextClassName : "")
+        : cn("text-sm font-bold sm:text-[15px]", usesTransparentStyle ? palette.accentTextClassName : ""),
+    subtitleClassName: usesTransparentStyle
+      ? `text-[11px] ${palette.mutedTextClassName}`
+      : "text-[11px] text-slate-500 dark:text-white/55",
+    descriptionClassName: usesTransparentStyle
+      ? `text-[11px] leading-5 ${palette.fieldTextClassName}`
+      : "text-[11px] leading-5 text-slate-600 dark:text-white/65",
+    fieldTextClassName: usesTransparentStyle
+      ? `text-[11px] leading-5 ${palette.fieldTextClassName}`
+      : "text-[11px] leading-5 text-slate-700 dark:text-white/75",
+    mutedTextClassName: usesTransparentStyle
+      ? `text-[11px] ${palette.mutedTextClassName}`
+      : "text-[11px] text-slate-500 dark:text-white/50",
+    avatarToneClassName: palette.accentTextClassName,
     quickActionsContainerClassName:
       inlineActionsMode === "hover"
         ? "flex flex-wrap items-center gap-2 opacity-90 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
@@ -172,13 +296,15 @@ export function resolveEntitySurfaceTokens(input: EntitySurfaceTokenInput): Reso
         ? "shadow-[0_40px_110px_-30px_rgba(15,23,42,0.6)]"
         : "shadow-[0_30px_90px_-36px_rgba(15,23,42,0.45)]",
     gridClassName: resolveGridClassName(viewMode),
-    focusRingClassName: "ring-1 ring-[color:var(--app-accent-strong)]/70",
+    focusRingClassName: `ring-1 ${palette.focusRingClassName}`,
     longPressScaleClassName:
       effectsPreset === "subtle"
         ? "scale-[1.01]"
         : effectsPreset === "rich"
           ? "scale-[1.03]"
           : "scale-[1.02]",
+    accentStripeClassName: palette.stripeClassName,
+    tintOverlayClassName: palette.softBackgroundClassName,
     showDescription,
     maxFields,
   };

@@ -23,15 +23,15 @@ import {
 } from "@/lib/i18n/ar";
 import type { StudentListItem } from "@/lib/api/client";
 
-export const STUDENT_SUMMARY_PERMISSION_CODES = ["students.read", "students.read.summary"] as const;
-export const STUDENT_DETAILS_PERMISSION_CODES = ["students.read", "students.read.details"] as const;
+export const STUDENT_SUMMARY_PERMISSION_CODES = ["students.read.summary"] as const;
+export const STUDENT_DETAILS_PERMISSION_CODES = ["students.read.details"] as const;
 export const STUDENT_QUICK_ACTION_PERMISSION_CODES = [
+  "students.read.details",
   "students.quick-actions.use",
   "students.update",
   "students.delete",
 ] as const;
 export const STUDENT_SENSITIVE_PERMISSION_CODES = [
-  "students.read",
   "students.fields.sensitive",
 ] as const;
 

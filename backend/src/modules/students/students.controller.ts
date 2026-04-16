@@ -75,7 +75,7 @@ export class StudentsController {
   }
 
   @Get(':id')
-  @RequireAnyPermissions('students.read', 'students.read.details')
+  @RequirePermissions('students.read.details')
   @ApiOperation({ summary: 'Get student by ID' })
   findOne(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.studentsService.findOne(id, user.userId);

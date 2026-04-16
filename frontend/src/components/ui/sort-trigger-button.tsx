@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Filter } from "lucide-react";
+import { ArrowUpDown } from "lucide-react";
 import { ToolbarTriggerButton } from "@/components/ui/toolbar-trigger-button";
 
-type FilterTriggerButtonProps = Omit<
+type SortTriggerButtonProps = Omit<
   React.ButtonHTMLAttributes<HTMLButtonElement>,
   "children"
 > & {
@@ -13,17 +13,19 @@ type FilterTriggerButtonProps = Omit<
   icon?: React.ReactNode;
 };
 
-export function FilterTriggerButton({
+export function SortTriggerButton({
   count = 0,
-  label = "فلترة",
+  label = "فرز",
   icon,
   ...props
-}: FilterTriggerButtonProps) {
+}: SortTriggerButtonProps) {
   return (
     <ToolbarTriggerButton
       label={label}
-      icon={icon ?? <Filter className="h-4 w-4" />}
+      icon={icon ?? <ArrowUpDown className="h-4 w-4" />}
       count={count}
+      hideLabelOnMobile
+      hideCountOnMobile
       {...props}
     />
   );

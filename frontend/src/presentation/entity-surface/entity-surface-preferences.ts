@@ -2,6 +2,7 @@
 
 import type {
   EntitySurfaceAvatarMode,
+  EntitySurfaceColorMode,
   EntitySurfaceDensity,
   EntitySurfaceDetailsOpenMode,
   EntitySurfaceEffectsPreset,
@@ -16,13 +17,16 @@ import type {
   EntitySurfaceVisualStyle,
 } from "@/presentation/entity-surface/entity-surface-types";
 
-const STORAGE_VERSION = 1;
-const STORAGE_KEY = "school-erp.entity-surface.v1";
+const STORAGE_VERSION = 4;
+const STORAGE_KEY = "school-erp.entity-surface.v4";
 
 export const DEFAULT_ENTITY_SURFACE_PREFERENCES: EntitySurfacePreferences = {
   defaultViewMode: "list",
   density: "balanced",
   richness: "balanced",
+  showExtendedDetailsInCards: false,
+  colorMode: "system",
+  customColorHex: "#0ea5e9",
   visualStyle: "glass",
   effectsPreset: "balanced",
   shapePreset: "rounded",
@@ -93,6 +97,44 @@ export const ENTITY_SURFACE_RICHNESS_OPTIONS: EntitySurfaceOption<EntitySurfaceR
   },
 ];
 
+export const ENTITY_SURFACE_COLOR_OPTIONS: EntitySurfaceOption<EntitySurfaceColorMode>[] = [
+  {
+    value: "system",
+    label: "حسب النظام",
+    description: "لون مخصص لكل نظام مثل الطلاب والرسائل والقيود.",
+  },
+  {
+    value: "accent",
+    label: "ألوان التطبيق",
+    description: "يعتمد لون التمييز الرئيسي الحالي للتطبيق.",
+  },
+  {
+    value: "custom",
+    label: "لون مخصص",
+    description: "تختار اللون يدويًا مثل ثيم النظام المخصص.",
+  },
+  {
+    value: "ocean",
+    label: "أزرق هادئ",
+    description: "ألوان بحرية أنيقة وواضحة في الليل والنهار.",
+  },
+  {
+    value: "emerald",
+    label: "أخضر",
+    description: "ألوان ثابتة مناسبة للبطاقات الإدارية الهادئة.",
+  },
+  {
+    value: "sunset",
+    label: "برتقالي",
+    description: "هوية أكثر دفئًا وحضورًا للمحتوى البصري.",
+  },
+  {
+    value: "berry",
+    label: "توتي",
+    description: "أسلوب أنعم بحضور لوني أوضح دون مبالغة.",
+  },
+];
+
 export const ENTITY_SURFACE_VISUAL_STYLE_OPTIONS: EntitySurfaceOption<EntitySurfaceVisualStyle>[] =
   [
     {
@@ -114,6 +156,11 @@ export const ENTITY_SURFACE_VISUAL_STYLE_OPTIONS: EntitySurfaceOption<EntitySurf
       value: "solid-soft",
       label: "ممتلئ ناعم",
       description: "حضور أقوى بدون صلابة مزعجة.",
+    },
+    {
+      value: "transparent",
+      label: "شفاف",
+      description: "بطاقة شفافة مع اعتماد اللون على الأيقونات والنصوص والأزرار.",
     },
   ];
 
@@ -294,6 +341,10 @@ function isRichness(value: unknown): value is EntitySurfaceRichness {
   return ENTITY_SURFACE_RICHNESS_OPTIONS.some((item) => item.value === value);
 }
 
+function isColorMode(value: unknown): value is EntitySurfaceColorMode {
+  return ENTITY_SURFACE_COLOR_OPTIONS.some((item) => item.value === value);
+}
+
 function isVisualStyle(value: unknown): value is EntitySurfaceVisualStyle {
   return ENTITY_SURFACE_VISUAL_STYLE_OPTIONS.some((item) => item.value === value);
 }
@@ -337,6 +388,17 @@ function normalizePreferences(input: Partial<EntitySurfacePreferences> | undefin
     richness: isRichness(input?.richness)
       ? input.richness
       : DEFAULT_ENTITY_SURFACE_PREFERENCES.richness,
+    showExtendedDetailsInCards:
+      typeof input?.showExtendedDetailsInCards === "boolean"
+        ? input.showExtendedDetailsInCards
+        : DEFAULT_ENTITY_SURFACE_PREFERENCES.showExtendedDetailsInCards,
+    colorMode: isColorMode(input?.colorMode)
+      ? input.colorMode
+      : DEFAULT_ENTITY_SURFACE_PREFERENCES.colorMode,
+    customColorHex:
+      typeof input?.customColorHex === "string" && /^#[0-9a-fA-F]{6}$/.test(input.customColorHex)
+        ? input.customColorHex
+        : DEFAULT_ENTITY_SURFACE_PREFERENCES.customColorHex,
     visualStyle: isVisualStyle(input?.visualStyle)
       ? input.visualStyle
       : DEFAULT_ENTITY_SURFACE_PREFERENCES.visualStyle,

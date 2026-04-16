@@ -14,6 +14,7 @@ import {
   Phone,
   MonitorSmartphone,
   Palette,
+  ScanSearch,
   RotateCcw,
   ShieldCheck,
   Smartphone,
@@ -26,7 +27,6 @@ import {
 import { useRouter } from "next/navigation";
 import { startRegistration } from "@simplewebauthn/browser";
 import { ProfileAppearanceSection } from "@/components/layout/profile-appearance-section";
-import { ProfileEntitySurfacePreferences } from "@/components/layout/profile-entity-surface-preferences";
 import { ProfileMessagePreferences } from "@/components/layout/profile-message-preferences";
 import { ProfileNavigationSection } from "@/components/layout/profile-navigation-section";
 import { Button } from "@/components/ui/button";
@@ -559,7 +559,33 @@ export function ProfileWorkspace() {
           open={expandedSections.entitySurface}
           onToggle={() => toggleSection("entitySurface")}
         >
-          <ProfileEntitySurfacePreferences />
+          <div className="space-y-3">
+            <div className="rounded-[1.25rem] border border-white/70 bg-background/78 p-4 dark:border-white/10 dark:bg-white/[0.04]">
+              <div className="flex items-start gap-3">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] border border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]">
+                  <ScanSearch className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1 text-right">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                    إعدادات بطاقات العرض والتفاصيل
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-white/55">
+                    افتح الصفحة المخصصة للتحكم في شكل البطاقات، الألوان، التفاعل، ومعاينة
+                    الصلاحيات قبل تطبيقها على واجهة الطلاب.
+                  </p>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                className="mt-3 h-11 w-full rounded-2xl"
+                onClick={() => router.push("/app/profile/entity-surface")}
+              >
+                <PanelsTopLeft className="h-4 w-4" />
+                فتح إعدادات البطاقات
+              </Button>
+            </div>
+          </div>
         </ProfileSection>
 
         {/* Navigation */}

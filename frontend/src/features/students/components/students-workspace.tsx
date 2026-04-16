@@ -6,6 +6,7 @@ import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   ArrowUpRight,
   CalendarDays,
+  Eye,
   HeartPulse,
   LoaderCircle,
   PencilLine,
@@ -38,9 +39,9 @@ import {
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { Fab } from "@/components/ui/fab";
 import { EntityDetailsShell } from "@/presentation/entity-surface/entity-details-shell";
-import { EntityPresentationToolbar } from "@/presentation/entity-surface/entity-presentation-toolbar";
 import { EntitySurfaceCard } from "@/presentation/entity-surface/entity-surface-card";
 import { EntitySurfaceGrid } from "@/presentation/entity-surface/entity-surface-grid";
+import { EntitySurfaceHeaderActionButton } from "@/presentation/entity-surface/entity-surface-header-action-button";
 import { EntitySurfaceQuickActions } from "@/presentation/entity-surface/entity-surface-quick-actions";
 import { getEntitySurfaceDefinition } from "@/presentation/entity-surface/entity-surface-registry";
 import { EntitySurfaceRow } from "@/presentation/entity-surface/entity-surface-row";
@@ -70,7 +71,6 @@ import { useStudentsQuery } from "@/features/students/hooks/use-students-query";
 import { StudentDetailsContent } from "@/features/students/components/student-details-content";
 import {
   STUDENT_DETAILS_PERMISSION_CODES,
-  STUDENT_QUICK_ACTION_PERMISSION_CODES,
   STUDENT_SENSITIVE_PERMISSION_CODES,
   buildStudentSurfacePreview,
   getStudentDetailsPath,
@@ -246,7 +246,6 @@ export function StudentsWorkspace() {
   const canUpdate = hasPermission("students.update");
   const canDelete = hasPermission("students.delete");
   const canReadDetails = hasAnyPermission([...STUDENT_DETAILS_PERMISSION_CODES]);
-  const canUseQuickActions = hasAnyPermission([...STUDENT_QUICK_ACTION_PERMISSION_CODES]);
   const canReadSensitiveFields = hasAnyPermission([...STUDENT_SENSITIVE_PERMISSION_CODES]);
   const canReadGenders = hasPermission("lookup-genders.read");
   const canReadBloodTypes = hasPermission("lookup-blood-types.read");
@@ -455,6 +454,8 @@ export function StudentsWorkspace() {
     resolvedViewMode,
     studentsSurface.detailsMode ?? "dialog",
   );
+  const showStudentCardDetails =
+    canReadDetails && entitySurface.showExtendedDetailsInCards;
   const usesBlurBackdrop = entitySurface.longPressMode === "enabled-with-blur";
 
   const mutationError =
@@ -894,12 +895,62 @@ export function StudentsWorkspace() {
     },
     [canReadDetails, router, studentDetailsMode],
   );
-  const buildStudentQuickActions = React.useCallback(
-    (student: StudentListItem): EntitySurfaceQuickAction[] => {
-      if (!canUseQuickActions) {
-        return [];
+  const renderStudentHeaderActions = React.useCallback(
+    (student: StudentListItem) => {
+      if (!canReadDetails && !canUpdate && !canDelete) {
+        return null;
       }
 
+      return (
+        <div className="flex items-center gap-1">
+          {canReadDetails ? (
+            <EntitySurfaceHeaderActionButton
+              label="معاينة"
+              icon={<Eye className="h-3.5 w-3.5" />}
+              tone="preview"
+              colorMode={entitySurface.colorMode}
+              entityKey="students"
+              onClick={() => handleOpenStudentDetails(student)}
+            />
+          ) : null}
+
+          {canUpdate ? (
+            <EntitySurfaceHeaderActionButton
+              label="تعديل"
+              icon={<PencilLine className="h-3.5 w-3.5" />}
+              tone="edit"
+              colorMode={entitySurface.colorMode}
+              entityKey="students"
+              disabled={updateMutation.isPending}
+              onClick={() => handleStartEdit(student)}
+            />
+          ) : null}
+
+          {canDelete ? (
+            <EntitySurfaceHeaderActionButton
+              label="حذف"
+              icon={<Trash2 className="h-3.5 w-3.5" />}
+              tone="delete"
+              disabled={deleteMutation.isPending}
+              onClick={() => handleDelete(student)}
+            />
+          ) : null}
+        </div>
+      );
+    },
+    [
+      canReadDetails,
+      canDelete,
+      canUpdate,
+      deleteMutation.isPending,
+      handleOpenStudentDetails,
+      handleStartEdit,
+      handleDelete,
+      updateMutation.isPending,
+    ],
+  );
+  const buildStudentQuickActions = React.useCallback(
+    (student: StudentListItem): EntitySurfaceQuickAction[] => {
       const actions: EntitySurfaceQuickAction[] = [];
 
       if (canReadDetails) {
@@ -954,7 +1005,6 @@ export function StudentsWorkspace() {
       canDelete,
       canReadDetails,
       canUpdate,
-      canUseQuickActions,
       deleteMutation.isPending,
       handleOpenStudentDetails,
       studentDetailsMode,
@@ -1015,18 +1065,6 @@ export function StudentsWorkspace() {
           searchPlaceholder="بحث بالاسم أو رقم الطالب..."
           filterCount={activeFiltersCount}
           onFilterClick={() => setIsFilterOpen((prev) => !prev)}
-        />
-
-        <EntityPresentationToolbar
-          viewMode={resolvedViewMode}
-          onViewModeChange={entitySurface.setDefaultViewMode}
-          density={entitySurface.density}
-          onDensityChange={entitySurface.setDensity}
-          avatarMode={entitySurface.avatarMode}
-          onAvatarModeChange={entitySurface.setAvatarMode}
-          inlineActionsMode={entitySurface.inlineActionsMode}
-          onInlineActionsModeChange={entitySurface.setInlineActionsMode}
-          allowedViewModes={studentsSurface.allowedViewModes ?? ["list", "smart-card", "grid", "dense-row"]}
         />
 
         <FilterDrawer
@@ -1189,18 +1227,20 @@ export function StudentsWorkspace() {
                 viewMode={resolvedViewMode}
                 density={entitySurface.density}
                 richness={entitySurface.richness}
+                colorMode={entitySurface.colorMode}
                 visualStyle={entitySurface.visualStyle}
                 effectsPreset={entitySurface.effectsPreset}
                 shapePreset={entitySurface.shapePreset}
+                entityKey="students"
                 inlineActionsMode={entitySurface.inlineActionsMode}
               >
                 {students.map((student) => {
                   const preview =
                     studentsSurface.buildPreview?.(student) ?? buildStudentSurfacePreview(student);
-                  const quickActions = buildStudentQuickActions(student);
-                  const visibleQuickActions = quickActions.length > 0 ? quickActions : undefined;
+                  const contextQuickActions = buildStudentQuickActions(student);
+                  const headerActions = renderStudentHeaderActions(student);
                   const canOpenContext =
-                    entitySurface.longPressMode !== "disabled" && quickActions.length > 0;
+                    entitySurface.longPressMode !== "disabled" && contextQuickActions.length > 0;
                   const handleCardClick = canReadDetails
                     ? () => handleOpenStudentDetails(student)
                     : undefined;
@@ -1210,22 +1250,23 @@ export function StudentsWorkspace() {
                       <EntitySurfaceRow
                         key={student.id}
                         title={preview.title}
-                        subtitle={preview.subtitle}
-                        meta={preview.meta ?? preview.description}
+                        subtitle={showStudentCardDetails ? preview.subtitle : undefined}
+                        meta={showStudentCardDetails ? preview.meta : undefined}
                         avatar={preview.avatar}
-                        statusChips={getStudentStatusChips(student)}
-                        quickActions={visibleQuickActions}
+                        headerActions={headerActions}
+                        statusChips={showStudentCardDetails ? preview.statusChips : undefined}
                         density={entitySurface.density}
                         richness={entitySurface.richness}
+                        colorMode={entitySurface.colorMode}
                         visualStyle={entitySurface.visualStyle}
                         effectsPreset={entitySurface.effectsPreset}
                         shapePreset={entitySurface.shapePreset}
+                        entityKey="students"
                         inlineActionsMode={entitySurface.inlineActionsMode}
                         motionPreset={entitySurface.motionPreset}
                         reducedMotion={entitySurface.reducedMotion}
                         longPressMode={entitySurface.longPressMode}
                         avatarMode={entitySurface.avatarMode}
-                        detailsAffordance={canReadDetails}
                         contextOpen={contextStudentId === student.id}
                         onClick={handleCardClick}
                         onLongPress={() => {
@@ -1242,24 +1283,25 @@ export function StudentsWorkspace() {
                     <EntitySurfaceCard
                       key={student.id}
                       title={preview.title}
-                      subtitle={preview.subtitle}
-                      description={preview.description}
+                      subtitle={showStudentCardDetails ? preview.subtitle : undefined}
+                      description={showStudentCardDetails ? preview.description : undefined}
                       avatar={preview.avatar}
-                      fields={preview.fields}
-                      statusChips={getStudentStatusChips(student)}
-                      quickActions={visibleQuickActions}
+                      headerActions={headerActions}
+                      fields={showStudentCardDetails ? preview.fields : undefined}
+                      statusChips={showStudentCardDetails ? preview.statusChips : undefined}
                       viewMode={resolvedViewMode}
                       density={entitySurface.density}
                       richness={entitySurface.richness}
+                      colorMode={entitySurface.colorMode}
                       visualStyle={entitySurface.visualStyle}
                       effectsPreset={entitySurface.effectsPreset}
                       shapePreset={entitySurface.shapePreset}
+                      entityKey="students"
                       inlineActionsMode={entitySurface.inlineActionsMode}
                       motionPreset={entitySurface.motionPreset}
                       reducedMotion={entitySurface.reducedMotion}
                       longPressMode={entitySurface.longPressMode}
                       avatarMode={entitySurface.avatarMode}
-                      detailsAffordance={canReadDetails}
                       contextOpen={contextStudentId === student.id}
                       onClick={handleCardClick}
                       onLongPress={() => {

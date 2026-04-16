@@ -22,6 +22,7 @@ type ManagementToolbarProps = {
   actionsClassName?: string;
   filterButtonClassName?: string;
   filterButtonTestId?: string;
+  beforeFilterActions?: React.ReactNode;
   actions?: React.ReactNode;
 };
 
@@ -39,6 +40,7 @@ export function ManagementToolbar({
   actionsClassName,
   filterButtonClassName,
   filterButtonTestId,
+  beforeFilterActions,
   actions,
 }: ManagementToolbarProps) {
   return (
@@ -68,6 +70,7 @@ export function ManagementToolbar({
           />
         </div>
         <div className={cn("flex shrink-0 items-center gap-2", actionsClassName)}>
+          {beforeFilterActions}
           {showFilterButton ? (
             <FilterTriggerButton
               count={filterCount}

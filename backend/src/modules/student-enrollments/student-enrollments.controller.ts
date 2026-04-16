@@ -74,6 +74,12 @@ export class StudentEnrollmentsController {
     enum: EnrollmentDistributionStatus,
   })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
+  @ApiQuery({ name: 'sortBy', required: false, type: String })
+  @ApiQuery({
+    name: 'sortDirection',
+    required: false,
+    type: String,
+  })
   findAll(@Query() query: ListStudentEnrollmentsDto) {
     return this.studentEnrollmentsService.findAll(query);
   }

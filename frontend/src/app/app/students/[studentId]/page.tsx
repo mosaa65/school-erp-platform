@@ -9,7 +9,7 @@ type StudentDetailsPageProps = {
 
 export default function StudentDetailsPage({ params }: StudentDetailsPageProps) {
   return (
-    <PermissionGuard requiredAnyPermission={["students.read", "students.read.details"]}>
+    <PermissionGuard requiredAnyPermission={["students.read.details"]}>
       <StudentDetailsPageClient studentId={params.studentId} />
     </PermissionGuard>
   );

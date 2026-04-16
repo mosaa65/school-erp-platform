@@ -51,17 +51,24 @@ export function EntitySurfaceAvatar({
 
   const fallbackText = buildFallbackText(avatar?.fallback ?? avatar?.alt);
   const colorSeed = avatar?.colorSeed ?? avatar?.fallback ?? avatar?.alt ?? fallbackText;
-  const backgroundColor = stringToColor(colorSeed);
+  const accentColor = stringToColor(colorSeed);
   const shouldShowImage = mode === "auto" && Boolean(avatar?.src);
+  const fallbackStyle = !shouldShowImage && !avatar?.icon
+    ? {
+        color: accentColor,
+        borderColor: `${accentColor}40`,
+        backgroundColor: "transparent",
+      }
+    : undefined;
 
   return (
     <span
       className={cn(
-        "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-[1.25rem] border border-white/70 bg-white text-white shadow-[0_16px_36px_-24px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-white/[0.08]",
+        "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/8 bg-transparent text-current shadow-none dark:border-white/10 dark:bg-transparent",
         sizeClassName,
         className,
       )}
-      style={!shouldShowImage ? { backgroundColor } : undefined}
+      style={fallbackStyle}
       aria-hidden="true"
     >
       {shouldShowImage ? (
@@ -71,11 +78,13 @@ export function EntitySurfaceAvatar({
           className="h-full w-full object-cover"
         />
       ) : avatar?.icon ? (
-        <span className="flex h-full w-full items-center justify-center text-white">
+        <span className="flex h-full w-full items-center justify-center text-current">
           {avatar.icon}
         </span>
       ) : (
-        <span className="text-xs font-extrabold tracking-[0.08em] text-white">{fallbackText}</span>
+        <span className="text-[11px] font-extrabold tracking-[0.08em] text-current">
+          {fallbackText}
+        </span>
       )}
     </span>
   );

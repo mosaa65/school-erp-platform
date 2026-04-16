@@ -159,8 +159,17 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 function categorizeAction(actionCode: string) {
-  if (["create", "read", "update", "delete"].includes(actionCode)) return actionCode;
+  const baseAction = actionCode.split(".", 1)[0];
+  if (["create", "read", "update", "delete"].includes(baseAction)) return baseAction;
   return "manage";
+}
+
+function getPermissionActionCode(permissionCode: string) {
+  return permissionCode.split(".").slice(1).join(".");
+}
+
+function getActionToneKey(actionCode: string) {
+  return actionCode.split(".", 1)[0];
 }
 
 function getActionStyles(actionPart: string, isSelected: boolean) {
@@ -227,8 +236,8 @@ export function PermissionsSelector({
       const cat = RESOURCE_CATEGORIES[resource] || "settings";
       if (categoryFilter !== "all" && cat !== categoryFilter) continue;
 
-      const [, actionPart] = p.code.split(".", 2);
-      const actionCat = categorizeAction(actionPart);
+      const actionCode = getPermissionActionCode(p.code);
+      const actionCat = categorizeAction(actionCode);
       if (actionFilter !== "all" && actionCat !== actionFilter) continue;
 
       const list = map.get(resource) ?? [];
@@ -587,9 +596,9 @@ export function PermissionsSelector({
                      <div className="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-2 sm:gap-3">
                        {group.permissions.map((p) => {
                          const isSelected = selectedIds.includes(p.id);
-                         const [, actionPart] = p.code.split(".", 2);
-                         const actionLabel = PERMISSION_ACTION_LABELS[actionPart] ?? actionPart;
-                         const colorStyles = getActionStyles(actionPart, isSelected);
+                         const actionCode = getPermissionActionCode(p.code);
+                         const actionLabel = PERMISSION_ACTION_LABELS[actionCode] ?? actionCode;
+                         const colorStyles = getActionStyles(getActionToneKey(actionCode), isSelected);
 
                          return (
                            <button
