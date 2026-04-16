@@ -10,10 +10,11 @@ import {
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   icon?: React.ReactNode;
+  containerClassName?: string;
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, icon, ...props }, ref) => {
+  ({ className, containerClassName, type, icon, ...props }, ref) => {
     const resolvedIcon =
       icon ?? (props.required ? <Asterisk className="text-rose-500" /> : null);
     const renderedIcon =
@@ -28,7 +29,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         : resolvedIcon;
 
     return (
-      <div className="group relative w-full min-w-0 overflow-hidden">
+      <div className={cn("group relative w-full min-w-0 overflow-hidden", containerClassName)}>
         {renderedIcon ? (
           <div
             className={cn(

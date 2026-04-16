@@ -104,6 +104,11 @@ type ParsedAuditDetails = {
   technicalExtras?: Record<string, unknown>;
 };
 
+type RollbackEligibility = {
+  eligible: boolean;
+  reason?: string;
+};
+
 const PAGE_SIZE = 15;
 const RETENTION_MIN_DAYS_FALLBACK = 7;
 const RETENTION_MAX_DAYS_FALLBACK = 3650;
@@ -615,6 +620,40 @@ function getTimelineMeta(log: AuditLogListItem) {
   };
 }
 
+function getTimelineRollbackEligibility(item: AuditLogTimelineItem): RollbackEligibility {
+  if (item.status !== "SUCCESS") {
+    return {
+      eligible: false,
+      reason: "لا يمكن التراجع عن عملية فاشلة.",
+    };
+  }
+
+  const normalizedAction = item.action.trim().toUpperCase();
+  const actionVerb = inferActionVerb(item.action);
+  if (
+    actionVerb === "FAILED" ||
+    actionVerb === "FAILURE" ||
+    normalizedAction.endsWith("_FAILED")
+  ) {
+    return {
+      eligible: false,
+      reason: "لا يمكن التراجع عن عملية موسومة بالفشل.",
+    };
+  }
+
+  if (isRecord(item.details) && isRecord(item.details.rollback)) {
+    const rollbackRecord = item.details.rollback;
+    if (rollbackRecord.eligible === false) {
+      return {
+        eligible: false,
+        reason: "هذا التغيير معلّم كغير قابل للتراجع.",
+      };
+    }
+  }
+
+  return { eligible: true };
+}
+
 function getErrorText(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message.trim()) {
     return error.message;
@@ -801,6 +840,14 @@ export function AuditLogsWorkspace() {
     () => rollbackTimelineQuery.data?.data ?? [],
     [rollbackTimelineQuery.data?.data],
   );
+  const rollbackTimelineItemsWithEligibility = React.useMemo(
+    () =>
+      rollbackTimelineItems.map((item) => ({
+        item,
+        eligibility: getTimelineRollbackEligibility(item),
+      })),
+    [rollbackTimelineItems],
+  );
 
   React.useEffect(() => {
     if (!rollbackLogId) {
@@ -811,11 +858,18 @@ export function AuditLogsWorkspace() {
       return;
     }
 
-    const initialTargetId = rollbackTimelineItems[1]?.id ?? rollbackTimelineItems[0]?.id;
+    const preferredPreviousId =
+      rollbackTimelineItemsWithEligibility[1]?.eligibility.eligible
+        ? rollbackTimelineItemsWithEligibility[1]?.item.id
+        : undefined;
+    const firstEligibleId = rollbackTimelineItemsWithEligibility.find(
+      (entry) => entry.eligibility.eligible,
+    )?.item.id;
+    const initialTargetId = preferredPreviousId ?? firstEligibleId;
     if (initialTargetId) {
       setSelectedRollbackTargetId(initialTargetId);
     }
-  }, [rollbackLogId, rollbackTimelineItems, selectedRollbackTargetId]);
+  }, [rollbackLogId, rollbackTimelineItemsWithEligibility, selectedRollbackTargetId]);
 
   React.useEffect(() => {
     if (!isRetentionPolicyOpen) {
@@ -854,12 +908,23 @@ export function AuditLogsWorkspace() {
   );
   const contextMethod = readContextValue(parsedDetails.requestContext, "method");
   const contextPath = readContextValue(parsedDetails.requestContext, "path");
-  const previousRollbackItem = rollbackTimelineItems[1] ?? null;
-  const selectedRollbackItem = React.useMemo(
+  const previousRollbackEntry = rollbackTimelineItemsWithEligibility[1] ?? null;
+  const previousRollbackItem = previousRollbackEntry?.item ?? null;
+  const previousRollbackEligibility = previousRollbackEntry?.eligibility ?? null;
+  const selectedRollbackEntry = React.useMemo(
     () =>
-      rollbackTimelineItems.find((item) => item.id === selectedRollbackTargetId) ??
-      null,
-    [rollbackTimelineItems, selectedRollbackTargetId],
+      rollbackTimelineItemsWithEligibility.find(
+        (entry) => entry.item.id === selectedRollbackTargetId,
+      ) ?? null,
+    [rollbackTimelineItemsWithEligibility, selectedRollbackTargetId],
+  );
+  const selectedRollbackItem = selectedRollbackEntry?.item ?? null;
+  const selectedRollbackEligibility = selectedRollbackEntry?.eligibility ?? null;
+  const eligibleRollbackItemsCount = React.useMemo(
+    () =>
+      rollbackTimelineItemsWithEligibility.filter((entry) => entry.eligibility.eligible)
+        .length,
+    [rollbackTimelineItemsWithEligibility],
   );
 
   const applyFilters = () => {
@@ -915,10 +980,40 @@ export function AuditLogsWorkspace() {
       return;
     }
 
+    if (mode === "PREVIOUS") {
+      if (!previousRollbackItem) {
+        setRollbackFeedback({
+          type: "error",
+          message: "لا يوجد تغيير سابق متاح للتراجع.",
+        });
+        return;
+      }
+
+      if (!previousRollbackEligibility?.eligible) {
+        setRollbackFeedback({
+          type: "error",
+          message:
+            previousRollbackEligibility?.reason ??
+            "التغيير السابق غير قابل للتراجع.",
+        });
+        return;
+      }
+    }
+
     if (mode === "TARGET" && !selectedRollbackTargetId) {
       setRollbackFeedback({
         type: "error",
         message: "اختر التغيير الذي تريد التراجع إليه أولًا.",
+      });
+      return;
+    }
+
+    if (mode === "TARGET" && !selectedRollbackEligibility?.eligible) {
+      setRollbackFeedback({
+        type: "error",
+        message:
+          selectedRollbackEligibility?.reason ??
+          "التغيير المحدد غير قابل للتراجع.",
       });
       return;
     }
@@ -1854,9 +1949,11 @@ export function AuditLogsWorkspace() {
               </div>
 
               <div className="space-y-2">
-                {rollbackTimelineItems.map((timelineItem) => {
+                {rollbackTimelineItemsWithEligibility.map(({ item: timelineItem, eligibility }) => {
                   const itemDetails = parseAuditDetails(timelineItem.details);
-                  const itemSummary = buildTimelineChangeHint(itemDetails);
+                  const itemSummary = eligibility.eligible
+                    ? buildTimelineChangeHint(itemDetails)
+                    : eligibility.reason ?? "هذا التغيير غير قابل للتراجع.";
                   const isSelected = selectedRollbackTargetId === timelineItem.id;
                   const isLatest = timelineItem.isLatest;
 
@@ -1870,7 +1967,7 @@ export function AuditLogsWorkspace() {
                           ? "border-primary/50 bg-primary/5"
                           : "border-border/70 bg-background/80 hover:border-primary/30"
                       }`}
-                      disabled={rollbackMutation.isPending}
+                      disabled={rollbackMutation.isPending || !eligibility.eligible}
                       data-testid={`audit-log-rollback-option-${timelineItem.id}`}
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1884,6 +1981,9 @@ export function AuditLogsWorkspace() {
                             {timelineItem.status === "SUCCESS" ? "ناجحة" : "فاشلة"}
                           </Badge>
                           {isLatest ? <Badge variant="secondary">الحالة الحالية</Badge> : null}
+                          {!eligibility.eligible ? (
+                            <Badge variant="destructive">غير قابل للتراجع</Badge>
+                          ) : null}
                         </div>
                         <p className="text-xs text-muted-foreground">
                           {formatDateTime(timelineItem.occurredAt)}
@@ -1897,6 +1997,11 @@ export function AuditLogsWorkspace() {
                   );
                 })}
               </div>
+              {eligibleRollbackItemsCount === 0 ? (
+                <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+                  لا توجد تغييرات قابلة للتراجع في آخر 10 تغييرات.
+                </div>
+              ) : null}
             </section>
           ) : null}
 
@@ -1914,7 +2019,11 @@ export function AuditLogsWorkspace() {
               variant="secondary"
               className="gap-1.5"
               onClick={() => void submitRollback("PREVIOUS")}
-              disabled={!previousRollbackItem || rollbackMutation.isPending}
+              disabled={
+                !previousRollbackItem ||
+                !previousRollbackEligibility?.eligible ||
+                rollbackMutation.isPending
+              }
               data-testid="audit-log-rollback-previous"
             >
               <Undo2 className="h-4 w-4" />
@@ -1924,7 +2033,11 @@ export function AuditLogsWorkspace() {
               type="button"
               className="gap-1.5"
               onClick={() => void submitRollback("TARGET")}
-              disabled={!selectedRollbackItem || rollbackMutation.isPending}
+              disabled={
+                !selectedRollbackItem ||
+                !selectedRollbackEligibility?.eligible ||
+                rollbackMutation.isPending
+              }
               data-testid="audit-log-rollback-selected"
             >
               <Undo2 className="h-4 w-4" />

@@ -3371,6 +3371,17 @@ export type EmployeeOrganizationOptionsResponse = {
   }>;
 };
 
+export type EmployeeOptionItem = {
+  id: string;
+  fullName: string;
+  jobNumber: string | null;
+  jobTitle: string | null;
+  isActive: boolean;
+  userAccount: {
+    id: string;
+  } | null;
+};
+
 export type EmployeeTalentListItem = {
   id: string;
   employeeId: string;
@@ -9002,6 +9013,10 @@ export const apiClient = {
         isActive: payload.isActive,
       },
     }),
+  getStudent: (studentId: string) =>
+    request<StudentListItem>(`/students/${studentId}`, "GET", {
+      withAuth: true,
+    }),
   updateStudent: (studentId: string, payload: UpdateStudentPayload) =>
     request<StudentListItem>(`/students/${studentId}`, "PATCH", {
       withAuth: true,
@@ -10356,6 +10371,24 @@ export const apiClient = {
   listEmployeeOrganizationOptions: () =>
     request<EmployeeOrganizationOptionsResponse>(
       "/employees/organization-options",
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  listEmployeeOptions: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<EmployeeOptionItem>>(
+      `/employees/options${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        isActive: query?.isActive,
+      })}`,
       "GET",
       {
         withAuth: true,
