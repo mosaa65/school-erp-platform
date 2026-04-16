@@ -21,10 +21,12 @@ import {
   Trash2,
   UserCircle2,
   LayoutGrid,
+  PanelsTopLeft,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { startRegistration } from "@simplewebauthn/browser";
 import { ProfileAppearanceSection } from "@/components/layout/profile-appearance-section";
+import { ProfileEntitySurfacePreferences } from "@/components/layout/profile-entity-surface-preferences";
 import { ProfileMessagePreferences } from "@/components/layout/profile-message-preferences";
 import { ProfileNavigationSection } from "@/components/layout/profile-navigation-section";
 import { Button } from "@/components/ui/button";
@@ -44,7 +46,7 @@ import { translateRoleCode } from "@/lib/i18n/ar";
 import { findCountryDialCodeOptionByDialCode } from "@/lib/intl/phone";
 import { cn } from "@/lib/utils";
 
-type SectionId = "appearance" | "navigation" | "account" | "security";
+type SectionId = "appearance" | "entitySurface" | "navigation" | "account" | "security";
 type PasswordIdentityMethod = "phone" | "email";
 
 const APP_VERSION_LABEL = "School ERP Web v0.1.0";
@@ -206,6 +208,7 @@ export function ProfileWorkspace() {
   const [credentialName, setCredentialName] = React.useState("");
   const [expandedSections, setExpandedSections] = React.useState<Record<SectionId, boolean>>({
     appearance: false,
+    entitySurface: false,
     navigation: false,
     account: false,
     security: false,
@@ -547,6 +550,16 @@ export function ProfileWorkspace() {
             <RotateCcw className="h-4 w-4" />
             إعادة المظهر
           </Button>
+        </ProfileSection>
+
+        {/* Entity surface */}
+        <ProfileSection
+          title="بطاقات العرض والتفاصيل"
+          icon={PanelsTopLeft}
+          open={expandedSections.entitySurface}
+          onToggle={() => toggleSection("entitySurface")}
+        >
+          <ProfileEntitySurfacePreferences />
         </ProfileSection>
 
         {/* Navigation */}

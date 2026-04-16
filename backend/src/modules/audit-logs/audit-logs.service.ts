@@ -489,7 +489,7 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
       targetAuditLogId: payload.targetAuditLogId,
       timelineItems: timeline.data,
     });
-    this.assertTimelineItemRollbackEligible(targetItem.details);
+    this.assertTimelineItemRollbackEligible(targetItem);
 
     const resourceResolver = this.resolveRollbackResource(timeline.resource);
     const prismaDelegate = (this.prisma as unknown as Record<string, unknown>)[
@@ -1225,8 +1225,28 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
     return null;
   }
 
-  private assertTimelineItemRollbackEligible(details: Prisma.JsonValue | null): void {
-    const detailsRecord = this.toRecord(details);
+  private assertTimelineItemRollbackEligible(
+    timelineItem: Pick<AuditLogTimelineItem, 'status' | 'action' | 'details'>,
+  ): void {
+    if (timelineItem.status !== AuditStatus.SUCCESS) {
+      throw new BadRequestException(
+        'Rollback is not allowed for failed timeline changes.',
+      );
+    }
+
+    const actionVerb = this.extractActionVerb(timelineItem.action);
+    const normalizedAction = timelineItem.action.trim().toUpperCase();
+    if (
+      actionVerb === 'FAILED' ||
+      actionVerb === 'FAILURE' ||
+      normalizedAction.endsWith('_FAILED')
+    ) {
+      throw new BadRequestException(
+        'Rollback is not allowed for failed timeline changes.',
+      );
+    }
+
+    const detailsRecord = this.toRecord(timelineItem.details);
     if (!detailsRecord) {
       return;
     }

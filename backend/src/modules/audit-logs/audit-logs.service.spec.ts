@@ -176,6 +176,182 @@ describe('AuditLogsService timeline', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('rejects rollback when the target timeline item has FAILURE status', async () => {
+    prismaMock.auditLog.findFirst.mockResolvedValueOnce({
+      id: 'audit-latest',
+      resource: 'students',
+      resourceId: 'stu-88',
+      occurredAt: new Date('2026-04-12T12:10:00.000Z'),
+    });
+    prismaMock.auditLog.count.mockResolvedValue(2);
+    prismaMock.auditLog.findMany.mockResolvedValue([
+      {
+        id: 'audit-latest',
+        actorUserId: 'actor-2',
+        action: 'STUDENT_UPDATE',
+        resource: 'students',
+        resourceId: 'stu-88',
+        status: AuditStatus.SUCCESS,
+        ipAddress: '10.0.0.8',
+        userAgent: 'Edge',
+        details: {
+          after: {
+            fullName: 'latest',
+          },
+        },
+        occurredAt: new Date('2026-04-12T12:10:00.000Z'),
+        createdAt: new Date('2026-04-12T12:10:00.000Z'),
+        updatedAt: new Date('2026-04-12T12:10:00.000Z'),
+        actorUser: null,
+      },
+      {
+        id: 'audit-failed',
+        actorUserId: 'actor-1',
+        action: 'STUDENT_UPDATE_FAILED',
+        resource: 'students',
+        resourceId: 'stu-88',
+        status: AuditStatus.FAILURE,
+        ipAddress: '10.0.0.5',
+        userAgent: 'Chrome',
+        details: {
+          reason: 'validation failed',
+        },
+        occurredAt: new Date('2026-04-12T11:10:00.000Z'),
+        createdAt: new Date('2026-04-12T11:10:00.000Z'),
+        updatedAt: new Date('2026-04-12T11:10:00.000Z'),
+        actorUser: null,
+      },
+    ]);
+
+    await expect(
+      service.rollbackFromTimeline('audit-latest', 'actor-9', {
+        mode: AuditRollbackMode.PREVIOUS,
+      }),
+    ).rejects.toThrow('failed timeline changes');
+
+    expect(prismaMock.student.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects rollback when action is marked as *_FAILED even if status is SUCCESS', async () => {
+    prismaMock.auditLog.findFirst.mockResolvedValueOnce({
+      id: 'audit-latest',
+      resource: 'students',
+      resourceId: 'stu-55',
+      occurredAt: new Date('2026-04-12T12:10:00.000Z'),
+    });
+    prismaMock.auditLog.count.mockResolvedValue(2);
+    prismaMock.auditLog.findMany.mockResolvedValue([
+      {
+        id: 'audit-latest',
+        actorUserId: 'actor-2',
+        action: 'STUDENT_UPDATE',
+        resource: 'students',
+        resourceId: 'stu-55',
+        status: AuditStatus.SUCCESS,
+        ipAddress: '10.0.0.8',
+        userAgent: 'Edge',
+        details: {
+          after: {
+            fullName: 'latest',
+          },
+        },
+        occurredAt: new Date('2026-04-12T12:10:00.000Z'),
+        createdAt: new Date('2026-04-12T12:10:00.000Z'),
+        updatedAt: new Date('2026-04-12T12:10:00.000Z'),
+        actorUser: null,
+      },
+      {
+        id: 'audit-marked-failed',
+        actorUserId: 'actor-1',
+        action: 'STUDENT_UPDATE_FAILED',
+        resource: 'students',
+        resourceId: 'stu-55',
+        status: AuditStatus.SUCCESS,
+        ipAddress: '10.0.0.5',
+        userAgent: 'Chrome',
+        details: {
+          after: {
+            fullName: 'older',
+          },
+        },
+        occurredAt: new Date('2026-04-12T11:10:00.000Z'),
+        createdAt: new Date('2026-04-12T11:10:00.000Z'),
+        updatedAt: new Date('2026-04-12T11:10:00.000Z'),
+        actorUser: null,
+      },
+    ]);
+
+    await expect(
+      service.rollbackFromTimeline('audit-latest', 'actor-9', {
+        mode: AuditRollbackMode.PREVIOUS,
+      }),
+    ).rejects.toThrow('failed timeline changes');
+  });
+
+  it('rejects rollback when target details mark rollback as ineligible', async () => {
+    prismaMock.auditLog.findFirst.mockResolvedValueOnce({
+      id: 'audit-latest',
+      resource: 'students',
+      resourceId: 'stu-33',
+      occurredAt: new Date('2026-04-12T12:10:00.000Z'),
+    });
+    prismaMock.auditLog.count.mockResolvedValue(2);
+    prismaMock.auditLog.findMany.mockResolvedValue([
+      {
+        id: 'audit-latest',
+        actorUserId: 'actor-2',
+        action: 'STUDENT_UPDATE',
+        resource: 'students',
+        resourceId: 'stu-33',
+        status: AuditStatus.SUCCESS,
+        ipAddress: '10.0.0.8',
+        userAgent: 'Edge',
+        details: {
+          rollback: {
+            schemaVersion: 1,
+            eligible: true,
+            after: {
+              fullName: 'latest',
+            },
+          },
+        },
+        occurredAt: new Date('2026-04-12T12:10:00.000Z'),
+        createdAt: new Date('2026-04-12T12:10:00.000Z'),
+        updatedAt: new Date('2026-04-12T12:10:00.000Z'),
+        actorUser: null,
+      },
+      {
+        id: 'audit-no-rollback',
+        actorUserId: 'actor-1',
+        action: 'STUDENT_UPDATE',
+        resource: 'students',
+        resourceId: 'stu-33',
+        status: AuditStatus.SUCCESS,
+        ipAddress: '10.0.0.5',
+        userAgent: 'Chrome',
+        details: {
+          rollback: {
+            schemaVersion: 1,
+            eligible: false,
+            after: {
+              fullName: 'older',
+            },
+          },
+        },
+        occurredAt: new Date('2026-04-12T11:10:00.000Z'),
+        createdAt: new Date('2026-04-12T11:10:00.000Z'),
+        updatedAt: new Date('2026-04-12T11:10:00.000Z'),
+        actorUser: null,
+      },
+    ]);
+
+    await expect(
+      service.rollbackFromTimeline('audit-latest', 'actor-9', {
+        mode: AuditRollbackMode.PREVIOUS,
+      }),
+    ).rejects.toThrow('not eligible for rollback');
+  });
+
   it('applies TARGET rollback using timeline snapshot and writes rollback audit entry in transaction', async () => {
     prismaMock.auditLog.findFirst.mockResolvedValueOnce({
       id: 'audit-latest',

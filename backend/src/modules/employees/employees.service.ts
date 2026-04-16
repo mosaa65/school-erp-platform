@@ -14,6 +14,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
+import { ListEmployeeOptionsDto } from './dto/list-employee-options.dto';
 import {
   ListEmployeesDto,
   OperationalReadinessFilter,
@@ -131,6 +132,19 @@ const employeeInclude = {
           },
         },
       },
+    },
+  },
+} as const;
+
+const employeeOptionSelect = {
+  id: true,
+  fullName: true,
+  jobNumber: true,
+  jobTitle: true,
+  isActive: true,
+  userAccount: {
+    select: {
+      id: true,
     },
   },
 } as const;
@@ -375,6 +389,56 @@ export class EmployeesService {
     };
   }
 
+  async findOptions(query: ListEmployeeOptionsDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 100;
+
+    const where: Prisma.EmployeeWhereInput = {
+      deletedAt: null,
+      isActive: query.isActive,
+      OR: query.search
+        ? [
+            {
+              fullName: {
+                contains: query.search,
+              },
+            },
+            {
+              jobNumber: {
+                contains: query.search,
+              },
+            },
+            {
+              jobTitle: {
+                contains: query.search,
+              },
+            },
+          ]
+        : undefined,
+    };
+
+    const [total, data] = await this.prisma.$transaction([
+      this.prisma.employee.count({ where }),
+      this.prisma.employee.findMany({
+        where,
+        select: employeeOptionSelect,
+        orderBy: [{ fullName: 'asc' }, { createdAt: 'desc' }],
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+    ]);
+
+    return {
+      data,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
   async getOrganizationOptions() {
     const [departments, branches, costCenters, managers] = await Promise.all([
       this.prisma.employeeDepartment.findMany({
@@ -420,13 +484,7 @@ export class EmployeesService {
           isActive: true,
         },
         orderBy: [{ fullName: 'asc' }],
-        select: {
-          id: true,
-          fullName: true,
-          jobNumber: true,
-          jobTitle: true,
-          isActive: true,
-        },
+        select: employeeOptionSelect,
       }),
     ]);
 
