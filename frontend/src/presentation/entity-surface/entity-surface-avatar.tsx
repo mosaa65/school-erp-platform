@@ -72,6 +72,7 @@ export function EntitySurfaceAvatar({
       aria-hidden="true"
     >
       {shouldShowImage ? (
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={avatar?.src ?? ""}
           alt={avatar?.alt ?? ""}

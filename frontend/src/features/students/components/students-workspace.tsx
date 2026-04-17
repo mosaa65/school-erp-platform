@@ -178,19 +178,6 @@ function toOptionalString(value: string): string | undefined {
   return normalized.length > 0 ? normalized : undefined;
 }
 
-function formatDate(isoDate: string | null): string {
-  if (!isoDate) {
-    return "-";
-  }
-
-  const date = new Date(isoDate);
-  if (Number.isNaN(date.getTime())) {
-    return "-";
-  }
-
-  return date.toLocaleDateString();
-}
-
 function toFormState(student: StudentListItem): StudentFormState {
   return {
     admissionNo: student.admissionNo ?? "",
@@ -895,122 +882,101 @@ export function StudentsWorkspace() {
     },
     [canReadDetails, router, studentDetailsMode],
   );
-  const renderStudentHeaderActions = React.useCallback(
-    (student: StudentListItem) => {
-      if (!canReadDetails && !canUpdate && !canDelete) {
-        return null;
-      }
+  const renderStudentHeaderActions = (student: StudentListItem) => {
+    if (!canReadDetails && !canUpdate && !canDelete) {
+      return null;
+    }
 
-      return (
-        <div className="flex items-center gap-1">
-          {canReadDetails ? (
-            <EntitySurfaceHeaderActionButton
-              label="معاينة"
-              icon={<Eye className="h-3.5 w-3.5" />}
-              tone="preview"
-              colorMode={entitySurface.colorMode}
-              entityKey="students"
-              onClick={() => handleOpenStudentDetails(student)}
-            />
-          ) : null}
+    return (
+      <div className="flex items-center gap-1">
+        {canReadDetails ? (
+          <EntitySurfaceHeaderActionButton
+            label="معاينة"
+            icon={<Eye className="h-3.5 w-3.5" />}
+            tone="preview"
+            colorMode={entitySurface.colorMode}
+            entityKey="students"
+            onClick={() => handleOpenStudentDetails(student)}
+          />
+        ) : null}
 
-          {canUpdate ? (
-            <EntitySurfaceHeaderActionButton
-              label="تعديل"
-              icon={<PencilLine className="h-3.5 w-3.5" />}
-              tone="edit"
-              colorMode={entitySurface.colorMode}
-              entityKey="students"
-              disabled={updateMutation.isPending}
-              onClick={() => handleStartEdit(student)}
-            />
-          ) : null}
+        {canUpdate ? (
+          <EntitySurfaceHeaderActionButton
+            label="تعديل"
+            icon={<PencilLine className="h-3.5 w-3.5" />}
+            tone="edit"
+            colorMode={entitySurface.colorMode}
+            entityKey="students"
+            disabled={updateMutation.isPending}
+            onClick={() => handleStartEdit(student)}
+          />
+        ) : null}
 
-          {canDelete ? (
-            <EntitySurfaceHeaderActionButton
-              label="حذف"
-              icon={<Trash2 className="h-3.5 w-3.5" />}
-              tone="delete"
-              disabled={deleteMutation.isPending}
-              onClick={() => handleDelete(student)}
-            />
-          ) : null}
-        </div>
+        {canDelete ? (
+          <EntitySurfaceHeaderActionButton
+            label="حذف"
+            icon={<Trash2 className="h-3.5 w-3.5" />}
+            tone="delete"
+            disabled={deleteMutation.isPending}
+            onClick={() => handleDelete(student)}
+          />
+        ) : null}
+      </div>
+    );
+  };
+  const buildStudentQuickActions = (
+    student: StudentListItem,
+  ): EntitySurfaceQuickAction[] => {
+    const actions: EntitySurfaceQuickAction[] = [];
+
+    if (canReadDetails) {
+      actions.push({
+        key: "details",
+        label: studentDetailsMode === "page" ? "فتح الصفحة" : "تفاصيل",
+        icon:
+          studentDetailsMode === "page" ? (
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          ) : (
+            <ScanSearch className="h-3.5 w-3.5" />
+          ),
+        tone: "accent",
+        onClick: () => handleOpenStudentDetails(student),
+      });
+    }
+
+    if (canUpdate) {
+      actions.push(
+        {
+          key: "edit",
+          label: "تعديل",
+          icon: <PencilLine className="h-3.5 w-3.5" />,
+          onClick: () => handleStartEdit(student),
+          disabled: updateMutation.isPending,
+        },
+        {
+          key: "toggle-active",
+          label: student.isActive ? "تعطيل" : "تفعيل",
+          icon: <Activity className="h-3.5 w-3.5" />,
+          tone: "ghost",
+          onClick: () => handleToggleActive(student),
+          disabled: updateMutation.isPending,
+        },
       );
-    },
-    [
-      canReadDetails,
-      canDelete,
-      canUpdate,
-      deleteMutation.isPending,
-      handleOpenStudentDetails,
-      handleStartEdit,
-      handleDelete,
-      updateMutation.isPending,
-    ],
-  );
-  const buildStudentQuickActions = React.useCallback(
-    (student: StudentListItem): EntitySurfaceQuickAction[] => {
-      const actions: EntitySurfaceQuickAction[] = [];
+    }
 
-      if (canReadDetails) {
-        actions.push({
-          key: "details",
-          label: studentDetailsMode === "page" ? "فتح الصفحة" : "تفاصيل",
-          icon:
-            studentDetailsMode === "page" ? (
-              <ArrowUpRight className="h-3.5 w-3.5" />
-            ) : (
-              <ScanSearch className="h-3.5 w-3.5" />
-            ),
-          tone: "accent",
-          onClick: () => handleOpenStudentDetails(student),
-        });
-      }
+    if (canDelete) {
+      actions.push({
+        key: "delete",
+        label: "حذف",
+        icon: <Trash2 className="h-3.5 w-3.5" />,
+        tone: "danger",
+        onClick: () => handleDelete(student),
+        disabled: deleteMutation.isPending,
+      });
+    }
 
-      if (canUpdate) {
-        actions.push(
-          {
-            key: "edit",
-            label: "تعديل",
-            icon: <PencilLine className="h-3.5 w-3.5" />,
-            onClick: () => handleStartEdit(student),
-            disabled: updateMutation.isPending,
-          },
-          {
-            key: "toggle-active",
-            label: student.isActive ? "تعطيل" : "تفعيل",
-            icon: <Activity className="h-3.5 w-3.5" />,
-            tone: "ghost",
-            onClick: () => handleToggleActive(student),
-            disabled: updateMutation.isPending,
-          },
-        );
-      }
-
-      if (canDelete) {
-        actions.push({
-          key: "delete",
-          label: "حذف",
-          icon: <Trash2 className="h-3.5 w-3.5" />,
-          tone: "danger",
-          onClick: () => handleDelete(student),
-          disabled: deleteMutation.isPending,
-        });
-      }
-
-      return actions;
-    },
-    [
-      canDelete,
-      canReadDetails,
-      canUpdate,
-      deleteMutation.isPending,
-      handleOpenStudentDetails,
-      studentDetailsMode,
-      updateMutation.isPending,
-    ],
-  );
+    return actions;
+  };
 
   const clearFilters = () => {
     setPage(1);

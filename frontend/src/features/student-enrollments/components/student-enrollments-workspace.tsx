@@ -1014,14 +1014,14 @@ export function StudentEnrollmentsWorkspace() {
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
   const requiresSection = formState.distributionStatus !== "PENDING_DISTRIBUTION";
-  const getStatusLabel = (value: StudentEnrollmentStatus) =>
-    enrollmentStatusLabels.get(value) ?? value;
-  const getDistributionStatusLabel = (
-    value: StudentEnrollmentDistributionStatus,
-  ) =>
-    DISTRIBUTION_STATUS_OPTIONS.find((option) => option.code === value)?.nameAr ??
-    value;
   const groupedEnrollments = React.useMemo<EnrollmentGroupedItems[]>(() => {
+    const getStatusLabel = (value: StudentEnrollmentStatus) =>
+      enrollmentStatusLabels.get(value) ?? value;
+    const getDistributionStatusLabel = (
+      value: StudentEnrollmentDistributionStatus,
+    ) =>
+      DISTRIBUTION_STATUS_OPTIONS.find((option) => option.code === value)?.nameAr ??
+      value;
     const activeGroupByCriteria = sortState.groupByCriteria.filter(
       (groupBy) => groupBy !== "NONE",
     );
@@ -1078,8 +1078,7 @@ export function StudentEnrollmentsWorkspace() {
     return buildGroups(enrollments, activeGroupByCriteria);
   }, [
     enrollments,
-    getDistributionStatusLabel,
-    getStatusLabel,
+    enrollmentStatusLabels,
     sortState.groupByCriteria,
   ]);
 
@@ -1217,87 +1216,77 @@ export function StudentEnrollmentsWorkspace() {
     }
   };
 
-  const buildEnrollmentQuickActions = React.useCallback(
-    (enrollment: StudentEnrollmentListItem): EntitySurfaceQuickAction[] => {
-      if (!canUseQuickActions) {
-        return [];
-      }
+  const buildEnrollmentQuickActions = (
+    enrollment: StudentEnrollmentListItem,
+  ): EntitySurfaceQuickAction[] => {
+    if (!canUseQuickActions) {
+      return [];
+    }
 
-      const actions: EntitySurfaceQuickAction[] = [];
+    const actions: EntitySurfaceQuickAction[] = [];
 
-      if (canReadDetails) {
-        actions.push({
-          key: "details",
-          label: "تفاصيل",
-          icon: <Type className="h-3.5 w-3.5" />,
-          tone: "accent",
-          onClick: () => handleOpenEnrollmentDetails(enrollment),
-        });
-      }
-
+    if (canReadDetails) {
       actions.push({
-        key: "distribution",
-        label: "شاشة التوزيع",
-        icon: <ArrowRightLeft className="h-3.5 w-3.5" />,
-        tone: "ghost",
-        onClick: () => handleOpenDistributionBoard(enrollment),
+        key: "details",
+        label: "تفاصيل",
+        icon: <Type className="h-3.5 w-3.5" />,
+        tone: "accent",
+        onClick: () => handleOpenEnrollmentDetails(enrollment),
       });
+    }
 
-      if (enrollment.sectionId && canUpdate) {
-        actions.push({
-          key: "return-pending",
-          label: "إرجاع للانتظار",
-          icon: <Undo2 className="h-3.5 w-3.5" />,
-          tone: "ghost",
-          onClick: () => void handleReturnToPendingDistribution(enrollment),
+    actions.push({
+      key: "distribution",
+      label: "شاشة التوزيع",
+      icon: <ArrowRightLeft className="h-3.5 w-3.5" />,
+      tone: "ghost",
+      onClick: () => handleOpenDistributionBoard(enrollment),
+    });
+
+    if (enrollment.sectionId && canUpdate) {
+      actions.push({
+        key: "return-pending",
+        label: "إرجاع للانتظار",
+        icon: <Undo2 className="h-3.5 w-3.5" />,
+        tone: "ghost",
+        onClick: () => void handleReturnToPendingDistribution(enrollment),
+        disabled: updateMutation.isPending,
+      });
+    }
+
+    if (canUpdate) {
+      actions.push(
+        {
+          key: "edit",
+          label: "تعديل",
+          icon: <PencilLine className="h-3.5 w-3.5" />,
+          onClick: () => handleStartEdit(enrollment),
           disabled: updateMutation.isPending,
-        });
-      }
+        },
+        {
+          key: "toggle-active",
+          label: enrollment.isActive ? "تعطيل" : "تفعيل",
+          icon: <Activity className="h-3.5 w-3.5" />,
+          tone: "ghost",
+          onClick: () => handleToggleActive(enrollment),
+          disabled: updateMutation.isPending,
+        },
+      );
+    }
 
-      if (canUpdate) {
-        actions.push(
-          {
-            key: "edit",
-            label: "تعديل",
-            icon: <PencilLine className="h-3.5 w-3.5" />,
-            onClick: () => handleStartEdit(enrollment),
-            disabled: updateMutation.isPending,
-          },
-          {
-            key: "toggle-active",
-            label: enrollment.isActive ? "تعطيل" : "تفعيل",
-            icon: <Activity className="h-3.5 w-3.5" />,
-            tone: "ghost",
-            onClick: () => handleToggleActive(enrollment),
-            disabled: updateMutation.isPending,
-          },
-        );
-      }
+    if (canDelete) {
+      actions.push({
+        key: "delete",
+        label: "حذف",
+        icon: <Trash2 className="h-3.5 w-3.5" />,
+        tone: "danger",
+        onClick: () => handleDelete(enrollment),
+        disabled: deleteMutation.isPending,
+      });
+    }
 
-      if (canDelete) {
-        actions.push({
-          key: "delete",
-          label: "حذف",
-          icon: <Trash2 className="h-3.5 w-3.5" />,
-          tone: "danger",
-          onClick: () => handleDelete(enrollment),
-          disabled: deleteMutation.isPending,
-        });
-      }
-
-      return actions;
-    },
-    [
-      canDelete,
-      canReadDetails,
-      canUpdate,
-      canUseQuickActions,
-      deleteMutation.isPending,
-      handleOpenDistributionBoard,
-      handleOpenEnrollmentDetails,
-      updateMutation.isPending,
-    ],
-  );
+    return actions;
+  };
 
   const handleRefresh = async () => {
     try {

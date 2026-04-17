@@ -10,8 +10,6 @@ import {
   Users,
   User,
   IdCard,
-  Phone,
-  MessageSquare,
   MapPin,
   Activity,
 } from "lucide-react";
@@ -183,15 +181,6 @@ function composePhoneValue(countryIso2: string, nationalNumber: string): string 
 
   return normalized.ok ? normalized.e164 : undefined;
 }
-
-type LocalityLabelInput = {
-  id: number;
-  nameAr?: string;
-  name?: string;
-  localityType?: "RURAL" | "URBAN";
-  directorateId?: number;
-  villageId?: number;
-};
 
 function toFormState(guardian: GuardianListItem): GuardianFormState {
   const primaryPhone = toPhoneFieldState(guardian.phonePrimary);
@@ -855,67 +844,58 @@ export function GuardiansWorkspace() {
     setSelectedGuardianId(guardian.id);
   }, [canReadDetails, guardianDetailsMode]);
 
-  const buildGuardianQuickActions = React.useCallback(
-    (guardian: GuardianListItem): EntitySurfaceQuickAction[] => {
-      if (!canUseQuickActions) {
-        return [];
-      }
+  const buildGuardianQuickActions = (
+    guardian: GuardianListItem,
+  ): EntitySurfaceQuickAction[] => {
+    if (!canUseQuickActions) {
+      return [];
+    }
 
-      const actions: EntitySurfaceQuickAction[] = [];
+    const actions: EntitySurfaceQuickAction[] = [];
 
-      if (canReadDetails) {
-        actions.push({
-          key: "details",
-          label: "تفاصيل",
-          icon: <Users className="h-3.5 w-3.5" />,
-          tone: "accent",
-          onClick: () => handleOpenGuardianDetails(guardian),
-        });
-      }
+    if (canReadDetails) {
+      actions.push({
+        key: "details",
+        label: "تفاصيل",
+        icon: <Users className="h-3.5 w-3.5" />,
+        tone: "accent",
+        onClick: () => handleOpenGuardianDetails(guardian),
+      });
+    }
 
-      if (canUpdate) {
-        actions.push(
-          {
-            key: "edit",
-            label: "تعديل",
-            icon: <PencilLine className="h-3.5 w-3.5" />,
-            onClick: () => handleStartEdit(guardian),
-            disabled: updateMutation.isPending,
-          },
-          {
-            key: "toggle-active",
-            label: guardian.isActive ? "تعطيل" : "تفعيل",
-            icon: <Activity className="h-3.5 w-3.5" />,
-            tone: "ghost",
-            onClick: () => handleToggleActive(guardian),
-            disabled: updateMutation.isPending,
-          },
-        );
-      }
+    if (canUpdate) {
+      actions.push(
+        {
+          key: "edit",
+          label: "تعديل",
+          icon: <PencilLine className="h-3.5 w-3.5" />,
+          onClick: () => handleStartEdit(guardian),
+          disabled: updateMutation.isPending,
+        },
+        {
+          key: "toggle-active",
+          label: guardian.isActive ? "تعطيل" : "تفعيل",
+          icon: <Activity className="h-3.5 w-3.5" />,
+          tone: "ghost",
+          onClick: () => handleToggleActive(guardian),
+          disabled: updateMutation.isPending,
+        },
+      );
+    }
 
-      if (canDelete) {
-        actions.push({
-          key: "delete",
-          label: "حذف",
-          icon: <Trash2 className="h-3.5 w-3.5" />,
-          tone: "danger",
-          onClick: () => handleDelete(guardian),
-          disabled: deleteMutation.isPending,
-        });
-      }
+    if (canDelete) {
+      actions.push({
+        key: "delete",
+        label: "حذف",
+        icon: <Trash2 className="h-3.5 w-3.5" />,
+        tone: "danger",
+        onClick: () => handleDelete(guardian),
+        disabled: deleteMutation.isPending,
+      });
+    }
 
-      return actions;
-    },
-    [
-      canDelete,
-      canReadDetails,
-      canUpdate,
-      canUseQuickActions,
-      deleteMutation.isPending,
-      handleOpenGuardianDetails,
-      updateMutation.isPending,
-    ],
-  );
+    return actions;
+  };
 
   const activeFiltersCount = React.useMemo(() => {
     return [genderFilter, idTypeFilter, localityFilter, activeFilter].filter(

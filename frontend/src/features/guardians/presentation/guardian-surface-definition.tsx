@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Activity, IdCard, MapPin, MessageSquare, Phone, User, Users } from "lucide-react";
+import { Activity, IdCard, MapPin, MessageSquare, User, Users } from "lucide-react";
 import {
   defineEntitySurface,
   registerEntitySurface,

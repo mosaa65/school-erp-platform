@@ -490,7 +490,13 @@ export function ProfileEntitySurfacePreferences({
 
       return actions.length > 0 ? <div className="flex items-center gap-1">{actions}</div> : null;
     },
-    [previewCanReadDetails, previewDeleteEnabled, previewEditEnabled, previewLabelMode],
+    [
+      entitySurface.colorMode,
+      previewCanReadDetails,
+      previewDeleteEnabled,
+      previewEditEnabled,
+      previewLabelMode,
+    ],
   );
 
   const buildQuickActions = React.useCallback(
@@ -801,8 +807,7 @@ export function ProfileEntitySurfacePreferences({
                     ملاحظات المعاينة
                   </p>
                   <p className="mt-1 text-[10px] leading-5 text-slate-500 dark:text-white/55">
-                    في وضع "عرض عام فقط" ستظهر البطاقة كأيقونة طالب مع الاسم فقط. في وضع
-                    "عرض مع تفاصيل" يظهر زر المعاينة ويمكن اختيار عرض تفاصيل إضافية داخل البطاقة.
+                    {'في وضع "عرض عام فقط" ستظهر البطاقة كأيقونة طالب مع الاسم فقط. في وضع "عرض مع تفاصيل" يظهر زر المعاينة ويمكن اختيار عرض تفاصيل إضافية داخل البطاقة.'}
                   </p>
                 </div>
               </div>
