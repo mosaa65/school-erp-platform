@@ -675,7 +675,6 @@ export function ExamPeriodsWorkspace() {
         onSubmit={handleSubmitForm}
         submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء فترة اختبارية"}
         isSubmitting={isFormSubmitting}
-        showFooter={false}
       >
         <div className="space-y-4">
           <div className="grid gap-3 md:grid-cols-2">

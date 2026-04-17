@@ -8,7 +8,7 @@ export default function StudentHomeworksPage() {
       <div className="space-y-4">
         <div className="space-y-2">
           <Badge variant="secondary" className="w-fit">
-            النظام 05 - التعليم والدرجات
+            النظام 05 - نظام الواجبات
           </Badge>
           <h2 className="text-2xl font-semibold tracking-tight">واجبات الطلاب</h2>
         </div>

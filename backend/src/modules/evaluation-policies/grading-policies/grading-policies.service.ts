@@ -5,8 +5,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AuditStatus, GradingPolicy, Prisma } from '@prisma/client';
-import { PrismaService } from '../../prisma/prisma.service';
-import { AuditLogsService } from '../audit-logs/audit-logs.service';
+import { PrismaService } from '../../../prisma/prisma.service';
+import { AuditLogsService } from '../../audit-logs/audit-logs.service';
 import { CreateGradingPolicyDto } from './dto/create-grading-policy.dto';
 import { ListGradingPoliciesDto } from './dto/list-grading-policies.dto';
 import { UpdateGradingPolicyDto } from './dto/update-grading-policy.dto';

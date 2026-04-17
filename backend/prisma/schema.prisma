@@ -335,6 +335,20 @@ enum GradingComponentCalculationMode {
   AUTO_EXAM
 }
 
+enum AssessmentPeriodCategory {
+  MONTHLY
+  SEMESTER
+  YEAR_FINAL
+}
+
+enum AssessmentComponentEntryMode {
+  MANUAL
+  AUTO_ATTENDANCE
+  AUTO_HOMEWORK
+  AUTO_EXAM
+  AGGREGATED_PERIODS
+}
+
 enum ExamAbsenceType {
   EXCUSED
   UNEXCUSED
@@ -681,6 +695,18 @@ model User {
   annualGradeTermsUpdated             AnnualGradeTerm[]               @relation("annual_grade_term_updated_by")
   periodGradeComponentsCreated        PeriodGradeComponent[]          @relation("period_grade_component_created_by")
   periodGradeComponentsUpdated        PeriodGradeComponent[]          @relation("period_grade_component_updated_by")
+  assessmentPeriodsCreated            AssessmentPeriod[]              @relation("assessment_period_created_by")
+  assessmentPeriodsUpdated            AssessmentPeriod[]              @relation("assessment_period_updated_by")
+  assessmentPeriodsLocked             AssessmentPeriod[]              @relation("assessment_period_locked_by")
+  assessmentPeriodComponentsCreated   AssessmentPeriodComponent[]     @relation("assessment_period_component_created_by")
+  assessmentPeriodComponentsUpdated   AssessmentPeriodComponent[]     @relation("assessment_period_component_updated_by")
+  assessmentComponentSourcesCreated   AssessmentComponentSourcePeriod[] @relation("assessment_component_source_created_by")
+  assessmentComponentSourcesUpdated   AssessmentComponentSourcePeriod[] @relation("assessment_component_source_updated_by")
+  studentPeriodResultsCreated         StudentPeriodResult[]           @relation("student_period_result_created_by")
+  studentPeriodResultsUpdated         StudentPeriodResult[]           @relation("student_period_result_updated_by")
+  studentPeriodResultsLocked          StudentPeriodResult[]           @relation("student_period_result_locked_by")
+  studentPeriodComponentScoresCreated StudentPeriodComponentScore[]   @relation("student_period_component_created_by")
+  studentPeriodComponentScoresUpdated StudentPeriodComponentScore[]   @relation("student_period_component_updated_by")
   branchesCreated                     Branch[]                       @relation("branch_created_by")
   branchesUpdated                     Branch[]                       @relation("branch_updated_by")
   currenciesCreated                   Currency[]                     @relation("currency_created_by")
@@ -1975,6 +2001,8 @@ model AcademicYear {
   semesterGrades                 SemesterGrade[]
   annualGrades                   AnnualGrade[]
   annualResults                  AnnualResult[]
+  assessmentPeriods              AssessmentPeriod[]
+  studentPeriodResults           StudentPeriodResult[]
   calendarDays                   CalendarMaster[]
   fiscalYears                    FiscalYear[]
   feeStructures                  FeeStructure[]
@@ -2021,6 +2049,8 @@ model AcademicTerm {
   AnnualGradeTerm      AnnualGradeTerm[]
   communityContributions CommunityContribution[]
   gradingPolicies      GradingPolicy[]
+  assessmentPeriods    AssessmentPeriod[]
+  studentPeriodResults StudentPeriodResult[]
 
   @@unique([academicYearId, code])
   @@unique([academicYearId, sequence])
@@ -2056,6 +2086,8 @@ model AcademicMonth {
 
   monthlyGrades MonthlyGrade[]
   communityContributions CommunityContribution[]
+  assessmentPeriods AssessmentPeriod[]
+  studentPeriodResults StudentPeriodResult[]
 
   @@unique([academicTermId, code], map: "acm_term_code_uq")
   @@unique([academicTermId, sequence], map: "acm_term_sequence_uq")
@@ -2128,6 +2160,7 @@ model Section {
   examAssessments             ExamAssessment[]
   homeworks                   Homework[]
   gradingPolicies             GradingPolicy[]
+  studentPeriodResults        StudentPeriodResult[]
 
   @@unique([gradeLevelId, code])
   @@index([buildingLookupId, deletedAt])
@@ -2219,6 +2252,7 @@ model Subject {
   homeworks                   Homework[]
   semesterGrades              SemesterGrade[]
   annualGrades                AnnualGrade[]
+  studentPeriodResults        StudentPeriodResult[]
 
   @@index([category, deletedAt])
   @@index([isActive, deletedAt])
@@ -2279,6 +2313,7 @@ model TermSubjectOffering {
 
   timetableEntries TimetableEntry[]
   annualGradeTerms AnnualGradeTerm[]
+  studentPeriodResults StudentPeriodResult[]
 
   @@unique([academicTermId, gradeLevelSubjectId], map: "tso_term_gls_uq")
   @@index([academicTermId, deletedAt], map: "tso_term_del_idx")
@@ -3012,6 +3047,7 @@ model StudentEnrollment {
   semesterGrades    SemesterGrade[]
   annualGrades      AnnualGrade[]
   annualResults     AnnualResult[]
+  studentPeriodResults StudentPeriodResult[]
   paymentTransactions PaymentTransaction[]
   studentInvoices     StudentInvoice[]
   communityContributions CommunityContribution[]
@@ -3586,6 +3622,294 @@ model MonthlyCustomComponentScore {
   @@index([isActive, deletedAt], map: "mcc_active_del_idx")
   @@index([deletedAt], map: "mcc_deleted_at_idx")
   @@map("monthly_custom_component_scores")
+}
+
+model AssessmentPeriod {
+  id             String                   @id @default(cuid()) @db.VarChar(191)
+  category       AssessmentPeriodCategory @map("category")
+  academicYearId String                   @map("academic_year_id") @db.VarChar(191)
+  academicTermId String?                  @map("academic_term_id") @db.VarChar(191)
+  academicMonthId String?                 @map("academic_month_id") @db.VarChar(191)
+  name           String                   @db.VarChar(160)
+  sequence       Int                      @default(1)
+  maxScore       Decimal                  @default(100.00) @map("max_score") @db.Decimal(7, 2)
+  status         GradingWorkflowStatus    @default(DRAFT)
+  isLocked       Boolean                  @default(false) @map("is_locked")
+  lockedAt       DateTime?                @map("locked_at")
+  lockedByUserId String?                  @map("locked_by_user_id") @db.VarChar(191)
+  isActive       Boolean                  @default(true) @map("is_active")
+  createdAt      DateTime                 @default(now()) @map("created_at")
+  updatedAt      DateTime                 @updatedAt @map("updated_at")
+  deletedAt      DateTime?                @map("deleted_at")
+  createdById    String?                  @map("created_by") @db.VarChar(191)
+  updatedById    String?                  @map("updated_by") @db.VarChar(191)
+
+  academicYear  AcademicYear  @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  academicTerm  AcademicTerm? @relation(fields: [academicTermId], references: [id], onDelete: Restrict)
+  academicMonth AcademicMonth? @relation(fields: [academicMonthId], references: [id], onDelete: Restrict)
+
+  lockedByUser User? @relation("assessment_period_locked_by", fields: [lockedByUserId], references: [id], onDelete: SetNull)
+  createdBy    User? @relation("assessment_period_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy    User? @relation("assessment_period_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  components AssessmentPeriodComponent[]
+  results    StudentPeriodResult[]
+  sourceForComponents AssessmentComponentSourcePeriod[] @relation("assessment_period_source")
+
+  @@unique([academicYearId, category, academicTermId, academicMonthId, name], map: "ap_scope_name_uq")
+  @@index([academicYearId, academicTermId, deletedAt], map: "ap_year_term_del_idx")
+  @@index([academicMonthId, deletedAt], map: "ap_month_del_idx")
+  @@index([status, deletedAt], map: "ap_status_del_idx")
+  @@index([isLocked, deletedAt], map: "ap_locked_del_idx")
+  @@index([isActive, deletedAt], map: "ap_active_del_idx")
+  @@index([deletedAt], map: "ap_deleted_at_idx")
+  @@map("assessment_periods")
+}
+
+model AssessmentPeriodComponent {
+  id                 String                      @id @default(cuid()) @db.VarChar(191)
+  assessmentPeriodId String                      @map("assessment_period_id") @db.VarChar(191)
+  code               String                      @db.VarChar(50)
+  name               String                      @db.VarChar(160)
+  entryMode          AssessmentComponentEntryMode @default(MANUAL) @map("entry_mode")
+  maxScore           Decimal                     @default(0.00) @map("max_score") @db.Decimal(6, 2)
+  sortOrder          Int                         @default(1) @map("sort_order")
+  isRequired         Boolean                     @default(true) @map("is_required")
+  isActive           Boolean                     @default(true) @map("is_active")
+  createdAt          DateTime                    @default(now()) @map("created_at")
+  updatedAt          DateTime                    @updatedAt @map("updated_at")
+  deletedAt          DateTime?                   @map("deleted_at")
+  createdById        String?                     @map("created_by") @db.VarChar(191)
+  updatedById        String?                     @map("updated_by") @db.VarChar(191)
+
+  assessmentPeriod AssessmentPeriod @relation(fields: [assessmentPeriodId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("assessment_period_component_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("assessment_period_component_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  sourcePeriods AssessmentComponentSourcePeriod[]
+  studentScores StudentPeriodComponentScore[]
+
+  @@unique([assessmentPeriodId, code], map: "apc_period_code_uq")
+  @@index([assessmentPeriodId, deletedAt], map: "apc_period_del_idx")
+  @@index([isActive, deletedAt], map: "apc_active_del_idx")
+  @@index([deletedAt], map: "apc_deleted_at_idx")
+  @@map("assessment_period_components")
+}
+
+model AssessmentComponentSourcePeriod {
+  id                         String    @id @default(cuid()) @db.VarChar(191)
+  assessmentPeriodComponentId String   @map("assessment_period_component_id") @db.VarChar(191)
+  sourcePeriodId             String    @map("source_period_id") @db.VarChar(191)
+  isActive                   Boolean   @default(true) @map("is_active")
+  createdAt                  DateTime  @default(now()) @map("created_at")
+  updatedAt                  DateTime  @updatedAt @map("updated_at")
+  deletedAt                  DateTime? @map("deleted_at")
+  createdById                String?   @map("created_by") @db.VarChar(191)
+  updatedById                String?   @map("updated_by") @db.VarChar(191)
+
+  assessmentPeriodComponent AssessmentPeriodComponent @relation(fields: [assessmentPeriodComponentId], references: [id], onDelete: Restrict)
+  sourcePeriod              AssessmentPeriod          @relation("assessment_period_source", fields: [sourcePeriodId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("assessment_component_source_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("assessment_component_source_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([assessmentPeriodComponentId, sourcePeriodId], map: "acsp_component_source_uq")
+  @@index([sourcePeriodId, deletedAt], map: "acsp_source_del_idx")
+  @@index([deletedAt], map: "acsp_deleted_at_idx")
+  @@map("assessment_component_source_periods")
+}
+
+model StudentPeriodResult {
+  id                  String                @id @default(cuid()) @db.VarChar(191)
+  assessmentPeriodId  String                @map("assessment_period_id") @db.VarChar(191)
+  studentEnrollmentId String                @map("student_enrollment_id") @db.VarChar(191)
+  subjectId           String                @map("subject_id") @db.VarChar(191)
+  academicYearId      String                @map("academic_year_id") @db.VarChar(191)
+  academicTermId      String?               @map("academic_term_id") @db.VarChar(191)
+  academicMonthId     String?               @map("academic_month_id") @db.VarChar(191)
+  termSubjectOfferingId String?             @map("term_subject_offering_id") @db.VarChar(191)
+  sectionId           String?               @map("section_id") @db.VarChar(191)
+  totalScore          Decimal               @default(0.00) @map("total_score") @db.Decimal(7, 2)
+  status              GradingWorkflowStatus @default(DRAFT)
+  isLocked            Boolean               @default(false) @map("is_locked")
+  lockedAt            DateTime?             @map("locked_at")
+  lockedByUserId      String?               @map("locked_by_user_id") @db.VarChar(191)
+  calculatedAt        DateTime?             @map("calculated_at")
+  notes               String?               @db.VarChar(255)
+  isActive            Boolean               @default(true) @map("is_active")
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @updatedAt @map("updated_at")
+  deletedAt           DateTime?             @map("deleted_at")
+  createdById         String?               @map("created_by") @db.VarChar(191)
+  updatedById         String?               @map("updated_by") @db.VarChar(191)
+
+  assessmentPeriod  AssessmentPeriod  @relation(fields: [assessmentPeriodId], references: [id], onDelete: Restrict)
+  studentEnrollment StudentEnrollment @relation(fields: [studentEnrollmentId], references: [id], onDelete: Restrict)
+  subject           Subject           @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  academicYear      AcademicYear      @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  academicTerm      AcademicTerm?     @relation(fields: [academicTermId], references: [id], onDelete: Restrict)
+  academicMonth     AcademicMonth?    @relation(fields: [academicMonthId], references: [id], onDelete: Restrict)
+  termSubjectOffering TermSubjectOffering? @relation(fields: [termSubjectOfferingId], references: [id], onDelete: Restrict)
+  section           Section?          @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+
+  lockedByUser User? @relation("student_period_result_locked_by", fields: [lockedByUserId], references: [id], onDelete: SetNull)
+  createdBy    User? @relation("student_period_result_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy    User? @relation("student_period_result_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  componentScores StudentPeriodComponentScore[]
+
+  @@unique([assessmentPeriodId, studentEnrollmentId, subjectId], map: "spr_period_enrollment_subject_uq")
+  @@index([studentEnrollmentId, deletedAt], map: "spr_enrollment_del_idx")
+  @@index([assessmentPeriodId, deletedAt], map: "spr_period_del_idx")
+  @@index([academicYearId, academicTermId, deletedAt], map: "spr_year_term_del_idx")
+  @@index([academicMonthId, deletedAt], map: "spr_month_del_idx")
+  @@index([status, deletedAt], map: "spr_status_del_idx")
+  @@index([isLocked, deletedAt], map: "spr_locked_del_idx")
+  @@index([isActive, deletedAt], map: "spr_active_del_idx")
+  @@index([deletedAt], map: "spr_deleted_at_idx")
+  @@map("student_period_results")
+}
+
+model StudentPeriodComponentScore {
+  id                         String    @id @default(cuid()) @db.VarChar(191)
+  studentPeriodResultId      String    @map("student_period_result_id") @db.VarChar(191)
+  assessmentPeriodComponentId String   @map("assessment_period_component_id") @db.VarChar(191)
+  rawScore                   Decimal   @default(0.00) @map("raw_score") @db.Decimal(7, 2)
+  finalScore                 Decimal   @default(0.00) @map("final_score") @db.Decimal(7, 2)
+  isAutoCalculated           Boolean   @default(false) @map("is_auto_calculated")
+  notes                      String?   @db.VarChar(255)
+  isActive                   Boolean   @default(true) @map("is_active")
+  createdAt                  DateTime  @default(now()) @map("created_at")
+  updatedAt                  DateTime  @updatedAt @map("updated_at")
+  deletedAt                  DateTime? @map("deleted_at")
+  createdById                String?   @map("created_by") @db.VarChar(191)
+  updatedById                String?   @map("updated_by") @db.VarChar(191)
+
+  studentPeriodResult       StudentPeriodResult       @relation(fields: [studentPeriodResultId], references: [id], onDelete: Restrict)
+  assessmentPeriodComponent AssessmentPeriodComponent @relation(fields: [assessmentPeriodComponentId], references: [id], onDelete: Restrict)
+
+  createdBy User? @relation("student_period_component_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("student_period_component_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@unique([studentPeriodResultId, assessmentPeriodComponentId], map: "spcs_result_component_uq")
+  @@index([studentPeriodResultId, deletedAt], map: "spcs_result_del_idx")
+  @@index([assessmentPeriodComponentId, deletedAt], map: "spcs_component_del_idx")
+  @@index([isActive, deletedAt], map: "spcs_active_del_idx")
+  @@index([deletedAt], map: "spcs_deleted_at_idx")
+  @@map("student_period_component_scores")
+}
+
+model MonthlyAssessmentPeriod {
+  id             String                @id @default(cuid()) @db.VarChar(191)
+  academicYearId String                @map("academic_year_id") @db.VarChar(191)
+  academicTermId String                @map("academic_term_id") @db.VarChar(191)
+  academicMonthId String               @map("academic_month_id") @db.VarChar(191)
+  name           String                @db.VarChar(160)
+  sequence       Int                   @default(1)
+  maxScore       Decimal               @default(100.00) @map("max_score") @db.Decimal(7, 2)
+  status         GradingWorkflowStatus @default(DRAFT)
+  isLocked       Boolean               @default(false) @map("is_locked")
+  lockedAt       DateTime?             @map("locked_at")
+  lockedByUserId String?               @map("locked_by_user_id") @db.VarChar(191)
+  isActive       Boolean               @default(true) @map("is_active")
+  createdAt      DateTime              @default(now()) @map("created_at")
+  updatedAt      DateTime              @updatedAt @map("updated_at")
+  deletedAt      DateTime?             @map("deleted_at")
+  createdById    String?               @map("created_by") @db.VarChar(191)
+  updatedById    String?               @map("updated_by") @db.VarChar(191)
+
+  @@unique([academicYearId, academicTermId, academicMonthId, name], map: "map_scope_name_uq")
+  @@index([academicYearId, academicTermId, deletedAt], map: "map_year_term_del_idx")
+  @@index([academicMonthId, deletedAt], map: "map_month_del_idx")
+  @@index([status, deletedAt], map: "map_status_del_idx")
+  @@index([isLocked, deletedAt], map: "map_locked_del_idx")
+  @@index([isActive, deletedAt], map: "map_active_del_idx")
+  @@index([deletedAt], map: "map_deleted_at_idx")
+  @@map("monthly_assessment_periods")
+}
+
+model MonthlyAssessmentComponent {
+  id                String                       @id @default(cuid()) @db.VarChar(191)
+  monthlyAssessmentPeriodId String              @map("monthly_assessment_period_id") @db.VarChar(191)
+  code              String                       @db.VarChar(50)
+  name              String                       @db.VarChar(160)
+  entryMode         AssessmentComponentEntryMode @default(MANUAL) @map("entry_mode")
+  maxScore          Decimal                      @default(0.00) @map("max_score") @db.Decimal(6, 2)
+  sortOrder         Int                          @default(1) @map("sort_order")
+  isRequired        Boolean                      @default(true) @map("is_required")
+  isActive          Boolean                      @default(true) @map("is_active")
+  createdAt         DateTime                     @default(now()) @map("created_at")
+  updatedAt         DateTime                     @updatedAt @map("updated_at")
+  deletedAt         DateTime?                    @map("deleted_at")
+  createdById       String?                      @map("created_by") @db.VarChar(191)
+  updatedById       String?                      @map("updated_by") @db.VarChar(191)
+
+  @@unique([monthlyAssessmentPeriodId, code], map: "mac_period_code_uq")
+  @@index([monthlyAssessmentPeriodId, deletedAt], map: "mac_period_del_idx")
+  @@index([entryMode, deletedAt], map: "mac_entry_mode_del_idx")
+  @@index([isActive, deletedAt], map: "mac_active_del_idx")
+  @@index([deletedAt], map: "mac_deleted_at_idx")
+  @@map("monthly_assessment_components")
+}
+
+model MonthlyStudentResult {
+  id                     String                @id @default(cuid()) @db.VarChar(191)
+  monthlyAssessmentPeriodId String            @map("monthly_assessment_period_id") @db.VarChar(191)
+  studentEnrollmentId    String                @map("student_enrollment_id") @db.VarChar(191)
+  subjectId              String                @map("subject_id") @db.VarChar(191)
+  academicYearId         String                @map("academic_year_id") @db.VarChar(191)
+  academicTermId         String                @map("academic_term_id") @db.VarChar(191)
+  academicMonthId        String                @map("academic_month_id") @db.VarChar(191)
+  termSubjectOfferingId  String?               @map("term_subject_offering_id") @db.VarChar(191)
+  sectionId              String?               @map("section_id") @db.VarChar(191)
+  totalScore             Decimal               @default(0.00) @map("total_score") @db.Decimal(7, 2)
+  status                 GradingWorkflowStatus @default(DRAFT)
+  isLocked               Boolean               @default(false) @map("is_locked")
+  lockedAt               DateTime?             @map("locked_at")
+  lockedByUserId         String?               @map("locked_by_user_id") @db.VarChar(191)
+  calculatedAt           DateTime?             @map("calculated_at")
+  notes                  String?               @db.VarChar(255)
+  isActive               Boolean               @default(true) @map("is_active")
+  createdAt              DateTime              @default(now()) @map("created_at")
+  updatedAt              DateTime              @updatedAt @map("updated_at")
+  deletedAt              DateTime?             @map("deleted_at")
+  createdById            String?               @map("created_by") @db.VarChar(191)
+  updatedById            String?               @map("updated_by") @db.VarChar(191)
+
+  @@unique([monthlyAssessmentPeriodId, studentEnrollmentId, subjectId], map: "msr_period_enrollment_subject_uq")
+  @@index([studentEnrollmentId, deletedAt], map: "msr_enrollment_del_idx")
+  @@index([monthlyAssessmentPeriodId, deletedAt], map: "msr_period_del_idx")
+  @@index([academicYearId, academicTermId, deletedAt], map: "msr_year_term_del_idx")
+  @@index([academicMonthId, deletedAt], map: "msr_month_del_idx")
+  @@index([status, deletedAt], map: "msr_status_del_idx")
+  @@index([isLocked, deletedAt], map: "msr_locked_del_idx")
+  @@index([isActive, deletedAt], map: "msr_active_del_idx")
+  @@index([deletedAt], map: "msr_deleted_at_idx")
+  @@map("monthly_student_results")
+}
+
+model MonthlyStudentComponentScore {
+  id                        String    @id @default(cuid()) @db.VarChar(191)
+  monthlyStudentResultId    String    @map("monthly_student_result_id") @db.VarChar(191)
+  monthlyAssessmentComponentId String @map("monthly_assessment_component_id") @db.VarChar(191)
+  rawScore                  Decimal   @default(0.00) @map("raw_score") @db.Decimal(7, 2)
+  finalScore                Decimal   @default(0.00) @map("final_score") @db.Decimal(7, 2)
+  isAutoCalculated          Boolean   @default(false) @map("is_auto_calculated")
+  notes                     String?   @db.VarChar(255)
+  isActive                  Boolean   @default(true) @map("is_active")
+  createdAt                 DateTime  @default(now()) @map("created_at")
+  updatedAt                 DateTime  @updatedAt @map("updated_at")
+  deletedAt                 DateTime? @map("deleted_at")
+  createdById               String?   @map("created_by") @db.VarChar(191)
+  updatedById               String?   @map("updated_by") @db.VarChar(191)
+
+  @@unique([monthlyStudentResultId, monthlyAssessmentComponentId], map: "mscs_result_component_uq")
+  @@index([monthlyStudentResultId, deletedAt], map: "mscs_result_del_idx")
+  @@index([monthlyAssessmentComponentId, deletedAt], map: "mscs_component_del_idx")
+  @@index([isActive, deletedAt], map: "mscs_active_del_idx")
+  @@index([deletedAt], map: "mscs_deleted_at_idx")
+  @@map("monthly_student_component_scores")
 }
 
 model AnnualStatusLookup {

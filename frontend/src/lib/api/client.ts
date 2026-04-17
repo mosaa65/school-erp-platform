@@ -1453,11 +1453,23 @@ export type AssessmentType =
   | "PRACTICAL"
   | "PROJECT";
 
+export type AssessmentPeriodCategory =
+  | "MONTHLY"
+  | "SEMESTER"
+  | "YEAR_FINAL";
+
 export type GradingComponentCalculationMode =
   | "MANUAL"
   | "AUTO_ATTENDANCE"
   | "AUTO_HOMEWORK"
   | "AUTO_EXAM";
+
+export type AssessmentComponentEntryMode =
+  | "MANUAL"
+  | "AUTO_ATTENDANCE"
+  | "AUTO_HOMEWORK"
+  | "AUTO_EXAM"
+  | "AGGREGATED_PERIODS";
 
 export type ExamAbsenceType = "EXCUSED" | "UNEXCUSED";
 
@@ -2470,9 +2482,6 @@ export type AnnualStatusListItem = {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
-  _count: {
-    annualGrades: number;
-  };
   createdBy: {
     id: string;
     email: string;
@@ -2550,108 +2559,6 @@ export type GradingOutcomeRuleListItem = {
     email: string;
   } | null;
   updatedBy: {
-    id: string;
-    email: string;
-  } | null;
-};
-
-export type AnnualGradeListItem = {
-  id: string;
-  studentEnrollmentId: string;
-  subjectId: string;
-  academicYearId: string;
-  semester1Total: number;
-  semester2Total: number;
-  annualTotal: number;
-  annualPercentage: number | null;
-  finalStatusId: string;
-  status: GradingWorkflowStatus;
-  isLocked: boolean;
-  lockedAt: string | null;
-  approvedAt: string | null;
-  calculatedAt: string | null;
-  notes: string | null;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-  termTotals: Array<{
-    id: string;
-    academicTermId: string;
-    termTotal: number;
-    academicTerm: {
-      id: string;
-      code: string;
-      name: string;
-      sequence: number;
-      termType: AcademicTermType;
-    };
-  }>;
-  studentEnrollment: {
-    id: string;
-    studentId: string;
-    sectionId: string;
-    gradeLevelId: string | null;
-    academicYearId: string;
-    status: StudentEnrollmentStatus;
-    isActive: boolean;
-    student: {
-      id: string;
-      admissionNo: string | null;
-      fullName: string;
-      isActive: boolean;
-    };
-    section: {
-      id: string;
-      code: string;
-      name: string;
-      gradeLevelId: string;
-      isActive: boolean;
-      gradeLevel: {
-        id: string;
-        code: string;
-        name: string;
-        sequence: number;
-      };
-    };
-    gradeLevel: {
-      id: string;
-      code: string;
-      name: string;
-      sequence: number;
-    } | null;
-  };
-  subject: {
-    id: string;
-    code: string;
-    name: string;
-    isActive: boolean;
-  };
-  academicYear: {
-    id: string;
-    code: string;
-    name: string;
-    status: AcademicYearStatus;
-    isCurrent: boolean;
-  };
-  finalStatus: {
-    id: string;
-    code: string;
-    name: string;
-    isActive: boolean;
-  };
-  createdBy: {
-    id: string;
-    email: string;
-  } | null;
-  updatedBy: {
-    id: string;
-    email: string;
-  } | null;
-  lockedByUser: {
-    id: string;
-    email: string;
-  } | null;
-  approvedByUser: {
     id: string;
     email: string;
   } | null;
@@ -3053,6 +2960,285 @@ export type TalentListItem = {
   } | null;
 };
 
+export type AssessmentPeriodListItem = {
+  id: string;
+  academicYearId: string;
+  academicTermId: string | null;
+  academicMonthId: string | null;
+  category: AssessmentPeriodCategory;
+  name: string;
+  sequence: number;
+  maxScore: number;
+  status: GradingWorkflowStatus;
+  isLocked: boolean;
+  lockedAt: string | null;
+  calculatedAt: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  _count: {
+    components: number;
+    results: number;
+  };
+  academicYear: {
+    id: string;
+    code: string;
+    name: string;
+    status: AcademicYearStatus;
+    isCurrent: boolean;
+  };
+  academicTerm: {
+    id: string;
+    code: string;
+    name: string;
+    sequence: number;
+    isActive: boolean;
+  } | null;
+  academicMonth: {
+    id: string;
+    code: string;
+    name: string;
+    sequence: number;
+    isCurrent: boolean;
+    isActive: boolean;
+  } | null;
+  createdBy: {
+    id: string;
+    email: string;
+  } | null;
+  updatedBy: {
+    id: string;
+    email: string;
+  } | null;
+  lockedByUser: {
+    id: string;
+    email: string;
+  } | null;
+};
+
+export type AssessmentPeriodComponentListItem = {
+  id: string;
+  assessmentPeriodId: string;
+  code: string | null;
+  name: string;
+  entryMode: AssessmentComponentEntryMode;
+  maxScore: number;
+  sortOrder: number;
+  isRequired: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  assessmentPeriod: {
+    id: string;
+    name: string;
+    category: AssessmentPeriodCategory;
+    academicYearId: string;
+    academicTermId: string | null;
+    academicMonthId: string | null;
+    status: GradingWorkflowStatus;
+    isActive: boolean;
+  };
+  createdBy: {
+    id: string;
+    email: string;
+  } | null;
+  updatedBy: {
+    id: string;
+    email: string;
+  } | null;
+};
+
+export type AssessmentComponentSourcePeriodListItem = {
+  id: string;
+  assessmentPeriodComponentId: string;
+  sourcePeriodId: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  assessmentPeriodComponent: {
+    id: string;
+    name: string;
+    entryMode: AssessmentComponentEntryMode;
+    assessmentPeriodId: string;
+  };
+  sourcePeriod: {
+    id: string;
+    name: string;
+    category: AssessmentPeriodCategory;
+    academicYearId: string;
+    academicTermId: string | null;
+    academicMonthId: string | null;
+  };
+  createdBy: {
+    id: string;
+    email: string;
+  } | null;
+  updatedBy: {
+    id: string;
+    email: string;
+  } | null;
+};
+
+export type StudentPeriodResultListItem = {
+  id: string;
+  assessmentPeriodId: string;
+  studentEnrollmentId: string;
+  subjectId: string;
+  academicYearId: string;
+  academicTermId: string | null;
+  academicMonthId: string | null;
+  termSubjectOfferingId: string | null;
+  sectionId: string | null;
+  totalScore: number;
+  status: GradingWorkflowStatus;
+  isLocked: boolean;
+  lockedAt: string | null;
+  calculatedAt: string | null;
+  notes: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  _count: {
+    componentScores: number;
+  };
+  assessmentPeriod: {
+    id: string;
+    name: string;
+    category: AssessmentPeriodCategory;
+    status: GradingWorkflowStatus;
+    maxScore: number;
+    academicYearId: string;
+    academicTermId: string | null;
+    academicMonthId: string | null;
+  };
+  academicYear: {
+    id: string;
+    code: string;
+    name: string;
+    status: AcademicYearStatus;
+    isCurrent: boolean;
+  };
+  academicTerm: {
+    id: string;
+    code: string;
+    name: string;
+    sequence: number;
+    isActive: boolean;
+  } | null;
+  academicMonth: {
+    id: string;
+    code: string;
+    name: string;
+    sequence: number;
+    isActive: boolean;
+  } | null;
+  studentEnrollment: {
+    id: string;
+    sectionId: string | null;
+    academicYearId: string;
+    status: StudentEnrollmentStatus;
+    isActive: boolean;
+    student: {
+      id: string;
+      admissionNo: string | null;
+      fullName: string;
+      isActive: boolean;
+    };
+    section: {
+      id: string;
+      code: string;
+      name: string;
+      isActive: boolean;
+    } | null;
+  };
+  subject: {
+    id: string;
+    code: string;
+    name: string;
+    isActive: boolean;
+  };
+  termSubjectOffering: {
+    id: string;
+    academicTermId: string;
+    gradeLevelSubject: {
+      id: string;
+      subjectId: string;
+      gradeLevelId: string;
+    };
+  } | null;
+  createdBy: {
+    id: string;
+    email: string;
+  } | null;
+  updatedBy: {
+    id: string;
+    email: string;
+  } | null;
+  lockedByUser: {
+    id: string;
+    email: string;
+  } | null;
+};
+
+export type StudentPeriodComponentScoreListItem = {
+  id: string;
+  studentPeriodResultId: string;
+  assessmentPeriodComponentId: string;
+  rawScore: number;
+  finalScore: number;
+  isAutoCalculated: boolean;
+  notes: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  studentPeriodResult: {
+    id: string;
+    assessmentPeriodId: string;
+    studentEnrollmentId: string;
+    subjectId: string;
+    isLocked: boolean;
+    assessmentPeriod: {
+      id: string;
+      name: string;
+      category: AssessmentPeriodCategory;
+      status: GradingWorkflowStatus;
+      isLocked: boolean;
+      maxScore: number;
+    };
+    studentEnrollment: {
+      id: string;
+      sectionId: string | null;
+      student: {
+        id: string;
+        admissionNo: string | null;
+        fullName: string;
+      };
+    };
+    subject: {
+      id: string;
+      code: string;
+      name: string;
+    };
+  };
+  assessmentPeriodComponent: {
+    id: string;
+    assessmentPeriodId: string;
+    code: string | null;
+    name: string;
+    entryMode: AssessmentComponentEntryMode;
+    maxScore: number;
+    sortOrder: number;
+  };
+  createdBy: {
+    id: string;
+    email: string;
+  } | null;
+  updatedBy: {
+    id: string;
+    email: string;
+  } | null;
+};
+
 export type EmployeeCourseListItem = {
   id: string;
   employeeId: string;
@@ -3338,7 +3524,7 @@ export type GradingSummaryReportResponse = {
     fromDate: string | null;
     toDate: string | null;
   };
-  semesterGrades: {
+  semesterPeriods: {
     total: number;
     active: number;
     inactive: number;
@@ -3350,7 +3536,7 @@ export type GradingSummaryReportResponse = {
       count: number;
     }>;
   };
-  annualGrades: {
+  yearFinalPeriods: {
     total: number;
     active: number;
     inactive: number;
@@ -3359,12 +3545,6 @@ export type GradingSummaryReportResponse = {
     lockRate: number;
     byStatus: Array<{
       status: GradingWorkflowStatus;
-      count: number;
-    }>;
-    byFinalStatus: Array<{
-      finalStatusId: string;
-      code: string;
-      name: string;
       count: number;
     }>;
   };
@@ -4704,37 +4884,6 @@ export type UpdateGradingOutcomeRulePayload = {
   isActive?: boolean;
 };
 
-export type CreateAnnualGradePayload = {
-  studentEnrollmentId: string;
-  subjectId: string;
-  academicYearId: string;
-  semester1Total?: number;
-  semester2Total?: number;
-  termTotals?: Array<{
-    academicTermId: string;
-    termTotal: number;
-  }>;
-  annualPercentage?: number;
-  finalStatusId: string;
-  status?: GradingWorkflowStatus;
-  notes?: string;
-  isActive?: boolean;
-};
-
-export type UpdateAnnualGradePayload = {
-  semester1Total?: number;
-  semester2Total?: number;
-  termTotals?: Array<{
-    academicTermId: string;
-    termTotal: number;
-  }>;
-  annualPercentage?: number;
-  finalStatusId?: string;
-  status?: GradingWorkflowStatus;
-  notes?: string;
-  isActive?: boolean;
-};
-
 export type CreateAnnualResultPayload = {
   studentEnrollmentId: string;
   academicYearId: string;
@@ -4773,7 +4922,7 @@ export type CalculateAnnualResultsPayload = {
 export type CalculateAnnualResultsResponse = {
   message: string;
   summary: {
-    annualGrades: {
+    periodSubjects: {
       created: number;
       updated: number;
       skippedLocked: number;
@@ -4786,6 +4935,107 @@ export type CalculateAnnualResultsResponse = {
     rankedClassRows?: number;
     rankedGradeRows?: number;
   };
+};
+
+export type CreateAssessmentPeriodPayload = {
+  academicYearId: string;
+  category: AssessmentPeriodCategory;
+  academicTermId?: string;
+  academicMonthId?: string;
+  name: string;
+  sequence?: number;
+  maxScore?: number;
+  status?: GradingWorkflowStatus;
+  isActive?: boolean;
+};
+
+export type UpdateAssessmentPeriodPayload = {
+  academicYearId?: string;
+  category?: AssessmentPeriodCategory;
+  academicTermId?: string | null;
+  academicMonthId?: string | null;
+  name?: string;
+  sequence?: number;
+  maxScore?: number;
+  status?: GradingWorkflowStatus;
+  isActive?: boolean;
+};
+
+export type CreateAssessmentPeriodComponentPayload = {
+  assessmentPeriodId: string;
+  code?: string;
+  name: string;
+  entryMode?: AssessmentComponentEntryMode;
+  maxScore?: number;
+  sortOrder?: number;
+  isRequired?: boolean;
+  isActive?: boolean;
+};
+
+export type UpdateAssessmentPeriodComponentPayload = {
+  code?: string;
+  name?: string;
+  entryMode?: AssessmentComponentEntryMode;
+  maxScore?: number;
+  sortOrder?: number;
+  isRequired?: boolean;
+  isActive?: boolean;
+};
+
+export type CreateAssessmentComponentSourcePeriodPayload = {
+  assessmentPeriodComponentId: string;
+  sourcePeriodId: string;
+  isActive?: boolean;
+};
+
+export type UpdateAssessmentComponentSourcePeriodPayload = {
+  sourcePeriodId?: string;
+  isActive?: boolean;
+};
+
+export type CreateStudentPeriodResultPayload = {
+  assessmentPeriodId: string;
+  studentEnrollmentId: string;
+  subjectId: string;
+  termSubjectOfferingId?: string;
+  status?: GradingWorkflowStatus;
+  notes?: string;
+  isActive?: boolean;
+};
+
+export type UpdateStudentPeriodResultPayload = {
+  status?: GradingWorkflowStatus;
+  notes?: string;
+  isActive?: boolean;
+};
+
+export type CalculateStudentPeriodResultsPayload = {
+  assessmentPeriodId: string;
+  sectionId?: string;
+  subjectId?: string;
+  studentEnrollmentId?: string;
+};
+
+export type CalculateStudentPeriodResultsResponse = {
+  success: boolean;
+  updatedResults: number;
+  updatedComponents: number;
+};
+
+export type CreateStudentPeriodComponentScorePayload = {
+  studentPeriodResultId: string;
+  assessmentPeriodComponentId: string;
+  rawScore: number;
+  finalScore?: number;
+  notes?: string;
+  isActive?: boolean;
+};
+
+export type UpdateStudentPeriodComponentScorePayload = {
+  rawScore?: number;
+  finalScore?: number;
+  notes?: string;
+  isActive?: boolean;
 };
 
 export type PopulateHomeworkStudentsResponse = {
@@ -9646,315 +9896,6 @@ export const apiClient = {
         withAuth: true,
       },
     ),
-  listMonthlyGrades: (query?: {
-    page?: number;
-    limit?: number;
-    search?: string;
-    academicYearId?: string;
-    academicTermId?: string;
-    academicMonthId?: string;
-    sectionId?: string;
-    subjectId?: string;
-    studentEnrollmentId?: string;
-    studentId?: string;
-    status?: GradingWorkflowStatus;
-    isLocked?: boolean;
-    isActive?: boolean;
-  }) =>
-    request<PaginatedResponse<MonthlyGradeListItem>>(
-      `/monthly-grades${buildQueryString({
-        page: query?.page,
-        limit: query?.limit,
-        search: query?.search,
-        academicYearId: query?.academicYearId,
-        academicTermId: query?.academicTermId,
-        academicMonthId: query?.academicMonthId,
-        sectionId: query?.sectionId,
-        subjectId: query?.subjectId,
-        studentEnrollmentId: query?.studentEnrollmentId,
-        studentId: query?.studentId,
-        status: query?.status,
-        isLocked: query?.isLocked,
-        isActive: query?.isActive,
-      })}`,
-      "GET",
-      {
-        withAuth: true,
-      },
-    ),
-  createMonthlyGrade: (payload: CreateMonthlyGradePayload) =>
-    request<MonthlyGradeListItem>("/monthly-grades", "POST", {
-      withAuth: true,
-      json: payload,
-    }),
-  calculateMonthlyGrades: (payload: CalculateMonthlyGradesPayload) =>
-    request<CalculateMonthlyGradesResponse>(
-      "/monthly-grades/calculate",
-      "POST",
-      {
-        withAuth: true,
-        json: payload,
-      },
-    ),
-  updateMonthlyGrade: (
-    monthlyGradeId: string,
-    payload: UpdateMonthlyGradePayload,
-  ) =>
-    request<MonthlyGradeListItem>(
-      `/monthly-grades/${monthlyGradeId}`,
-      "PATCH",
-      {
-        withAuth: true,
-        json: payload,
-      },
-    ),
-  lockMonthlyGrade: (monthlyGradeId: string) =>
-    request<MonthlyGradeListItem>(
-      `/monthly-grades/${monthlyGradeId}/lock`,
-      "POST",
-      {
-        withAuth: true,
-      },
-    ),
-  unlockMonthlyGrade: (monthlyGradeId: string) =>
-    request<MonthlyGradeListItem>(
-      `/monthly-grades/${monthlyGradeId}/unlock`,
-      "POST",
-      {
-        withAuth: true,
-      },
-    ),
-  deleteMonthlyGrade: (monthlyGradeId: string) =>
-    request<DeleteEntityResponse>(
-      `/monthly-grades/${monthlyGradeId}`,
-      "DELETE",
-      {
-        withAuth: true,
-      },
-    ),
-  listMonthlyCustomComponentScores: (query?: {
-    page?: number;
-    limit?: number;
-    search?: string;
-    monthlyGradeId?: string;
-    gradingPolicyComponentId?: string;
-    academicMonthId?: string;
-    subjectId?: string;
-    sectionId?: string;
-    studentEnrollmentId?: string;
-    studentId?: string;
-    isActive?: boolean;
-  }) =>
-    request<PaginatedResponse<MonthlyCustomComponentScoreListItem>>(
-      `/monthly-custom-component-scores${buildQueryString({
-        page: query?.page,
-        limit: query?.limit,
-        search: query?.search,
-        monthlyGradeId: query?.monthlyGradeId,
-        gradingPolicyComponentId: query?.gradingPolicyComponentId,
-        academicMonthId: query?.academicMonthId,
-        subjectId: query?.subjectId,
-        sectionId: query?.sectionId,
-        studentEnrollmentId: query?.studentEnrollmentId,
-        studentId: query?.studentId,
-        isActive: query?.isActive,
-      })}`,
-      "GET",
-      {
-        withAuth: true,
-      },
-    ),
-  createMonthlyCustomComponentScore: (
-    payload: CreateMonthlyCustomComponentScorePayload,
-  ) =>
-    request<MonthlyCustomComponentScoreListItem>(
-      "/monthly-custom-component-scores",
-      "POST",
-      {
-        withAuth: true,
-        json: payload,
-      },
-    ),
-  updateMonthlyCustomComponentScore: (
-    monthlyCustomComponentScoreId: string,
-    payload: UpdateMonthlyCustomComponentScorePayload,
-  ) =>
-    request<MonthlyCustomComponentScoreListItem>(
-      `/monthly-custom-component-scores/${monthlyCustomComponentScoreId}`,
-      "PATCH",
-      {
-        withAuth: true,
-        json: payload,
-      },
-    ),
-  deleteMonthlyCustomComponentScore: (monthlyCustomComponentScoreId: string) =>
-    request<DeleteEntityResponse>(
-      `/monthly-custom-component-scores/${monthlyCustomComponentScoreId}`,
-      "DELETE",
-      {
-        withAuth: true,
-      },
-    ),
-  listSemesterGrades: (query?: {
-    page?: number;
-    limit?: number;
-    search?: string;
-    academicYearId?: string;
-    academicTermId?: string;
-    sectionId?: string;
-    subjectId?: string;
-    studentEnrollmentId?: string;
-    studentId?: string;
-    status?: GradingWorkflowStatus;
-    isLocked?: boolean;
-    isActive?: boolean;
-  }) =>
-    request<PaginatedResponse<SemesterGradeListItem>>(
-      `/semester-grades${buildQueryString({
-        page: query?.page,
-        limit: query?.limit,
-        search: query?.search,
-        academicYearId: query?.academicYearId,
-        academicTermId: query?.academicTermId,
-        sectionId: query?.sectionId,
-        subjectId: query?.subjectId,
-        studentEnrollmentId: query?.studentEnrollmentId,
-        studentId: query?.studentId,
-        status: query?.status,
-        isLocked: query?.isLocked,
-        isActive: query?.isActive,
-      })}`,
-      "GET",
-      {
-        withAuth: true,
-      },
-    ),
-  createSemesterGrade: (payload: CreateSemesterGradePayload) =>
-    request<SemesterGradeListItem>("/semester-grades", "POST", {
-      withAuth: true,
-      json: payload,
-    }),
-  calculateSemesterGrades: (payload: CalculateSemesterGradesPayload) =>
-    request<CalculateSemesterGradesResponse>(
-      "/semester-grades/calculate",
-      "POST",
-      {
-        withAuth: true,
-        json: payload,
-      },
-    ),
-  fillSemesterFinalExamScores: (payload: FillSemesterFinalExamScoresPayload) =>
-    request<FillSemesterFinalExamScoresResponse>(
-      "/semester-grades/fill-final-exam-scores",
-      "POST",
-      {
-        withAuth: true,
-        json: payload,
-      },
-    ),
-  updateSemesterGrade: (
-    semesterGradeId: string,
-    payload: UpdateSemesterGradePayload,
-  ) =>
-    request<SemesterGradeListItem>(
-      `/semester-grades/${semesterGradeId}`,
-      "PATCH",
-      {
-        withAuth: true,
-        json: payload,
-      },
-    ),
-  lockSemesterGrade: (semesterGradeId: string) =>
-    request<SemesterGradeListItem>(
-      `/semester-grades/${semesterGradeId}/lock`,
-      "POST",
-      {
-        withAuth: true,
-      },
-    ),
-  unlockSemesterGrade: (semesterGradeId: string) =>
-    request<SemesterGradeListItem>(
-      `/semester-grades/${semesterGradeId}/unlock`,
-      "POST",
-      {
-        withAuth: true,
-      },
-    ),
-  deleteSemesterGrade: (semesterGradeId: string) =>
-    request<DeleteEntityResponse>(
-      `/semester-grades/${semesterGradeId}`,
-      "DELETE",
-      {
-        withAuth: true,
-      },
-    ),
-  listAnnualGrades: (query?: {
-    page?: number;
-    limit?: number;
-    search?: string;
-    academicYearId?: string;
-    sectionId?: string;
-    subjectId?: string;
-    studentEnrollmentId?: string;
-    studentId?: string;
-    finalStatusId?: string;
-    status?: GradingWorkflowStatus;
-    isLocked?: boolean;
-    isActive?: boolean;
-  }) =>
-    request<PaginatedResponse<AnnualGradeListItem>>(
-      `/annual-grades${buildQueryString({
-        page: query?.page,
-        limit: query?.limit,
-        search: query?.search,
-        academicYearId: query?.academicYearId,
-        sectionId: query?.sectionId,
-        subjectId: query?.subjectId,
-        studentEnrollmentId: query?.studentEnrollmentId,
-        studentId: query?.studentId,
-        finalStatusId: query?.finalStatusId,
-        status: query?.status,
-        isLocked: query?.isLocked,
-        isActive: query?.isActive,
-      })}`,
-      "GET",
-      {
-        withAuth: true,
-      },
-    ),
-  createAnnualGrade: (payload: CreateAnnualGradePayload) =>
-    request<AnnualGradeListItem>("/annual-grades", "POST", {
-      withAuth: true,
-      json: payload,
-    }),
-  updateAnnualGrade: (
-    annualGradeId: string,
-    payload: UpdateAnnualGradePayload,
-  ) =>
-    request<AnnualGradeListItem>(`/annual-grades/${annualGradeId}`, "PATCH", {
-      withAuth: true,
-      json: payload,
-    }),
-  lockAnnualGrade: (annualGradeId: string) =>
-    request<AnnualGradeListItem>(
-      `/annual-grades/${annualGradeId}/lock`,
-      "POST",
-      {
-        withAuth: true,
-      },
-    ),
-  unlockAnnualGrade: (annualGradeId: string) =>
-    request<AnnualGradeListItem>(
-      `/annual-grades/${annualGradeId}/unlock`,
-      "POST",
-      {
-        withAuth: true,
-      },
-    ),
-  deleteAnnualGrade: (annualGradeId: string) =>
-    request<DeleteEntityResponse>(`/annual-grades/${annualGradeId}`, "DELETE", {
-      withAuth: true,
-    }),
   listAnnualResults: (query?: {
     page?: number;
     limit?: number;
@@ -10038,6 +9979,557 @@ export const apiClient = {
       {
         withAuth: true,
       },
+    ),
+  listAssessmentPeriods: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    academicYearId?: string;
+    academicTermId?: string;
+    academicMonthId?: string;
+    category?: AssessmentPeriodCategory;
+    status?: GradingWorkflowStatus;
+    isLocked?: boolean;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<AssessmentPeriodListItem>>(
+      `/assessment-periods${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        academicYearId: query?.academicYearId,
+        academicTermId: query?.academicTermId,
+        academicMonthId: query?.academicMonthId,
+        category: query?.category,
+        status: query?.status,
+        isLocked: query?.isLocked,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createAssessmentPeriod: (payload: CreateAssessmentPeriodPayload) =>
+    request<AssessmentPeriodListItem>("/assessment-periods", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateAssessmentPeriod: (
+    assessmentPeriodId: string,
+    payload: UpdateAssessmentPeriodPayload,
+  ) =>
+    request<AssessmentPeriodListItem>(
+      `/assessment-periods/${assessmentPeriodId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  lockAssessmentPeriod: (assessmentPeriodId: string) =>
+    request<AssessmentPeriodListItem>(
+      `/assessment-periods/${assessmentPeriodId}/lock`,
+      "POST",
+      {
+        withAuth: true,
+      },
+    ),
+  unlockAssessmentPeriod: (assessmentPeriodId: string) =>
+    request<AssessmentPeriodListItem>(
+      `/assessment-periods/${assessmentPeriodId}/unlock`,
+      "POST",
+      {
+        withAuth: true,
+      },
+    ),
+  deleteAssessmentPeriod: (assessmentPeriodId: string) =>
+    request<DeleteEntityResponse>(`/assessment-periods/${assessmentPeriodId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listAssessmentPeriodComponents: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    assessmentPeriodId?: string;
+    entryMode?: AssessmentComponentEntryMode;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<AssessmentPeriodComponentListItem>>(
+      `/assessment-period-components${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        assessmentPeriodId: query?.assessmentPeriodId,
+        entryMode: query?.entryMode,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createAssessmentPeriodComponent: (
+    payload: CreateAssessmentPeriodComponentPayload,
+  ) =>
+    request<AssessmentPeriodComponentListItem>("/assessment-period-components", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateAssessmentPeriodComponent: (
+    assessmentPeriodComponentId: string,
+    payload: UpdateAssessmentPeriodComponentPayload,
+  ) =>
+    request<AssessmentPeriodComponentListItem>(
+      `/assessment-period-components/${assessmentPeriodComponentId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  deleteAssessmentPeriodComponent: (assessmentPeriodComponentId: string) =>
+    request<DeleteEntityResponse>(
+      `/assessment-period-components/${assessmentPeriodComponentId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
+  listAssessmentComponentSourcePeriods: (query?: {
+    page?: number;
+    limit?: number;
+    assessmentPeriodComponentId?: string;
+    sourcePeriodId?: string;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<AssessmentComponentSourcePeriodListItem>>(
+      `/assessment-component-source-periods${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        assessmentPeriodComponentId: query?.assessmentPeriodComponentId,
+        sourcePeriodId: query?.sourcePeriodId,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createAssessmentComponentSourcePeriod: (
+    payload: CreateAssessmentComponentSourcePeriodPayload,
+  ) =>
+    request<AssessmentComponentSourcePeriodListItem>(
+      "/assessment-component-source-periods",
+      "POST",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  updateAssessmentComponentSourcePeriod: (
+    sourcePeriodLinkId: string,
+    payload: UpdateAssessmentComponentSourcePeriodPayload,
+  ) =>
+    request<AssessmentComponentSourcePeriodListItem>(
+      `/assessment-component-source-periods/${sourcePeriodLinkId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  deleteAssessmentComponentSourcePeriod: (sourcePeriodLinkId: string) =>
+    request<DeleteEntityResponse>(
+      `/assessment-component-source-periods/${sourcePeriodLinkId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
+  listStudentPeriodResults: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    assessmentPeriodId?: string;
+    academicYearId?: string;
+    academicTermId?: string;
+    academicMonthId?: string;
+    sectionId?: string;
+    subjectId?: string;
+    studentEnrollmentId?: string;
+    studentId?: string;
+    termSubjectOfferingId?: string;
+    status?: GradingWorkflowStatus;
+    isLocked?: boolean;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<StudentPeriodResultListItem>>(
+      `/student-period-results${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        assessmentPeriodId: query?.assessmentPeriodId,
+        academicYearId: query?.academicYearId,
+        academicTermId: query?.academicTermId,
+        academicMonthId: query?.academicMonthId,
+        sectionId: query?.sectionId,
+        subjectId: query?.subjectId,
+        studentEnrollmentId: query?.studentEnrollmentId,
+        studentId: query?.studentId,
+        termSubjectOfferingId: query?.termSubjectOfferingId,
+        status: query?.status,
+        isLocked: query?.isLocked,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createStudentPeriodResult: (payload: CreateStudentPeriodResultPayload) =>
+    request<StudentPeriodResultListItem>("/student-period-results", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateStudentPeriodResult: (
+    studentPeriodResultId: string,
+    payload: UpdateStudentPeriodResultPayload,
+  ) =>
+    request<StudentPeriodResultListItem>(
+      `/student-period-results/${studentPeriodResultId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  lockStudentPeriodResult: (studentPeriodResultId: string) =>
+    request<StudentPeriodResultListItem>(
+      `/student-period-results/${studentPeriodResultId}/lock`,
+      "POST",
+      {
+        withAuth: true,
+      },
+    ),
+  unlockStudentPeriodResult: (studentPeriodResultId: string) =>
+    request<StudentPeriodResultListItem>(
+      `/student-period-results/${studentPeriodResultId}/unlock`,
+      "POST",
+      {
+        withAuth: true,
+      },
+    ),
+  calculateStudentPeriodResults: (
+    payload: CalculateStudentPeriodResultsPayload,
+  ) =>
+    request<CalculateStudentPeriodResultsResponse>(
+      "/student-period-results/calculate",
+      "POST",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  deleteStudentPeriodResult: (studentPeriodResultId: string) =>
+    request<DeleteEntityResponse>(`/student-period-results/${studentPeriodResultId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listStudentPeriodComponentScores: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    studentPeriodResultId?: string;
+    assessmentPeriodComponentId?: string;
+    assessmentPeriodId?: string;
+    subjectId?: string;
+    studentEnrollmentId?: string;
+    studentId?: string;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<StudentPeriodComponentScoreListItem>>(
+      `/student-period-component-scores${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        studentPeriodResultId: query?.studentPeriodResultId,
+        assessmentPeriodComponentId: query?.assessmentPeriodComponentId,
+        assessmentPeriodId: query?.assessmentPeriodId,
+        subjectId: query?.subjectId,
+        studentEnrollmentId: query?.studentEnrollmentId,
+        studentId: query?.studentId,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createStudentPeriodComponentScore: (
+    payload: CreateStudentPeriodComponentScorePayload,
+  ) =>
+    request<StudentPeriodComponentScoreListItem>("/student-period-component-scores", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateStudentPeriodComponentScore: (
+    studentPeriodComponentScoreId: string,
+    payload: UpdateStudentPeriodComponentScorePayload,
+  ) =>
+    request<StudentPeriodComponentScoreListItem>(
+      `/student-period-component-scores/${studentPeriodComponentScoreId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  deleteStudentPeriodComponentScore: (studentPeriodComponentScoreId: string) =>
+    request<DeleteEntityResponse>(
+      `/student-period-component-scores/${studentPeriodComponentScoreId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
+  listMonthlyAssessmentPeriods: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    academicYearId?: string;
+    academicTermId?: string;
+    academicMonthId?: string;
+    status?: GradingWorkflowStatus;
+    isLocked?: boolean;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<AssessmentPeriodListItem>>(
+      `/monthly-assessment-periods${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        academicYearId: query?.academicYearId,
+        academicTermId: query?.academicTermId,
+        academicMonthId: query?.academicMonthId,
+        status: query?.status,
+        isLocked: query?.isLocked,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      { withAuth: true },
+    ),
+  createMonthlyAssessmentPeriod: (payload: CreateAssessmentPeriodPayload) =>
+    request<AssessmentPeriodListItem>("/monthly-assessment-periods", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateMonthlyAssessmentPeriod: (
+    assessmentPeriodId: string,
+    payload: UpdateAssessmentPeriodPayload,
+  ) =>
+    request<AssessmentPeriodListItem>(
+      `/monthly-assessment-periods/${assessmentPeriodId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  lockMonthlyAssessmentPeriod: (assessmentPeriodId: string) =>
+    request<AssessmentPeriodListItem>(
+      `/monthly-assessment-periods/${assessmentPeriodId}/lock`,
+      "POST",
+      { withAuth: true },
+    ),
+  unlockMonthlyAssessmentPeriod: (assessmentPeriodId: string) =>
+    request<AssessmentPeriodListItem>(
+      `/monthly-assessment-periods/${assessmentPeriodId}/unlock`,
+      "POST",
+      { withAuth: true },
+    ),
+  deleteMonthlyAssessmentPeriod: (assessmentPeriodId: string) =>
+    request<DeleteEntityResponse>(`/monthly-assessment-periods/${assessmentPeriodId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listMonthlyAssessmentComponents: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    assessmentPeriodId?: string;
+    entryMode?: AssessmentComponentEntryMode;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<AssessmentPeriodComponentListItem>>(
+      `/monthly-assessment-components${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        assessmentPeriodId: query?.assessmentPeriodId,
+        entryMode: query?.entryMode,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      { withAuth: true },
+    ),
+  createMonthlyAssessmentComponent: (
+    payload: CreateAssessmentPeriodComponentPayload,
+  ) =>
+    request<AssessmentPeriodComponentListItem>("/monthly-assessment-components", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateMonthlyAssessmentComponent: (
+    assessmentPeriodComponentId: string,
+    payload: UpdateAssessmentPeriodComponentPayload,
+  ) =>
+    request<AssessmentPeriodComponentListItem>(
+      `/monthly-assessment-components/${assessmentPeriodComponentId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  deleteMonthlyAssessmentComponent: (assessmentPeriodComponentId: string) =>
+    request<DeleteEntityResponse>(
+      `/monthly-assessment-components/${assessmentPeriodComponentId}`,
+      "DELETE",
+      { withAuth: true },
+    ),
+  listMonthlyStudentResults: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    assessmentPeriodId?: string;
+    academicYearId?: string;
+    academicTermId?: string;
+    academicMonthId?: string;
+    sectionId?: string;
+    subjectId?: string;
+    studentEnrollmentId?: string;
+    studentId?: string;
+    termSubjectOfferingId?: string;
+    status?: GradingWorkflowStatus;
+    isLocked?: boolean;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<StudentPeriodResultListItem>>(
+      `/monthly-student-results${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        assessmentPeriodId: query?.assessmentPeriodId,
+        academicYearId: query?.academicYearId,
+        academicTermId: query?.academicTermId,
+        academicMonthId: query?.academicMonthId,
+        sectionId: query?.sectionId,
+        subjectId: query?.subjectId,
+        studentEnrollmentId: query?.studentEnrollmentId,
+        studentId: query?.studentId,
+        termSubjectOfferingId: query?.termSubjectOfferingId,
+        status: query?.status,
+        isLocked: query?.isLocked,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      { withAuth: true },
+    ),
+  createMonthlyStudentResult: (payload: CreateStudentPeriodResultPayload) =>
+    request<StudentPeriodResultListItem>("/monthly-student-results", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateMonthlyStudentResult: (
+    studentPeriodResultId: string,
+    payload: UpdateStudentPeriodResultPayload,
+  ) =>
+    request<StudentPeriodResultListItem>(
+      `/monthly-student-results/${studentPeriodResultId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  lockMonthlyStudentResult: (studentPeriodResultId: string) =>
+    request<StudentPeriodResultListItem>(
+      `/monthly-student-results/${studentPeriodResultId}/lock`,
+      "POST",
+      { withAuth: true },
+    ),
+  unlockMonthlyStudentResult: (studentPeriodResultId: string) =>
+    request<StudentPeriodResultListItem>(
+      `/monthly-student-results/${studentPeriodResultId}/unlock`,
+      "POST",
+      { withAuth: true },
+    ),
+  calculateMonthlyStudentResults: (
+    payload: CalculateStudentPeriodResultsPayload,
+  ) =>
+    request<CalculateStudentPeriodResultsResponse>(
+      "/monthly-student-results/calculate",
+      "POST",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  deleteMonthlyStudentResult: (studentPeriodResultId: string) =>
+    request<DeleteEntityResponse>(`/monthly-student-results/${studentPeriodResultId}`, "DELETE", {
+      withAuth: true,
+    }),
+  listMonthlyStudentComponentScores: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    studentPeriodResultId?: string;
+    assessmentPeriodComponentId?: string;
+    assessmentPeriodId?: string;
+    subjectId?: string;
+    studentEnrollmentId?: string;
+    studentId?: string;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<StudentPeriodComponentScoreListItem>>(
+      `/monthly-student-component-scores${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        studentPeriodResultId: query?.studentPeriodResultId,
+        assessmentPeriodComponentId: query?.assessmentPeriodComponentId,
+        assessmentPeriodId: query?.assessmentPeriodId,
+        subjectId: query?.subjectId,
+        studentEnrollmentId: query?.studentEnrollmentId,
+        studentId: query?.studentId,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      { withAuth: true },
+    ),
+  createMonthlyStudentComponentScore: (
+    payload: CreateStudentPeriodComponentScorePayload,
+  ) =>
+    request<StudentPeriodComponentScoreListItem>("/monthly-student-component-scores", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateMonthlyStudentComponentScore: (
+    studentPeriodComponentScoreId: string,
+    payload: UpdateStudentPeriodComponentScorePayload,
+  ) =>
+    request<StudentPeriodComponentScoreListItem>(
+      `/monthly-student-component-scores/${studentPeriodComponentScoreId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  deleteMonthlyStudentComponentScore: (studentPeriodComponentScoreId: string) =>
+    request<DeleteEntityResponse>(
+      `/monthly-student-component-scores/${studentPeriodComponentScoreId}`,
+      "DELETE",
+      { withAuth: true },
     ),
   listHomeworkTypes: (query?: {
     page?: number;

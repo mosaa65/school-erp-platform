@@ -1,5 +1,9 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { GradingWorkflowStatus, Prisma } from '@prisma/client';
+import {
+  AssessmentPeriodCategory,
+  GradingWorkflowStatus,
+  Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { GradingDetailsQueryDto } from './dto/grading-details-query.dto';
 import { GradingSummaryQueryDto } from './dto/grading-summary-query.dto';
@@ -34,19 +38,27 @@ export class GradingReportsService {
       query.gradeLevelId,
     );
 
-    const semesterWhere: Prisma.SemesterGradeWhereInput = {
+    const semesterPeriodWhere: Prisma.StudentPeriodResultWhereInput = {
       deletedAt: null,
       academicYearId: query.academicYearId,
       academicTermId: query.academicTermId,
       updatedAt: updatedAtRange,
       studentEnrollment: enrollmentFilter,
+      assessmentPeriod: {
+        category: AssessmentPeriodCategory.SEMESTER,
+        deletedAt: null,
+      },
     };
 
-    const annualGradeWhere: Prisma.AnnualGradeWhereInput = {
+    const yearFinalPeriodWhere: Prisma.StudentPeriodResultWhereInput = {
       deletedAt: null,
       academicYearId: query.academicYearId,
       updatedAt: updatedAtRange,
       studentEnrollment: enrollmentFilter,
+      assessmentPeriod: {
+        category: AssessmentPeriodCategory.YEAR_FINAL,
+        deletedAt: null,
+      },
     };
 
     const annualResultWhere: Prisma.AnnualResultWhereInput = {
@@ -57,47 +69,46 @@ export class GradingReportsService {
     };
 
     const [
-      semesterTotal,
-      semesterLocked,
-      semesterActive,
-      annualGradeTotal,
-      annualGradeLocked,
-      annualGradeActive,
+      semesterPeriodTotal,
+      semesterPeriodLocked,
+      semesterPeriodActive,
+      yearFinalPeriodTotal,
+      yearFinalPeriodLocked,
+      yearFinalPeriodActive,
       annualResultTotal,
       annualResultLocked,
       annualResultActive,
-      semesterStatusRows,
-      annualGradeStatusRows,
+      semesterPeriodStatusRows,
+      yearFinalPeriodStatusRows,
       annualResultStatusRows,
-      finalStatusDistribution,
       promotionDecisionDistribution,
       withClassRank,
       withGradeRank,
       fullyRanked,
     ] = await Promise.all([
-      this.prisma.semesterGrade.count({ where: semesterWhere }),
-      this.prisma.semesterGrade.count({
+      this.prisma.studentPeriodResult.count({ where: semesterPeriodWhere }),
+      this.prisma.studentPeriodResult.count({
         where: {
-          ...semesterWhere,
+          ...semesterPeriodWhere,
           isLocked: true,
         },
       }),
-      this.prisma.semesterGrade.count({
+      this.prisma.studentPeriodResult.count({
         where: {
-          ...semesterWhere,
+          ...semesterPeriodWhere,
           isActive: true,
         },
       }),
-      this.prisma.annualGrade.count({ where: annualGradeWhere }),
-      this.prisma.annualGrade.count({
+      this.prisma.studentPeriodResult.count({ where: yearFinalPeriodWhere }),
+      this.prisma.studentPeriodResult.count({
         where: {
-          ...annualGradeWhere,
+          ...yearFinalPeriodWhere,
           isLocked: true,
         },
       }),
-      this.prisma.annualGrade.count({
+      this.prisma.studentPeriodResult.count({
         where: {
-          ...annualGradeWhere,
+          ...yearFinalPeriodWhere,
           isActive: true,
         },
       }),
@@ -114,14 +125,14 @@ export class GradingReportsService {
           isActive: true,
         },
       }),
-      this.prisma.semesterGrade.groupBy({
+      this.prisma.studentPeriodResult.groupBy({
         by: ['status'],
-        where: semesterWhere,
+        where: semesterPeriodWhere,
         _count: { _all: true },
       }),
-      this.prisma.annualGrade.groupBy({
+      this.prisma.studentPeriodResult.groupBy({
         by: ['status'],
-        where: annualGradeWhere,
+        where: yearFinalPeriodWhere,
         _count: { _all: true },
       }),
       this.prisma.annualResult.groupBy({
@@ -129,7 +140,6 @@ export class GradingReportsService {
         where: annualResultWhere,
         _count: { _all: true },
       }),
-      this.countAnnualFinalStatusDistribution(annualGradeWhere),
       this.countPromotionDecisionDistribution(annualResultWhere),
       this.prisma.annualResult.count({
         where: {
@@ -160,8 +170,10 @@ export class GradingReportsService {
       }),
     ]);
 
-    const semesterUnlocked = semesterTotal - semesterLocked;
-    const annualGradeUnlocked = annualGradeTotal - annualGradeLocked;
+    const semesterPeriodUnlocked =
+      semesterPeriodTotal - semesterPeriodLocked;
+    const yearFinalPeriodUnlocked =
+      yearFinalPeriodTotal - yearFinalPeriodLocked;
     const annualResultUnlocked = annualResultTotal - annualResultLocked;
 
     return {
@@ -174,24 +186,29 @@ export class GradingReportsService {
         fromDate: query.fromDate ?? null,
         toDate: query.toDate ?? null,
       },
-      semesterGrades: {
-        total: semesterTotal,
-        active: semesterActive,
-        inactive: semesterTotal - semesterActive,
-        locked: semesterLocked,
-        unlocked: semesterUnlocked,
-        lockRate: this.percentage(semesterLocked, semesterTotal),
-        byStatus: this.mapWorkflowStatusCounts(semesterStatusRows),
+      semesterPeriods: {
+        total: semesterPeriodTotal,
+        active: semesterPeriodActive,
+        inactive: semesterPeriodTotal - semesterPeriodActive,
+        locked: semesterPeriodLocked,
+        unlocked: semesterPeriodUnlocked,
+        lockRate: this.percentage(
+          semesterPeriodLocked,
+          semesterPeriodTotal,
+        ),
+        byStatus: this.mapWorkflowStatusCounts(semesterPeriodStatusRows),
       },
-      annualGrades: {
-        total: annualGradeTotal,
-        active: annualGradeActive,
-        inactive: annualGradeTotal - annualGradeActive,
-        locked: annualGradeLocked,
-        unlocked: annualGradeUnlocked,
-        lockRate: this.percentage(annualGradeLocked, annualGradeTotal),
-        byStatus: this.mapWorkflowStatusCounts(annualGradeStatusRows),
-        byFinalStatus: finalStatusDistribution,
+      yearFinalPeriods: {
+        total: yearFinalPeriodTotal,
+        active: yearFinalPeriodActive,
+        inactive: yearFinalPeriodTotal - yearFinalPeriodActive,
+        locked: yearFinalPeriodLocked,
+        unlocked: yearFinalPeriodUnlocked,
+        lockRate: this.percentage(
+          yearFinalPeriodLocked,
+          yearFinalPeriodTotal,
+        ),
+        byStatus: this.mapWorkflowStatusCounts(yearFinalPeriodStatusRows),
       },
       annualResults: {
         total: annualResultTotal,
@@ -235,11 +252,15 @@ export class GradingReportsService {
       updatedAt: updatedAtRange,
       studentEnrollment: {
         ...(enrollmentFilter ?? {}),
-        semesterGrades: query.academicTermId
+        studentPeriodResults: query.academicTermId
           ? {
               some: {
                 academicTermId: query.academicTermId,
                 deletedAt: null,
+                assessmentPeriod: {
+                  category: AssessmentPeriodCategory.SEMESTER,
+                  deletedAt: null,
+                },
               },
             }
           : undefined,
@@ -582,51 +603,6 @@ export class GradingReportsService {
       status,
       count: countMap.get(status) ?? 0,
     }));
-  }
-
-  private async countAnnualFinalStatusDistribution(
-    baseWhere: Prisma.AnnualGradeWhereInput,
-  ) {
-    const grouped = await this.prisma.annualGrade.groupBy({
-      by: ['finalStatusId'],
-      where: baseWhere,
-      _count: {
-        _all: true,
-      },
-    });
-
-    if (grouped.length === 0) {
-      return [];
-    }
-
-    const statusIds = grouped.map((row) => row.finalStatusId);
-    const statuses = await this.prisma.annualStatusLookup.findMany({
-      where: {
-        id: {
-          in: statusIds,
-        },
-      },
-      select: {
-        id: true,
-        code: true,
-        name: true,
-      },
-    });
-    const statusMap = new Map(
-      statuses.map((status) => [status.id, status] as const),
-    );
-
-    return grouped
-      .map((row) => {
-        const status = statusMap.get(row.finalStatusId);
-        return {
-          finalStatusId: row.finalStatusId,
-          code: status?.code ?? 'UNKNOWN',
-          name: status?.name ?? 'Unknown',
-          count: row._count._all,
-        };
-      })
-      .sort((a, b) => b.count - a.count);
   }
 
   private async countPromotionDecisionDistribution(

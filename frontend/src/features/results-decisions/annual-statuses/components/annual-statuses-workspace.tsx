@@ -389,9 +389,6 @@ export function AnnualStatusesWorkspace() {
                       {item.name} (<code>{item.code}</code>)
                     </p>
                     <p className="text-xs text-muted-foreground">{item.description ?? "-"}</p>
-                    <p className="text-xs text-muted-foreground">
-                      عدد الدرجات السنوية المرتبطة: {item._count.annualGrades}
-                    </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5">
                     {item.isSystem ? (

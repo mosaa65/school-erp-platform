@@ -17,9 +17,6 @@ function useInvalidateAnnualResults() {
     void queryClient.invalidateQueries({
       queryKey: ["annual-results", "list"],
     });
-    void queryClient.invalidateQueries({
-      queryKey: ["annual-grades", "list"],
-    });
   };
 }
 

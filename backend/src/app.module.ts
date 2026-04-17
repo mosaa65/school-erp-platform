@@ -96,6 +96,10 @@ import { FinancialCategoriesModule } from './modules/finance/financial-categorie
 import { RevenuesModule } from './modules/finance/revenues/revenues.module';
 import { ExpensesModule } from './modules/finance/expenses/expenses.module';
 import { CommunityContributionsModule } from './modules/finance/community-contributions/community-contributions.module';
+import { EvaluationPoliciesModule } from './modules/evaluation-policies/evaluation-policies.module';
+import { ResultsDecisionsModule } from './modules/results-decisions/results-decisions.module';
+import { AssessmentPeriodsModule } from './modules/assessment-periods/assessment-periods.module';
+import { MonthlyAssessmentModule } from './modules/monthly-assessment/monthly-assessment.module';
 
 @Module({
   imports: [
@@ -126,6 +130,10 @@ import { CommunityContributionsModule } from './modules/finance/community-contri
     ParentNotificationsModule,
     ExamsModule,
     AssignmentsModule,
+    EvaluationPoliciesModule,
+    ResultsDecisionsModule,
+    AssessmentPeriodsModule,
+    MonthlyAssessmentModule,
     HrReportsModule,
     EmployeesModule,
     TalentsModule,

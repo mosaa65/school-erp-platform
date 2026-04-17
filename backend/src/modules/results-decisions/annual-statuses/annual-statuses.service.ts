@@ -13,11 +13,6 @@ import { ListAnnualStatusesDto } from './dto/list-annual-statuses.dto';
 import { UpdateAnnualStatusDto } from './dto/update-annual-status.dto';
 
 const annualStatusInclude: Prisma.AnnualStatusLookupInclude = {
-  _count: {
-    select: {
-      annualGrades: true,
-    },
-  },
   createdBy: {
     select: {
       id: true,
@@ -213,19 +208,6 @@ export class AnnualStatusesService {
 
     if (annualStatus.isSystem) {
       throw new ConflictException('لا يمكن حذف حالة سنوية من النظام');
-    }
-
-    const linkedAnnualGrades = await this.prisma.annualGrade.count({
-      where: {
-        finalStatusId: id,
-        deletedAt: null,
-      },
-    });
-
-    if (linkedAnnualGrades > 0) {
-      throw new ConflictException(
-        'Cannot delete annual status that is linked to active annual grades',
-      );
     }
 
     await this.prisma.annualStatusLookup.update({

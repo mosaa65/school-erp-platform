@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import * as React from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   Calculator,
@@ -31,10 +32,7 @@ import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
 import { StudentEnrollmentPickerSheet } from "@/components/ui/student-enrollment-picker-sheet";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
-import { useAcademicYearOptionsQuery } from "@/features/grade-aggregation/annual-grades/hooks/use-academic-year-options-query";
-import { useSectionOptionsQuery } from "@/features/grade-aggregation/annual-grades/hooks/use-section-options-query";
-import { useStudentEnrollmentOptionsQuery } from "@/features/grade-aggregation/annual-grades/hooks/use-student-enrollment-options-query";
-import { useAnnualGradesQuery } from "@/features/grade-aggregation/annual-grades/hooks/use-annual-grades-query";
+import { useAuth } from "@/features/auth/providers/auth-provider";
 import {
   useCalculateAnnualResultsMutation,
   useCreateAnnualResultMutation,
@@ -43,11 +41,19 @@ import {
   useUnlockAnnualResultMutation,
   useUpdateAnnualResultMutation,
 } from "@/features/results-decisions/annual-results/hooks/use-annual-results-mutations";
+import { useAcademicYearOptionsQuery } from "@/features/results-decisions/annual-results/hooks/use-academic-year-options-query";
 import { useAnnualResultsQuery } from "@/features/results-decisions/annual-results/hooks/use-annual-results-query";
 import { useAcademicTermOptionsQuery } from "@/features/results-decisions/annual-results/hooks/use-academic-term-options-query";
 import { usePromotionDecisionOptionsQuery } from "@/features/results-decisions/annual-results/hooks/use-promotion-decision-options-query";
+import { useSectionOptionsQuery } from "@/features/results-decisions/annual-results/hooks/use-section-options-query";
+import { useStudentEnrollmentOptionsQuery } from "@/features/results-decisions/annual-results/hooks/use-student-enrollment-options-query";
+import { ApiError, apiClient } from "@/lib/api/client";
 import { translateGradingWorkflowStatus } from "@/lib/i18n/ar";
-import type { AnnualGradeListItem, AnnualResultListItem, GradingWorkflowStatus } from "@/lib/api/client";
+import type {
+  AnnualResultListItem,
+  GradingWorkflowStatus,
+  StudentPeriodResultListItem,
+} from "@/lib/api/client";
 import { formatNameCodeLabel, formatSectionWithGradeLabel } from "@/lib/option-labels";
 import { formatStudentEnrollmentPlacementLabel } from "@/lib/student-enrollment-display";
 import { toStudentEnrollmentPickerOption } from "@/features/students/lib/student-enrollment-picker";
@@ -105,19 +111,6 @@ function toOptionalString(value: string): string | undefined {
   return normalized.length > 0 ? normalized : undefined;
 }
 
-function formatAnnualGradeTerms(item: AnnualGradeListItem): string {
-  if (item.termTotals.length > 0) {
-    const sorted = [...item.termTotals].sort(
-      (a, b) => a.academicTerm.sequence - b.academicTerm.sequence,
-    );
-    return sorted
-      .map((term) => `${term.academicTerm.name} (${term.academicTerm.code}): ${term.termTotal}`)
-      .join(" | ");
-  }
-
-  return `ف1: ${item.semester1Total} | ف2: ${item.semester2Total}`;
-}
-
 function toFormState(item: AnnualResultListItem): FormState {
   return {
     academicYearId: item.academicYearId,
@@ -135,6 +128,63 @@ function toFormState(item: AnnualResultListItem): FormState {
   };
 }
 
+type AnnualResultSubjectRow = {
+  subjectId: string;
+  subjectName: string;
+  subjectCode: string;
+  totalScore: number;
+  detailText: string;
+  sourceLabel: string;
+};
+
+function buildAnnualResultSubjectRows(
+  rows: StudentPeriodResultListItem[],
+): AnnualResultSubjectRow[] {
+  const yearFinalRows = rows.filter(
+    (row) => row.assessmentPeriod.category === "YEAR_FINAL",
+  );
+
+  if (yearFinalRows.length > 0) {
+    return yearFinalRows
+      .map((row) => ({
+        subjectId: row.subjectId,
+        subjectName: row.subject.name,
+        subjectCode: row.subject.code,
+        totalScore: row.totalScore,
+        detailText: `${row.assessmentPeriod.name}: ${row.totalScore}`,
+        sourceLabel: "فترة نهائية",
+      }))
+      .sort((a, b) => a.subjectName.localeCompare(b.subjectName, "ar"));
+  }
+
+  const aggregateMap = new Map<string, AnnualResultSubjectRow>();
+
+  for (const row of rows.filter((item) => item.assessmentPeriod.category === "SEMESTER")) {
+    const existing = aggregateMap.get(row.subjectId) ?? {
+      subjectId: row.subjectId,
+      subjectName: row.subject.name,
+      subjectCode: row.subject.code,
+      totalScore: 0,
+      detailText: "",
+      sourceLabel: "فترات فصلية",
+    };
+
+    existing.totalScore += row.totalScore;
+    existing.detailText = existing.detailText
+      ? `${existing.detailText} | ${row.assessmentPeriod.name}: ${row.totalScore}`
+      : `${row.assessmentPeriod.name}: ${row.totalScore}`;
+
+    aggregateMap.set(row.subjectId, existing);
+  }
+
+  return Array.from(aggregateMap.values())
+    .map((row) => ({
+      ...row,
+      totalScore: Number(row.totalScore.toFixed(2)),
+    }))
+    .sort((a, b) => a.subjectName.localeCompare(b.subjectName, "ar"));
+}
+
 function AnnualResultSubjectsPanel({
   studentEnrollmentId,
   academicYearId,
@@ -142,63 +192,77 @@ function AnnualResultSubjectsPanel({
   studentEnrollmentId: string;
   academicYearId: string;
 }) {
-  const annualGradesQuery = useAnnualGradesQuery({
-    page: 1,
-    limit: 200,
-    academicYearId,
-    studentEnrollmentId,
+  const auth = useAuth();
+  const periodResultsQuery = useQuery({
+    queryKey: ["annual-results", "subject-periods", academicYearId, studentEnrollmentId],
+    enabled: auth.isHydrated && auth.isAuthenticated,
+    queryFn: async () => {
+      try {
+        return await apiClient.listStudentPeriodResults({
+          page: 1,
+          limit: 300,
+          academicYearId,
+          studentEnrollmentId,
+          isActive: true,
+        });
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) {
+          auth.signOut();
+        }
+
+        throw error;
+      }
+    },
   });
 
-  if (annualGradesQuery.isPending) {
+  if (periodResultsQuery.isPending) {
     return (
       <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
-        جارٍ تحميل درجات المواد...
+        جارٍ تحميل نتائج المواد من الفترات...
       </div>
     );
   }
 
-  if (annualGradesQuery.error) {
+  if (periodResultsQuery.error) {
     return (
       <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
-        {annualGradesQuery.error instanceof Error
-          ? annualGradesQuery.error.message
-          : "تعذر تحميل الدرجات السنوية للمواد."}
+        {periodResultsQuery.error instanceof Error
+          ? periodResultsQuery.error.message
+          : "تعذر تحميل نتائج المواد من الفترات."}
       </div>
     );
   }
 
-  const rows = annualGradesQuery.data?.data ?? [];
+  const rows = buildAnnualResultSubjectRows(periodResultsQuery.data?.data ?? []);
   if (rows.length === 0) {
     return (
       <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
-        لا توجد درجات سنوية للمواد.
+        لا توجد نتائج مواد مرتبطة بالفترات المرنة.
       </div>
     );
   }
 
-  const passedCount = rows.filter((row) => row.finalStatus.code === "PASS").length;
-  const failedCount = rows.length - passedCount;
-  const totalAllSubjects = rows.reduce((sum, row) => sum + row.annualTotal, 0);
+  const totalAllSubjects = Number(
+    rows.reduce((sum, row) => sum + row.totalScore, 0).toFixed(2),
+  );
 
   return (
     <div className="space-y-2 rounded-md border border-border/70 bg-background/70 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/60 bg-background/80 p-2 text-xs text-muted-foreground">
         <span>المواد: {rows.length}</span>
-        <span>ناجح: {passedCount}</span>
-        <span>راسب: {failedCount}</span>
         <span>إجمالي الدرجات: {totalAllSubjects}</span>
+        <span>المصدر: الفترات المرنة</span>
       </div>
       {rows.map((row) => (
-        <div key={row.id} className="rounded-md border border-border/60 p-2 text-xs">
+        <div key={row.subjectId} className="rounded-md border border-border/60 p-2 text-xs">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="font-medium">{formatNameCodeLabel(row.subject.name, row.subject.code)}</span>
-            <span className="text-muted-foreground">
-              الحالة: {formatNameCodeLabel(row.finalStatus.name, row.finalStatus.code)}
+            <span className="font-medium">
+              {formatNameCodeLabel(row.subjectName, row.subjectCode)}
             </span>
+            <span className="text-muted-foreground">{row.sourceLabel}</span>
           </div>
-          <div className="mt-1 text-muted-foreground">
-            {formatAnnualGradeTerms(row)} | الإجمالي: {row.annualTotal} | %: {row.annualPercentage ?? 0}
-          </div>
+          <div className="mt-1 text-muted-foreground">{row.detailText}</div>
+          <div className="mt-1 text-muted-foreground">الإجمالي المحتسب: {row.totalScore}</div>
         </div>
       ))}
     </div>
@@ -241,6 +305,9 @@ export function AnnualResultsWorkspace() {
   const [formError, setFormError] = React.useState<string | null>(null);
   const [calcInfo, setCalcInfo] = React.useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
+  const [workspaceView, setWorkspaceView] = React.useState<
+    "overview" | "results" | "calculation"
+  >("overview");
 
   const academicYearsQuery = useAcademicYearOptionsQuery();
   const sectionsQuery = useSectionOptionsQuery();
@@ -276,6 +343,18 @@ export function AnnualResultsWorkspace() {
 
   const records = React.useMemo(() => annualResultsQuery.data?.data ?? [], [annualResultsQuery.data?.data]);
   const pagination = annualResultsQuery.data?.pagination;
+  const selectedYearOption = academicYearsQuery.data?.find((item) => item.id === yearFilter);
+  const selectedCalcYearOption = academicYearsQuery.data?.find((item) => item.id === calcYear);
+  const selectedCalcSectionOption = sectionsQuery.data?.find((item) => item.id === calcSection);
+  const activeResultsCount = React.useMemo(
+    () => records.filter((item) => item.isActive).length,
+    [records],
+  );
+  const lockedResultsCount = React.useMemo(
+    () => records.filter((item) => item.isLocked).length,
+    [records],
+  );
+  const readyForCalculation = Boolean(calcYear && calcSection);
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
   const mutationError =
     (createMutation.error as Error | null)?.message ??
@@ -470,6 +549,45 @@ export function AnnualResultsWorkspace() {
           </div>
         </div>
 
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+          <CardHeader className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <CardTitle>سير العمل</CardTitle>
+                <CardDescription>
+                  انتقل بين نظرة عامة، تنفيذ الاحتساب، وإدارة النتائج السنوية.
+                </CardDescription>
+              </div>
+              <Badge variant="secondary">
+                السجلات الحالية: {pagination?.total ?? 0}
+              </Badge>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant={workspaceView === "overview" ? "default" : "outline"}
+                onClick={() => setWorkspaceView("overview")}
+              >
+                نظرة عامة
+              </Button>
+              <Button
+                type="button"
+                variant={workspaceView === "calculation" ? "default" : "outline"}
+                onClick={() => setWorkspaceView("calculation")}
+              >
+                الاحتساب السنوي
+              </Button>
+              <Button
+                type="button"
+                variant={workspaceView === "results" ? "default" : "outline"}
+                onClick={() => setWorkspaceView("results")}
+              >
+                النتائج والمواد
+              </Button>
+            </div>
+          </CardHeader>
+        </Card>
+
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
@@ -517,65 +635,129 @@ export function AnnualResultsWorkspace() {
 
         <Card className="border-border/70 bg-card/80">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calculator className="h-5 w-5 text-primary" />
-              احتساب النتائج السنوية
-            </CardTitle>
-            <CardDescription>إنشاء النتائج السنوية آليًا من الدرجات السنوية وقرارات الترفيع.</CardDescription>
+            <CardTitle>الفلترة والسياق</CardTitle>
+            <CardDescription>
+              اختر السنة والشعبة والسجلات النشطة للوصول السريع إلى النتائج أو الاحتساب.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="grid gap-2 md:grid-cols-2">
-              <SelectField value={calcYear} onChange={(event) => setCalcYear(event.target.value)}>
-                <option value="">السنة الدراسية</option>
-                {(academicYearsQuery.data ?? []).map((item) => (
-                  <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>
-                ))}
-              </SelectField>
-              <SelectField value={calcSection} onChange={(event) => setCalcSection(event.target.value)}>
-                <option value="">الشعبة</option>
-                {(sectionsQuery.data ?? []).map((item) => (
-                  <option key={item.id} value={item.id}>{formatSectionWithGradeLabel(item)}</option>
-                ))}
-              </SelectField>
-            </div>
-            {calcYear ? (
-              <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                {calcTermsQuery.isPending
-                  ? "جارٍ تحميل الفصول الدراسية..."
-                  : calcTermsQuery.data && calcTermsQuery.data.length > 0
-                    ? `الفصول المعتمدة: ${calcTermsQuery.data.map((term) => `${term.name} (${term.code})`).join(" | ")}`
-                    : "لا توجد فصول دراسية مفعلة لهذه السنة."}
+            <div className="grid gap-3 md:grid-cols-4">
+              <div className="rounded-lg border border-border/70 bg-background/70 p-3">
+                <p className="text-xs text-muted-foreground">السنة المختارة</p>
+                <p className="mt-1 text-sm font-medium">
+                  {yearFilter === "all"
+                    ? "كل السنوات"
+                    : selectedYearOption
+                      ? formatNameCodeLabel(selectedYearOption.name, selectedYearOption.code)
+                      : "سنة محددة"}
+                </p>
               </div>
-            ) : null}
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full gap-2"
-              disabled={!canCalculate || calculateMutation.isPending}
-              onClick={() => {
-                setCalcInfo(null);
-                if (!calcYear || !calcSection) {
-                  setCalcInfo("اختر السنة والشعبة.");
-                  return;
-                }
-                calculateMutation.mutate(
-                  { academicYearId: calcYear, sectionId: calcSection },
-                  {
-                    onSuccess: (result) =>
-                      setCalcInfo(
-                        `${result.message} | الدرجات السنوية: جديد ${result.summary.annualGrades.created}، تحديث ${result.summary.annualGrades.updated}، متجاوز (مقفل) ${result.summary.annualGrades.skippedLocked} | النتائج السنوية: جديد ${result.summary.annualResults.created}، تحديث ${result.summary.annualResults.updated}، متجاوز (مقفل) ${result.summary.annualResults.skippedLocked}`,
-                      ),
-                  },
-                );
-              }}
-            >
-              {calculateMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Calculator className="h-4 w-4" />}
-              تنفيذ الاحتساب
-            </Button>
-            {calcInfo ? <div className="rounded-md border border-primary/30 bg-primary/10 p-2 text-xs text-primary">{calcInfo}</div> : null}
+              <div className="rounded-lg border border-border/70 bg-background/70 p-3">
+                <p className="text-xs text-muted-foreground">عدد النتائج الحالية</p>
+                <p className="mt-1 text-2xl font-semibold">{records.length}</p>
+              </div>
+              <div className="rounded-lg border border-border/70 bg-background/70 p-3">
+                <p className="text-xs text-muted-foreground">النتائج المقفلة</p>
+                <p className="mt-1 text-2xl font-semibold">{lockedResultsCount}</p>
+              </div>
+              <div className="rounded-lg border border-border/70 bg-background/70 p-3">
+                <p className="text-xs text-muted-foreground">النتائج النشطة</p>
+                <p className="mt-1 text-2xl font-semibold">{activeResultsCount}</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
+        {(workspaceView === "overview" || workspaceView === "calculation") ? (
+          <Card className="border-border/70 bg-card/80">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calculator className="h-5 w-5 text-primary" />
+                الاحتساب السنوي
+              </CardTitle>
+              <CardDescription>
+                إنشاء النتائج السنوية آليًا من نتائج الفترات المرنة وقرارات الترفيع.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid gap-2 md:grid-cols-2">
+                <SelectField value={calcYear} onChange={(event) => setCalcYear(event.target.value)}>
+                  <option value="">السنة الدراسية</option>
+                  {(academicYearsQuery.data ?? []).map((item) => (
+                    <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>
+                  ))}
+                </SelectField>
+                <SelectField value={calcSection} onChange={(event) => setCalcSection(event.target.value)}>
+                  <option value="">الشعبة</option>
+                  {(sectionsQuery.data ?? []).map((item) => (
+                    <option key={item.id} value={item.id}>{formatSectionWithGradeLabel(item)}</option>
+                  ))}
+                </SelectField>
+              </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="rounded-lg border border-border/70 bg-background/70 p-3">
+                  <p className="text-xs text-muted-foreground">جاهزية الاحتساب</p>
+                  <p className="mt-1 text-sm font-medium">
+                    {readyForCalculation ? "جاهز للتنفيذ" : "يلزم اختيار السنة والشعبة"}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-border/70 bg-background/70 p-3">
+                  <p className="text-xs text-muted-foreground">السنة الحالية</p>
+                  <p className="mt-1 text-sm font-medium">
+                    {selectedCalcYearOption
+                      ? formatNameCodeLabel(selectedCalcYearOption.name, selectedCalcYearOption.code)
+                      : "غير محددة"}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-border/70 bg-background/70 p-3">
+                  <p className="text-xs text-muted-foreground">الشعبة الحالية</p>
+                  <p className="mt-1 text-sm font-medium">
+                    {selectedCalcSectionOption
+                      ? formatSectionWithGradeLabel(selectedCalcSectionOption)
+                      : "غير محددة"}
+                  </p>
+                </div>
+              </div>
+              {calcYear ? (
+                <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+                  {calcTermsQuery.isPending
+                    ? "جارٍ تحميل الفصول الدراسية..."
+                    : calcTermsQuery.data && calcTermsQuery.data.length > 0
+                      ? `الفصول المعتمدة: ${calcTermsQuery.data.map((term) => `${term.name} (${term.code})`).join(" | ")}`
+                      : "لا توجد فصول دراسية مفعلة لهذه السنة."}
+                </div>
+              ) : null}
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-2"
+                disabled={!canCalculate || calculateMutation.isPending}
+                onClick={() => {
+                  setCalcInfo(null);
+                  if (!calcYear || !calcSection) {
+                    setCalcInfo("اختر السنة والشعبة.");
+                    return;
+                  }
+                  calculateMutation.mutate(
+                    { academicYearId: calcYear, sectionId: calcSection },
+                    {
+                      onSuccess: (result) =>
+                        setCalcInfo(
+                          `${result.message} | مواد الفترات المحتسبة: ${result.summary.periodSubjects.created} | النتائج السنوية: جديد ${result.summary.annualResults.created}، تحديث ${result.summary.annualResults.updated}، متجاوز (مقفل) ${result.summary.annualResults.skippedLocked}`,
+                        ),
+                    },
+                  );
+                }}
+              >
+                {calculateMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Calculator className="h-4 w-4" />}
+                تنفيذ الاحتساب
+              </Button>
+              {calcInfo ? <div className="rounded-md border border-primary/30 bg-primary/10 p-2 text-xs text-primary">{calcInfo}</div> : null}
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {(workspaceView === "overview" || workspaceView === "results") ? (
         <Card className="border-border/70 bg-card/80">
           <CardHeader className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -659,6 +841,7 @@ export function AnnualResultsWorkspace() {
             </div>
           </CardContent>
         </Card>
+        ) : null}
       </div>
 
       <Fab icon={<Plus className="h-4 w-4" />} label="إضافة" ariaLabel="إضافة نتيجة سنوية" onClick={handleStartCreate} disabled={!canCreate} />

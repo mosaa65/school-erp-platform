@@ -27,9 +27,9 @@ import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
-import { useAcademicYearOptionsQuery } from "@/features/grade-aggregation/annual-grades/hooks/use-academic-year-options-query";
 import { useGradeLevelOptionsQuery } from "@/features/results-decisions/annual-results/hooks/use-grade-level-options-query";
 import { usePromotionDecisionOptionsQuery } from "@/features/results-decisions/annual-results/hooks/use-promotion-decision-options-query";
+import { useAcademicYearOptionsQuery } from "@/features/results-decisions/annual-results/hooks/use-academic-year-options-query";
 import {
   useCreateGradingOutcomeRuleMutation,
   useDeleteGradingOutcomeRuleMutation,

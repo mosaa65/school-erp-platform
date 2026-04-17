@@ -7,15 +7,15 @@ import {
 } from '@nestjs/common';
 import {
   AnnualResult,
+  AssessmentPeriodCategory,
   AssessmentType,
   AuditStatus,
   GradingWorkflowStatus,
   Prisma,
   TieBreakStrategy,
 } from '@prisma/client';
-import { PrismaService } from '../../prisma/prisma.service';
-import { AuditLogsService } from '../audit-logs/audit-logs.service';
-import { GradingNotificationsService } from '../grading-notifications/grading-notifications.service';
+import { PrismaService } from '../../../prisma/prisma.service';
+import { AuditLogsService } from '../../audit-logs/audit-logs.service';
 import { CalculateAnnualResultsDto } from './dto/calculate-annual-results.dto';
 import { CreateAnnualResultDto } from './dto/create-annual-result.dto';
 import { ListAnnualResultsDto } from './dto/list-annual-results.dto';
@@ -41,6 +41,13 @@ type SubjectAnnualAggregate = {
   subjectId: string;
   semester1Total: number;
   semester2Total: number;
+};
+
+type AnnualResultRowLite = {
+  id: string;
+  studentEnrollmentId: string;
+  isLocked: boolean;
+  status: GradingWorkflowStatus;
 };
 
 const annualResultInclude: Prisma.AnnualResultInclude = {
@@ -127,7 +134,6 @@ export class AnnualResultsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLogsService: AuditLogsService,
-    private readonly gradingNotificationsService: GradingNotificationsService,
   ) {}
 
   async create(payload: CreateAnnualResultDto, actorUserId: string) {
@@ -582,7 +588,7 @@ export class AnnualResultsService {
       return {
         message: 'لا توجد قيود طلاب نشطة للشعبة والسنة المحددتين',
         summary: {
-          annualGrades: {
+          periodSubjects: {
             created: 0,
             updated: 0,
             skippedLocked: 0,
@@ -598,73 +604,77 @@ export class AnnualResultsService {
       };
     }
 
-    const enrollmentIds = enrollments.map((enrollment) => enrollment.id);
-
-    // Check if all semester grades are complete for the year
-    await this.ensureSemesterGradesComplete(
-      enrollmentIds,
-      payload.academicYearId,
-      context,
-      actorUserId,
+    const enrollmentIds = enrollments.map(
+      (enrollment: { id: string }) => enrollment.id,
     );
 
-    const [passStatus, failStatus] = await this.prisma.$transaction([
-      this.prisma.annualStatusLookup.findFirst({
-        where: {
-          code: 'PASS',
-          isActive: true,
+    const yearFinalPeriodResults = await this.prisma.studentPeriodResult.findMany({
+      where: {
+        academicYearId: payload.academicYearId,
+        sectionId: payload.sectionId,
+        studentEnrollmentId: {
+          in: enrollmentIds,
+        },
+        deletedAt: null,
+        isActive: true,
+        assessmentPeriod: {
+          category: AssessmentPeriodCategory.YEAR_FINAL,
           deletedAt: null,
-        },
-        select: {
-          id: true,
-        },
-      }),
-      this.prisma.annualStatusLookup.findFirst({
-        where: {
-          code: 'FAIL',
           isActive: true,
-          deletedAt: null,
         },
-        select: {
-          id: true,
+      },
+      select: {
+        studentEnrollmentId: true,
+        subjectId: true,
+        totalScore: true,
+        assessmentPeriod: {
+          select: {
+            maxScore: true,
+          },
         },
-      }),
-    ]);
+      },
+    });
 
-    if (!passStatus || !failStatus) {
-      throw new BadRequestException(
-        'يجب إعداد حالتي PASS و FAIL قبل تنفيذ الاحتساب السنوي',
-      );
-    }
+    const useFlexibleFinalPeriods = yearFinalPeriodResults.length > 0;
 
     const outcomeRule = await this.resolveOutcomeRule(
       payload.academicYearId,
       context.gradeLevelId,
     );
 
-    const semesterGradeRows = await this.prisma.semesterGrade.findMany({
+    const aggregateMap = new Map<string, SubjectAnnualAggregate>();
+    const semesterPeriodResults = await this.prisma.studentPeriodResult.findMany({
       where: {
         academicYearId: payload.academicYearId,
+        sectionId: payload.sectionId,
         studentEnrollmentId: {
           in: enrollmentIds,
         },
         deletedAt: null,
         isActive: true,
+        assessmentPeriod: {
+          category: AssessmentPeriodCategory.SEMESTER,
+          deletedAt: null,
+          isActive: true,
+        },
       },
       select: {
         studentEnrollmentId: true,
         subjectId: true,
-        semesterTotal: true,
-        academicTerm: {
+        totalScore: true,
+        assessmentPeriod: {
           select: {
-            sequence: true,
+            academicTerm: {
+              select: {
+                sequence: true,
+              },
+            },
           },
         },
       },
     });
 
-    const aggregateMap = new Map<string, SubjectAnnualAggregate>();
-    for (const row of semesterGradeRows) {
+    for (const row of semesterPeriodResults) {
       const key = `${row.studentEnrollmentId}::${row.subjectId}`;
       const existing =
         aggregateMap.get(key) ??
@@ -675,25 +685,51 @@ export class AnnualResultsService {
           semester2Total: 0,
         } as SubjectAnnualAggregate);
 
-      if (row.academicTerm.sequence === 1) {
-        existing.semester1Total += this.decimalToNumber(row.semesterTotal) ?? 0;
-      } else if (row.academicTerm.sequence === 2) {
-        existing.semester2Total += this.decimalToNumber(row.semesterTotal) ?? 0;
+      const termSequence = row.assessmentPeriod.academicTerm?.sequence;
+      if (termSequence === 1) {
+        existing.semester1Total += this.decimalToNumber(row.totalScore) ?? 0;
+      } else if (termSequence === 2) {
+        existing.semester2Total += this.decimalToNumber(row.totalScore) ?? 0;
       }
 
       aggregateMap.set(key, existing);
     }
 
+    for (const row of yearFinalPeriodResults) {
+      const key = `${row.studentEnrollmentId}::${row.subjectId}`;
+      if (!aggregateMap.has(key)) {
+        aggregateMap.set(key, {
+          studentEnrollmentId: row.studentEnrollmentId,
+          subjectId: row.subjectId,
+          semester1Total: 0,
+          semester2Total: this.decimalToNumber(row.totalScore) ?? 0,
+        });
+      }
+    }
+
+    if (aggregateMap.size === 0) {
+      throw new BadRequestException(
+        'لا توجد نتائج فترات مرنة فصلية أو نهائية كافية لتنفيذ الاحتساب السنوي.',
+      );
+    }
+
     const subjectIds = Array.from(
       new Set(Array.from(aggregateMap.values()).map((item) => item.subjectId)),
     );
-    const policyMetaBySubjectId = await this.buildPolicyMetaMap(
-      payload.academicYearId,
-      context.gradeLevelId,
-      subjectIds,
-    );
+    const policyMetaBySubjectId = useFlexibleFinalPeriods
+      ? await this.buildFlexiblePolicyMetaMap(
+          payload.academicYearId,
+          payload.sectionId,
+          subjectIds,
+          yearFinalPeriodResults,
+        )
+      : await this.buildPolicyMetaMap(
+          payload.academicYearId,
+          context.gradeLevelId,
+          subjectIds,
+        );
 
-    const annualGradeSummary = {
+    const periodSubjectsSummary = {
       created: 0,
       updated: 0,
       skippedLocked: 0,
@@ -704,143 +740,44 @@ export class AnnualResultsService {
       skippedLocked: 0,
     };
     const now = new Date();
+    const gradeRowsByEnrollmentId = new Map<
+      string,
+      Array<{
+        subjectId: string;
+        annualTotal: number;
+        finalStatusCode: string;
+      }>
+    >();
 
-    await this.prisma.$transaction(async (tx) => {
-      if (aggregateMap.size > 0) {
-        const annualGradeRows = await tx.annualGrade.findMany({
-          where: {
-            academicYearId: payload.academicYearId,
-            studentEnrollmentId: {
-              in: enrollmentIds,
-            },
-            subjectId: {
-              in: subjectIds,
-            },
-            deletedAt: null,
-          },
-          select: {
-            id: true,
-            studentEnrollmentId: true,
-            subjectId: true,
-            isLocked: true,
-            status: true,
-          },
-        });
+    for (const aggregate of aggregateMap.values()) {
+      const semester1Total = this.round2(aggregate.semester1Total);
+      const semester2Total = this.round2(aggregate.semester2Total);
+      const annualTotal = this.round2(semester1Total + semester2Total);
+      const policyMeta = policyMetaBySubjectId.get(aggregate.subjectId) ?? {
+        passingScore: 50,
+        maxAnnual: 0,
+      };
+      const annualPercentage =
+        policyMeta.maxAnnual > 0
+          ? this.round2((annualTotal / policyMeta.maxAnnual) * 100)
+          : 0;
+      const finalStatusCode =
+        annualPercentage >= policyMeta.passingScore ? 'PASS' : 'FAIL';
+      const subjectRows =
+        gradeRowsByEnrollmentId.get(aggregate.studentEnrollmentId) ?? [];
 
-        const annualGradeByKey = new Map(
-          annualGradeRows.map((row) => [
-            `${row.studentEnrollmentId}::${row.subjectId}`,
-            row,
-          ]),
-        );
-
-        for (const aggregate of aggregateMap.values()) {
-          const key = `${aggregate.studentEnrollmentId}::${aggregate.subjectId}`;
-          const existing = annualGradeByKey.get(key);
-
-          if (existing?.isLocked) {
-            annualGradeSummary.skippedLocked += 1;
-            continue;
-          }
-
-          const semester1Total = this.round2(aggregate.semester1Total);
-          const semester2Total = this.round2(aggregate.semester2Total);
-          const annualTotal = this.round2(semester1Total + semester2Total);
-          const policyMeta = policyMetaBySubjectId.get(aggregate.subjectId) ?? {
-            passingScore: 50,
-            maxAnnual: 0,
-          };
-          const annualPercentage =
-            policyMeta.maxAnnual > 0
-              ? this.round2((annualTotal / policyMeta.maxAnnual) * 100)
-              : 0;
-          const finalStatusId =
-            annualPercentage >= policyMeta.passingScore
-              ? passStatus.id
-              : failStatus.id;
-
-          if (existing) {
-            await tx.annualGrade.update({
-              where: {
-                id: existing.id,
-              },
-              data: {
-                semester1Total,
-                semester2Total,
-                annualTotal,
-                annualPercentage,
-                finalStatusId,
-                calculatedAt: now,
-                status:
-                  existing.status === GradingWorkflowStatus.ARCHIVED
-                    ? GradingWorkflowStatus.ARCHIVED
-                    : GradingWorkflowStatus.DRAFT,
-                updatedById: actorUserId,
-              },
-            });
-            annualGradeSummary.updated += 1;
-          } else {
-            await tx.annualGrade.create({
-              data: {
-                studentEnrollmentId: aggregate.studentEnrollmentId,
-                subjectId: aggregate.subjectId,
-                academicYearId: payload.academicYearId,
-                semester1Total,
-                semester2Total,
-                annualTotal,
-                annualPercentage,
-                finalStatusId,
-                status: GradingWorkflowStatus.DRAFT,
-                isLocked: false,
-                calculatedAt: now,
-                isActive: true,
-                createdById: actorUserId,
-                updatedById: actorUserId,
-              },
-            });
-            annualGradeSummary.created += 1;
-          }
-        }
-      }
-
-      const latestAnnualGrades = await tx.annualGrade.findMany({
-        where: {
-          academicYearId: payload.academicYearId,
-          studentEnrollmentId: {
-            in: enrollmentIds,
-          },
-          deletedAt: null,
-          isActive: true,
-        },
-        select: {
-          studentEnrollmentId: true,
-          subjectId: true,
-          annualTotal: true,
-          finalStatus: {
-            select: {
-              code: true,
-            },
-          },
-        },
+      subjectRows.push({
+        subjectId: aggregate.subjectId,
+        annualTotal,
+        finalStatusCode,
       });
+      gradeRowsByEnrollmentId.set(aggregate.studentEnrollmentId, subjectRows);
+    }
 
-      const gradeRowsByEnrollmentId = new Map<
-        string,
-        Array<{
-          subjectId: string;
-          annualTotal: number;
-          finalStatusCode: string;
-        }>
-      >();
-      for (const row of latestAnnualGrades) {
-        const list = gradeRowsByEnrollmentId.get(row.studentEnrollmentId) ?? [];
-        list.push({
-          subjectId: row.subjectId,
-          annualTotal: this.decimalToNumber(row.annualTotal) ?? 0,
-          finalStatusCode: row.finalStatus.code,
-        });
-        gradeRowsByEnrollmentId.set(row.studentEnrollmentId, list);
-      }
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      periodSubjectsSummary.created = aggregateMap.size;
+      periodSubjectsSummary.updated = 0;
+      periodSubjectsSummary.skippedLocked = 0;
 
       const annualResultsRows = await tx.annualResult.findMany({
         where: {
@@ -857,8 +794,11 @@ export class AnnualResultsService {
           status: true,
         },
       });
-      const annualResultByEnrollmentId = new Map(
-        annualResultsRows.map((row) => [row.studentEnrollmentId, row] as const),
+      const annualResultByEnrollmentId = new Map<string, AnnualResultRowLite>(
+        annualResultsRows.map((row: AnnualResultRowLite) => [
+          row.studentEnrollmentId,
+          row,
+        ]),
       );
 
       for (const enrollmentId of enrollmentIds) {
@@ -1036,7 +976,8 @@ export class AnnualResultsService {
       details: {
         academicYearId: payload.academicYearId,
         sectionId: payload.sectionId,
-        annualGrades: annualGradeSummary,
+        source: 'assessment-periods',
+        periodSubjects: periodSubjectsSummary,
         annualResults: annualResultSummary,
       },
     });
@@ -1044,7 +985,7 @@ export class AnnualResultsService {
     return {
       message: 'اكتمل احتساب النتائج السنوية',
       summary: {
-        annualGrades: annualGradeSummary,
+        periodSubjects: periodSubjectsSummary,
         annualResults: annualResultSummary,
       },
     };
@@ -1123,6 +1064,9 @@ export class AnnualResultsService {
     if (!enrollment.isActive) {
       throw new BadRequestException('قيد الطالب غير نشط');
     }
+    if (!enrollment.sectionId || !enrollment.section) {
+      throw new BadRequestException('قيد الطالب غير مرتبط بشعبة صالحة');
+    }
     if (!enrollment.section.isActive) {
       throw new BadRequestException('شعبة القيد غير نشطة');
     }
@@ -1162,6 +1106,14 @@ export class AnnualResultsService {
 
     if (!annualResult) {
       throw new NotFoundException('النتيجة السنوية غير موجودة');
+    }
+    if (
+      !annualResult.studentEnrollment.sectionId ||
+      !annualResult.studentEnrollment.section
+    ) {
+      throw new BadRequestException(
+        'النتيجة السنوية غير مرتبطة بشعبة صالحة',
+      );
     }
 
     return {
@@ -1356,11 +1308,7 @@ export class AnnualResultsService {
         isDefault: true,
         status: true,
         updatedAt: true,
-        maxExamScore: true,
-        maxHomeworkScore: true,
-        maxAttendanceScore: true,
-        maxActivityScore: true,
-        maxContributionScore: true,
+        totalMaxScore: true,
         passingScore: true,
       },
     });
@@ -1389,42 +1337,12 @@ export class AnnualResultsService {
       }
     }
 
-    const pickedPolicies = Array.from(pickedBySubject.values());
-    const policyIds = pickedPolicies.map((policy) => policy.id);
-    const componentSums = await this.prisma.gradingPolicyComponent.groupBy({
-      by: ['gradingPolicyId'],
-      where: {
-        gradingPolicyId: {
-          in: policyIds,
-        },
-        includeInSemester: true,
-        deletedAt: null,
-        isActive: true,
-      },
-      _sum: {
-        maxScore: true,
-      },
-    });
-
-    const componentSumByPolicyId = new Map(
-      componentSums.map((row) => [
-        row.gradingPolicyId,
-        this.decimalToNumber(row._sum.maxScore) ?? 0,
-      ]),
-    );
-
     const result = new Map<
       string,
       { passingScore: number; maxAnnual: number }
     >();
-    for (const policy of pickedPolicies) {
-      const oneSemesterMax =
-        (this.decimalToNumber(policy.maxExamScore) ?? 0) +
-        (this.decimalToNumber(policy.maxHomeworkScore) ?? 0) +
-        (this.decimalToNumber(policy.maxAttendanceScore) ?? 0) +
-        (this.decimalToNumber(policy.maxActivityScore) ?? 0) +
-        (this.decimalToNumber(policy.maxContributionScore) ?? 0) +
-        (componentSumByPolicyId.get(policy.id) ?? 0);
+    for (const policy of pickedBySubject.values()) {
+      const oneSemesterMax = this.decimalToNumber(policy.totalMaxScore) ?? 100;
 
       result.set(policy.subjectId, {
         passingScore: this.decimalToNumber(policy.passingScore) ?? 50,
@@ -1433,6 +1351,51 @@ export class AnnualResultsService {
     }
 
     return result;
+  }
+
+  private async buildFlexiblePolicyMetaMap(
+    academicYearId: string,
+    sectionId: string,
+    subjectIds: string[],
+    yearFinalRows: Array<{
+      studentEnrollmentId: string;
+      subjectId: string;
+      totalScore: Prisma.Decimal;
+      assessmentPeriod: {
+        maxScore: Prisma.Decimal;
+      };
+    }>,
+  ) {
+    const baseMeta = await this.buildPolicyMetaMap(
+      academicYearId,
+      (
+        await this.ensureSectionContext(sectionId, academicYearId)
+      ).gradeLevelId,
+      subjectIds,
+    );
+
+    const maxScoreBySubjectId = new Map<string, number>();
+    for (const row of yearFinalRows) {
+      if (!maxScoreBySubjectId.has(row.subjectId)) {
+        maxScoreBySubjectId.set(
+          row.subjectId,
+          this.decimalToNumber(row.assessmentPeriod.maxScore) ?? 100,
+        );
+      }
+    }
+
+    for (const subjectId of subjectIds) {
+      const existing = baseMeta.get(subjectId) ?? {
+        passingScore: 50,
+        maxAnnual: 100,
+      };
+      baseMeta.set(subjectId, {
+        ...existing,
+        maxAnnual: maxScoreBySubjectId.get(subjectId) ?? existing.maxAnnual,
+      });
+    }
+
+    return baseMeta;
   }
 
   private sortAnnualRankingRows(
@@ -1501,84 +1464,6 @@ export class AnnualResultsService {
     if (!Number.isInteger(value) || value < 0) {
       throw new BadRequestException(
         `يجب أن تكون قيمة ${fieldName} عددًا صحيحًا غير سالب`,
-      );
-    }
-  }
-
-  private async ensureSemesterGradesComplete(
-    enrollmentIds: string[],
-    academicYearId: string,
-    context: SectionContext,
-    actorUserId: string,
-  ) {
-    // Get all terms in the year
-    const yearTerms = await this.prisma.academicTerm.findMany({
-      where: {
-        academicYearId,
-        deletedAt: null,
-        isActive: true,
-      },
-      select: {
-        id: true,
-        sequence: true,
-      },
-    });
-
-    if (yearTerms.length === 0) {
-      throw new BadRequestException(
-        'لا توجد فصول أكاديمية نشطة في السنة المحددة',
-      );
-    }
-
-    const termIds = yearTerms.map((term) => term.id);
-
-    // Check if all students have semester grades for all terms in the year
-    const existingSemesterGrades = await this.prisma.semesterGrade.findMany({
-      where: {
-        studentEnrollmentId: {
-          in: enrollmentIds,
-        },
-        academicTermId: {
-          in: termIds,
-        },
-        deletedAt: null,
-        isActive: true,
-      },
-      select: {
-        studentEnrollmentId: true,
-        academicTermId: true,
-      },
-    });
-
-    // Group by enrollment to check completeness
-    const gradesByEnrollment = new Map<string, Set<string>>();
-    for (const grade of existingSemesterGrades) {
-      if (!gradesByEnrollment.has(grade.studentEnrollmentId)) {
-        gradesByEnrollment.set(grade.studentEnrollmentId, new Set());
-      }
-      gradesByEnrollment.get(grade.studentEnrollmentId)!.add(grade.academicTermId);
-    }
-
-    // Check each enrollment has all terms
-    const missingGrades: string[] = [];
-    for (const enrollmentId of enrollmentIds) {
-      const studentTerms = gradesByEnrollment.get(enrollmentId);
-      if (!studentTerms || studentTerms.size !== termIds.length) {
-        missingGrades.push(enrollmentId);
-      }
-    }
-
-    if (missingGrades.length > 0) {
-      await this.gradingNotificationsService.notifySemesterGradesIncomplete(
-        context.sectionId,
-        academicYearId,
-        context.gradeLevelId,
-        missingGrades.length,
-        actorUserId,
-      );
-
-      throw new BadRequestException(
-        `لا يمكن حساب النتيجة السنوية: ${missingGrades.length} طالب لم يكملوا الدرجات الفصلية لجميع فصول السنة. يرجى حساب الدرجات الفصلية أولاً.`,
       );
     }
   }

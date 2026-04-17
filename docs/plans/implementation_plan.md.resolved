@@ -1,0 +1,347 @@
+# خطة إعادة هيكلة الإعدادات وملف المدرسة 🏗️ (v2 — محدّثة)
+
+> [!NOTE]
+> تم التحديث بناءً على ملاحظات المستخدم:
+> - ❌ حذف كل ما يخص التقارير (ترويسة/تذييل/شعارات) — سيكون في نظام تقارير مستقل لاحقاً
+> - ✅ إنشاء `LookupSchoolType` جديد
+> - ✅ `socialMedia` كحقل JSON
+
+---
+
+## الملخص التنفيذي
+
+```mermaid
+graph LR
+    subgraph "قبل 🔴"
+        GS["GlobalSetting<br/>(فارغ ومكرر)"]
+        SS1["SystemSetting<br/>(21 إعداد مبعثر)"]
+        SP1["SchoolProfile<br/>(7 حقول فقط)"]
+    end
+    
+    subgraph "بعد 🟢"
+        SS2["SystemSetting<br/>(موحّد + isPublic + categories)"]
+        SP2["SchoolProfile<br/>(25+ حقل شامل)"]
+        LST["LookupSchoolType<br/>(جديد)"]
+    end
+    
+    GS -->|حذف| SS2
+    SS1 -->|تنظيم| SS2
+    SP1 -->|توسيع كبير| SP2
+    LST -.->|علاقة| SP2
+    
+    style GS fill:#fecaca
+    style SS2 fill:#bbf7d0
+    style SP2 fill:#bbf7d0
+    style LST fill:#bbf7d0
+```
+
+---
+
+## المرحلة 1: إنشاء `LookupSchoolType`
+
+#### [NEW] إضافة model في Prisma
+
+```prisma
+model LookupSchoolType {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique @db.VarChar(50)
+  nameAr      String    @map("name_ar") @db.VarChar(100)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  createdById String?   @map("created_by") @db.VarChar(191)
+  updatedById String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy      User?           @relation("lookup_school_type_created_by", ...)
+  updatedBy      User?           @relation("lookup_school_type_updated_by", ...)
+  schoolProfiles SchoolProfile[]
+
+  @@map("lookup_school_types")
+}
+```
+
+#### [NEW] بيانات Seed أولية
+
+| Code | الاسم العربي |
+|------|-------------|
+| `BOYS` | بنين |
+| `GIRLS` | بنات |
+| `MIXED` | مختلط |
+
+---
+
+## المرحلة 2: حذف `GlobalSetting` ودمجه في `SystemSetting`
+
+#### [DELETE] حذف backend module كامل
+
+| الملف | الإجراء |
+|------|---------|
+| `backend/src/modules/global-settings/` | حذف المجلد كاملاً |
+| `GlobalSetting` model في `schema.prisma` | حذف |
+| `SettingValueType` enum في `schema.prisma` | حذف |
+| العلاقات في `User` model (`settingsCreated`, `settingsUpdated`) | حذف |
+| `app.module.ts` — import `GlobalSettingsModule` | إزالة |
+
+#### [DELETE] حذف frontend بالكامل
+
+| الملف | الإجراء |
+|------|---------|
+| `frontend/src/app/app/global-settings/` | حذف |
+| `frontend/src/features/global-settings/` | حذف |
+| رابط في `app-navigation.ts` | إزالة |
+
+#### [MODIFY] توسيع `SystemSetting` model
+
+إضافة `isPublic` لتغطية ما كان في `GlobalSetting`:
+
+```diff
+ model SystemSetting {
+   ...
+   isEditable   Boolean           @default(true) @map("is_editable")
++  isPublic     Boolean           @default(false) @map("is_public")
+   ...
+ }
+```
+
+---
+
+## المرحلة 3: توسيع `SchoolProfile`
+
+#### [MODIFY] توسيع SchoolProfile model
+
+الحقول الجديدة المضافة (بدون أي شي يخص التقارير):
+
+```prisma
+model SchoolProfile {
+  id              String    @id @default(cuid()) @db.VarChar(191)
+  code            String    @unique @db.VarChar(40)
+  
+  // ── المعلومات الأساسية (موجودة) ──
+  nameAr          String    @map("name_ar") @db.VarChar(150)
+  nameEn          String?   @map("name_en") @db.VarChar(150)
+  ownershipTypeId Int?      @map("ownership_type_id")
+  
+  // ── 🆕 نوع المدرسة ──
+  schoolTypeId    Int?      @map("school_type_id")
+
+  // ── 🆕 الشعار والختم ──
+  logoUrl         String?   @map("logo_url") @db.VarChar(500)
+  stampUrl        String?   @map("stamp_url") @db.VarChar(500)
+
+  // ── 🆕 الهوية والتراخيص ──
+  licenseNumber       String?  @map("license_number") @db.VarChar(50)
+  registrationNumber  String?  @map("registration_number") @db.VarChar(50)
+  establishedYear     String?  @map("established_year") @db.VarChar(20)
+
+  // ── 🆕 الرؤية والرسالة ──
+  vision          String?   @db.Text
+  mission         String?   @db.Text
+
+  // ── 🆕 الإدارة ──
+  principalName   String?   @map("principal_name") @db.VarChar(150)
+
+  // ── معلومات الاتصال (phone + email موجودين) ──
+  phone           String?   @db.VarChar(20)
+  phone2          String?   @map("phone_2") @db.VarChar(20)       // 🆕
+  fax             String?   @db.VarChar(20)                        // 🆕
+  email           String?   @db.VarChar(191)
+  website         String?   @db.VarChar(255)                       // 🆕
+  poBox           String?   @map("po_box") @db.VarChar(20)        // 🆕
+
+  // ── العنوان (addressText موجود) ──
+  addressText     String?   @map("address_text") @db.VarChar(255)
+  latitude        Decimal?  @db.Decimal(10, 7)                     // 🆕
+  longitude       Decimal?  @db.Decimal(10, 7)                     // 🆕
+  city            String?   @db.VarChar(100)                       // 🆕
+  district        String?   @db.VarChar(100)                       // 🆕
+
+  // ── 🆕 التواصل الاجتماعي (JSON) ──
+  socialMedia     Json?     @map("social_media")
+
+  // ── الحقول الموجودة ──
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+  createdById     String?   @map("created_by") @db.VarChar(191)
+  updatedById     String?   @map("updated_by") @db.VarChar(191)
+
+  // ── العلاقات ──
+  ownershipType LookupOwnershipType? @relation(...)
+  schoolType    LookupSchoolType?    @relation(...)   // 🆕
+  createdBy     User?                @relation(...)
+  updatedBy     User?                @relation(...)
+}
+```
+
+#### ملخص الحقول الجديدة (18 حقل):
+
+| المجموعة | الحقول | النوع |
+|---------|--------|------|
+| **نوع المدرسة** | `schoolTypeId` | FK → `LookupSchoolType` |
+| **الشعار والختم** | `logoUrl`, `stampUrl` | VarChar(500) |
+| **الهوية** | `licenseNumber`, `registrationNumber`, `establishedYear` | VarChar |
+| **الرؤية والرسالة** | `vision`, `mission` | Text |
+| **الإدارة** | `principalName` | VarChar(150) |
+| **اتصال إضافي** | `phone2`, `fax`, `website`, `poBox` | VarChar |
+| **الموقع الجغرافي** | `latitude`, `longitude`, `city`, `district` | Decimal + VarChar |
+| **التواصل الاجتماعي** | `socialMedia` | JSON |
+
+---
+
+## المرحلة 4: تحديث الـ Backend
+
+### [MODIFY] `school-profiles` module
+
+#### DTO Updates
+
+| ملف | التغيير |
+|-----|---------|
+| `create-school-profile.dto.ts` | إضافة كل الحقول الجديدة كـ optional |
+| `update-school-profile.dto.ts` | إضافة كل الحقول الجديدة كـ optional |
+| `list-school-profiles.dto.ts` | إضافة فلاتر: `schoolTypeId` |
+
+#### Service Updates
+- إضافة validation لـ `schoolTypeId` (ensureSchoolTypeExists)
+- إضافة normalization للحقول الجديدة
+- تحديث `create` و `update` و `findAll`
+
+### [MODIFY] `system-settings` module
+- إضافة `isPublic` في DTOs
+- إضافة فلتر `isPublic` في list query
+
+### [MODIFY] Seeds
+- إضافة seed لـ `LookupSchoolType` (BOYS, GIRLS, MIXED)
+- تحديث seed لـ `SchoolProfile` الافتراضي بالحقول الجديدة
+
+---
+
+## المرحلة 5: إعادة بناء الواجهة الأمامية
+
+### [MODIFY] صفحة ملف المدرسة — تصميم Premium بتبويبات
+
+التصميم الجديد سيكون بنمط **بطاقة ملف شخصي** — بدلاً من قائمة CRUD:
+
+```
+┌─────────────────────────────────────────────────┐
+│  🏫 ملف المدرسة                                │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│  ┌───────┐  المدرسة الافتراضية                 │
+│  │ LOGO  │  Default School                      │
+│  │       │  📍 العنوان — بنين — خاصة            │
+│  └───────┘  🟢 نشطة                             │
+│                                                 │
+│  ━━━━ التبويبات ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ │
+│  [البيانات الأساسية] [الاتصال والموقع]          │
+│  [الهوية والتراخيص] [الشعار والختم]             │
+│                                                 │
+│  ── تبويب: البيانات الأساسية ──                │
+│  الاسم العربي      │ نوع الملكية                │
+│  الاسم الإنجليزي   │ نوع المدرسة               │
+│  اسم المدير        │ سنة التأسيس               │
+│  ─── الرؤية والرسالة ───                        │
+│  الرؤية: ████████████████                       │
+│  الرسالة: ████████████████                      │
+│                                                 │
+│  ── تبويب: الاتصال والموقع ──                  │
+│  📞 الهاتف 1       │ 📞 الهاتف 2               │
+│  📧 البريد          │ 📠 الفاكس                 │
+│  🌐 الموقع          │ 📮 ص.ب                    │
+│  📍 العنوان         │ 🏙️ المدينة / الحي         │
+│  🗺️ خريطة (lat/lng)                             │
+│  ─── التواصل الاجتماعي ───                      │
+│  𝕏 تويتر  │ 📘 فيسبوك  │ 📸 انستقرام           │
+│                                                 │
+│  ── تبويب: الهوية والتراخيص ──                 │
+│  رقم الترخيص       │ رقم التسجيل               │
+│  سنة التأسيس                                    │
+│                                                 │
+│  ── تبويب: الشعار والختم ──                    │
+│  ┌─────────┐  ┌─────────┐                      │
+│  │ شعار    │  │ ختم     │                      │
+│  │ المدرسة │  │ المدرسة │                      │
+│  └─────────┘  └─────────┘                      │
+│  [📤 رفع شعار]    [📤 رفع ختم]                 │
+│                                                 │
+└─────────────────────────────────────────────────┘
+```
+
+### [MODIFY] صفحة إعدادات النظام — تبويبات ذكية بفئات
+
+```
+┌─────────────────────────────────────────────────┐
+│  ⚙️ إعدادات النظام                              │
+├─────────────────────────────────────────────────┤
+│  [🏢 الهوية] [🔒 الأمان] [📊 الدرجات]          │
+│  [🏪 الفروع] [⚙️ عام]                           │
+│                                                 │
+│  ── تبويب: الأمان ──                           │
+│  ┌───────────────────────────────────────────┐  │
+│  │ مدة انتهاء الجلسة        [24] ساعة       │  │
+│  │ وضع الجلسة الواحدة       [━━○] معطّل     │  │
+│  │ موافقة جهاز جديد         [━━○] معطّل     │  │
+│  │ تعدد أجهزة ولي الأمر     [○━━] مفعّل     │  │
+│  │ موافقة التفعيل - موظف    [○━━] مفعّل     │  │
+│  │ موافقة التفعيل - ولي أمر [━━○] معطّل     │  │
+│  └───────────────────────────────────────────┘  │
+│                                                 │
+│  ── تبويب: الهوية ──                           │
+│  ┌───────────────────────────────────────────┐  │
+│  │ اسم المؤسس               [خالد شبيطه]    │  │
+│  │ عام التأسيس              [١٤٤٧هـ]        │  │
+│  │ اسم الشركة               [شركةون سوفت]   │  │
+│  └───────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────┘
+```
+
+### [DELETE] حذف من التنقل
+
+إزالة رابط **الإعدادات العامة** من `app-navigation.ts` (سطر 94-98)
+
+---
+
+## ترتيب التنفيذ
+
+| # | المهمة | الملفات |
+|---|--------|---------|
+| 1 | إنشاء `LookupSchoolType` في schema + seed | `schema.prisma`, `seeds/` |
+| 2 | توسيع `SchoolProfile` في schema | `schema.prisma` |
+| 3 | إضافة `isPublic` لـ `SystemSetting` | `schema.prisma` |
+| 4 | حذف `GlobalSetting` model + enum | `schema.prisma` |
+| 5 | تشغيل migration | `prisma migrate dev` |
+| 6 | حذف `global-settings` backend module | `backend/src/modules/` |
+| 7 | تحديث `app.module.ts` | `backend/src/app.module.ts` |
+| 8 | تحديث `school-profiles` DTOs + service | `backend/src/modules/school-profiles/` |
+| 9 | تحديث `system-settings` DTOs + service | `backend/src/modules/system-settings/` |
+| 10 | حذف `global-settings` frontend | `frontend/src/features/`, `frontend/src/app/app/` |
+| 11 | تحديث navigation | `app-navigation.ts` |
+| 12 | إعادة بناء `school-profiles` workspace | `frontend/src/features/school-profiles/` |
+| 13 | تحسين `system-settings` workspace | `frontend/src/features/system-settings/` |
+| 14 | Build + اختبار | `npm run build` |
+
+---
+
+## Verification Plan
+
+### Automated Tests
+```bash
+# 1. Schema migration
+npx prisma migrate dev --name restructure_settings_school_profile
+
+# 2. Seed
+npx prisma db seed
+
+# 3. Backend build
+cd backend && npm run build
+
+# 4. Frontend build
+cd frontend && npm run build
+```
+
+### Manual Verification
+- صفحة إعدادات النظام تظهر بتبويبات مصنفة
+- صفحة ملف المدرسة تعرض كل الحقول الجديدة بتبويبات
+- صفحة الإعدادات العامة **لم تعد تظهر** في التنقل
+- إنشاء/تعديل ملف مدرسة يعمل مع الحقول الجديدة

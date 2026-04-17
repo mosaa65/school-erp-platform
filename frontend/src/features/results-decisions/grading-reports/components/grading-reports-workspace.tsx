@@ -70,11 +70,13 @@ function toPercentageLabel(value: number): string {
 
 export function GradingReportsWorkspace() {
   const [searchInput, setSearchInput] = React.useState("");
-  const [search, setSearch] = React.useState("");  const [filterDraft, setFilterDraft] = React.useState<FiltersState>(DEFAULT_FILTERS);
+  const [search, setSearch] = React.useState("");
+  const [filterDraft, setFilterDraft] = React.useState<FiltersState>(DEFAULT_FILTERS);
   const [appliedFilters, setAppliedFilters] = React.useState<FiltersState>(DEFAULT_FILTERS);
   const [detailsPage, setDetailsPage] = React.useState(1);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = React.useState(false);
+  const [workspaceView, setWorkspaceView] = React.useState<"overview" | "details">("overview");
 
   const yearOptionsQuery = useAcademicYearOptionsQuery();
   const gradeLevelOptionsQuery = useGradeLevelOptionsQuery();
@@ -104,6 +106,18 @@ export function GradingReportsWorkspace() {
   const report = reportQuery.data;
   const details = detailsQuery.data?.data ?? [];
   const detailsPagination = detailsQuery.data?.pagination;
+  const selectedYearOption = yearOptionsQuery.data?.find(
+    (item) => item.id === appliedFilters.academicYearId,
+  );
+  const selectedGradeLevelOption = gradeLevelOptionsQuery.data?.find(
+    (item) => item.id === appliedFilters.gradeLevelId,
+  );
+  const selectedSectionOption = sectionOptionsQuery.data?.find(
+    (item) => item.id === appliedFilters.sectionId,
+  );
+  const selectedTermOption = termOptionsQuery.data?.find(
+    (item) => item.id === appliedFilters.academicTermId,
+  );
 
   useDebounceEffect(() => {
       setSearch(searchInput.trim());
@@ -192,6 +206,38 @@ export function GradingReportsWorkspace() {
           </div>
         </div>
 
+        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+          <CardHeader className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <CardTitle>سير العمل</CardTitle>
+                <CardDescription>
+                  راجع الملخص أولًا ثم انتقل إلى التفاصيل الفردية عند الحاجة.
+                </CardDescription>
+              </div>
+              <Badge variant="secondary">
+                التفاصيل الحالية: {detailsPagination?.total ?? 0}
+              </Badge>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant={workspaceView === "overview" ? "default" : "outline"}
+                onClick={() => setWorkspaceView("overview")}
+              >
+                نظرة عامة
+              </Button>
+              <Button
+                type="button"
+                variant={workspaceView === "details" ? "default" : "outline"}
+                onClick={() => setWorkspaceView("details")}
+              >
+                التفاصيل السنوية
+              </Button>
+            </div>
+          </CardHeader>
+        </Card>
+
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
@@ -212,12 +258,47 @@ export function GradingReportsWorkspace() {
 
         <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
           <CardHeader className="space-y-3">
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-primary" />
-              ملخص حوكمة الدرجات
-            </CardTitle>
-            <CardDescription>تقرير ملخّص لحوكمة الدرجات الفصلية والسنوية والنتائج.</CardDescription>
+            <CardTitle>السياق والمرشحات</CardTitle>
+            <CardDescription>
+              استخدم المرشحات لتضييق ملخص الحوكمة والتفاصيل على سنة أو مرحلة أو شعبة.
+            </CardDescription>
           </CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-4">
+            <div className="rounded-lg border border-border/70 bg-background/70 p-3">
+              <p className="text-xs text-muted-foreground">السنة</p>
+              <p className="mt-1 text-sm font-medium">
+                {selectedYearOption
+                  ? formatNameCodeLabel(selectedYearOption.name, selectedYearOption.code)
+                  : "كل السنوات"}
+              </p>
+            </div>
+            <div className="rounded-lg border border-border/70 bg-background/70 p-3">
+              <p className="text-xs text-muted-foreground">المرحلة</p>
+              <p className="mt-1 text-sm font-medium">
+                {selectedGradeLevelOption
+                  ? formatNameCodeLabel(
+                      selectedGradeLevelOption.name,
+                      selectedGradeLevelOption.code,
+                    )
+                  : "كل المراحل"}
+              </p>
+            </div>
+            <div className="rounded-lg border border-border/70 bg-background/70 p-3">
+              <p className="text-xs text-muted-foreground">الشعبة / الفصل</p>
+              <p className="mt-1 text-sm font-medium">
+                {selectedSectionOption
+                  ? formatSectionWithGradeLabel(selectedSectionOption)
+                  : "كل الشعب"}
+                {selectedTermOption
+                  ? ` | ${formatNameCodeLabel(selectedTermOption.name, selectedTermOption.code)}`
+                  : ""}
+              </p>
+            </div>
+            <div className="rounded-lg border border-border/70 bg-background/70 p-3">
+              <p className="text-xs text-muted-foreground">السجلات التفصيلية</p>
+              <p className="mt-1 text-2xl font-semibold">{details.length}</p>
+            </div>
+          </CardContent>
         </Card>
 
         {reportQuery.isPending ? (
@@ -236,28 +317,39 @@ export function GradingReportsWorkspace() {
 
         {report ? (
           <>
-            <div className="grid gap-3 md:grid-cols-3">
+            {(workspaceView === "overview" || workspaceView === "details") ? (
+            <Card className="border-border/70 bg-card/80">
+              <CardHeader className="space-y-1">
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                  ملخص حوكمة الدرجات
+                </CardTitle>
+                <CardDescription>
+                  نظرة مركزة على الفترات الفصلية والنهائية والنتائج السنوية.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-3 md:grid-cols-3">
               <Card className="border-border/70 bg-card/80" data-testid="grading-report-semester-card">
                 <CardHeader className="space-y-1 pb-2">
-                  <CardTitle className="text-sm">الدرجات الفصلية</CardTitle>
-                  <CardDescription>الإجمالي: {report.semesterGrades.total}</CardDescription>
+                  <CardTitle className="text-sm">الفترات الفصلية</CardTitle>
+                  <CardDescription>الإجمالي: {report.semesterPeriods.total}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-1 text-sm">
-                  <p>النشط: {report.semesterGrades.active}</p>
-                  <p>المقفل: {report.semesterGrades.locked}</p>
-                  <p>نسبة الإقفال: {toPercentageLabel(report.semesterGrades.lockRate)}</p>
+                  <p>النشط: {report.semesterPeriods.active}</p>
+                  <p>المقفل: {report.semesterPeriods.locked}</p>
+                  <p>نسبة الإقفال: {toPercentageLabel(report.semesterPeriods.lockRate)}</p>
                 </CardContent>
               </Card>
 
-              <Card className="border-border/70 bg-card/80" data-testid="grading-report-annual-grades-card">
+              <Card className="border-border/70 bg-card/80" data-testid="grading-report-year-final-card">
                 <CardHeader className="space-y-1 pb-2">
-                  <CardTitle className="text-sm">الدرجات السنوية</CardTitle>
-                  <CardDescription>الإجمالي: {report.annualGrades.total}</CardDescription>
+                  <CardTitle className="text-sm">الفترات النهائية</CardTitle>
+                  <CardDescription>الإجمالي: {report.yearFinalPeriods.total}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-1 text-sm">
-                  <p>النشط: {report.annualGrades.active}</p>
-                  <p>المقفل: {report.annualGrades.locked}</p>
-                  <p>نسبة الإقفال: {toPercentageLabel(report.annualGrades.lockRate)}</p>
+                  <p>النشط: {report.yearFinalPeriods.active}</p>
+                  <p>المقفل: {report.yearFinalPeriods.locked}</p>
+                  <p>نسبة الإقفال: {toPercentageLabel(report.yearFinalPeriods.lockRate)}</p>
                 </CardContent>
               </Card>
 
@@ -272,8 +364,11 @@ export function GradingReportsWorkspace() {
                   <p>نسبة الإقفال: {toPercentageLabel(report.annualResults.lockRate)}</p>
                 </CardContent>
               </Card>
-            </div>
+              </CardContent>
+            </Card>
+            ) : null}
 
+            {workspaceView === "overview" ? (
             <div className="grid gap-3 md:grid-cols-2">
               <Card className="border-border/70 bg-card/80" data-testid="grading-report-workflow-card">
                 <CardHeader className="pb-2">
@@ -281,18 +376,18 @@ export function GradingReportsWorkspace() {
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground">الفصلي</p>
+                    <p className="text-xs font-medium text-muted-foreground">الفترات الفصلية</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {report.semesterGrades.byStatus.map((item) => (
+                      {report.semesterPeriods.byStatus.map((item) => (
                         <Badge key={`semester-${item.status}`} variant="outline">{translateGradingWorkflowStatus(item.status)}: {item.count}</Badge>
                       ))}
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground">الدرجات السنوية</p>
+                    <p className="text-xs font-medium text-muted-foreground">الفترات النهائية</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {report.annualGrades.byStatus.map((item) => (
-                        <Badge key={`annual-grade-${item.status}`} variant="outline">{translateGradingWorkflowStatus(item.status)}: {item.count}</Badge>
+                      {report.yearFinalPeriods.byStatus.map((item) => (
+                        <Badge key={`year-final-${item.status}`} variant="outline">{translateGradingWorkflowStatus(item.status)}: {item.count}</Badge>
                       ))}
                     </div>
                   </div>
@@ -321,17 +416,10 @@ export function GradingReportsWorkspace() {
                 </CardContent>
               </Card>
             </div>
+            ) : null}
 
+            {workspaceView === "overview" ? (
             <div className="grid gap-3 md:grid-cols-2">
-              <Card className="border-border/70 bg-card/80" data-testid="grading-report-final-status-card">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">توزيع الحالات النهائية</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  {report.annualGrades.byFinalStatus.length === 0 ? <p className="text-muted-foreground">لا توجد بيانات.</p> : report.annualGrades.byFinalStatus.map((item) => <p key={item.finalStatusId}>{formatNameCodeLabel(item.name, item.code)}: {item.count}</p>)}
-                </CardContent>
-              </Card>
-
               <Card className="border-border/70 bg-card/80" data-testid="grading-report-promotion-card">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm">توزيع قرارات الترفيع</CardTitle>
@@ -341,7 +429,9 @@ export function GradingReportsWorkspace() {
                 </CardContent>
               </Card>
             </div>
+            ) : null}
 
+            {(workspaceView === "overview" || workspaceView === "details") ? (
             <Card className="border-border/70 bg-card/80" data-testid="grading-report-details-card">
               <CardHeader className="space-y-1 pb-2">
                 <CardTitle className="text-sm">تفاصيل النتائج السنوية</CardTitle>
@@ -377,6 +467,7 @@ export function GradingReportsWorkspace() {
                 </div>
               </CardContent>
             </Card>
+            ) : null}
 
             <div className="flex justify-end">
               <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => { void Promise.all([reportQuery.refetch(), detailsQuery.refetch()]); }} disabled={reportQuery.isFetching || detailsQuery.isFetching} data-testid="grading-report-refresh">

@@ -781,7 +781,6 @@ export function ExamAssessmentsWorkspace() {
         onSubmit={submitForm}
         submitLabel={isEditing ? "حفظ التعديلات" : "إنشاء اختبار"}
         isSubmitting={isFormSubmitting}
-        showFooter={false}
       >
         <form className="space-y-4" onSubmit={handleSubmitForm}>
           <FormField label="فترة الاختبار" required>

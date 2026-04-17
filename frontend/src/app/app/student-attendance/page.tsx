@@ -8,9 +8,9 @@ export default function StudentAttendancePage() {
       <div className="space-y-4">
         <div className="space-y-2">
           <Badge variant="secondary" className="w-fit">
-            النظام 04 - الطلاب
+            النظام 05 - حضور الطلاب
           </Badge>
-          <h2 className="text-2xl font-semibold tracking-tight">حضور الطلاب</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">حضور وغياب الطلاب</h2>
         </div>
         <StudentAttendanceWorkspace />
       </div>

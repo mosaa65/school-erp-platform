@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { AuditLogsModule } from '../audit-logs/audit-logs.module';
+import { AuditLogsModule } from '../../audit-logs/audit-logs.module';
 import { GradingPoliciesController } from './grading-policies.controller';
 import { GradingPoliciesService } from './grading-policies.service';
 
