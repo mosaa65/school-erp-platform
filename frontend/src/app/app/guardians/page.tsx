@@ -4,7 +4,7 @@ import { GuardiansWorkspace } from "@/features/guardians/components/guardians-wo
 
 export default function GuardiansPage() {
   return (
-    <PermissionGuard permission="guardians.read">
+    <PermissionGuard requiredAnyPermission={["guardians.read.summary", "guardians.read"]}>
       <div className="space-y-4">
         <div className="space-y-2">
           <Badge variant="secondary" className="w-fit">
@@ -17,7 +17,6 @@ export default function GuardiansPage() {
     </PermissionGuard>
   );
 }
-
 
 
 

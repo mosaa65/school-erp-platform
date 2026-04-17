@@ -25,7 +25,6 @@ import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
 import { EntityDetailsShell } from "@/presentation/entity-surface/entity-details-shell";
-import { EntityPresentationToolbar } from "@/presentation/entity-surface/entity-presentation-toolbar";
 import { EntitySurfaceCard } from "@/presentation/entity-surface/entity-surface-card";
 import { EntitySurfaceGrid } from "@/presentation/entity-surface/entity-surface-grid";
 import { EntitySurfaceQuickActions } from "@/presentation/entity-surface/entity-surface-quick-actions";
@@ -62,6 +61,8 @@ import { useGuardianIdTypeOptionsQuery } from "@/features/guardians/hooks/use-id
 import { useGuardiansQuery } from "@/features/guardians/hooks/use-guardians-query";
 import {
   buildGuardianSurfacePreview,
+  GUARDIAN_DETAILS_PERMISSION_CODES,
+  GUARDIAN_SUMMARY_PERMISSION_CODES,
   getGuardianDetailsPath,
   getGuardianStatusChips,
   guardianSurfaceDefinition,
@@ -264,18 +265,19 @@ function resolveGuardiansDetailsMode(
 }
 
 export function GuardiansWorkspace() {
-  const { hasPermission } = useRbac();
+  const { hasAnyPermission, hasPermission } = useRbac();
   const entitySurface = useEntitySurface();
   const guardiansSurface = React.useMemo(
     () => getEntitySurfaceDefinition<GuardianListItem>("guardians") ?? guardianSurfaceDefinition,
     [],
   );
   const canCreate = hasPermission("guardians.create");
-  const canReadDetails = hasPermission("guardians.read");
-  const canUseQuickActions =
-    canReadDetails || hasPermission("guardians.update") || hasPermission("guardians.delete");
+  const canReadSummary = hasAnyPermission([...GUARDIAN_SUMMARY_PERMISSION_CODES]);
+  const canReadDetails =
+    canReadSummary && hasAnyPermission([...GUARDIAN_DETAILS_PERMISSION_CODES]);
   const canUpdate = hasPermission("guardians.update");
   const canDelete = hasPermission("guardians.delete");
+  const canUseQuickActions = canReadDetails || canUpdate || canDelete;
   const canReadGenders = hasPermission("lookup-genders.read");
   const canReadIdTypes = hasPermission("lookup-id-types.read");
   const canReadLocalities = hasPermission("localities.read");
@@ -920,6 +922,8 @@ export function GuardiansWorkspace() {
       (value) => value !== "all",
     ).length;
   }, [activeFilter, genderFilter, idTypeFilter, localityFilter]);
+  const showGuardianCardDetails =
+    canReadDetails && entitySurface.showExtendedDetailsInCards;
   const usesBlurBackdrop = entitySurface.longPressMode === "enabled-with-blur";
   const contextGuardianQuickActions = contextGuardian ? buildGuardianQuickActions(contextGuardian) : [];
   const selectedGuardianQuickActions = selectedGuardian
@@ -1297,18 +1301,6 @@ export function GuardiansWorkspace() {
             actionsClassName="justify-start lg:justify-end"
           />
 
-          <EntityPresentationToolbar
-            viewMode={resolvedViewMode}
-            onViewModeChange={entitySurface.setDefaultViewMode}
-            density={entitySurface.density}
-            onDensityChange={entitySurface.setDensity}
-            avatarMode={entitySurface.avatarMode}
-            onAvatarModeChange={entitySurface.setAvatarMode}
-            inlineActionsMode={entitySurface.inlineActionsMode}
-            onInlineActionsModeChange={entitySurface.setInlineActionsMode}
-            allowedViewModes={guardiansSurface.allowedViewModes ?? ["list", "smart-card", "grid", "dense-row"]}
-          />
-
           <FilterDrawer
             open={isFilterOpen}
             onClose={() => setIsFilterOpen(false)}
@@ -1436,6 +1428,7 @@ export function GuardiansWorkspace() {
               viewMode={resolvedViewMode}
               density={entitySurface.density}
               richness={entitySurface.richness}
+              colorMode={entitySurface.colorMode}
               visualStyle={entitySurface.visualStyle}
               effectsPreset={entitySurface.effectsPreset}
               shapePreset={entitySurface.shapePreset}
@@ -1457,13 +1450,14 @@ export function GuardiansWorkspace() {
                     <EntitySurfaceRow
                       key={guardian.id}
                       title={preview.title}
-                      subtitle={preview.subtitle}
-                      meta={preview.meta ?? preview.description}
+                      subtitle={showGuardianCardDetails ? preview.subtitle : undefined}
+                      meta={showGuardianCardDetails ? preview.meta ?? preview.description : undefined}
                       avatar={preview.avatar}
-                      statusChips={getGuardianStatusChips(guardian)}
+                      statusChips={showGuardianCardDetails ? getGuardianStatusChips(guardian) : undefined}
                       quickActions={visibleQuickActions}
                       density={entitySurface.density}
                       richness={entitySurface.richness}
+                      colorMode={entitySurface.colorMode}
                       visualStyle={entitySurface.visualStyle}
                       effectsPreset={entitySurface.effectsPreset}
                       shapePreset={entitySurface.shapePreset}
@@ -1489,15 +1483,16 @@ export function GuardiansWorkspace() {
                   <EntitySurfaceCard
                     key={guardian.id}
                     title={preview.title}
-                    subtitle={preview.subtitle}
-                    description={preview.description}
+                    subtitle={showGuardianCardDetails ? preview.subtitle : undefined}
+                    description={showGuardianCardDetails ? preview.description : undefined}
                     avatar={preview.avatar}
-                    fields={preview.fields}
-                    statusChips={getGuardianStatusChips(guardian)}
+                    fields={showGuardianCardDetails ? preview.fields : undefined}
+                    statusChips={showGuardianCardDetails ? getGuardianStatusChips(guardian) : undefined}
                     quickActions={visibleQuickActions}
                     viewMode={resolvedViewMode}
                     density={entitySurface.density}
                     richness={entitySurface.richness}
+                    colorMode={entitySurface.colorMode}
                     visualStyle={entitySurface.visualStyle}
                     effectsPreset={entitySurface.effectsPreset}
                     shapePreset={entitySurface.shapePreset}

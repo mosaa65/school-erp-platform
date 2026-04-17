@@ -340,7 +340,7 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         href: "/app/guardians",
         label: "أولياء الأمور",
         icon: Users,
-        requiredPermission: "guardians.read",
+        requiredAnyPermission: ["guardians.read.summary", "guardians.read"],
       },
       {
         href: "/app/student-guardians",

@@ -27,7 +27,6 @@ import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import { StudentPickerSheet } from "@/components/ui/student-picker-sheet";
 import { SystemMessageInline } from "@/components/feedback/system-message-inline";
 import { EntityDetailsShell } from "@/presentation/entity-surface/entity-details-shell";
-import { EntityPresentationToolbar } from "@/presentation/entity-surface/entity-presentation-toolbar";
 import { EntitySurfaceCard } from "@/presentation/entity-surface/entity-surface-card";
 import { EntitySurfaceGrid } from "@/presentation/entity-surface/entity-surface-grid";
 import { EntitySurfaceQuickActions } from "@/presentation/entity-surface/entity-surface-quick-actions";
@@ -1419,18 +1418,6 @@ export function StudentEnrollmentsWorkspace() {
           onFilterClick={() => setIsFilterOpen((prev) => !prev)}
         />
 
-        <EntityPresentationToolbar
-          viewMode={resolvedViewMode}
-          onViewModeChange={entitySurface.setDefaultViewMode}
-          density={entitySurface.density}
-          onDensityChange={entitySurface.setDensity}
-          avatarMode={entitySurface.avatarMode}
-          onAvatarModeChange={entitySurface.setAvatarMode}
-          inlineActionsMode={entitySurface.inlineActionsMode}
-          onInlineActionsModeChange={entitySurface.setInlineActionsMode}
-          allowedViewModes={enrollmentsSurface.allowedViewModes ?? ["list", "smart-card", "grid", "dense-row"]}
-        />
-
         <FilterDrawer
           open={isSortOpen}
           onClose={() => setIsSortOpen(false)}
@@ -1816,6 +1803,7 @@ export function StudentEnrollmentsWorkspace() {
                 viewMode={resolvedViewMode}
                 density={entitySurface.density}
                 richness={entitySurface.richness}
+                colorMode={entitySurface.colorMode}
                 visualStyle={entitySurface.visualStyle}
                 effectsPreset={entitySurface.effectsPreset}
                 shapePreset={entitySurface.shapePreset}
@@ -1845,6 +1833,7 @@ export function StudentEnrollmentsWorkspace() {
                         quickActions={visibleQuickActions}
                         density={entitySurface.density}
                         richness={entitySurface.richness}
+                        colorMode={entitySurface.colorMode}
                         visualStyle={entitySurface.visualStyle}
                         effectsPreset={entitySurface.effectsPreset}
                         shapePreset={entitySurface.shapePreset}
@@ -1879,6 +1868,7 @@ export function StudentEnrollmentsWorkspace() {
                       viewMode={resolvedViewMode}
                       density={entitySurface.density}
                       richness={entitySurface.richness}
+                      colorMode={entitySurface.colorMode}
                       visualStyle={entitySurface.visualStyle}
                       effectsPreset={entitySurface.effectsPreset}
                       shapePreset={entitySurface.shapePreset}

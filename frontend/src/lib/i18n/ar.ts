@@ -180,6 +180,10 @@ const PERMISSION_CODE_LABELS: Record<string, string> = {
   "students.read.details": "الطلاب - عرض تفاصيل الطلاب",
   "students.quick-actions.use": "الطلاب - استخدام الاختصارات السريعة",
   "students.fields.sensitive": "الطلاب - عرض الحقول الحساسة",
+  "guardians.read": "أولياء الأمور - قراءة أولياء الأمور العامة",
+  "guardians.read.summary": "أولياء الأمور - عرض أولياء الأمور",
+  "guardians.read.details": "أولياء الأمور - عرض تفاصيل أولياء الأمور",
+  "guardians.quick-actions.use": "أولياء الأمور - استخدام الاختصارات السريعة",
 };
 
 export const PERMISSION_RESOURCE_LABELS: Record<string, string> = {
