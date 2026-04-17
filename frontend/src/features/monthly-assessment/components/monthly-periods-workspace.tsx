@@ -79,7 +79,11 @@ const DEFAULT_COMPONENT_FORM: ComponentFormState = {
 };
 
 function toOptionalNumber(value: string) {
-  const parsed = Number(value.trim());
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  const parsed = Number(trimmed);
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
@@ -160,6 +164,8 @@ export function MonthlyPeriodsWorkspace({ mode }: MonthlyPeriodsWorkspaceProps) 
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
+  const formAcademicYearId =
+    isPeriodsMode && isFormOpen && periodForm.academicYearId ? periodForm.academicYearId : yearFilter;
 
   const yearsQuery = useQuery({
     queryKey: ["monthly-assessment-years"],
@@ -167,26 +173,26 @@ export function MonthlyPeriodsWorkspace({ mode }: MonthlyPeriodsWorkspaceProps) 
   });
 
   const termsQuery = useQuery({
-    queryKey: ["monthly-assessment-terms", yearFilter],
+    queryKey: ["monthly-assessment-terms", formAcademicYearId],
     queryFn: async () =>
       (
         await apiClient.listAcademicTerms({
           page: 1,
           limit: 100,
-          academicYearId: yearFilter === "all" ? undefined : yearFilter,
+          academicYearId: formAcademicYearId === "all" ? undefined : formAcademicYearId,
           isActive: true,
         })
       ).data,
   });
 
   const monthsQuery = useQuery({
-    queryKey: ["monthly-assessment-months", yearFilter],
+    queryKey: ["monthly-assessment-months", formAcademicYearId],
     queryFn: async () =>
       (
         await apiClient.listAcademicMonths({
           page: 1,
           limit: 100,
-          academicYearId: yearFilter === "all" ? undefined : yearFilter,
+          academicYearId: formAcademicYearId === "all" ? undefined : formAcademicYearId,
           isActive: true,
         })
       ).data,
@@ -337,6 +343,33 @@ export function MonthlyPeriodsWorkspace({ mode }: MonthlyPeriodsWorkspaceProps) 
   React.useEffect(() => {
     setPage(1);
   }, [yearFilter, termFilter, monthFilter, periodFilter, entryModeFilter, activeFilter, lockedFilter]);
+
+  React.useEffect(() => {
+    if (!isPeriodsMode) {
+      return;
+    }
+
+    setPeriodForm((prev) => {
+      const nextTermId =
+        prev.academicTermId && (termsQuery.data ?? []).some((item) => item.id === prev.academicTermId)
+          ? prev.academicTermId
+          : "";
+      const nextMonthId =
+        prev.academicMonthId && (monthsQuery.data ?? []).some((item) => item.id === prev.academicMonthId)
+          ? prev.academicMonthId
+          : "";
+
+      if (nextTermId === prev.academicTermId && nextMonthId === prev.academicMonthId) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        academicTermId: nextTermId,
+        academicMonthId: nextMonthId,
+      };
+    });
+  }, [isPeriodsMode, termsQuery.data, monthsQuery.data]);
 
   function handleCloseForm() {
     setIsFormOpen(false);

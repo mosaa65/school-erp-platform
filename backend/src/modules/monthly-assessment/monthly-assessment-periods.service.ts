@@ -1,5 +1,10 @@
 import { randomUUID } from 'crypto';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma, GradingWorkflowStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateAssessmentPeriodDto } from '../assessment-periods/assessment-periods/dto/create-assessment-period.dto';
@@ -49,41 +54,52 @@ export class MonthlyAssessmentPeriodsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(payload: CreateAssessmentPeriodDto, actorUserId: string) {
+    this.ensureMonthlyCategory(payload.category);
+    await this.ensureMonthlyScope(
+      payload.academicYearId,
+      payload.academicTermId,
+      payload.academicMonthId,
+    );
+
     const id = randomUUID();
 
-    await this.prisma.$executeRaw`
-      INSERT INTO monthly_assessment_periods (
-        id,
-        academic_year_id,
-        academic_term_id,
-        academic_month_id,
-        name,
-        sequence,
-        max_score,
-        status,
-        is_locked,
-        is_active,
-        created_at,
-        updated_at,
-        created_by,
-        updated_by
-      ) VALUES (
-        ${id},
-        ${payload.academicYearId},
-        ${payload.academicTermId ?? null},
-        ${payload.academicMonthId ?? null},
-        ${payload.name.trim()},
-        ${payload.sequence ?? 1},
-        ${payload.maxScore ?? 100},
-        ${payload.status ?? GradingWorkflowStatus.DRAFT},
-        false,
-        ${payload.isActive ?? true},
-        NOW(),
-        NOW(),
-        ${actorUserId},
-        ${actorUserId}
-      )
-    `;
+    try {
+      await this.prisma.$executeRaw`
+        INSERT INTO monthly_assessment_periods (
+          id,
+          academic_year_id,
+          academic_term_id,
+          academic_month_id,
+          name,
+          sequence,
+          max_score,
+          status,
+          is_locked,
+          is_active,
+          created_at,
+          updated_at,
+          created_by,
+          updated_by
+        ) VALUES (
+          ${id},
+          ${payload.academicYearId},
+          ${payload.academicTermId},
+          ${payload.academicMonthId},
+          ${payload.name.trim()},
+          ${payload.sequence ?? 1},
+          ${payload.maxScore ?? 100},
+          ${payload.status ?? GradingWorkflowStatus.DRAFT},
+          false,
+          ${payload.isActive ?? true},
+          NOW(),
+          NOW(),
+          ${actorUserId},
+          ${actorUserId}
+        )
+      `;
+    } catch (error) {
+      this.throwKnownDatabaseErrors(error);
+    }
 
     return this.findOne(id);
   }
@@ -250,24 +266,41 @@ export class MonthlyAssessmentPeriodsService {
     payload: UpdateAssessmentPeriodDto,
     actorUserId: string,
   ) {
-    await this.findOne(id);
+    const current = await this.findOne(id);
+    const nextAcademicYearId = payload.academicYearId ?? current.academicYearId;
+    const nextAcademicTermId = payload.academicTermId ?? current.academicTermId;
+    const nextAcademicMonthId = payload.academicMonthId ?? current.academicMonthId;
 
-    await this.prisma.$executeRaw`
-      UPDATE monthly_assessment_periods
-      SET
-        academic_year_id = COALESCE(${payload.academicYearId ?? null}, academic_year_id),
-        academic_term_id = COALESCE(${payload.academicTermId ?? null}, academic_term_id),
-        academic_month_id = COALESCE(${payload.academicMonthId ?? null}, academic_month_id),
-        name = COALESCE(${payload.name?.trim() ?? null}, name),
-        sequence = COALESCE(${payload.sequence ?? null}, sequence),
-        max_score = COALESCE(${payload.maxScore ?? null}, max_score),
-        status = COALESCE(${payload.status ?? null}, status),
-        is_active = COALESCE(${payload.isActive ?? null}, is_active),
-        updated_at = NOW(),
-        updated_by = ${actorUserId}
-      WHERE id = ${id}
-        AND deleted_at IS NULL
-    `;
+    if (payload.category) {
+      this.ensureMonthlyCategory(payload.category);
+    }
+
+    await this.ensureMonthlyScope(
+      nextAcademicYearId,
+      nextAcademicTermId,
+      nextAcademicMonthId,
+    );
+
+    try {
+      await this.prisma.$executeRaw`
+        UPDATE monthly_assessment_periods
+        SET
+          academic_year_id = COALESCE(${payload.academicYearId ?? null}, academic_year_id),
+          academic_term_id = COALESCE(${payload.academicTermId ?? null}, academic_term_id),
+          academic_month_id = COALESCE(${payload.academicMonthId ?? null}, academic_month_id),
+          name = COALESCE(${payload.name?.trim() ?? null}, name),
+          sequence = COALESCE(${payload.sequence ?? null}, sequence),
+          max_score = COALESCE(${payload.maxScore ?? null}, max_score),
+          status = COALESCE(${payload.status ?? null}, status),
+          is_active = COALESCE(${payload.isActive ?? null}, is_active),
+          updated_at = NOW(),
+          updated_by = ${actorUserId}
+        WHERE id = ${id}
+          AND deleted_at IS NULL
+      `;
+    } catch (error) {
+      this.throwKnownDatabaseErrors(error);
+    }
 
     return this.findOne(id);
   }
@@ -364,6 +397,74 @@ export class MonthlyAssessmentPeriodsService {
     }
 
     return where;
+  }
+
+  private ensureMonthlyCategory(category: string) {
+    if (category !== 'MONTHLY') {
+      throw new BadRequestException('Monthly endpoint only accepts MONTHLY category');
+    }
+  }
+
+  private async ensureMonthlyScope(
+    academicYearId: string,
+    academicTermId?: string | null,
+    academicMonthId?: string | null,
+  ) {
+    if (!academicYearId || !academicTermId || !academicMonthId) {
+      throw new BadRequestException(
+        'Academic year, term, and month are required for monthly periods',
+      );
+    }
+
+    const [term, month] = await Promise.all([
+      this.prisma.academicTerm.findFirst({
+        where: { id: academicTermId, deletedAt: null },
+        select: { id: true, academicYearId: true },
+      }),
+      this.prisma.academicMonth.findFirst({
+        where: { id: academicMonthId, deletedAt: null },
+        select: { id: true, academicYearId: true, academicTermId: true },
+      }),
+    ]);
+
+    if (!term) {
+      throw new BadRequestException('Academic term not found');
+    }
+
+    if (!month) {
+      throw new BadRequestException('Academic month not found');
+    }
+
+    if (term.academicYearId !== academicYearId) {
+      throw new BadRequestException(
+        'Selected academic term does not belong to the chosen academic year',
+      );
+    }
+
+    if (month.academicYearId !== academicYearId) {
+      throw new BadRequestException(
+        'Selected academic month does not belong to the chosen academic year',
+      );
+    }
+
+    if (month.academicTermId !== academicTermId) {
+      throw new BadRequestException(
+        'Selected academic month does not belong to the chosen academic term',
+      );
+    }
+  }
+
+  private throwKnownDatabaseErrors(error: unknown): never {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
+      throw new ConflictException(
+        'A monthly assessment period with the same name already exists for this month',
+      );
+    }
+
+    throw error;
   }
 
   private mapPeriod(item: MonthlyPeriodRow) {
