@@ -4,15 +4,18 @@ import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   Activity,
+  ArrowUpRight,
   ArrowUpDown,
   ArrowRightLeft,
   CalendarDays,
+  Eye,
   GraduationCap,
   Hash,
   LoaderCircle,
   PencilLine,
   Plus,
   RefreshCw,
+  ScanSearch,
   Trash2,
   Type,
   Undo2,
@@ -29,6 +32,7 @@ import { SystemMessageInline } from "@/components/feedback/system-message-inline
 import { EntityDetailsShell } from "@/presentation/entity-surface/entity-details-shell";
 import { EntitySurfaceCard } from "@/presentation/entity-surface/entity-surface-card";
 import { EntitySurfaceGrid } from "@/presentation/entity-surface/entity-surface-grid";
+import { EntitySurfaceHeaderActionButton } from "@/presentation/entity-surface/entity-surface-header-action-button";
 import { EntitySurfaceQuickActions } from "@/presentation/entity-surface/entity-surface-quick-actions";
 import { getEntitySurfaceDefinition } from "@/presentation/entity-surface/entity-surface-registry";
 import { EntitySurfaceRow } from "@/presentation/entity-surface/entity-surface-row";
@@ -68,6 +72,7 @@ import { StudentEnrollmentDetailsContent } from "@/features/student-enrollments/
 import {
   buildStudentEnrollmentSurfacePreview,
   getStudentEnrollmentDetailsPath,
+  STUDENT_ENROLLMENT_DETAILS_PERMISSION_CODES,
   getStudentEnrollmentStatusChips,
   studentEnrollmentSurfaceDefinition,
 } from "@/features/student-enrollments/presentation/student-enrollment-surface-definition";
@@ -574,7 +579,7 @@ function buildStudentPickerOptionFromEnrollment(
 export function StudentEnrollmentsWorkspace() {
   const router = useRouter();
   const entitySurface = useEntitySurface();
-  const { hasPermission } = useRbac();
+  const { hasAnyPermission, hasPermission } = useRbac();
   const { notify, preferences } = useSystemMessage();
   const enrollmentsSurface = React.useMemo(
     () =>
@@ -585,9 +590,9 @@ export function StudentEnrollmentsWorkspace() {
   const canCreate = hasPermission("student-enrollments.create");
   const canUpdate = hasPermission("student-enrollments.update");
   const canDelete = hasPermission("student-enrollments.delete");
-  const canReadDetails = hasPermission("student-enrollments.read");
+  const canReadDetails = hasAnyPermission([...STUDENT_ENROLLMENT_DETAILS_PERMISSION_CODES]);
   const canUseQuickActions = canReadDetails || canUpdate || canDelete;
-  const canReadStudents = hasPermission("students.read");
+  const canReadStudents = hasAnyPermission(["students.read", "students.read.summary"]);
   const canReadAcademicYears = hasPermission("academic-years.read");
   const canReadGradeLevels = hasPermission("grade-levels.read");
   const canReadSections = hasPermission("sections.read");
@@ -1174,6 +1179,51 @@ export function StudentEnrollmentsWorkspace() {
     },
     [canReadDetails, enrollmentDetailsMode, router],
   );
+  const showEnrollmentCardDetails =
+    canReadDetails && entitySurface.showExtendedDetailsInCards;
+
+  const renderEnrollmentHeaderActions = (enrollment: StudentEnrollmentListItem) => {
+    if (!canReadDetails && !canUpdate && !canDelete) {
+      return null;
+    }
+
+    return (
+      <div className="flex items-center gap-1">
+        {canReadDetails ? (
+          <EntitySurfaceHeaderActionButton
+            label="معاينة"
+            icon={<Eye className="h-3.5 w-3.5" />}
+            tone="preview"
+            colorMode={entitySurface.colorMode}
+            entityKey="students"
+            onClick={() => handleOpenEnrollmentDetails(enrollment)}
+          />
+        ) : null}
+
+        {canUpdate ? (
+          <EntitySurfaceHeaderActionButton
+            label="تعديل"
+            icon={<PencilLine className="h-3.5 w-3.5" />}
+            tone="edit"
+            colorMode={entitySurface.colorMode}
+            entityKey="students"
+            disabled={updateMutation.isPending}
+            onClick={() => handleStartEdit(enrollment)}
+          />
+        ) : null}
+
+        {canDelete ? (
+          <EntitySurfaceHeaderActionButton
+            label="حذف"
+            icon={<Trash2 className="h-3.5 w-3.5" />}
+            tone="delete"
+            disabled={deleteMutation.isPending}
+            onClick={() => handleDelete(enrollment)}
+          />
+        ) : null}
+      </div>
+    );
+  };
 
   const handleReturnToPendingDistribution = async (enrollment: StudentEnrollmentListItem) => {
     if (!canUpdate) {
@@ -1228,8 +1278,13 @@ export function StudentEnrollmentsWorkspace() {
     if (canReadDetails) {
       actions.push({
         key: "details",
-        label: "تفاصيل",
-        icon: <Type className="h-3.5 w-3.5" />,
+        label: enrollmentDetailsMode === "page" ? "فتح الصفحة" : "تفاصيل",
+        icon:
+          enrollmentDetailsMode === "page" ? (
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          ) : (
+            <ScanSearch className="h-3.5 w-3.5" />
+          ),
         tone: "accent",
         onClick: () => handleOpenEnrollmentDetails(enrollment),
       });
@@ -1796,16 +1851,17 @@ export function StudentEnrollmentsWorkspace() {
                 visualStyle={entitySurface.visualStyle}
                 effectsPreset={entitySurface.effectsPreset}
                 shapePreset={entitySurface.shapePreset}
+                entityKey="students"
                 inlineActionsMode={entitySurface.inlineActionsMode}
               >
                 {group.items.map((enrollment) => {
                   const preview =
                     enrollmentsSurface.buildPreview?.(enrollment) ??
                     buildStudentEnrollmentSurfacePreview(enrollment);
-                  const quickActions = buildEnrollmentQuickActions(enrollment);
-                  const visibleQuickActions = quickActions.length > 0 ? quickActions : undefined;
+                  const contextQuickActions = buildEnrollmentQuickActions(enrollment);
+                  const headerActions = renderEnrollmentHeaderActions(enrollment);
                   const canOpenContext =
-                    entitySurface.longPressMode !== "disabled" && quickActions.length > 0;
+                    entitySurface.longPressMode !== "disabled" && contextQuickActions.length > 0;
                   const handleCardClick = canReadDetails
                     ? () => handleOpenEnrollmentDetails(enrollment)
                     : undefined;
@@ -1815,23 +1871,23 @@ export function StudentEnrollmentsWorkspace() {
                       <EntitySurfaceRow
                         key={enrollment.id}
                         title={preview.title}
-                        subtitle={preview.subtitle}
-                        meta={preview.meta ?? preview.description}
+                        subtitle={showEnrollmentCardDetails ? preview.subtitle : undefined}
+                        meta={showEnrollmentCardDetails ? preview.meta ?? preview.description : undefined}
                         avatar={preview.avatar}
-                        statusChips={getStudentEnrollmentStatusChips(enrollment)}
-                        quickActions={visibleQuickActions}
+                        headerActions={headerActions}
+                        statusChips={showEnrollmentCardDetails ? getStudentEnrollmentStatusChips(enrollment) : undefined}
                         density={entitySurface.density}
                         richness={entitySurface.richness}
                         colorMode={entitySurface.colorMode}
                         visualStyle={entitySurface.visualStyle}
                         effectsPreset={entitySurface.effectsPreset}
                         shapePreset={entitySurface.shapePreset}
+                        entityKey="students"
                         inlineActionsMode={entitySurface.inlineActionsMode}
                         motionPreset={entitySurface.motionPreset}
                         reducedMotion={entitySurface.reducedMotion}
                         longPressMode={entitySurface.longPressMode}
                         avatarMode={entitySurface.avatarMode}
-                        detailsAffordance={canReadDetails}
                         contextOpen={contextEnrollmentId === enrollment.id}
                         onClick={handleCardClick}
                         onLongPress={() => {
@@ -1848,12 +1904,12 @@ export function StudentEnrollmentsWorkspace() {
                     <EntitySurfaceCard
                       key={enrollment.id}
                       title={preview.title}
-                      subtitle={preview.subtitle}
-                      description={preview.description}
+                      subtitle={showEnrollmentCardDetails ? preview.subtitle : undefined}
+                      description={showEnrollmentCardDetails ? preview.description : undefined}
                       avatar={preview.avatar}
-                      fields={preview.fields}
-                      statusChips={getStudentEnrollmentStatusChips(enrollment)}
-                      quickActions={visibleQuickActions}
+                      headerActions={headerActions}
+                      fields={showEnrollmentCardDetails ? preview.fields : undefined}
+                      statusChips={showEnrollmentCardDetails ? getStudentEnrollmentStatusChips(enrollment) : undefined}
                       viewMode={resolvedViewMode}
                       density={entitySurface.density}
                       richness={entitySurface.richness}
@@ -1861,12 +1917,12 @@ export function StudentEnrollmentsWorkspace() {
                       visualStyle={entitySurface.visualStyle}
                       effectsPreset={entitySurface.effectsPreset}
                       shapePreset={entitySurface.shapePreset}
+                      entityKey="students"
                       inlineActionsMode={entitySurface.inlineActionsMode}
                       motionPreset={entitySurface.motionPreset}
                       reducedMotion={entitySurface.reducedMotion}
                       longPressMode={entitySurface.longPressMode}
                       avatarMode={entitySurface.avatarMode}
-                      detailsAffordance={canReadDetails}
                       contextOpen={contextEnrollmentId === enrollment.id}
                       onClick={handleCardClick}
                       onLongPress={() => {

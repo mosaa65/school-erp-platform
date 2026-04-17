@@ -20,7 +20,10 @@ import {
   StudentEnrollmentStatus,
 } from '@prisma/client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import {
+  RequireAnyPermissions,
+  RequirePermissions,
+} from '../../common/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import type { AuthUser } from '../../common/interfaces/auth-user.interface';
@@ -54,7 +57,10 @@ export class StudentEnrollmentsController {
   }
 
   @Get()
-  @RequirePermissions('student-enrollments.read')
+  @RequireAnyPermissions(
+    'student-enrollments.read',
+    'student-enrollments.read.summary',
+  )
   @ApiOperation({ summary: 'Get paginated student enrollments' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -85,7 +91,10 @@ export class StudentEnrollmentsController {
   }
 
   @Get('distribution/board')
-  @RequirePermissions('student-enrollments.read')
+  @RequireAnyPermissions(
+    'student-enrollments.read',
+    'student-enrollments.read.details',
+  )
   @ApiOperation({ summary: 'Get student distribution board by year and grade' })
   findDistributionBoard(@Query() query: StudentEnrollmentDistributionBoardDto) {
     return this.studentEnrollmentsService.getDistributionBoard(query);
@@ -138,7 +147,10 @@ export class StudentEnrollmentsController {
   }
 
   @Get(':id')
-  @RequirePermissions('student-enrollments.read')
+  @RequireAnyPermissions(
+    'student-enrollments.read',
+    'student-enrollments.read.details',
+  )
   @ApiOperation({ summary: 'Get student enrollment by ID' })
   findOne(@Param('id') id: string) {
     return this.studentEnrollmentsService.findOne(id);

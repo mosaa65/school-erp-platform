@@ -352,13 +352,13 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         href: "/app/student-enrollments",
         label: "قيود الطلاب",
         icon: ClipboardList,
-        requiredPermission: "student-enrollments.read",
+        requiredAnyPermission: ["student-enrollments.read.summary", "student-enrollments.read"],
       },
       {
         href: "/app/student-distributions",
         label: "توزيع الطلاب على الشعب",
         icon: Shuffle,
-        requiredPermission: "student-enrollments.read",
+        requiredAnyPermission: ["student-enrollments.read.summary", "student-enrollments.read"],
       },
       {
         href: "/app/student-attendance",

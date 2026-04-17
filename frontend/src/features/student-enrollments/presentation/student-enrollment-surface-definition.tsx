@@ -23,8 +23,17 @@ const DISTRIBUTION_STATUS_LABELS: Record<StudentEnrollmentDistributionStatus, st
   TRANSFERRED: "منقول",
 };
 
-export const STUDENT_ENROLLMENT_PERMISSION_CODES = ["student-enrollments.read"] as const;
+export const STUDENT_ENROLLMENT_SUMMARY_PERMISSION_CODES = [
+  "student-enrollments.read.summary",
+  "student-enrollments.read",
+] as const;
+export const STUDENT_ENROLLMENT_DETAILS_PERMISSION_CODES = [
+  "student-enrollments.read.details",
+  "student-enrollments.read",
+] as const;
 export const STUDENT_ENROLLMENT_QUICK_ACTION_PERMISSION_CODES = [
+  "student-enrollments.quick-actions.use",
+  "student-enrollments.read.details",
   "student-enrollments.read",
   "student-enrollments.update",
   "student-enrollments.delete",
@@ -152,9 +161,9 @@ export const studentEnrollmentSurfaceDefinition = registerEntitySurface(
       quickActions: ["details", "edit", "delete"],
     },
     permissions: {
-      summary: "student-enrollments.read",
-      details: "student-enrollments.read",
-      quickActions: "student-enrollments.read",
+      summary: "student-enrollments.read.summary",
+      details: "student-enrollments.read.details",
+      quickActions: "student-enrollments.quick-actions.use",
       quickEdit: "student-enrollments.update",
       quickDelete: "student-enrollments.delete",
     },

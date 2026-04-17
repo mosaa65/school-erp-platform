@@ -184,6 +184,10 @@ const PERMISSION_CODE_LABELS: Record<string, string> = {
   "guardians.read.summary": "أولياء الأمور - عرض أولياء الأمور",
   "guardians.read.details": "أولياء الأمور - عرض تفاصيل أولياء الأمور",
   "guardians.quick-actions.use": "أولياء الأمور - استخدام الاختصارات السريعة",
+  "student-enrollments.read": "قيود الطلاب - قراءة القيود العامة",
+  "student-enrollments.read.summary": "قيود الطلاب - عرض قيود الطلاب",
+  "student-enrollments.read.details": "قيود الطلاب - عرض تفاصيل قيود الطلاب",
+  "student-enrollments.quick-actions.use": "قيود الطلاب - استخدام الاختصارات السريعة",
 };
 
 export const PERMISSION_RESOURCE_LABELS: Record<string, string> = {

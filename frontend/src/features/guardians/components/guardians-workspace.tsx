@@ -3,9 +3,12 @@
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
+  ArrowUpRight,
+  Eye,
   LoaderCircle,
   PencilLine,
   RefreshCw,
+  ScanSearch,
   Trash2,
   Users,
   User,
@@ -25,6 +28,7 @@ import { SelectField } from "@/components/ui/select-field";
 import { EntityDetailsShell } from "@/presentation/entity-surface/entity-details-shell";
 import { EntitySurfaceCard } from "@/presentation/entity-surface/entity-surface-card";
 import { EntitySurfaceGrid } from "@/presentation/entity-surface/entity-surface-grid";
+import { EntitySurfaceHeaderActionButton } from "@/presentation/entity-surface/entity-surface-header-action-button";
 import { EntitySurfaceQuickActions } from "@/presentation/entity-surface/entity-surface-quick-actions";
 import { getEntitySurfaceDefinition } from "@/presentation/entity-surface/entity-surface-registry";
 import { EntitySurfaceRow } from "@/presentation/entity-surface/entity-surface-row";
@@ -60,7 +64,6 @@ import { useGuardiansQuery } from "@/features/guardians/hooks/use-guardians-quer
 import {
   buildGuardianSurfacePreview,
   GUARDIAN_DETAILS_PERMISSION_CODES,
-  GUARDIAN_SUMMARY_PERMISSION_CODES,
   getGuardianDetailsPath,
   getGuardianStatusChips,
   guardianSurfaceDefinition,
@@ -261,9 +264,7 @@ export function GuardiansWorkspace() {
     [],
   );
   const canCreate = hasPermission("guardians.create");
-  const canReadSummary = hasAnyPermission([...GUARDIAN_SUMMARY_PERMISSION_CODES]);
-  const canReadDetails =
-    canReadSummary && hasAnyPermission([...GUARDIAN_DETAILS_PERMISSION_CODES]);
+  const canReadDetails = hasAnyPermission([...GUARDIAN_DETAILS_PERMISSION_CODES]);
   const canUpdate = hasPermission("guardians.update");
   const canDelete = hasPermission("guardians.delete");
   const canUseQuickActions = canReadDetails || canUpdate || canDelete;
@@ -844,6 +845,49 @@ export function GuardiansWorkspace() {
     setSelectedGuardianId(guardian.id);
   }, [canReadDetails, guardianDetailsMode]);
 
+  const renderGuardianHeaderActions = (guardian: GuardianListItem) => {
+    if (!canReadDetails && !canUpdate && !canDelete) {
+      return null;
+    }
+
+    return (
+      <div className="flex items-center gap-1">
+        {canReadDetails ? (
+          <EntitySurfaceHeaderActionButton
+            label="معاينة"
+            icon={<Eye className="h-3.5 w-3.5" />}
+            tone="preview"
+            colorMode={entitySurface.colorMode}
+            entityKey="students"
+            onClick={() => handleOpenGuardianDetails(guardian)}
+          />
+        ) : null}
+
+        {canUpdate ? (
+          <EntitySurfaceHeaderActionButton
+            label="تعديل"
+            icon={<PencilLine className="h-3.5 w-3.5" />}
+            tone="edit"
+            colorMode={entitySurface.colorMode}
+            entityKey="students"
+            disabled={updateMutation.isPending}
+            onClick={() => handleStartEdit(guardian)}
+          />
+        ) : null}
+
+        {canDelete ? (
+          <EntitySurfaceHeaderActionButton
+            label="حذف"
+            icon={<Trash2 className="h-3.5 w-3.5" />}
+            tone="delete"
+            disabled={deleteMutation.isPending}
+            onClick={() => handleDelete(guardian)}
+          />
+        ) : null}
+      </div>
+    );
+  };
+
   const buildGuardianQuickActions = (
     guardian: GuardianListItem,
   ): EntitySurfaceQuickAction[] => {
@@ -856,8 +900,13 @@ export function GuardiansWorkspace() {
     if (canReadDetails) {
       actions.push({
         key: "details",
-        label: "تفاصيل",
-        icon: <Users className="h-3.5 w-3.5" />,
+        label: guardianDetailsMode === "page" ? "فتح الصفحة" : "تفاصيل",
+        icon:
+          guardianDetailsMode === "page" ? (
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          ) : (
+            <ScanSearch className="h-3.5 w-3.5" />
+          ),
         tone: "accent",
         onClick: () => handleOpenGuardianDetails(guardian),
       });
@@ -1412,15 +1461,16 @@ export function GuardiansWorkspace() {
               visualStyle={entitySurface.visualStyle}
               effectsPreset={entitySurface.effectsPreset}
               shapePreset={entitySurface.shapePreset}
+              entityKey="students"
               inlineActionsMode={entitySurface.inlineActionsMode}
             >
               {guardians.map((guardian) => {
                 const preview =
                   guardiansSurface.buildPreview?.(guardian) ?? buildGuardianSurfacePreview(guardian);
-                const quickActions = buildGuardianQuickActions(guardian);
-                const visibleQuickActions = quickActions.length > 0 ? quickActions : undefined;
+                const contextQuickActions = buildGuardianQuickActions(guardian);
+                const headerActions = renderGuardianHeaderActions(guardian);
                 const canOpenContext =
-                  entitySurface.longPressMode !== "disabled" && quickActions.length > 0;
+                  entitySurface.longPressMode !== "disabled" && contextQuickActions.length > 0;
                 const handleCardClick = canReadDetails
                   ? () => handleOpenGuardianDetails(guardian)
                   : undefined;
@@ -1433,20 +1483,20 @@ export function GuardiansWorkspace() {
                       subtitle={showGuardianCardDetails ? preview.subtitle : undefined}
                       meta={showGuardianCardDetails ? preview.meta ?? preview.description : undefined}
                       avatar={preview.avatar}
+                      headerActions={headerActions}
                       statusChips={showGuardianCardDetails ? getGuardianStatusChips(guardian) : undefined}
-                      quickActions={visibleQuickActions}
                       density={entitySurface.density}
                       richness={entitySurface.richness}
                       colorMode={entitySurface.colorMode}
                       visualStyle={entitySurface.visualStyle}
                       effectsPreset={entitySurface.effectsPreset}
                       shapePreset={entitySurface.shapePreset}
+                      entityKey="students"
                       inlineActionsMode={entitySurface.inlineActionsMode}
                       motionPreset={entitySurface.motionPreset}
                       reducedMotion={entitySurface.reducedMotion}
                       longPressMode={entitySurface.longPressMode}
                       avatarMode={entitySurface.avatarMode}
-                      detailsAffordance={canReadDetails}
                       contextOpen={contextGuardianId === guardian.id}
                       onClick={handleCardClick}
                       onLongPress={() => {
@@ -1466,9 +1516,9 @@ export function GuardiansWorkspace() {
                     subtitle={showGuardianCardDetails ? preview.subtitle : undefined}
                     description={showGuardianCardDetails ? preview.description : undefined}
                     avatar={preview.avatar}
+                    headerActions={headerActions}
                     fields={showGuardianCardDetails ? preview.fields : undefined}
                     statusChips={showGuardianCardDetails ? getGuardianStatusChips(guardian) : undefined}
-                    quickActions={visibleQuickActions}
                     viewMode={resolvedViewMode}
                     density={entitySurface.density}
                     richness={entitySurface.richness}
@@ -1476,12 +1526,12 @@ export function GuardiansWorkspace() {
                     visualStyle={entitySurface.visualStyle}
                     effectsPreset={entitySurface.effectsPreset}
                     shapePreset={entitySurface.shapePreset}
+                    entityKey="students"
                     inlineActionsMode={entitySurface.inlineActionsMode}
                     motionPreset={entitySurface.motionPreset}
                     reducedMotion={entitySurface.reducedMotion}
                     longPressMode={entitySurface.longPressMode}
                     avatarMode={entitySurface.avatarMode}
-                    detailsAffordance={canReadDetails}
                     contextOpen={contextGuardianId === guardian.id}
                     onClick={handleCardClick}
                     onLongPress={() => {
