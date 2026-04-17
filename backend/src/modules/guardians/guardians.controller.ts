@@ -17,7 +17,10 @@ import {
 } from '@nestjs/swagger';
 import { StudentGender } from '@prisma/client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import {
+  RequireAnyPermissions,
+  RequirePermissions,
+} from '../../common/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import type { AuthUser } from '../../common/interfaces/auth-user.interface';
@@ -41,7 +44,7 @@ export class GuardiansController {
   }
 
   @Get()
-  @RequirePermissions('guardians.read')
+  @RequireAnyPermissions('guardians.read', 'guardians.read.summary')
   @ApiOperation({ summary: 'Get paginated guardians' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -56,7 +59,7 @@ export class GuardiansController {
   }
 
   @Get(':id')
-  @RequirePermissions('guardians.read')
+  @RequireAnyPermissions('guardians.read', 'guardians.read.details')
   @ApiOperation({ summary: 'Get guardian by ID' })
   findOne(@Param('id') id: string) {
     return this.guardiansService.findOne(id);

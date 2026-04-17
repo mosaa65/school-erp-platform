@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ClipboardList, RefreshCw, Trash2 } from "lucide-react";
+import { ClipboardList, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,14 +15,11 @@ import {
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { SelectField } from "@/components/ui/select-field";
-import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   FinanceAlert,
   FinanceEmptyState,
-  confirmFinanceAction,
 } from "@/features/finance/shared/finance-ui";
 import { useAuditTrailQuery } from "@/features/audit-trail/hooks/use-audit-trail-query";
-import { useDeleteAuditTrailMutation } from "@/features/audit-trail/hooks/use-audit-trail-mutations";
 
 const PAGE_SIZE = 12;
 
@@ -61,10 +58,98 @@ function toOptionalString(value: string): string | undefined {
   return normalized ? normalized : undefined;
 }
 
-export function AuditTrailWorkspace() {
-  const { hasPermission } = useRbac();
-  const canDelete = hasPermission("audit-trail.delete");
+function translateAuditAction(action?: string | null): string {
+  switch (action) {
+    case "INSERT":
+      return "إضافة";
+    case "UPDATE":
+      return "تعديل";
+    case "DELETE":
+      return "حذف";
+    case "APPROVE":
+      return "اعتماد";
+    case "POST":
+      return "ترحيل";
+    case "REVERSE":
+      return "عكس";
+    case "CLOSE":
+      return "إغلاق";
+    case "REOPEN":
+      return "إعادة فتح";
+    default:
+      return action ? `عملية ${action}` : "عملية غير محددة";
+  }
+}
 
+function translateActionContext(action?: string | null): string {
+  switch (action) {
+    case "INSERT":
+      return "تمت إضافة سجل جديد";
+    case "UPDATE":
+      return "تم تعديل سجل مالي";
+    case "DELETE":
+      return "تم حذف سجل مالي";
+    case "APPROVE":
+      return "تم اعتماد العملية المالية";
+    case "POST":
+      return "تم ترحيل القيد المالي";
+    case "REVERSE":
+      return "تم عكس القيد المالي";
+    case "CLOSE":
+      return "تم إغلاق السجل المالي";
+    case "REOPEN":
+      return "تمت إعادة فتح السجل المالي";
+    default:
+      return "تم تنفيذ عملية مالية";
+  }
+}
+
+function translateEntityName(entity?: string | null): string {
+  if (!entity) {
+    return "السجل المالي";
+  }
+
+  const normalized = entity.trim().toLowerCase();
+  const map: Record<string, string> = {
+    revenues: "الإيرادات",
+    revenue: "الإيراد",
+    expenses: "المصروفات",
+    expense: "المصروف",
+    budgets: "الميزانيات",
+    budget: "الميزانية",
+    journal_entries: "القيود اليومية",
+    invoices: "الفواتير",
+    student_invoices: "فواتير الطلاب",
+    fees: "الرسوم",
+    fee_structures: "هياكل الرسوم",
+    financial_funds: "الصناديق المالية",
+    financial_categories: "التصنيفات المالية",
+  };
+
+  return map[normalized] ?? entity;
+}
+
+function formatAuditValue(value: unknown): string {
+  if (value === null || value === undefined) {
+    return "لا يوجد";
+  }
+
+  if (typeof value === "string") {
+    return value.trim().length > 0 ? value : "فارغ";
+  }
+
+  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+    return String(value);
+  }
+
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+
+export function AuditTrailWorkspace() {
   const [page, setPage] = React.useState(1);
   const [draftFilters, setDraftFilters] = React.useState<DraftFilters>(DEFAULT_FILTERS);
   const [appliedFilters, setAppliedFilters] = React.useState<AppliedFilters>({});
@@ -81,8 +166,6 @@ export function AuditTrailWorkspace() {
     from: appliedFilters.from,
     to: appliedFilters.to,
   });
-
-  const deleteMutation = useDeleteAuditTrailMutation();
 
   const entries = React.useMemo(() => auditQuery.data?.data ?? [], [auditQuery.data?.data]);
   const pagination = auditQuery.data?.pagination;
@@ -121,22 +204,13 @@ export function AuditTrailWorkspace() {
     setIsFilterOpen(false);
   };
 
-  const handleDelete = (id: string | number) => {
-    if (!canDelete) {
-      return;
-    }
-
-    const confirmed = confirmFinanceAction("تأكيد حذف سجل الأثر المالي؟");
-    if (!confirmed) {
-      return;
-    }
-
-    deleteMutation.mutate(id);
-  };
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary">عرض قراءة فقط</Badge>
+          <Badge variant="outline">للإدارة المالية</Badge>
+        </div>
         <FilterTriggerButton
           count={activeFiltersCount}
           onClick={() => setIsFilterOpen((prev) => !prev)}
@@ -238,7 +312,7 @@ export function AuditTrailWorkspace() {
             <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
           </div>
           <CardDescription>
-            يتتبع جميع العمليات المالية الحساسة مع تفاصيل التعديلات.
+            سجل مرئي يوضح ما الذي تغيّر في العمليات المالية، ومن نفذه، ومتى حدث.
           </CardDescription>
         </CardHeader>
 
@@ -267,7 +341,7 @@ export function AuditTrailWorkspace() {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="space-y-1">
                   <p className="font-medium">
-                    {entry.tableName ?? "جدول غير معروف"} · {entry.action ?? ""}
+                    {translateActionContext(entry.action)} · {translateEntityName(entry.tableName)}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     المستخدم: {entry.user?.email ?? "غير محدد"}
@@ -276,32 +350,61 @@ export function AuditTrailWorkspace() {
                     التاريخ: {entry.createdAt ? new Date(entry.createdAt).toLocaleString() : "-"}
                   </p>
                 </div>
-                <Badge variant="outline">{entry.recordId ?? "-"}</Badge>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Badge variant="outline">{translateAuditAction(entry.action)}</Badge>
+                  <Badge variant="outline">{entry.recordId ?? "-"}</Badge>
+                </div>
               </div>
 
               {entry.changeSummary ? (
-                <p className="text-xs text-muted-foreground">{entry.changeSummary}</p>
-              ) : null}
-
-              {entry.fieldName ? (
-                <p className="text-xs text-muted-foreground">
-                  الحقل: {entry.fieldName}
-                </p>
-              ) : null}
-
-              {canDelete ? (
-                <div className="flex justify-end">
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => handleDelete(entry.id)}
-                    disabled={deleteMutation.isPending}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    حذف
-                  </Button>
+                <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-foreground">
+                  <p className="mb-1 font-medium text-amber-800">ملخص التغيير</p>
+                  <p>{entry.changeSummary}</p>
                 </div>
+              ) : null}
+
+              {(
+                entry.fieldName ||
+                entry.oldValue !== null ||
+                entry.oldValue !== undefined ||
+                entry.newValue !== null ||
+                entry.newValue !== undefined
+              ) ? (
+                <div className="grid gap-2 md:grid-cols-2">
+                  {entry.fieldName ? (
+                    <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground">الحقل</span>
+                      <div>{entry.fieldName}</div>
+                    </div>
+                  ) : null}
+                  {entry.oldValue !== null && entry.oldValue !== undefined ? (
+                    <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground">قبل</span>
+                      <pre className="mt-1 whitespace-pre-wrap break-words font-sans text-xs">
+                        {formatAuditValue(entry.oldValue)}
+                      </pre>
+                    </div>
+                  ) : null}
+                  {entry.newValue !== null && entry.newValue !== undefined ? (
+                    <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground md:col-span-2">
+                      <span className="font-medium text-foreground">بعد</span>
+                      <pre className="mt-1 whitespace-pre-wrap break-words font-sans text-xs">
+                        {formatAuditValue(entry.newValue)}
+                      </pre>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Badge variant="outline">IP: {entry.userIp ?? "غير متاح"}</Badge>
+                <Badge variant="outline">قراءة فقط</Badge>
+              </div>
+
+              {entry.userAgent ? (
+                <p className="truncate text-xs text-muted-foreground">
+                  عميل المتصفح: {entry.userAgent}
+                </p>
               ) : null}
             </div>
           ))}

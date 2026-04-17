@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/card";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
 import { PageShell } from "@/components/ui/page-shell";
@@ -1004,28 +1005,22 @@ export function GradingPoliciesWorkspace() {
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>افتراضي</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isDefault}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isDefault: event.target.checked }))
-                  }
-                  data-testid="grading-policy-form-default"
-                />
-              </label>
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشط</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                  data-testid="grading-policy-form-active"
-                />
-              </label>
+              <FormBooleanField
+                label="افتراضي"
+                checked={formState.isDefault}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({ ...prev, isDefault: checked }))
+                }
+                data-testid="grading-policy-form-default"
+              />
+              <FormBooleanField
+                label="نشط"
+                checked={formState.isActive}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({ ...prev, isActive: checked }))
+                }
+                data-testid="grading-policy-form-active"
+              />
             </div>
 
             {formError ? (

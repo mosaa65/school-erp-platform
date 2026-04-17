@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
+  Activity,
   BookOpenText,
   LoaderCircle,
   PencilLine,
@@ -13,9 +14,13 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
-import { SearchField } from "@/components/ui/search-field";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
+import { TextareaField } from "@/components/ui/textarea-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
@@ -25,7 +30,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
 import { generateAutoCode } from "@/lib/auto-code";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
@@ -334,72 +338,54 @@ export function HomeworkTypesWorkspace() {
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
-            <SearchField
-              containerClassName="flex-1"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="بحث بالاسم..."
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterTriggerButton
-              count={activeFiltersCount}
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-            />
-          </div>
-        </div>
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="بحث بالاسم..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+        />
 
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
           title="فلاتر أنواع الواجبات"
-          actionButtons={
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
-            </div>
-          }
+          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft.system}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  system: event.target.value as "all" | "system" | "custom",
-                }))
-              }
-            >
-              <option value="all">كل الأنواع</option>
-              <option value="system">النظامية فقط</option>
-              <option value="custom">المخصصة فقط</option>
-            </SelectField>
+            <FormField label="نوع السجل">
+              <SelectField
+                icon={<ShieldAlert />}
+                value={filterDraft.system}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    system: event.target.value as "all" | "system" | "custom",
+                  }))
+                }
+              >
+                <option value="all">كل الأنواع</option>
+                <option value="system">النظامية فقط</option>
+                <option value="custom">المخصصة فقط</option>
+              </SelectField>
+            </FormField>
 
-            <SelectField
-              value={filterDraft.active}
-              onChange={(event) =>
-                setFilterDraft((prev) => ({
-                  ...prev,
-                  active: event.target.value as "all" | "active" | "inactive",
-                }))
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">النشطة فقط</option>
-              <option value="inactive">غير النشطة فقط</option>
-            </SelectField>
+            <FormField label="الحالة">
+              <SelectField
+                icon={<Activity />}
+                value={filterDraft.active}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    active: event.target.value as "all" | "active" | "inactive",
+                  }))
+                }
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">النشطة فقط</option>
+                <option value="inactive">غير النشطة فقط</option>
+              </SelectField>
+            </FormField>
           </div>
         </FilterDrawer>
 
@@ -562,9 +548,9 @@ export function HomeworkTypesWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الاسم *</label>
+            <FormField label="الاسم" required>
               <Input
+                icon={<BookOpenText />}
                 value={formState.name}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, name: event.target.value }))
@@ -572,40 +558,35 @@ export function HomeworkTypesWorkspace() {
                 placeholder="واجب منزلي"
                 required
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الوصف</label>
-              <Input
+            <FormField label="الوصف">
+              <TextareaField
+                icon={<BookOpenText />}
                 value={formState.description}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, description: event.target.value }))
                 }
                 placeholder="واجب منزلي قياسي"
+                rows={3}
               />
-            </div>
+            </FormField>
 
             <div className="grid gap-2 md:grid-cols-2">
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نوع نظامي</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isSystem}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isSystem: event.target.checked }))
-                  }
-                />
-              </label>
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشط</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                />
-              </label>
+              <FormBooleanField
+                label="نوع نظامي"
+                checked={formState.isSystem}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({ ...prev, isSystem: checked }))
+                }
+              />
+              <FormBooleanField
+                label="نشط"
+                checked={formState.isActive}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({ ...prev, isActive: checked }))
+                }
+              />
             </div>
 
             {formError ? (

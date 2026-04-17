@@ -25,6 +25,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
@@ -623,17 +624,14 @@ export function StudentTalentsWorkspace() {
               />
             </div>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                data-testid="student-talent-form-active"
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-              />
-            </label>
+            <FormBooleanField
+              label="نشط"
+              checked={formState.isActive}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({ ...prev, isActive: checked }))
+              }
+              data-testid="student-talent-form-active"
+            />
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

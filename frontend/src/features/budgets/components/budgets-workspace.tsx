@@ -7,8 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
-import { SearchField } from "@/components/ui/search-field";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useApproveBudgetMutation } from "@/features/budgets/hooks/use-budgets-mutations";
@@ -97,17 +96,13 @@ export function BudgetsWorkspace() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
-          <SearchField
-            containerClassName="flex-1"
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            placeholder="ابحث باسم الميزانية..."
-          />
-        </div>
-        <FilterTriggerButton count={activeFiltersCount} onClick={() => setIsFilterOpen((prev) => !prev)} />
-      </div>
+      <ManagementToolbar
+        searchValue={searchInput}
+        onSearchChange={(event) => setSearchInput(event.target.value)}
+        searchPlaceholder="ابحث باسم الميزانية..."
+        filterCount={activeFiltersCount}
+        onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+      />
 
       <FilterDrawer
         open={isFilterOpen}

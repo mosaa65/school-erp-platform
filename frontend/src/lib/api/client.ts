@@ -454,6 +454,22 @@ export type EmployeeSectionSupervisionListItem = {
 
 export type AuditStatus = "SUCCESS" | "FAILURE";
 
+export type AuditActorRoleItem = {
+  role: {
+    id: string;
+    code: string;
+    name: string;
+  };
+};
+
+export type AuditActorUser = {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  userRoles?: AuditActorRoleItem[];
+};
+
 export type AuditLogListItem = {
   id: string;
   actorUserId: string | null;
@@ -467,12 +483,61 @@ export type AuditLogListItem = {
   occurredAt: string;
   createdAt: string;
   updatedAt: string;
-  actorUser: {
-    id: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-  } | null;
+  actorUser: AuditActorUser | null;
+  timeline?: {
+    totalChanges: number;
+    previousChanges: number;
+    displayedChanges: number;
+    hasPreviousChanges: boolean;
+  };
+};
+
+export type AuditLogTimelineItem = AuditLogListItem & {
+  timelineOrder: number;
+  isLatest: boolean;
+};
+
+export type AuditRollbackMode = "PREVIOUS" | "TARGET";
+
+export type AuditLogRollbackPayload = {
+  mode?: AuditRollbackMode;
+  targetAuditLogId?: string;
+};
+
+export type AuditLogRollbackResponse = {
+  success: true;
+  mode: AuditRollbackMode;
+  anchorAuditLogId: string;
+  targetAuditLogId: string;
+  rollbackAuditLogId: string;
+  resource: string;
+  resourceId: string;
+  rolledBackAt: string;
+  appliedFields: string[];
+};
+
+export type AuditLogTimelineResponse = {
+  resource: string;
+  resourceId: string | null;
+  anchorAuditLogId: string;
+  limit: number;
+  total: number;
+  data: AuditLogTimelineItem[];
+};
+
+export type AuditLogRetentionPolicy = {
+  settingKey: string;
+  retentionDays: number | null;
+  autoDeleteEnabled: boolean;
+  minRetentionDays: number;
+  maxRetentionDays: number;
+  recommendedRetentionDays: number;
+  cleanupIntervalMinutes: number;
+  updatedAt: string | null;
+};
+
+export type UpdateAuditLogRetentionPolicyPayload = {
+  retentionDays: number | null;
 };
 
 export type LookupBloodTypeListItem = {
@@ -1122,6 +1187,24 @@ export type StudentEnrollmentDistributionStatus =
   | "PENDING_DISTRIBUTION"
   | "ASSIGNED"
   | "TRANSFERRED";
+
+export type StudentEnrollmentSortBy =
+  | "ACADEMIC_YEAR_START_DATE"
+  | "ENROLLMENT_DATE"
+  | "STUDENT_NAME"
+  | "ADMISSION_NO"
+  | "YEARLY_ENROLLMENT_NO"
+  | "GRADE_LEVEL"
+  | "SECTION_NAME"
+  | "STATUS"
+  | "DISTRIBUTION_STATUS"
+  | "ACTIVE_STATE"
+  | "CREATED_AT"
+  | "UPDATED_AT";
+
+export type StudentEnrollmentSortDirection = "asc" | "desc";
+
+export type StudentEnrollmentGroupBy = "NONE" | StudentEnrollmentSortBy;
 
 export type StudentListItem = {
   id: string;
@@ -3492,6 +3575,17 @@ export type EmployeeOrganizationOptionsResponse = {
   }>;
 };
 
+export type EmployeeOptionItem = {
+  id: string;
+  fullName: string;
+  jobNumber: string | null;
+  jobTitle: string | null;
+  isActive: boolean;
+  userAccount: {
+    id: string;
+  } | null;
+};
+
 export type EmployeeTalentListItem = {
   id: string;
   employeeId: string;
@@ -3735,9 +3829,9 @@ export type UpdateUserPayload = {
 
 export type CreatedUserResponse = UserListItem & {
   activationSetup: {
-    initialOneTimePassword: string;
     expiresAt: string;
     activationStatus: "ACTIVE" | "PENDING_INITIAL_PASSWORD" | "SUSPENDED";
+    notifiedSystemAdminsCount?: number;
   };
 };
 
@@ -8287,8 +8381,12 @@ export const apiClient = {
     limit?: number;
     resource?: string;
     action?: string;
+    actionType?: string;
+    domain?: string;
     status?: AuditStatus;
     actorUserId?: string;
+    user?: string;
+    search?: string;
     from?: string;
     to?: string;
   }) =>
@@ -8298,8 +8396,12 @@ export const apiClient = {
         limit: query?.limit,
         resource: query?.resource,
         action: query?.action,
+        actionType: query?.actionType,
+        domain: query?.domain,
         status: query?.status,
         actorUserId: query?.actorUserId,
+        user: query?.user,
+        search: query?.search,
         from: query?.from,
         to: query?.to,
       })}`,
@@ -8308,6 +8410,39 @@ export const apiClient = {
         withAuth: true,
       },
     ),
+  getAuditLogById: (auditLogId: string) =>
+    request<AuditLogListItem>(`/audit-logs/${auditLogId}`, "GET", {
+      withAuth: true,
+    }),
+  getAuditLogRetentionPolicy: () =>
+    request<AuditLogRetentionPolicy>("/audit-logs/retention-policy", "GET", {
+      withAuth: true,
+    }),
+  updateAuditLogRetentionPolicy: (
+    payload: UpdateAuditLogRetentionPolicyPayload,
+  ) =>
+    request<AuditLogRetentionPolicy>("/audit-logs/retention-policy", "PATCH", {
+      withAuth: true,
+      json: payload,
+    }),
+  getAuditLogTimeline: (auditLogId: string, limit?: number) =>
+    request<AuditLogTimelineResponse>(
+      `/audit-logs/${auditLogId}/timeline${buildQueryString({
+        limit,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  rollbackAuditLog: (
+    auditLogId: string,
+    payload: AuditLogRollbackPayload,
+  ) =>
+    request<AuditLogRollbackResponse>(`/audit-logs/${auditLogId}/rollback`, "POST", {
+      withAuth: true,
+      json: payload,
+    }),
   deleteAuditLog: (auditLogId: string) =>
     request<DeleteEntityResponse>(`/audit-logs/${auditLogId}`, "DELETE", {
       withAuth: true,
@@ -9146,6 +9281,10 @@ export const apiClient = {
         isActive: payload.isActive,
       },
     }),
+  getStudent: (studentId: string) =>
+    request<StudentListItem>(`/students/${studentId}`, "GET", {
+      withAuth: true,
+    }),
   updateStudent: (studentId: string, payload: UpdateStudentPayload) =>
     request<StudentListItem>(`/students/${studentId}`, "PATCH", {
       withAuth: true,
@@ -9259,6 +9398,10 @@ export const apiClient = {
     status?: StudentEnrollmentStatus;
     distributionStatus?: StudentEnrollmentDistributionStatus;
     isActive?: boolean;
+    sortBy?: StudentEnrollmentSortBy | StudentEnrollmentSortBy[];
+    sortDirection?:
+      | StudentEnrollmentSortDirection
+      | StudentEnrollmentSortDirection[];
   }) =>
     request<PaginatedResponse<StudentEnrollmentListItem>>(
       `/student-enrollments${buildQueryString({
@@ -9272,6 +9415,10 @@ export const apiClient = {
         status: query?.status,
         distributionStatus: query?.distributionStatus,
         isActive: query?.isActive,
+        sortBy: Array.isArray(query?.sortBy) ? query.sortBy.join(",") : query?.sortBy,
+        sortDirection: Array.isArray(query?.sortDirection)
+          ? query.sortDirection.join(",")
+          : query?.sortDirection,
       })}`,
       "GET",
       {
@@ -10742,6 +10889,24 @@ export const apiClient = {
   listEmployeeOrganizationOptions: () =>
     request<EmployeeOrganizationOptionsResponse>(
       "/employees/organization-options",
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  listEmployeeOptions: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<EmployeeOptionItem>>(
+      `/employees/options${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        isActive: query?.isActive,
+      })}`,
       "GET",
       {
         withAuth: true,

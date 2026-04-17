@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { SelectField } from "@/components/ui/select-field";
 import {
@@ -358,19 +359,16 @@ export function FinancialReportsWorkspace() {
               setDraftFilters((prev) => ({ ...prev, limit: event.target.value }))
             }
           />
-          <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-            <span>إظهار العناوين</span>
-            <input
-              type="checkbox"
-              checked={draftFilters.includeHeaders}
-              onChange={(event) =>
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  includeHeaders: event.target.checked,
-                }))
-              }
-            />
-          </label>
+          <FormBooleanField
+            label="إظهار العناوين"
+            checked={draftFilters.includeHeaders}
+            onCheckedChange={(checked) =>
+              setDraftFilters((prev) => ({
+                ...prev,
+                includeHeaders: checked,
+              }))
+            }
+          />
         </div>
       </FilterDrawer>
 

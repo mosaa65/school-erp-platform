@@ -26,6 +26,28 @@ const branchInclude: Prisma.BranchInclude = {
   },
 };
 
+const branchRollbackSnapshotSelect = {
+  nameAr: true,
+  nameEn: true,
+  address: true,
+  phone: true,
+  isHeadquarters: true,
+  isActive: true,
+} satisfies Prisma.BranchSelect;
+
+type BranchRollbackSnapshot = Prisma.BranchGetPayload<{
+  select: typeof branchRollbackSnapshotSelect;
+}>;
+
+const BRANCH_ROLLBACK_FIELDS: Array<keyof BranchRollbackSnapshot> = [
+  'nameAr',
+  'nameEn',
+  'address',
+  'phone',
+  'isHeadquarters',
+  'isActive',
+];
+
 @Injectable()
 export class BranchesService {
   constructor(
@@ -54,15 +76,25 @@ export class BranchesService {
         },
         include: branchInclude,
       });
+      const afterSnapshot = this.toBranchRollbackSnapshot(branch);
+      const changedFields = this.computeBranchChangedFields(
+        null,
+        afterSnapshot,
+      );
 
       await this.auditLogsService.record({
         actorUserId,
         action: 'BRANCH_CREATE',
         resource: 'branches',
         resourceId: String(branch.id),
-        details: {
-          nameAr: branch.nameAr,
-        },
+        details: this.buildBranchRollbackDetails({
+          before: null,
+          after: afterSnapshot,
+          changedFields,
+          additionalDetails: {
+            nameAr: branch.nameAr,
+          },
+        }),
       });
 
       return branch;
@@ -144,7 +176,7 @@ export class BranchesService {
   }
 
   async update(id: number, payload: UpdateBranchDto, actorUserId: string) {
-    await this.ensureBranchExists(id);
+    const beforeSnapshot = await this.getBranchRollbackSnapshotOrThrow(id);
 
     const nameAr =
       payload.nameAr === undefined
@@ -169,13 +201,23 @@ export class BranchesService {
         },
         include: branchInclude,
       });
+      const afterSnapshot = this.toBranchRollbackSnapshot(updated);
+      const changedFields = this.computeBranchChangedFields(
+        beforeSnapshot,
+        afterSnapshot,
+      );
 
       await this.auditLogsService.record({
         actorUserId,
         action: 'BRANCH_UPDATE',
         resource: 'branches',
         resourceId: String(id),
-        details: payload as Prisma.InputJsonValue,
+        details: this.buildBranchRollbackDetails({
+          before: beforeSnapshot,
+          after: afterSnapshot,
+          changedFields,
+          additionalDetails: this.extractBranchRequestedChanges(payload),
+        }),
       });
 
       return updated;
@@ -185,22 +227,33 @@ export class BranchesService {
   }
 
   async remove(id: number, actorUserId: string) {
-    await this.ensureBranchExists(id);
+    const beforeSnapshot = await this.getBranchRollbackSnapshotOrThrow(id);
 
-    await this.prisma.branch.update({
+    const removed = await this.prisma.branch.update({
       where: { id },
       data: {
         isActive: false,
         deletedAt: new Date(),
         updatedById: actorUserId,
       },
+      select: branchRollbackSnapshotSelect,
     });
+    const afterSnapshot = this.toBranchRollbackSnapshot(removed);
+    const changedFields = this.computeBranchChangedFields(
+      beforeSnapshot,
+      afterSnapshot,
+    );
 
     await this.auditLogsService.record({
       actorUserId,
       action: 'BRANCH_DELETE',
       resource: 'branches',
       resourceId: String(id),
+      details: this.buildBranchRollbackDetails({
+        before: beforeSnapshot,
+        after: afterSnapshot,
+        changedFields,
+      }),
     });
 
     return {
@@ -209,18 +262,110 @@ export class BranchesService {
     };
   }
 
-  private async ensureBranchExists(id: number) {
+  private async getBranchRollbackSnapshotOrThrow(
+    id: number,
+  ): Promise<BranchRollbackSnapshot> {
     const branch = await this.prisma.branch.findFirst({
       where: {
         id,
         deletedAt: null,
       },
-      select: { id: true },
+      select: branchRollbackSnapshotSelect,
     });
 
     if (!branch) {
       throw new NotFoundException('Branch not found');
     }
+
+    return this.toBranchRollbackSnapshot(branch);
+  }
+
+  private toBranchRollbackSnapshot(source: {
+    nameAr: string;
+    nameEn: string | null;
+    address: string | null;
+    phone: string | null;
+    isHeadquarters: boolean;
+    isActive: boolean;
+  }): BranchRollbackSnapshot {
+    return {
+      nameAr: source.nameAr,
+      nameEn: source.nameEn,
+      address: source.address,
+      phone: source.phone,
+      isHeadquarters: source.isHeadquarters,
+      isActive: source.isActive,
+    };
+  }
+
+  private computeBranchChangedFields(
+    before: BranchRollbackSnapshot | null,
+    after: BranchRollbackSnapshot | null,
+  ): string[] {
+    if (!before && !after) {
+      return [];
+    }
+
+    if (!before && after) {
+      return [...BRANCH_ROLLBACK_FIELDS];
+    }
+
+    if (before && !after) {
+      return [...BRANCH_ROLLBACK_FIELDS];
+    }
+
+    return BRANCH_ROLLBACK_FIELDS.filter(
+      (field) => before![field] !== after![field],
+    );
+  }
+
+  private extractBranchRequestedChanges(
+    payload: UpdateBranchDto,
+  ): Record<string, Prisma.InputJsonValue> {
+    const details: Record<string, Prisma.InputJsonValue> = {};
+
+    if (payload.nameAr !== undefined) {
+      details.nameAr = payload.nameAr;
+    }
+    if (payload.nameEn !== undefined) {
+      details.nameEn = payload.nameEn;
+    }
+    if (payload.address !== undefined) {
+      details.address = payload.address;
+    }
+    if (payload.phone !== undefined) {
+      details.phone = payload.phone;
+    }
+    if (payload.isHeadquarters !== undefined) {
+      details.isHeadquarters = payload.isHeadquarters;
+    }
+    if (payload.isActive !== undefined) {
+      details.isActive = payload.isActive;
+    }
+
+    return details;
+  }
+
+  private buildBranchRollbackDetails(input: {
+    before: BranchRollbackSnapshot | null;
+    after: BranchRollbackSnapshot | null;
+    changedFields: string[];
+    additionalDetails?: Record<string, Prisma.InputJsonValue>;
+  }): Prisma.InputJsonValue {
+    const { before, after, changedFields, additionalDetails } = input;
+
+    return {
+      ...(additionalDetails ?? {}),
+      before,
+      after,
+      rollback: {
+        schemaVersion: 1,
+        eligible: true,
+        before,
+        after,
+        changedFields,
+      },
+    } as Prisma.InputJsonValue;
   }
 
   private normalizeRequiredText(value: string, fieldName: string): string {

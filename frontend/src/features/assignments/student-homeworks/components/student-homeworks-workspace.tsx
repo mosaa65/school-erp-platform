@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { Input } from "@/components/ui/input";
 import { StudentEnrollmentPickerSheet } from "@/components/ui/student-enrollment-picker-sheet";
 import {
@@ -498,26 +499,20 @@ export function StudentHomeworksWorkspace() {
               />
 
               <div className="grid gap-3 md:grid-cols-2">
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>مكتمل</span>
-                  <input
-                    type="checkbox"
-                    checked={formState.isCompleted}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, isCompleted: event.target.checked }))
-                    }
-                  />
-                </label>
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>نشط</span>
-                  <input
-                    type="checkbox"
-                    checked={formState.isActive}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                    }
-                  />
-                </label>
+                <FormBooleanField
+                  label="مكتمل"
+                  checked={formState.isCompleted}
+                  onCheckedChange={(checked) =>
+                    setFormState((prev) => ({ ...prev, isCompleted: checked }))
+                  }
+                />
+                <FormBooleanField
+                  label="نشط"
+                  checked={formState.isActive}
+                  onCheckedChange={(checked) =>
+                    setFormState((prev) => ({ ...prev, isActive: checked }))
+                  }
+                />
               </div>
 
               <div className="grid gap-3 md:grid-cols-2">

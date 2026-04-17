@@ -9,14 +9,13 @@ import {
   FIELD_SUPPORTING_TEXT_CLASS_NAME,
 } from "@/components/ui/field-styles";
 
-type FormBooleanFieldProps = {
+type FormBooleanFieldProps = React.HTMLAttributes<HTMLDivElement> & {
   label: React.ReactNode;
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
   description?: React.ReactNode;
   required?: boolean;
   disabled?: boolean;
-  className?: string;
   labelClassName?: string;
 };
 
@@ -29,9 +28,10 @@ export function FormBooleanField({
   disabled = false,
   className,
   labelClassName,
+  ...props
 }: FormBooleanFieldProps) {
   return (
-    <div className={cn(FIELD_BOOLEAN_SURFACE_CLASS_NAME, className)}>
+    <div className={cn(FIELD_BOOLEAN_SURFACE_CLASS_NAME, className)} {...props}>
       <div className="min-w-0 space-y-1">
         <Label required={required} className={cn("mb-0 px-0", labelClassName)}>
           {label}

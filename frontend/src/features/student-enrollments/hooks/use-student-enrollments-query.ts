@@ -5,6 +5,9 @@ import {
   ApiError,
   apiClient,
   type StudentEnrollmentDistributionStatus,
+  type StudentEnrollmentGroupBy,
+  type StudentEnrollmentSortBy,
+  type StudentEnrollmentSortDirection,
   type StudentEnrollmentStatus,
 } from "@/lib/api/client";
 import { useAuth } from "@/features/auth/providers/auth-provider";
@@ -20,6 +23,9 @@ type UseStudentEnrollmentsQueryOptions = {
   status?: StudentEnrollmentStatus;
   distributionStatus?: StudentEnrollmentDistributionStatus;
   isActive?: boolean;
+  sortBy?: StudentEnrollmentSortBy[];
+  sortDirection?: StudentEnrollmentSortDirection[];
+  groupBy?: StudentEnrollmentGroupBy;
 };
 
 export function useStudentEnrollmentsQuery(
@@ -41,6 +47,9 @@ export function useStudentEnrollmentsQuery(
       options.status ?? "all",
       options.distributionStatus ?? "all",
       options.isActive === undefined ? "all" : options.isActive ? "active" : "inactive",
+      options.sortBy?.join(",") ?? "default",
+      options.sortDirection?.join(",") ?? "default",
+      options.groupBy ?? "NONE",
     ],
     enabled: auth.isHydrated && auth.isAuthenticated,
     queryFn: async () => {
@@ -56,6 +65,8 @@ export function useStudentEnrollmentsQuery(
           status: options.status,
           distributionStatus: options.distributionStatus,
           isActive: options.isActive,
+          sortBy: options.sortBy,
+          sortDirection: options.sortDirection,
         });
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) {

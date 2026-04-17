@@ -21,7 +21,10 @@ import {
   StudentOrphanStatus,
 } from '@prisma/client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { RequirePermissions } from '../../common/decorators/permissions.decorator';
+import {
+  RequireAnyPermissions,
+  RequirePermissions,
+} from '../../common/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import type { AuthUser } from '../../common/interfaces/auth-user.interface';
@@ -45,7 +48,7 @@ export class StudentsController {
   }
 
   @Get()
-  @RequirePermissions('students.read')
+  @RequireAnyPermissions('students.read', 'students.read.summary')
   @ApiOperation({ summary: 'Get paginated students' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -72,7 +75,7 @@ export class StudentsController {
   }
 
   @Get(':id')
-  @RequirePermissions('students.read')
+  @RequirePermissions('students.read.details')
   @ApiOperation({ summary: 'Get student by ID' })
   findOne(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.studentsService.findOne(id, user.userId);

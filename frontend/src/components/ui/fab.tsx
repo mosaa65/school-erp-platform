@@ -22,7 +22,7 @@ export function Fab({
   const accessibleLabel = ariaLabel ?? label ?? "إجراء سريع";
 
   return (
-    <div className="pointer-events-none fixed bottom-[calc(0.9rem+env(safe-area-inset-bottom))] right-[calc(0.9rem+env(safe-area-inset-right))] z-50 sm:bottom-6 sm:right-6">
+    <div className="pointer-events-none fixed bottom-[calc(env(safe-area-inset-bottom)+var(--app-footer-dock-offset,5.9rem))] right-[calc(0.9rem+env(safe-area-inset-right)+var(--app-mobile-sidebar-offset,0px))] z-50 md:bottom-[calc(1.5rem+var(--app-footer-dock-offset,5.9rem))] md:right-[calc(1.5rem+var(--app-desktop-sidebar-offset,0px))]">
       <button
         type="button"
         onClick={onClick}

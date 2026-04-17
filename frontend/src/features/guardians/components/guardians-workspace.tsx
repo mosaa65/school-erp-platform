@@ -3,15 +3,16 @@
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
+  ArrowUpRight,
+  Eye,
   LoaderCircle,
   PencilLine,
   RefreshCw,
+  ScanSearch,
   Trash2,
   Users,
   User,
   IdCard,
-  Phone,
-  MessageSquare,
   MapPin,
   Activity,
 } from "lucide-react";
@@ -24,6 +25,18 @@ import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
+import { EntityDetailsShell } from "@/presentation/entity-surface/entity-details-shell";
+import { EntitySurfaceCard } from "@/presentation/entity-surface/entity-surface-card";
+import { EntitySurfaceGrid } from "@/presentation/entity-surface/entity-surface-grid";
+import { EntitySurfaceHeaderActionButton } from "@/presentation/entity-surface/entity-surface-header-action-button";
+import { EntitySurfaceQuickActions } from "@/presentation/entity-surface/entity-surface-quick-actions";
+import { getEntitySurfaceDefinition } from "@/presentation/entity-surface/entity-surface-registry";
+import { EntitySurfaceRow } from "@/presentation/entity-surface/entity-surface-row";
+import type {
+  EntityDetailsMode,
+  EntitySurfaceQuickAction,
+  EntitySurfaceViewMode,
+} from "@/presentation/entity-surface/entity-surface-types";
 import {
   Card,
   CardContent,
@@ -31,6 +44,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useEntitySurface } from "@/hooks/use-entity-surface";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useGeographyOptionsQuery } from "@/features/lookup-catalog/hooks/use-geography-options-query";
 import {
@@ -38,6 +52,7 @@ import {
   formatLocalityHierarchyLabel,
   resolveSelectionFromLocality,
 } from "@/features/lookup-catalog/lib/geography";
+import { GuardianDetailsContent } from "@/features/guardians/components/guardian-details-content";
 import {
   useCreateGuardianMutation,
   useDeleteGuardianMutation,
@@ -46,12 +61,20 @@ import {
 import { useGuardianGenderOptionsQuery } from "@/features/guardians/hooks/use-gender-options-query";
 import { useGuardianIdTypeOptionsQuery } from "@/features/guardians/hooks/use-id-type-options-query";
 import { useGuardiansQuery } from "@/features/guardians/hooks/use-guardians-query";
+import {
+  buildGuardianSurfacePreview,
+  GUARDIAN_DETAILS_PERMISSION_CODES,
+  getGuardianDetailsPath,
+  getGuardianStatusChips,
+  guardianSurfaceDefinition,
+} from "@/features/guardians/presentation/guardian-surface-definition";
 import { translateGuardianRelationship, translateStudentGender } from "@/lib/i18n/ar";
 import {
   DEFAULT_COUNTRY_ISO2,
   normalizePhoneValue,
   parseStoredPhoneValue,
 } from "@/lib/intl/phone";
+import { cn } from "@/lib/utils";
 import type {
   GuardianListItem,
   GuardianRelationship,
@@ -162,15 +185,6 @@ function composePhoneValue(countryIso2: string, nationalNumber: string): string 
   return normalized.ok ? normalized.e164 : undefined;
 }
 
-type LocalityLabelInput = {
-  id: number;
-  nameAr?: string;
-  name?: string;
-  localityType?: "RURAL" | "URBAN";
-  directorateId?: number;
-  villageId?: number;
-};
-
 function toFormState(guardian: GuardianListItem): GuardianFormState {
   const primaryPhone = toPhoneFieldState(guardian.phonePrimary);
   const secondaryPhone = toPhoneFieldState(guardian.phoneSecondary);
@@ -214,11 +228,46 @@ function toRelationshipPreview(guardian: GuardianListItem): string {
   return `${translateGuardianRelationship(first.relationship)} - ${first.student.fullName}`;
 }
 
+function resolveGuardiansViewMode(
+  requestedMode: EntitySurfaceViewMode,
+  allowedViewModes: EntitySurfaceViewMode[] | undefined,
+  fallbackMode: EntitySurfaceViewMode,
+): EntitySurfaceViewMode {
+  if (!allowedViewModes || allowedViewModes.length === 0) {
+    return requestedMode;
+  }
+
+  if (allowedViewModes.includes(requestedMode)) {
+    return requestedMode;
+  }
+
+  return allowedViewModes.includes(fallbackMode) ? fallbackMode : allowedViewModes[0];
+}
+
+function resolveGuardiansDetailsMode(
+  requestedMode: string,
+  currentViewMode: EntitySurfaceViewMode,
+  defaultMode: EntityDetailsMode,
+): EntityDetailsMode {
+  if (requestedMode === "screen-default") {
+    return currentViewMode === "dense-row" ? "inline" : defaultMode;
+  }
+
+  return requestedMode as EntityDetailsMode;
+}
+
 export function GuardiansWorkspace() {
-  const { hasPermission } = useRbac();
+  const { hasAnyPermission, hasPermission } = useRbac();
+  const entitySurface = useEntitySurface();
+  const guardiansSurface = React.useMemo(
+    () => getEntitySurfaceDefinition<GuardianListItem>("guardians") ?? guardianSurfaceDefinition,
+    [],
+  );
   const canCreate = hasPermission("guardians.create");
+  const canReadDetails = hasAnyPermission([...GUARDIAN_DETAILS_PERMISSION_CODES]);
   const canUpdate = hasPermission("guardians.update");
   const canDelete = hasPermission("guardians.delete");
+  const canUseQuickActions = canReadDetails || canUpdate || canDelete;
   const canReadGenders = hasPermission("lookup-genders.read");
   const canReadIdTypes = hasPermission("lookup-id-types.read");
   const canReadLocalities = hasPermission("localities.read");
@@ -238,6 +287,8 @@ export function GuardiansWorkspace() {
   );
 
   const [editingGuardianId, setEditingGuardianId] = React.useState<string | null>(null);
+  const [selectedGuardianId, setSelectedGuardianId] = React.useState<string | null>(null);
+  const [contextGuardianId, setContextGuardianId] = React.useState<string | null>(null);
   const [formState, setFormState] = React.useState<GuardianFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
@@ -368,6 +419,32 @@ export function GuardiansWorkspace() {
     [formState.localityId, geographyMaps],
   );
   const pagination = guardiansQuery.data?.pagination;
+  const selectedGuardian = React.useMemo(
+    () => guardians.find((guardian) => guardian.id === selectedGuardianId) ?? null,
+    [guardians, selectedGuardianId],
+  );
+  const contextGuardian = React.useMemo(
+    () => guardians.find((guardian) => guardian.id === contextGuardianId) ?? null,
+    [contextGuardianId, guardians],
+  );
+  const resolvedViewMode = React.useMemo(
+    () =>
+      resolveGuardiansViewMode(
+        entitySurface.defaultViewMode,
+        guardiansSurface.allowedViewModes,
+        guardiansSurface.defaultViewMode ?? "list",
+      ),
+    [entitySurface.defaultViewMode, guardiansSurface.allowedViewModes, guardiansSurface.defaultViewMode],
+  );
+  const guardianDetailsMode = React.useMemo(
+    () =>
+      resolveGuardiansDetailsMode(
+        entitySurface.detailsOpenMode,
+        resolvedViewMode,
+        guardiansSurface.detailsMode ?? "sheet",
+      ),
+    [entitySurface.detailsOpenMode, guardiansSurface.detailsMode, resolvedViewMode],
+  );
   const isEditing = editingGuardianId !== null;
 
   const mutationError =
@@ -393,6 +470,16 @@ export function GuardiansWorkspace() {
       setFormError(null);
     }
   }, [editingGuardianId, guardians, isEditing]);
+
+  React.useEffect(() => {
+    if (selectedGuardianId && !guardians.some((guardian) => guardian.id === selectedGuardianId)) {
+      setSelectedGuardianId(null);
+    }
+
+    if (contextGuardianId && !guardians.some((guardian) => guardian.id === contextGuardianId)) {
+      setContextGuardianId(null);
+    }
+  }, [contextGuardianId, guardians, selectedGuardianId]);
 
   React.useEffect(() => {
     if (isEditing || formState.genderId || !canReadGenders) {
@@ -732,9 +819,131 @@ export function GuardiansWorkspace() {
         if (editingGuardianId === guardian.id) {
           resetForm();
         }
+        if (selectedGuardianId === guardian.id) {
+          setSelectedGuardianId(null);
+        }
+        if (contextGuardianId === guardian.id) {
+          setContextGuardianId(null);
+        }
         setActionSuccess("تم حذف ولي الأمر بنجاح.");
       },
     });
+  };
+
+  const handleOpenGuardianDetails = React.useCallback((guardian: GuardianListItem) => {
+    setContextGuardianId(null);
+
+    if (!canReadDetails) {
+      return;
+    }
+
+    if (guardianDetailsMode === "page") {
+      window.location.hash = getGuardianDetailsPath(guardian);
+      return;
+    }
+
+    setSelectedGuardianId(guardian.id);
+  }, [canReadDetails, guardianDetailsMode]);
+
+  const renderGuardianHeaderActions = (guardian: GuardianListItem) => {
+    if (!canReadDetails && !canUpdate && !canDelete) {
+      return null;
+    }
+
+    return (
+      <div className="flex items-center gap-1">
+        {canReadDetails ? (
+          <EntitySurfaceHeaderActionButton
+            label="معاينة"
+            icon={<Eye className="h-3.5 w-3.5" />}
+            tone="preview"
+            colorMode={entitySurface.colorMode}
+            entityKey="students"
+            onClick={() => handleOpenGuardianDetails(guardian)}
+          />
+        ) : null}
+
+        {canUpdate ? (
+          <EntitySurfaceHeaderActionButton
+            label="تعديل"
+            icon={<PencilLine className="h-3.5 w-3.5" />}
+            tone="edit"
+            colorMode={entitySurface.colorMode}
+            entityKey="students"
+            disabled={updateMutation.isPending}
+            onClick={() => handleStartEdit(guardian)}
+          />
+        ) : null}
+
+        {canDelete ? (
+          <EntitySurfaceHeaderActionButton
+            label="حذف"
+            icon={<Trash2 className="h-3.5 w-3.5" />}
+            tone="delete"
+            disabled={deleteMutation.isPending}
+            onClick={() => handleDelete(guardian)}
+          />
+        ) : null}
+      </div>
+    );
+  };
+
+  const buildGuardianQuickActions = (
+    guardian: GuardianListItem,
+  ): EntitySurfaceQuickAction[] => {
+    if (!canUseQuickActions) {
+      return [];
+    }
+
+    const actions: EntitySurfaceQuickAction[] = [];
+
+    if (canReadDetails) {
+      actions.push({
+        key: "details",
+        label: guardianDetailsMode === "page" ? "فتح الصفحة" : "تفاصيل",
+        icon:
+          guardianDetailsMode === "page" ? (
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          ) : (
+            <ScanSearch className="h-3.5 w-3.5" />
+          ),
+        tone: "accent",
+        onClick: () => handleOpenGuardianDetails(guardian),
+      });
+    }
+
+    if (canUpdate) {
+      actions.push(
+        {
+          key: "edit",
+          label: "تعديل",
+          icon: <PencilLine className="h-3.5 w-3.5" />,
+          onClick: () => handleStartEdit(guardian),
+          disabled: updateMutation.isPending,
+        },
+        {
+          key: "toggle-active",
+          label: guardian.isActive ? "تعطيل" : "تفعيل",
+          icon: <Activity className="h-3.5 w-3.5" />,
+          tone: "ghost",
+          onClick: () => handleToggleActive(guardian),
+          disabled: updateMutation.isPending,
+        },
+      );
+    }
+
+    if (canDelete) {
+      actions.push({
+        key: "delete",
+        label: "حذف",
+        icon: <Trash2 className="h-3.5 w-3.5" />,
+        tone: "danger",
+        onClick: () => handleDelete(guardian),
+        disabled: deleteMutation.isPending,
+      });
+    }
+
+    return actions;
   };
 
   const activeFiltersCount = React.useMemo(() => {
@@ -742,6 +951,13 @@ export function GuardiansWorkspace() {
       (value) => value !== "all",
     ).length;
   }, [activeFilter, genderFilter, idTypeFilter, localityFilter]);
+  const showGuardianCardDetails =
+    canReadDetails && entitySurface.showExtendedDetailsInCards;
+  const usesBlurBackdrop = entitySurface.longPressMode === "enabled-with-blur";
+  const contextGuardianQuickActions = contextGuardian ? buildGuardianQuickActions(contextGuardian) : [];
+  const selectedGuardianQuickActions = selectedGuardian
+    ? buildGuardianQuickActions(selectedGuardian).filter((action) => action.key !== "details")
+    : [];
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
 
@@ -1236,88 +1452,99 @@ export function GuardiansWorkspace() {
             </div>
           ) : null}
 
-          {guardians.map((guardian) => (
-            <div
-              key={guardian.id}
-              className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+          {!guardiansQuery.isPending && guardians.length > 0 ? (
+            <EntitySurfaceGrid
+              viewMode={resolvedViewMode}
+              density={entitySurface.density}
+              richness={entitySurface.richness}
+              colorMode={entitySurface.colorMode}
+              visualStyle={entitySurface.visualStyle}
+              effectsPreset={entitySurface.effectsPreset}
+              shapePreset={entitySurface.shapePreset}
+              entityKey="students"
+              inlineActionsMode={entitySurface.inlineActionsMode}
             >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium">{guardian.fullName}</p>
-                    <Badge variant="outline" className="text-[10px] h-4 px-1">
-                      {guardian.genderLookup?.nameAr ?? translateStudentGender(guardian.gender)}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <span className="flex items-center gap-1">
-                      <IdCard className="h-3 w-3 text-[color:var(--app-accent-color)]/80" />
-                      {guardian.idNumber ?? "-"} ({guardian.idType?.nameAr ?? "بدون"})
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Phone className="h-3 w-3 text-[color:var(--app-accent-color)]/80" />
-                      {guardian.phonePrimary ?? "-"}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <MessageSquare className="h-3 w-3 text-[color:var(--app-accent-color)]/80" />
-                      {guardian.whatsappNumber ?? "-"}
-                    </span>
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    الطلاب: {guardian.students.length} ({toRelationshipPreview(guardian)})
-                  </p>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    <MapPin className="h-3 w-3 text-[color:var(--app-accent-color)]/80" />
-                    {guardian.locality
-                      ? formatLocalityHierarchyLabel(
-                          (geographyMaps.localityById.get(guardian.locality.id) ??
-                            guardian.locality) as LocalityLabelInput,
-                          geographyMaps,
-                        )
-                      : "غير محدد"}
-                  </p>
-                </div>
+              {guardians.map((guardian) => {
+                const preview =
+                  guardiansSurface.buildPreview?.(guardian) ?? buildGuardianSurfacePreview(guardian);
+                const contextQuickActions = buildGuardianQuickActions(guardian);
+                const headerActions = renderGuardianHeaderActions(guardian);
+                const canOpenContext =
+                  entitySurface.longPressMode !== "disabled" && contextQuickActions.length > 0;
+                const handleCardClick = canReadDetails
+                  ? () => handleOpenGuardianDetails(guardian)
+                  : undefined;
 
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant={guardian.isActive ? "default" : "outline"}>
-                    {guardian.isActive ? "نشط" : "غير نشط"}
-                  </Badge>
-                </div>
-              </div>
+                if (resolvedViewMode === "dense-row") {
+                  return (
+                    <EntitySurfaceRow
+                      key={guardian.id}
+                      title={preview.title}
+                      subtitle={showGuardianCardDetails ? preview.subtitle : undefined}
+                      meta={showGuardianCardDetails ? preview.meta ?? preview.description : undefined}
+                      avatar={preview.avatar}
+                      headerActions={headerActions}
+                      statusChips={showGuardianCardDetails ? getGuardianStatusChips(guardian) : undefined}
+                      density={entitySurface.density}
+                      richness={entitySurface.richness}
+                      colorMode={entitySurface.colorMode}
+                      visualStyle={entitySurface.visualStyle}
+                      effectsPreset={entitySurface.effectsPreset}
+                      shapePreset={entitySurface.shapePreset}
+                      entityKey="students"
+                      inlineActionsMode={entitySurface.inlineActionsMode}
+                      motionPreset={entitySurface.motionPreset}
+                      reducedMotion={entitySurface.reducedMotion}
+                      longPressMode={entitySurface.longPressMode}
+                      avatarMode={entitySurface.avatarMode}
+                      contextOpen={contextGuardianId === guardian.id}
+                      onClick={handleCardClick}
+                      onLongPress={() => {
+                        if (!canOpenContext) {
+                          return;
+                        }
+                        setContextGuardianId(guardian.id);
+                      }}
+                    />
+                  );
+                }
 
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 transition-all duration-300 hover:bg-primary/5"
-                  onClick={() => handleStartEdit(guardian)}
-                  disabled={!canUpdate || updateMutation.isPending}
-                >
-                  <PencilLine className="h-3.5 w-3.5" />
-                  تعديل
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="transition-all duration-300"
-                  onClick={() => handleToggleActive(guardian)}
-                  disabled={!canUpdate || updateMutation.isPending}
-                >
-                  {guardian.isActive ? "تعطيل" : "تفعيل"}
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="gap-1.5 transition-all duration-300"
-                  onClick={() => handleDelete(guardian)}
-                  disabled={!canDelete || deleteMutation.isPending}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  حذف
-                </Button>
-              </div>
-            </div>
-          ))}
+                return (
+                  <EntitySurfaceCard
+                    key={guardian.id}
+                    title={preview.title}
+                    subtitle={showGuardianCardDetails ? preview.subtitle : undefined}
+                    description={showGuardianCardDetails ? preview.description : undefined}
+                    avatar={preview.avatar}
+                    headerActions={headerActions}
+                    fields={showGuardianCardDetails ? preview.fields : undefined}
+                    statusChips={showGuardianCardDetails ? getGuardianStatusChips(guardian) : undefined}
+                    viewMode={resolvedViewMode}
+                    density={entitySurface.density}
+                    richness={entitySurface.richness}
+                    colorMode={entitySurface.colorMode}
+                    visualStyle={entitySurface.visualStyle}
+                    effectsPreset={entitySurface.effectsPreset}
+                    shapePreset={entitySurface.shapePreset}
+                    entityKey="students"
+                    inlineActionsMode={entitySurface.inlineActionsMode}
+                    motionPreset={entitySurface.motionPreset}
+                    reducedMotion={entitySurface.reducedMotion}
+                    longPressMode={entitySurface.longPressMode}
+                    avatarMode={entitySurface.avatarMode}
+                    contextOpen={contextGuardianId === guardian.id}
+                    onClick={handleCardClick}
+                    onLongPress={() => {
+                      if (!canOpenContext) {
+                        return;
+                      }
+                      setContextGuardianId(guardian.id);
+                    }}
+                  />
+                );
+              })}
+            </EntitySurfaceGrid>
+          ) : null}
 
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
             <p className="text-xs text-muted-foreground">
@@ -1365,6 +1592,54 @@ export function GuardiansWorkspace() {
           </div>
         </CardContent>
       </Card>
+
+      {contextGuardian ? (
+        <div className="fixed inset-0 z-[85]">
+          <div
+            className={cn(
+              "absolute inset-0",
+              usesBlurBackdrop ? "bg-black/24 backdrop-blur-sm" : "bg-black/18",
+            )}
+            onClick={() => setContextGuardianId(null)}
+          />
+          <div className="absolute inset-x-4 bottom-4 mx-auto max-w-sm">
+            <div className="rounded-[1.6rem] border border-white/70 bg-white/88 p-3 shadow-[0_30px_90px_-36px_rgba(15,23,42,0.45)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/88">
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">اختصارات ولي الأمر</p>
+              <p className="mt-1 text-[11px] leading-5 text-slate-500 dark:text-white/55">
+                {contextGuardian.fullName} • {contextGuardian.phonePrimary ?? "بدون هاتف"}
+              </p>
+              {contextGuardianQuickActions.length > 0 ? (
+                <EntitySurfaceQuickActions actions={contextGuardianQuickActions} className="mt-3" />
+              ) : (
+                <p className="mt-3 text-xs text-slate-500 dark:text-white/55">
+                  لا توجد اختصارات متاحة حاليًا.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {selectedGuardian ? (
+        <EntityDetailsShell
+          open
+          mode={guardianDetailsMode}
+          title={selectedGuardian.fullName}
+          subtitle={`${selectedGuardian.phonePrimary ?? "بدون هاتف"} • ${toRelationshipPreview(selectedGuardian)}`}
+          statusChips={getGuardianStatusChips(selectedGuardian)}
+          actions={selectedGuardianQuickActions}
+          density={entitySurface.density}
+          visualStyle={entitySurface.visualStyle}
+          effectsPreset={entitySurface.effectsPreset}
+          shapePreset={entitySurface.shapePreset}
+          onClose={() => setSelectedGuardianId(null)}
+        >
+          <GuardianDetailsContent
+            guardian={selectedGuardian}
+            quickActions={selectedGuardianQuickActions}
+          />
+        </EntityDetailsShell>
+      ) : null}
     </div>
   );
 }

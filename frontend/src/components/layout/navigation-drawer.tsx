@@ -2,10 +2,9 @@
 
 import * as React from "react";
 import {
+  ArrowRight,
   ArrowLeft,
   ChevronDown,
-  Compass,
-  Menu,
   Search,
   Sparkles,
   X,
@@ -19,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { useNavigationPreferences } from "@/hooks/use-navigation-preferences";
 import { cn } from "@/lib/utils";
 import type {
   MobileNavigatorPresentation,
@@ -78,12 +78,17 @@ export function NavigationDrawer({
   presentation = "drawer",
   density = "comfortable",
 }: NavigationDrawerProps) {
+  const navigationPreferences = useNavigationPreferences();
   const [internalSearch, setInternalSearch] = React.useState("");
   const contentScrollRef = React.useRef<HTMLDivElement | null>(null);
+  const [expandedGroupIds, setExpandedGroupIds] = React.useState<string[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = React.useState<string | null>(null);
   const [navFilter, setNavFilter] = React.useState<NavigationFilterValue>({
     currentGroupOnly: false,
     selectedGroupIds: [],
   });
+  const isFocusedSystemMode =
+    navigationPreferences.systemsViewMode === "focused-system";
   const isSearchControlled = navSearch !== undefined && onNavSearchChange !== undefined;
   const searchValue = isSearchControlled ? navSearch : internalSearch;
   const setSearchValue = React.useCallback(
@@ -158,10 +163,29 @@ export function NavigationDrawer({
     searchValue,
   ]);
 
-  const totalItems = React.useMemo(
-    () => visibleGroups.reduce((count, group) => count + group.items.length, 0),
-    [visibleGroups],
+  const selectedGroup = React.useMemo(
+    () =>
+      selectedGroupId
+        ? navGroups.find((group) => group.id === selectedGroupId) ?? null
+        : null,
+    [navGroups, selectedGroupId],
   );
+
+  const focusedGroupItems = React.useMemo(() => {
+    if (!selectedGroup) {
+      return [];
+    }
+
+    const query = normalizeText(searchValue);
+    if (!query) {
+      return selectedGroup.items;
+    }
+
+    return selectedGroup.items.filter((item) => {
+      const haystack = normalizeText([item.label, item.href].join(" "));
+      return haystack.includes(query);
+    });
+  }, [searchValue, selectedGroup]);
 
   const filterGroups = React.useMemo(
     () =>
@@ -174,6 +198,45 @@ export function NavigationDrawer({
   const isBottomSheet = presentation === "bottom-sheet";
   const isCompact = density === "compact";
   const useTightMode = isCompact || isBottomSheet;
+
+  React.useEffect(() => {
+    if (!isFocusedSystemMode) {
+      setSelectedGroupId(null);
+      return;
+    }
+
+    if (activeGroup?.id) {
+      setSelectedGroupId((previous) =>
+        previous === activeGroup.id ? previous : activeGroup.id,
+      );
+    }
+  }, [activeGroup?.id, isFocusedSystemMode]);
+
+  React.useEffect(() => {
+    if (!selectedGroupId) {
+      return;
+    }
+
+    const stillExists = navGroups.some((group) => group.id === selectedGroupId);
+    if (!stillExists) {
+      setSelectedGroupId(null);
+    }
+  }, [navGroups, selectedGroupId]);
+
+  React.useEffect(() => {
+    setExpandedGroupIds((previous) => {
+      const validIds = previous.filter((id) => visibleGroups.some((group) => group.id === id));
+      if (isFocusedSystemMode && selectedGroupId) {
+        return [selectedGroupId];
+      }
+
+      if (validIds.length > 0) {
+        return validIds;
+      }
+
+      return activeGroup?.id ? [activeGroup.id] : [];
+    });
+  }, [activeGroup?.id, isFocusedSystemMode, selectedGroupId, visibleGroups]);
 
   React.useEffect(() => {
     if (!open || !isBottomSheet) {
@@ -293,13 +356,25 @@ export function NavigationDrawer({
 
         <div className={cn("border-b border-border/70", isBottomSheet ? "px-4 py-3 sm:px-5" : "px-5 py-4 sm:px-6")}>
           <div className="flex items-center gap-2">
+            {isFocusedSystemMode && selectedGroup ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-11 w-11 shrink-0 rounded-2xl border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)] shadow-sm"
+                onClick={() => setSelectedGroupId(null)}
+                aria-label="الرجوع إلى الأنظمة"
+              >
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            ) : null}
             <div className="relative flex-1">
               <Input
                 value={searchValue}
                 onChange={(event) => setSearchValue(event.target.value)}
                 placeholder="ابحث عن نظام أو صفحة..."
                 className={cn(
-                  "rounded-2xl border-border/70 bg-background/75 pr-10 pl-10",
+                  "rounded-2xl border-border/70 bg-background/75 pr-14 pl-10",
                   useTightMode ? "h-9 text-xs" : "h-11",
                 )}
               />
@@ -320,25 +395,10 @@ export function NavigationDrawer({
               value={navFilter}
               onChange={setNavFilter}
               activeGroupId={activeGroup?.id}
-              className="h-9 shrink-0 rounded-xl px-2.5 text-[11px]"
+              className="shrink-0"
             />
           </div>
 
-          <div
-            className={cn(
-              "mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground",
-              isBottomSheet ? "mt-2" : "",
-            )}
-          >
-            <span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/70 px-3 py-1.5">
-              <Menu className="h-3 w-3 text-[color:var(--app-accent-color)]" />
-              {visibleGroups.length} نظام
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/70 px-3 py-1.5">
-              <Compass className="h-3 w-3 text-[color:var(--app-accent-color)]" />
-              {totalItems} صفحة
-            </span>
-          </div>
         </div>
 
         <div
@@ -348,7 +408,96 @@ export function NavigationDrawer({
             isBottomSheet ? "px-3 py-2.5 sm:px-4" : "px-4 py-4 sm:px-5",
           )}
         >
-          {visibleGroups.length === 0 ? (
+          {isFocusedSystemMode && selectedGroup ? (
+            <div className="space-y-3">
+              <section
+                className={cn(
+                  "rounded-[24px] border bg-background/55",
+                  useTightMode ? "p-2.5" : "p-3",
+                )}
+              >
+                <div className={cn("flex items-center gap-3", useTightMode ? "mb-2.5" : "mb-3")}>
+                  <div
+                    className={cn(
+                      "flex shrink-0 items-center justify-center rounded-2xl border shadow-sm",
+                      useTightMode ? "h-9 w-9" : "h-11 w-11",
+                      resolveGroupAccent(selectedGroup),
+                    )}
+                  >
+                    <selectedGroup.icon className={cn(useTightMode ? "h-4 w-4" : "h-5 w-5")} />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className={cn("truncate font-semibold", useTightMode ? "text-xs" : "text-sm")}>
+                      {selectedGroup.label}
+                    </h3>
+                  </div>
+                </div>
+
+                {focusedGroupItems.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-border/70 bg-background/60 p-4 text-center text-xs text-muted-foreground">
+                    لا توجد صفحات مطابقة داخل هذا النظام.
+                  </div>
+                ) : (
+                  <div className={cn("grid gap-2", isBottomSheet ? "grid-cols-2" : "sm:grid-cols-2")}>
+                    {focusedGroupItems.map((item) => {
+                      const active = isPathActive(activePath, item.href);
+
+                      return (
+                        <button
+                          key={item.href}
+                          type="button"
+                          onClick={() => {
+                            onNavigate(item.href);
+                            onClose();
+                          }}
+                          className={cn(
+                            "group flex w-full items-center gap-3 rounded-2xl border text-right transition-all duration-200",
+                            useTightMode ? "px-2.5 py-2 text-xs" : "px-3 py-3 text-sm",
+                            active
+                              ? "border-[color:var(--app-accent-strong)] bg-background text-foreground shadow-[0_14px_36px_-26px_rgba(15,23,42,0.55)]"
+                              : "border-border/70 bg-background/70 text-muted-foreground hover:-translate-y-0.5 hover:border-[color:var(--app-accent-strong)] hover:bg-[color:var(--app-accent-soft)]/35 hover:text-foreground",
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "flex shrink-0 items-center justify-center rounded-xl border shadow-sm transition-colors",
+                              useTightMode ? "h-8 w-8" : "h-10 w-10",
+                              active
+                                ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
+                                : item.iconClassName ??
+                                    "border-border/70 bg-background/80 text-muted-foreground group-hover:border-[color:var(--app-accent-strong)] group-hover:bg-[color:var(--app-accent-soft)] group-hover:text-[color:var(--app-accent-color)]",
+                            )}
+                          >
+                            <item.icon className={cn(useTightMode ? "h-3.5 w-3.5" : "h-4 w-4")} />
+                          </span>
+
+                          <span className="min-w-0 flex-1">
+                            <span className={cn("block truncate font-medium", useTightMode ? "text-xs" : "")}>
+                              {item.label}
+                            </span>
+                            {useTightMode ? null : (
+                              <span className="block truncate text-[11px] text-muted-foreground">
+                                {item.href}
+                              </span>
+                            )}
+                          </span>
+
+                          {active ? (
+                            <ArrowLeft
+                              className={cn(
+                                "shrink-0 text-[color:var(--app-accent-color)]",
+                                useTightMode ? "h-3.5 w-3.5" : "h-4 w-4",
+                              )}
+                            />
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+            </div>
+          ) : visibleGroups.length === 0 ? (
             <div className="flex h-full items-center justify-center">
               <div className="max-w-sm rounded-3xl border border-dashed border-border/70 bg-background/60 p-6 text-center">
                 <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]">
@@ -361,24 +510,24 @@ export function NavigationDrawer({
               </div>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-3">
               {visibleGroups.map((group) => {
                 const groupAccent = resolveGroupAccent(group);
                 const groupHasActiveItem = group.items.some((item) =>
                   isPathActive(activePath, item.href),
                 );
+                const isExpanded = expandedGroupIds.includes(group.id);
 
-                return (
-                  <section
-                    key={group.id}
-                    className={cn(
-                      "relative overflow-hidden border transition-all",
-                      useTightMode ? "rounded-[22px] p-2" : "rounded-[28px] p-3",
-                      groupHasActiveItem
-                        ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)]/30 shadow-[0_18px_42px_-28px_rgba(15,23,42,0.5)]"
-                        : "border-border/70 bg-background/55 hover:border-border/90",
-                    )}
-                  >
+                const cardClassName = cn(
+                  "relative overflow-hidden border transition-all self-start",
+                  useTightMode ? "rounded-[22px] p-2" : "rounded-[28px] p-3",
+                  groupHasActiveItem
+                    ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)]/30 shadow-[0_18px_42px_-28px_rgba(15,23,42,0.5)]"
+                    : "border-border/70 bg-background/55 hover:border-border/90",
+                );
+
+                const cardContent = (
+                  <>
                     {groupHasActiveItem ? (
                       <div className="pointer-events-none absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-[color:var(--app-accent-strong)] via-[color:var(--app-accent-soft)] to-transparent opacity-80" />
                     ) : null}
@@ -405,92 +554,118 @@ export function NavigationDrawer({
                               >
                                 {group.label}
                               </h3>
-                              <ChevronDown
-                                className={cn(
-                                  "text-muted-foreground/80",
-                                  useTightMode ? "h-3.5 w-3.5" : "h-4 w-4",
-                                )}
-                              />
                             </div>
-                            <p
-                              className={cn(
-                                "mt-0.5 text-muted-foreground",
-                                useTightMode ? "text-[10px]" : "text-[11px]",
-                              )}
-                            >
-                              {group.items.length} صفحة متاحة
-                            </p>
                           </div>
                         </div>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "rounded-full px-2.5 py-1 text-[10px] font-medium",
-                            useTightMode ? "text-[9px]" : "",
-                            groupAccent,
-                          )}
-                        >
-                          {group.items.length}
-                        </Badge>
+                        {isFocusedSystemMode ? null : (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedGroupIds((previous) =>
+                                previous.includes(group.id)
+                                  ? previous.filter((id) => id !== group.id)
+                                  : [...previous, group.id],
+                              )
+                            }
+                            aria-label={isExpanded ? "إخفاء صفحات النظام" : "إظهار صفحات النظام"}
+                            className={cn(
+                              "inline-flex shrink-0 items-center justify-center rounded-full border transition-all",
+                              useTightMode ? "h-9 w-9" : "h-10 w-10",
+                              groupAccent,
+                            )}
+                          >
+                            <ChevronDown
+                              className={cn(
+                                "transition-transform",
+                                isExpanded ? "rotate-180" : "",
+                                useTightMode ? "h-3.5 w-3.5" : "h-4 w-4",
+                              )}
+                            />
+                          </button>
+                        )}
                       </div>
 
-                      <div className={cn("grid gap-2", isBottomSheet ? "grid-cols-1" : "sm:grid-cols-2")}>
-                        {group.items.map((item) => {
-                          const active = isPathActive(activePath, item.href);
+                      {isFocusedSystemMode ? (
+                        null
+                      ) : isExpanded ? (
+                        <div className={cn("grid gap-2", isBottomSheet ? "grid-cols-2" : "sm:grid-cols-2")}>
+                          {group.items.map((item) => {
+                            const active = isPathActive(activePath, item.href);
 
-                          return (
-                            <button
-                              key={item.href}
-                              type="button"
-                              onClick={() => {
-                                onNavigate(item.href);
-                                onClose();
-                              }}
-                              className={cn(
-                                "group flex w-full items-center gap-3 rounded-2xl border text-right transition-all duration-200",
-                                useTightMode ? "px-2.5 py-2 text-xs" : "px-3 py-3 text-sm",
-                                active
-                                  ? "border-[color:var(--app-accent-strong)] bg-background text-foreground shadow-[0_14px_36px_-26px_rgba(15,23,42,0.55)]"
-                                  : "border-border/70 bg-background/70 text-muted-foreground hover:-translate-y-0.5 hover:border-[color:var(--app-accent-strong)] hover:bg-[color:var(--app-accent-soft)]/35 hover:text-foreground",
-                              )}
-                            >
-                              <span
+                            return (
+                              <button
+                                key={item.href}
+                                type="button"
+                                onClick={() => {
+                                  onNavigate(item.href);
+                                  onClose();
+                                }}
                                 className={cn(
-                                  "flex shrink-0 items-center justify-center rounded-xl border shadow-sm transition-colors",
-                                  useTightMode ? "h-8 w-8" : "h-10 w-10",
+                                  "group flex w-full items-center gap-3 rounded-2xl border text-right transition-all duration-200",
+                                  useTightMode ? "px-2.5 py-2 text-xs" : "px-3 py-3 text-sm",
                                   active
-                                    ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
-                                    : item.iconClassName ??
-                                        "border-border/70 bg-background/80 text-muted-foreground group-hover:border-[color:var(--app-accent-strong)] group-hover:bg-[color:var(--app-accent-soft)] group-hover:text-[color:var(--app-accent-color)]",
+                                    ? "border-[color:var(--app-accent-strong)] bg-background text-foreground shadow-[0_14px_36px_-26px_rgba(15,23,42,0.55)]"
+                                    : "border-border/70 bg-background/70 text-muted-foreground hover:-translate-y-0.5 hover:border-[color:var(--app-accent-strong)] hover:bg-[color:var(--app-accent-soft)]/35 hover:text-foreground",
                                 )}
                               >
-                                <item.icon className={cn(useTightMode ? "h-3.5 w-3.5" : "h-4 w-4")} />
-                              </span>
-
-                              <span className="min-w-0 flex-1">
-                                <span className={cn("block truncate font-medium", useTightMode ? "text-xs" : "")}>
-                                  {item.label}
-                                </span>
-                                {useTightMode ? null : (
-                                  <span className="block truncate text-[11px] text-muted-foreground">
-                                    {item.href}
-                                  </span>
-                                )}
-                              </span>
-
-                              {active ? (
-                                <ArrowLeft
+                                <span
                                   className={cn(
-                                    "shrink-0 text-[color:var(--app-accent-color)]",
-                                    useTightMode ? "h-3.5 w-3.5" : "h-4 w-4",
+                                    "flex shrink-0 items-center justify-center rounded-xl border shadow-sm transition-colors",
+                                    useTightMode ? "h-8 w-8" : "h-10 w-10",
+                                    active
+                                      ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
+                                      : item.iconClassName ??
+                                          "border-border/70 bg-background/80 text-muted-foreground group-hover:border-[color:var(--app-accent-strong)] group-hover:bg-[color:var(--app-accent-soft)] group-hover:text-[color:var(--app-accent-color)]",
                                   )}
-                                />
-                              ) : null}
-                            </button>
-                          );
-                        })}
-                      </div>
+                                >
+                                  <item.icon className={cn(useTightMode ? "h-3.5 w-3.5" : "h-4 w-4")} />
+                                </span>
+
+                                <span className="min-w-0 flex-1">
+                                  <span className={cn("block truncate font-medium", useTightMode ? "text-xs" : "")}>
+                                    {item.label}
+                                  </span>
+                                  {useTightMode ? null : (
+                                    <span className="block truncate text-[11px] text-muted-foreground">
+                                      {item.href}
+                                    </span>
+                                  )}
+                                </span>
+
+                                {active ? (
+                                  <ArrowLeft
+                                    className={cn(
+                                      "shrink-0 text-[color:var(--app-accent-color)]",
+                                      useTightMode ? "h-3.5 w-3.5" : "h-4 w-4",
+                                    )}
+                                  />
+                                ) : null}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : null}
                     </div>
+                  </>
+                );
+
+                if (isFocusedSystemMode) {
+                  return (
+                    <button
+                      key={group.id}
+                      type="button"
+                      onClick={() => setSelectedGroupId(group.id)}
+                      className={cn(cardClassName, "block w-full text-right")}
+                      aria-label={`عرض صفحات ${group.label}`}
+                    >
+                      {cardContent}
+                    </button>
+                  );
+                }
+
+                return (
+                  <section key={group.id} className={cardClassName}>
+                    {cardContent}
                   </section>
                 );
               })}

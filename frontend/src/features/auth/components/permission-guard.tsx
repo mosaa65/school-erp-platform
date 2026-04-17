@@ -4,20 +4,23 @@ import type { ReactNode } from "react";
 import { ForbiddenCard } from "@/components/layout/forbidden-card";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
+import { matchesPermissionRequirement } from "@/features/auth/lib/permission-requirements";
 
 type PermissionGuardProps = {
-  permission: string;
+  permission?: string;
+  requiredAnyPermission?: string[];
   children: ReactNode;
   fallback?: ReactNode;
 };
 
 export function PermissionGuard({
   permission,
+  requiredAnyPermission,
   children,
   fallback,
 }: PermissionGuardProps) {
   const auth = useAuth();
-  const { hasPermission } = useRbac();
+  const { hasAnyPermission, hasPermission } = useRbac();
 
   if (!auth.isHydrated) {
     return (
@@ -31,8 +34,21 @@ export function PermissionGuard({
     return null;
   }
 
-  if (!hasPermission(permission)) {
-    return fallback ?? <ForbiddenCard requiredPermission={permission} />;
+  const hasAccess = matchesPermissionRequirement(
+    {
+      requiredPermission: permission,
+      requiredAnyPermission,
+    },
+    {
+      hasPermission,
+      hasAnyPermission,
+    },
+  );
+
+  if (!hasAccess) {
+    const requiredPermissionLabel =
+      permission ?? requiredAnyPermission?.join(" | ") ?? "صلاحية غير محددة";
+    return fallback ?? <ForbiddenCard requiredPermission={requiredPermissionLabel} />;
   }
 
   return <>{children}</>;

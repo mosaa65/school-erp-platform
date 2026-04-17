@@ -2,12 +2,14 @@ export type NavigationLayoutMode = "classic" | "rail" | "hub";
 export type MobileNavigatorPresentation = "drawer" | "bottom-sheet";
 export type NavigationLandingPage = "dashboard" | "navigation-hub" | "last-visited";
 export type NavigationDensity = "comfortable" | "compact";
+export type NavigationSystemsViewMode = "lists" | "focused-system";
 
 export type NavigationPreferences = {
   layoutMode: NavigationLayoutMode;
   mobilePresentation: MobileNavigatorPresentation;
   landingPage: NavigationLandingPage;
   density: NavigationDensity;
+  systemsViewMode: NavigationSystemsViewMode;
   showHeaderMenuButton: boolean;
 };
 
@@ -37,6 +39,12 @@ export type NavigationDensityDefinition = {
   description: string;
 };
 
+export type NavigationSystemsViewModeDefinition = {
+  value: NavigationSystemsViewMode;
+  label: string;
+  description: string;
+};
+
 const STORAGE_VERSION = 1;
 const STORAGE_KEY = "school-erp.navigation.v1";
 const LAST_VISITED_APP_PATH_STORAGE_KEY = "school-erp.navigation.last-visited-path.v1";
@@ -46,6 +54,7 @@ export const DEFAULT_NAVIGATION_PREFERENCES: NavigationPreferences = {
   mobilePresentation: "bottom-sheet",
   landingPage: "dashboard",
   density: "compact",
+  systemsViewMode: "focused-system",
   showHeaderMenuButton: false,
 };
 
@@ -117,6 +126,19 @@ export const NAVIGATION_DENSITY_OPTIONS: NavigationDensityDefinition[] = [
   },
 ];
 
+export const NAVIGATION_SYSTEMS_VIEW_MODE_OPTIONS: NavigationSystemsViewModeDefinition[] = [
+  {
+    value: "lists",
+    label: "عرض القوائم",
+    description: "إظهار كل الأنظمة وصفحاتها في نفس الشاشة.",
+  },
+  {
+    value: "focused-system",
+    label: "نظام واحد",
+    description: "عند اختيار نظام تظهر صفحاته فقط مع إخفاء بقية الأنظمة.",
+  },
+];
+
 type StoredNavigationPreferences = {
   version: number;
   preferences: NavigationPreferences;
@@ -144,6 +166,10 @@ function isNavigationDensity(value: unknown): value is NavigationDensity {
   return NAVIGATION_DENSITY_OPTIONS.some((item) => item.value === value);
 }
 
+function isNavigationSystemsViewMode(value: unknown): value is NavigationSystemsViewMode {
+  return NAVIGATION_SYSTEMS_VIEW_MODE_OPTIONS.some((item) => item.value === value);
+}
+
 function isBoolean(value: unknown): value is boolean {
   return typeof value === "boolean";
 }
@@ -164,6 +190,9 @@ function normalizeNavigationPreferences(
     density: isNavigationDensity(input?.density)
       ? input.density
       : DEFAULT_NAVIGATION_PREFERENCES.density,
+    systemsViewMode: isNavigationSystemsViewMode(input?.systemsViewMode)
+      ? input.systemsViewMode
+      : DEFAULT_NAVIGATION_PREFERENCES.systemsViewMode,
     showHeaderMenuButton: isBoolean(input?.showHeaderMenuButton)
       ? input.showHeaderMenuButton
       : DEFAULT_NAVIGATION_PREFERENCES.showHeaderMenuButton,
@@ -259,6 +288,10 @@ export function getNavigationLandingPageLabel(value: NavigationLandingPage): str
 
 export function getNavigationDensityLabel(value: NavigationDensity): string {
   return NAVIGATION_DENSITY_OPTIONS.find((item) => item.value === value)?.label ?? value;
+}
+
+export function getNavigationSystemsViewModeLabel(value: NavigationSystemsViewMode): string {
+  return NAVIGATION_SYSTEMS_VIEW_MODE_OPTIONS.find((item) => item.value === value)?.label ?? value;
 }
 
 export function getHeaderMenuButtonVisibilityLabel(value: boolean): string {

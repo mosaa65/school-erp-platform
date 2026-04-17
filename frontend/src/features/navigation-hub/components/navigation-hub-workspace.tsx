@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowLeft, Compass, Search, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Compass, Search, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { APP_NAV_GROUPS } from "@/components/layout/app-navigation";
 import {
@@ -91,6 +91,7 @@ export function NavigationHubWorkspace() {
   );
 
   const isCompact = navigationPreferences.density === "compact";
+  const isFocusedSystemMode = navigationPreferences.systemsViewMode === "focused-system";
   const filterGroups = React.useMemo(
     () =>
       visibleNavGroups.map((group) => ({
@@ -100,6 +101,44 @@ export function NavigationHubWorkspace() {
     [visibleNavGroups],
   );
   const activeGroupId = selectedGroupId !== "all" ? selectedGroupId : undefined;
+  const selectedGroup = React.useMemo(
+    () =>
+      selectedGroupId === "all"
+        ? null
+        : visibleNavGroups.find((group) => group.id === selectedGroupId) ?? null,
+    [selectedGroupId, visibleNavGroups],
+  );
+  const focusedGroupItems = React.useMemo(() => {
+    if (!selectedGroup) {
+      return [];
+    }
+
+    const query = normalizeText(deferredSearch);
+    if (!query) {
+      return selectedGroup.items;
+    }
+
+    const groupMatches = normalizeText(selectedGroup.label).includes(query);
+    if (groupMatches) {
+      return selectedGroup.items;
+    }
+
+    return selectedGroup.items.filter((item) => {
+      const haystack = normalizeText([item.label, item.href].join(" "));
+      return haystack.includes(query);
+    });
+  }, [deferredSearch, selectedGroup]);
+
+  React.useEffect(() => {
+    if (selectedGroupId === "all") {
+      return;
+    }
+
+    const stillExists = visibleNavGroups.some((group) => group.id === selectedGroupId);
+    if (!stillExists) {
+      setSelectedGroupId("all");
+    }
+  }, [selectedGroupId, visibleNavGroups]);
 
   return (
     <div className="mx-auto max-w-6xl space-y-4">
@@ -155,39 +194,130 @@ export function NavigationHubWorkspace() {
             </div>
           </div>
 
-          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-            <button
-              type="button"
-              onClick={() => setSelectedGroupId("all")}
-              className={cn(
-                "shrink-0 rounded-full border px-3 py-2 text-xs font-medium transition-all",
-                selectedGroupId === "all"
-                  ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
-                  : "border-white/70 bg-white/75 text-slate-700 hover:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:text-white/72 dark:hover:bg-white/[0.08] dark:hover:text-white",
-              )}
-            >
-              كل الأنظمة
-            </button>
-            {visibleNavGroups.map((group) => (
+          {isFocusedSystemMode && selectedGroup ? (
+            <div className="flex items-center justify-between gap-3 rounded-[1.3rem] border border-[color:var(--app-accent-strong)]/35 bg-[color:var(--app-accent-soft)]/25 px-3 py-2.5">
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">النظام المحدد</p>
+                <p className="truncate text-sm font-semibold">{selectedGroup.label}</p>
+              </div>
               <button
-                key={group.id}
                 type="button"
-                onClick={() => setSelectedGroupId(group.id)}
+                onClick={() => setSelectedGroupId("all")}
+                className="inline-flex items-center gap-2 rounded-full border border-[color:var(--app-accent-strong)] bg-background/85 px-3 py-2 text-xs font-medium text-[color:var(--app-accent-color)] transition hover:bg-background"
+              >
+                <ArrowRight className="h-4 w-4" />
+                رجوع للأنظمة
+              </button>
+            </div>
+          ) : (
+            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+              <button
+                type="button"
+                onClick={() => setSelectedGroupId("all")}
                 className={cn(
                   "shrink-0 rounded-full border px-3 py-2 text-xs font-medium transition-all",
-                  selectedGroupId === group.id
+                  selectedGroupId === "all"
                     ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
                     : "border-white/70 bg-white/75 text-slate-700 hover:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:text-white/72 dark:hover:bg-white/[0.08] dark:hover:text-white",
                 )}
               >
-                {group.label}
+                كل الأنظمة
               </button>
-            ))}
-          </div>
+              {visibleNavGroups.map((group) => (
+                <button
+                  key={group.id}
+                  type="button"
+                  onClick={() => setSelectedGroupId(group.id)}
+                  className={cn(
+                    "shrink-0 rounded-full border px-3 py-2 text-xs font-medium transition-all",
+                    selectedGroupId === group.id
+                      ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
+                      : "border-white/70 bg-white/75 text-slate-700 hover:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:text-white/72 dark:hover:bg-white/[0.08] dark:hover:text-white",
+                  )}
+                >
+                  {group.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
-      {filteredNavGroups.length === 0 ? (
+      {isFocusedSystemMode && selectedGroup ? (
+        <section className="overflow-hidden rounded-[1.7rem] border border-white/70 bg-white/78 shadow-[0_22px_56px_-40px_rgba(15,23,42,0.22)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/56 dark:shadow-[0_24px_64px_-36px_rgba(15,23,42,0.92)]">
+          <div className="flex items-center justify-between gap-3 border-b border-black/[0.05] px-4 py-3.5 dark:border-white/10 sm:px-5">
+            <div className="flex min-w-0 items-center gap-3">
+              <span
+                className={cn(
+                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border shadow-sm",
+                  selectedGroup.iconClassName ??
+                    "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]",
+                )}
+              >
+                <selectedGroup.icon className="h-4 w-4" />
+              </span>
+              <div className="min-w-0">
+                <h3 className="truncate text-sm font-semibold sm:text-[15px]">
+                  {selectedGroup.label}
+                </h3>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  صفحات النظام المحدد فقط.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSelectedGroupId("all")}
+              className="inline-flex items-center gap-2 rounded-full border border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)]/50 px-3 py-2 text-[11px] font-medium text-[color:var(--app-accent-color)] transition hover:bg-[color:var(--app-accent-soft)]"
+            >
+              <ArrowRight className="h-4 w-4" />
+              رجوع
+            </button>
+          </div>
+
+          {focusedGroupItems.length === 0 ? (
+            <div className="px-5 py-10 text-center">
+              <p className="text-sm font-semibold">لا توجد صفحات مطابقة داخل هذا النظام</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                غيّر البحث الحالي أو ارجع لكل الأنظمة.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-2 px-3 py-3 sm:grid-cols-2 sm:px-4 sm:py-4">
+              {focusedGroupItems.map((item) => (
+                <button
+                  key={item.href}
+                  type="button"
+                  onClick={() => router.push(item.href)}
+                  className={cn(
+                    "group flex w-full items-center gap-3 rounded-[1.15rem] border border-white/70 bg-background/86 text-right transition-all hover:-translate-y-0.5 hover:border-[color:var(--app-accent-strong)] hover:bg-white dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.08]",
+                    isCompact ? "px-3 py-2.5" : "px-3 py-3",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-[0.95rem] border shadow-sm",
+                      item.iconClassName ??
+                        "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]",
+                    )}
+                  >
+                    <item.icon className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium">{item.label}</span>
+                    {isCompact ? null : (
+                      <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                        {item.href}
+                      </span>
+                    )}
+                  </span>
+                  <ArrowLeft className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:-translate-x-0.5 group-hover:text-[color:var(--app-accent-color)]" />
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : filteredNavGroups.length === 0 ? (
         <section className="rounded-[1.8rem] border border-dashed border-border/70 bg-background/60 px-5 py-10 text-center">
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]">
             <Search className="h-6 w-6" />
@@ -197,6 +327,36 @@ export function NavigationHubWorkspace() {
             جرّب اسمًا مختلفًا أو عد إلى كل الأنظمة.
           </p>
         </section>
+      ) : isFocusedSystemMode && !selectedGroup ? (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {filteredNavGroups.map((group) => (
+            <button
+              key={group.id}
+              type="button"
+              onClick={() => setSelectedGroupId(group.id)}
+              className="group overflow-hidden rounded-[1.7rem] border border-white/70 bg-white/78 p-4 text-right shadow-[0_22px_56px_-40px_rgba(15,23,42,0.22)] backdrop-blur-2xl transition-all hover:-translate-y-0.5 hover:border-[color:var(--app-accent-strong)] hover:bg-white dark:border-white/10 dark:bg-slate-950/56 dark:shadow-[0_24px_64px_-36px_rgba(15,23,42,0.92)] dark:hover:bg-slate-950/64"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <span
+                  className={cn(
+                    "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border shadow-sm",
+                    group.iconClassName ??
+                      "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]",
+                  )}
+                >
+                  <group.icon className="h-4 w-4" />
+                </span>
+                <ArrowLeft className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:-translate-x-0.5 group-hover:text-[color:var(--app-accent-color)]" />
+              </div>
+              <div className="mt-4">
+                <h3 className="truncate text-sm font-semibold sm:text-[15px]">{group.label}</h3>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  اضغط لعرض صفحات هذا النظام فقط.
+                </p>
+              </div>
+            </button>
+          ))}
+        </div>
       ) : (
         <div className="grid gap-3 lg:grid-cols-2">
           {filteredNavGroups.map((group) => (

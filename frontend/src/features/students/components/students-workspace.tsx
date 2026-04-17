@@ -1,28 +1,32 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
+  ArrowUpRight,
+  CalendarDays,
+  Eye,
+  HeartPulse,
   LoaderCircle,
   PencilLine,
   Plus,
   RefreshCw,
+  ScanSearch,
   Trash2,
   Users,
   User,
-  CalendarDays,
+  UserCheck,
   MapPin,
   Droplets,
-  HeartPulse,
   Heart,
   Activity,
-  UserCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SearchField } from "@/components/ui/search-field";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
@@ -33,8 +37,20 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
+import { EntityDetailsShell } from "@/presentation/entity-surface/entity-details-shell";
+import { EntitySurfaceCard } from "@/presentation/entity-surface/entity-surface-card";
+import { EntitySurfaceGrid } from "@/presentation/entity-surface/entity-surface-grid";
+import { EntitySurfaceHeaderActionButton } from "@/presentation/entity-surface/entity-surface-header-action-button";
+import { EntitySurfaceQuickActions } from "@/presentation/entity-surface/entity-surface-quick-actions";
+import { getEntitySurfaceDefinition } from "@/presentation/entity-surface/entity-surface-registry";
+import { EntitySurfaceRow } from "@/presentation/entity-surface/entity-surface-row";
+import type {
+  EntityDetailsMode,
+  EntitySurfaceViewMode,
+  EntitySurfaceQuickAction,
+} from "@/presentation/entity-surface/entity-surface-types";
+import { useEntitySurface } from "@/hooks/use-entity-surface";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useGeographyOptionsQuery } from "@/features/lookup-catalog/hooks/use-geography-options-query";
 import {
@@ -52,13 +68,21 @@ import { useBloodTypeOptionsQuery } from "@/features/students/hooks/use-blood-ty
 import { useStudentGenderOptionsQuery } from "@/features/students/hooks/use-gender-options-query";
 import { useHealthStatusOptionsQuery } from "@/features/students/hooks/use-health-status-options-query";
 import { useStudentsQuery } from "@/features/students/hooks/use-students-query";
+import { StudentDetailsContent } from "@/features/students/components/student-details-content";
 import {
-  translateStudentEnrollmentStatus,
+  STUDENT_DETAILS_PERMISSION_CODES,
+  STUDENT_SENSITIVE_PERMISSION_CODES,
+  buildStudentSurfacePreview,
+  getStudentDetailsPath,
+  getStudentPlacementLongLabel,
+  getStudentStatusChips,
+  studentSurfaceDefinition,
+} from "@/features/students/presentation/student-surface-definition";
+import {
   translateStudentGender,
   translateStudentHealthStatus,
-  translateStudentOrphanStatus,
 } from "@/lib/i18n/ar";
-import { formatNameCodeLabel } from "@/lib/option-labels";
+import { cn } from "@/lib/utils";
 import type {
   StudentGender,
   StudentHealthStatus,
@@ -154,67 +178,6 @@ function toOptionalString(value: string): string | undefined {
   return normalized.length > 0 ? normalized : undefined;
 }
 
-function formatDate(isoDate: string | null): string {
-  if (!isoDate) {
-    return "-";
-  }
-
-  const date = new Date(isoDate);
-  if (Number.isNaN(date.getTime())) {
-    return "-";
-  }
-
-  return date.toLocaleDateString();
-}
-
-type StudentEnrollmentLabelInput = {
-  academicYear: {
-    name: string;
-    code: string;
-  };
-  gradeLevel?: {
-    name: string;
-    code: string;
-  } | null;
-  section?: {
-    name?: string | null;
-    code?: string | null;
-    gradeLevel?: {
-      name: string;
-      code: string;
-    } | null;
-  } | null;
-};
-
-function formatStudentEnrollmentPlacementLabel(
-  enrollment: StudentEnrollmentLabelInput,
-): string {
-  const yearLabel = formatNameCodeLabel(enrollment.academicYear.name, enrollment.academicYear.code);
-  const gradeLabel = enrollment.gradeLevel
-    ? formatNameCodeLabel(enrollment.gradeLevel.name, enrollment.gradeLevel.code)
-    : enrollment.section?.gradeLevel
-      ? formatNameCodeLabel(
-        enrollment.section.gradeLevel.name,
-        enrollment.section.gradeLevel.code,
-      )
-      : "";
-
-  if (enrollment.section) {
-    return `${yearLabel} / ${gradeLabel || "غير موزع"} / ${formatNameCodeLabel(enrollment.section.name, enrollment.section.code)}`;
-  }
-
-  return gradeLabel ? `${yearLabel} / ${gradeLabel} / غير موزع` : `${yearLabel} / غير موزع`;
-}
-
-type LocalityLabelInput = {
-  id: number;
-  nameAr?: string;
-  name?: string;
-  localityType?: "RURAL" | "URBAN";
-  directorateId?: number;
-  villageId?: number;
-};
-
 function toFormState(student: StudentListItem): StudentFormState {
   return {
     admissionNo: student.admissionNo ?? "",
@@ -230,39 +193,47 @@ function toFormState(student: StudentListItem): StudentFormState {
   };
 }
 
-function orphanBadgeVariant(
-  orphanStatus: StudentOrphanStatus,
-): "default" | "secondary" | "outline" {
-  if (orphanStatus === "NONE") {
-    return "outline";
+function resolveStudentsViewMode(
+  requestedMode: EntitySurfaceViewMode,
+  allowedViewModes: EntitySurfaceViewMode[] | undefined,
+  fallbackMode: EntitySurfaceViewMode,
+): EntitySurfaceViewMode {
+  if (!allowedViewModes || allowedViewModes.length === 0) {
+    return requestedMode;
   }
 
-  if (orphanStatus === "BOTH_DECEASED") {
-    return "default";
+  if (allowedViewModes.includes(requestedMode)) {
+    return requestedMode;
   }
 
-  return "secondary";
+  return allowedViewModes.includes(fallbackMode) ? fallbackMode : allowedViewModes[0];
 }
 
-function healthBadgeVariant(
-  healthStatus: StudentHealthStatus | null,
-): "default" | "secondary" | "outline" {
-  if (!healthStatus) {
-    return "outline";
+function resolveStudentsDetailsMode(
+  requestedMode: string,
+  currentViewMode: EntitySurfaceViewMode,
+  defaultMode: EntityDetailsMode,
+): EntityDetailsMode {
+  if (requestedMode === "screen-default") {
+    return currentViewMode === "dense-row" ? "inline" : defaultMode;
   }
 
-  if (healthStatus === "HEALTHY") {
-    return "secondary";
-  }
-
-  return "default";
+  return requestedMode as EntityDetailsMode;
 }
 
 export function StudentsWorkspace() {
-  const { hasPermission } = useRbac();
+  const router = useRouter();
+  const { hasAnyPermission, hasPermission } = useRbac();
+  const entitySurface = useEntitySurface();
+  const studentsSurface = React.useMemo(
+    () => getEntitySurfaceDefinition<StudentListItem>("students") ?? studentSurfaceDefinition,
+    [],
+  );
   const canCreate = hasPermission("students.create");
   const canUpdate = hasPermission("students.update");
   const canDelete = hasPermission("students.delete");
+  const canReadDetails = hasAnyPermission([...STUDENT_DETAILS_PERMISSION_CODES]);
+  const canReadSensitiveFields = hasAnyPermission([...STUDENT_SENSITIVE_PERMISSION_CODES]);
   const canReadGenders = hasPermission("lookup-genders.read");
   const canReadBloodTypes = hasPermission("lookup-blood-types.read");
   const canReadLocalities = hasPermission("localities.read");
@@ -299,6 +270,8 @@ export function StudentsWorkspace() {
   const [formState, setFormState] = React.useState<StudentFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
+  const [selectedStudentId, setSelectedStudentId] = React.useState<string | null>(null);
+  const [contextStudentId, setContextStudentId] = React.useState<string | null>(null);
   const [formGovernorateId, setFormGovernorateId] = React.useState<string>("");
   const [formDirectorateId, setFormDirectorateId] = React.useState<string>("");
   const [formSubDistrictId, setFormSubDistrictId] = React.useState<string>("");
@@ -328,6 +301,15 @@ export function StudentsWorkspace() {
   const createMutation = useCreateStudentMutation();
   const updateMutation = useUpdateStudentMutation();
   const deleteMutation = useDeleteStudentMutation();
+  const resolvedViewMode = React.useMemo(
+    () =>
+      resolveStudentsViewMode(
+        entitySurface.defaultViewMode,
+        studentsSurface.allowedViewModes,
+        studentsSurface.defaultViewMode ?? "list",
+      ),
+    [entitySurface.defaultViewMode, studentsSurface.allowedViewModes, studentsSurface.defaultViewMode],
+  );
 
   const students = React.useMemo(() => studentsQuery.data?.data ?? [], [studentsQuery.data?.data]);
   const genderOptions = React.useMemo(
@@ -444,12 +426,24 @@ export function StudentsWorkspace() {
     () => new Map(orphanStatusOptions.map((item) => [item.id, item])),
     [orphanStatusOptions],
   );
-  const orphanStatusLabels = React.useMemo(
-    () => new Map(orphanStatusOptions.map((item) => [item.code, item.nameAr])),
-    [orphanStatusOptions],
-  );
   const pagination = studentsQuery.data?.pagination;
   const isEditing = editingStudentId !== null;
+  const selectedStudent = React.useMemo(
+    () => students.find((student) => student.id === selectedStudentId) ?? null,
+    [selectedStudentId, students],
+  );
+  const contextStudent = React.useMemo(
+    () => students.find((student) => student.id === contextStudentId) ?? null,
+    [contextStudentId, students],
+  );
+  const studentDetailsMode = resolveStudentsDetailsMode(
+    entitySurface.detailsOpenMode,
+    resolvedViewMode,
+    studentsSurface.detailsMode ?? "dialog",
+  );
+  const showStudentCardDetails =
+    canReadDetails && entitySurface.showExtendedDetailsInCards;
+  const usesBlurBackdrop = entitySurface.longPressMode === "enabled-with-blur";
 
   const mutationError =
     (createMutation.error as Error | null)?.message ??
@@ -470,6 +464,16 @@ export function StudentsWorkspace() {
       setIsFormOpen(false);
     }
   }, [editingStudentId, isEditing, students]);
+
+  React.useEffect(() => {
+    if (selectedStudentId && !students.some((student) => student.id === selectedStudentId)) {
+      setSelectedStudentId(null);
+    }
+
+    if (contextStudentId && !students.some((student) => student.id === contextStudentId)) {
+      setContextStudentId(null);
+    }
+  }, [contextStudentId, selectedStudentId, students]);
 
   useDebounceEffect(() => {
     setPage(1);
@@ -588,6 +592,8 @@ export function StudentsWorkspace() {
     setFormDirectorateId("");
     setFormSubDistrictId("");
     setFormVillageId("");
+    setSelectedStudentId(null);
+    setContextStudentId(null);
     setIsFormOpen(true);
   };
 
@@ -803,6 +809,8 @@ export function StudentsWorkspace() {
     }
 
     setFormState(nextState);
+    setSelectedStudentId(null);
+    setContextStudentId(null);
     setIsFormOpen(true);
   };
 
@@ -845,14 +853,130 @@ export function StudentsWorkspace() {
         if (editingStudentId === student.id) {
           resetForm();
         }
+        if (selectedStudentId === student.id) {
+          setSelectedStudentId(null);
+        }
+        if (contextStudentId === student.id) {
+          setContextStudentId(null);
+        }
         setActionSuccess("تم حذف الطالب بنجاح.");
       },
     });
   };
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
-  const getOrphanStatusLabel = (value: StudentOrphanStatus) =>
-    orphanStatusLabels.get(value) ?? translateStudentOrphanStatus(value);
+  const handleOpenStudentDetails = React.useCallback(
+    (student: StudentListItem) => {
+      setContextStudentId(null);
+
+      if (!canReadDetails) {
+        return;
+      }
+
+      if (studentDetailsMode === "page") {
+        router.push(getStudentDetailsPath(student));
+        return;
+      }
+
+      setSelectedStudentId(student.id);
+    },
+    [canReadDetails, router, studentDetailsMode],
+  );
+  const renderStudentHeaderActions = (student: StudentListItem) => {
+    if (!canReadDetails && !canUpdate && !canDelete) {
+      return null;
+    }
+
+    return (
+      <div className="flex items-center gap-1">
+        {canReadDetails ? (
+          <EntitySurfaceHeaderActionButton
+            label="معاينة"
+            icon={<Eye className="h-3.5 w-3.5" />}
+            tone="preview"
+            colorMode={entitySurface.colorMode}
+            entityKey="students"
+            onClick={() => handleOpenStudentDetails(student)}
+          />
+        ) : null}
+
+        {canUpdate ? (
+          <EntitySurfaceHeaderActionButton
+            label="تعديل"
+            icon={<PencilLine className="h-3.5 w-3.5" />}
+            tone="edit"
+            colorMode={entitySurface.colorMode}
+            entityKey="students"
+            disabled={updateMutation.isPending}
+            onClick={() => handleStartEdit(student)}
+          />
+        ) : null}
+
+        {canDelete ? (
+          <EntitySurfaceHeaderActionButton
+            label="حذف"
+            icon={<Trash2 className="h-3.5 w-3.5" />}
+            tone="delete"
+            disabled={deleteMutation.isPending}
+            onClick={() => handleDelete(student)}
+          />
+        ) : null}
+      </div>
+    );
+  };
+  const buildStudentQuickActions = (
+    student: StudentListItem,
+  ): EntitySurfaceQuickAction[] => {
+    const actions: EntitySurfaceQuickAction[] = [];
+
+    if (canReadDetails) {
+      actions.push({
+        key: "details",
+        label: studentDetailsMode === "page" ? "فتح الصفحة" : "تفاصيل",
+        icon:
+          studentDetailsMode === "page" ? (
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          ) : (
+            <ScanSearch className="h-3.5 w-3.5" />
+          ),
+        tone: "accent",
+        onClick: () => handleOpenStudentDetails(student),
+      });
+    }
+
+    if (canUpdate) {
+      actions.push(
+        {
+          key: "edit",
+          label: "تعديل",
+          icon: <PencilLine className="h-3.5 w-3.5" />,
+          onClick: () => handleStartEdit(student),
+          disabled: updateMutation.isPending,
+        },
+        {
+          key: "toggle-active",
+          label: student.isActive ? "تعطيل" : "تفعيل",
+          icon: <Activity className="h-3.5 w-3.5" />,
+          tone: "ghost",
+          onClick: () => handleToggleActive(student),
+          disabled: updateMutation.isPending,
+        },
+      );
+    }
+
+    if (canDelete) {
+      actions.push({
+        key: "delete",
+        label: "حذف",
+        icon: <Trash2 className="h-3.5 w-3.5" />,
+        tone: "danger",
+        onClick: () => handleDelete(student),
+        disabled: deleteMutation.isPending,
+      });
+    }
+
+    return actions;
+  };
 
   const clearFilters = () => {
     setPage(1);
@@ -893,26 +1017,21 @@ export function StudentsWorkspace() {
     orphanFilter,
     searchInput,
   ]);
+  const contextStudentQuickActions = contextStudent ? buildStudentQuickActions(contextStudent) : [];
+  const selectedStudentQuickActions = selectedStudent
+    ? buildStudentQuickActions(selectedStudent).filter((action) => action.key !== "details")
+    : [];
 
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
-            <SearchField
-              containerClassName="flex-1"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="بحث بالاسم أو رقم الطالب..."
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterTriggerButton
-              count={activeFiltersCount}
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-            />
-          </div>
-        </div>
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="بحث بالاسم أو رقم الطالب..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+        />
 
         <FilterDrawer
           open={isFilterOpen}
@@ -1069,96 +1188,99 @@ export function StudentsWorkspace() {
               </div>
             ) : null}
 
-            {students.map((student) => {
-              const latestEnrollment = student.enrollments[0];
+            {!studentsQuery.isPending && students.length > 0 ? (
+              <EntitySurfaceGrid
+                viewMode={resolvedViewMode}
+                density={entitySurface.density}
+                richness={entitySurface.richness}
+                colorMode={entitySurface.colorMode}
+                visualStyle={entitySurface.visualStyle}
+                effectsPreset={entitySurface.effectsPreset}
+                shapePreset={entitySurface.shapePreset}
+                entityKey="students"
+                inlineActionsMode={entitySurface.inlineActionsMode}
+              >
+                {students.map((student) => {
+                  const preview =
+                    studentsSurface.buildPreview?.(student) ?? buildStudentSurfacePreview(student);
+                  const contextQuickActions = buildStudentQuickActions(student);
+                  const headerActions = renderStudentHeaderActions(student);
+                  const canOpenContext =
+                    entitySurface.longPressMode !== "disabled" && contextQuickActions.length > 0;
+                  const handleCardClick = canReadDetails
+                    ? () => handleOpenStudentDetails(student)
+                    : undefined;
 
-              return (
-                <div
-                  key={student.id}
-                  className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div className="space-y-1">
-                      <p className="font-medium">{student.fullName}</p>
-                      <p className="text-xs text-muted-foreground">
-                        رقم الطالب: {student.admissionNo ?? "-"} | الميلاد: {formatDate(student.birthDate)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        أولياء الأمور: {student.guardians.length} | القيود: {student.enrollments.length}
-                      </p>
-                      {latestEnrollment ? (
-                        <p className="text-xs text-muted-foreground">
-                          آخر قيد: {formatStudentEnrollmentPlacementLabel(latestEnrollment)} (
-                          {translateStudentEnrollmentStatus(latestEnrollment.status)})
-                        </p>
-                      ) : null}
-                      <p className="text-xs text-muted-foreground">
-                        الموقع:{" "}
-                        {student.locality
-                          ? formatLocalityHierarchyLabel(
-                            (geographyMaps.localityById.get(student.locality.id) ??
-                              student.locality) as LocalityLabelInput,
-                            geographyMaps,
-                          )
-                          : "غير محدد"}
-                      </p>
-                    </div>
+                  if (resolvedViewMode === "dense-row") {
+                    return (
+                      <EntitySurfaceRow
+                        key={student.id}
+                        title={preview.title}
+                        subtitle={showStudentCardDetails ? preview.subtitle : undefined}
+                        meta={showStudentCardDetails ? preview.meta : undefined}
+                        avatar={preview.avatar}
+                        headerActions={headerActions}
+                        statusChips={showStudentCardDetails ? preview.statusChips : undefined}
+                        density={entitySurface.density}
+                        richness={entitySurface.richness}
+                        colorMode={entitySurface.colorMode}
+                        visualStyle={entitySurface.visualStyle}
+                        effectsPreset={entitySurface.effectsPreset}
+                        shapePreset={entitySurface.shapePreset}
+                        entityKey="students"
+                        inlineActionsMode={entitySurface.inlineActionsMode}
+                        motionPreset={entitySurface.motionPreset}
+                        reducedMotion={entitySurface.reducedMotion}
+                        longPressMode={entitySurface.longPressMode}
+                        avatarMode={entitySurface.avatarMode}
+                        contextOpen={contextStudentId === student.id}
+                        onClick={handleCardClick}
+                        onLongPress={() => {
+                          if (!canOpenContext) {
+                            return;
+                          }
+                          setContextStudentId(student.id);
+                        }}
+                      />
+                    );
+                  }
 
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <Badge variant="outline">
-                        {student.genderLookup?.nameAr ?? translateStudentGender(student.gender)}
-                      </Badge>
-                      <Badge variant="outline">
-                        {student.bloodType ? student.bloodType.name : "بدون فصيلة"}
-                      </Badge>
-                      <Badge variant={orphanBadgeVariant(student.orphanStatus)}>
-                        {student.orphanStatusLookup?.nameAr ?? getOrphanStatusLabel(student.orphanStatus)}
-                      </Badge>
-                      <Badge variant={healthBadgeVariant(student.healthStatus)}>
-                        {student.healthStatusLookup?.nameAr ??
-                          (student.healthStatus
-                            ? translateStudentHealthStatus(student.healthStatus)
-                            : "غير محدد")}
-                      </Badge>
-                      <Badge variant={student.isActive ? "default" : "outline"}>
-                        {student.isActive ? "نشط" : "غير نشط"}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5"
-                      onClick={() => handleStartEdit(student)}
-                      disabled={!canUpdate || updateMutation.isPending}
-                    >
-                      <PencilLine className="h-3.5 w-3.5" />
-                      تعديل
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleToggleActive(student)}
-                      disabled={!canUpdate || updateMutation.isPending}
-                    >
-                      {student.isActive ? "تعطيل" : "تفعيل"}
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="gap-1.5"
-                      onClick={() => handleDelete(student)}
-                      disabled={!canDelete || deleteMutation.isPending}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      حذف
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
+                  return (
+                    <EntitySurfaceCard
+                      key={student.id}
+                      title={preview.title}
+                      subtitle={showStudentCardDetails ? preview.subtitle : undefined}
+                      description={showStudentCardDetails ? preview.description : undefined}
+                      avatar={preview.avatar}
+                      headerActions={headerActions}
+                      fields={showStudentCardDetails ? preview.fields : undefined}
+                      statusChips={showStudentCardDetails ? preview.statusChips : undefined}
+                      viewMode={resolvedViewMode}
+                      density={entitySurface.density}
+                      richness={entitySurface.richness}
+                      colorMode={entitySurface.colorMode}
+                      visualStyle={entitySurface.visualStyle}
+                      effectsPreset={entitySurface.effectsPreset}
+                      shapePreset={entitySurface.shapePreset}
+                      entityKey="students"
+                      inlineActionsMode={entitySurface.inlineActionsMode}
+                      motionPreset={entitySurface.motionPreset}
+                      reducedMotion={entitySurface.reducedMotion}
+                      longPressMode={entitySurface.longPressMode}
+                      avatarMode={entitySurface.avatarMode}
+                      contextOpen={contextStudentId === student.id}
+                      onClick={handleCardClick}
+                      onLongPress={() => {
+                        if (!canOpenContext) {
+                          return;
+                        }
+                        setContextStudentId(student.id);
+                      }}
+                    />
+                  );
+                })}
+              </EntitySurfaceGrid>
+            ) : null}
 
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
               <p className="text-xs text-muted-foreground">
@@ -1206,6 +1328,57 @@ export function StudentsWorkspace() {
           </CardContent>
         </Card>
       </div>
+
+      {contextStudent ? (
+        <div className="fixed inset-0 z-[85]">
+          <div
+            className={cn(
+              "absolute inset-0",
+              usesBlurBackdrop ? "bg-black/24 backdrop-blur-sm" : "bg-black/18",
+            )}
+            onClick={() => setContextStudentId(null)}
+          />
+          <div className="absolute inset-x-4 bottom-4 mx-auto max-w-sm">
+            <div className="rounded-[1.6rem] border border-white/70 bg-white/88 p-3 shadow-[0_30px_90px_-36px_rgba(15,23,42,0.45)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/88">
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                اختصارات الطالب
+              </p>
+              <p className="mt-1 text-[11px] leading-5 text-slate-500 dark:text-white/55">
+                {contextStudent.fullName} • {contextStudent.admissionNo ?? "بدون رقم"}
+              </p>
+              {contextStudentQuickActions.length > 0 ? (
+                <EntitySurfaceQuickActions actions={contextStudentQuickActions} className="mt-3" />
+              ) : (
+                <p className="mt-3 text-xs text-slate-500 dark:text-white/55">
+                  لا توجد اختصارات متاحة لهذا المستخدم.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {selectedStudent ? (
+        <EntityDetailsShell
+          open
+          mode={studentDetailsMode}
+          title={selectedStudent.fullName}
+          subtitle={`${selectedStudent.admissionNo ?? "بدون رقم"} • ${getStudentPlacementLongLabel(selectedStudent)}`}
+          statusChips={getStudentStatusChips(selectedStudent)}
+          actions={selectedStudentQuickActions}
+          density={entitySurface.density}
+          visualStyle={entitySurface.visualStyle}
+          effectsPreset={entitySurface.effectsPreset}
+          shapePreset={entitySurface.shapePreset}
+          onClose={() => setSelectedStudentId(null)}
+        >
+          <StudentDetailsContent
+            student={selectedStudent}
+            canReadSensitive={canReadSensitiveFields}
+            quickActions={selectedStudentQuickActions}
+          />
+        </EntityDetailsShell>
+      ) : null}
 
       <Fab
         icon={<Plus className="h-4 w-4" />}

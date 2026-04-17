@@ -1,7 +1,12 @@
 ﻿"use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ApiError, apiClient } from "@/lib/api/client";
+import {
+  ApiError,
+  apiClient,
+  type AuditLogRollbackPayload,
+  type UpdateAuditLogRetentionPolicyPayload,
+} from "@/lib/api/client";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 
 function useInvalidateAuditLogs() {
@@ -32,6 +37,47 @@ export function useDeleteAuditLogMutation() {
     mutationFn: (auditLogId: string) => apiClient.deleteAuditLog(auditLogId),
     onSuccess: () => {
       invalidate();
+    },
+    onError: handleAuthFailure,
+  });
+}
+
+export function useRollbackAuditLogMutation() {
+  const queryClient = useQueryClient();
+  const invalidate = useInvalidateAuditLogs();
+  const handleAuthFailure = useHandleAuthFailure();
+
+  return useMutation({
+    mutationFn: (input: {
+      auditLogId: string;
+      payload: AuditLogRollbackPayload;
+    }) => apiClient.rollbackAuditLog(input.auditLogId, input.payload),
+    onSuccess: (_result, input) => {
+      invalidate();
+      void queryClient.invalidateQueries({
+        queryKey: ["audit-logs", "details", input.auditLogId],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["audit-logs", "timeline", input.auditLogId],
+      });
+    },
+    onError: handleAuthFailure,
+  });
+}
+
+export function useUpdateAuditLogRetentionPolicyMutation() {
+  const queryClient = useQueryClient();
+  const invalidate = useInvalidateAuditLogs();
+  const handleAuthFailure = useHandleAuthFailure();
+
+  return useMutation({
+    mutationFn: (payload: UpdateAuditLogRetentionPolicyPayload) =>
+      apiClient.updateAuditLogRetentionPolicy(payload),
+    onSuccess: () => {
+      invalidate();
+      void queryClient.invalidateQueries({
+        queryKey: ["audit-logs", "retention-policy"],
+      });
     },
     onError: handleAuthFailure,
   });

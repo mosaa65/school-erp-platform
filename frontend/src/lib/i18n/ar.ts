@@ -174,6 +174,22 @@ const ROLE_CODE_LABELS: Record<string, string> = {
   super_admin: "مدير النظام",
 };
 
+const PERMISSION_CODE_LABELS: Record<string, string> = {
+  "students.read": "الطلاب - قراءة الطلاب العامة",
+  "students.read.summary": "الطلاب - عرض الطلاب",
+  "students.read.details": "الطلاب - عرض تفاصيل الطلاب",
+  "students.quick-actions.use": "الطلاب - استخدام الاختصارات السريعة",
+  "students.fields.sensitive": "الطلاب - عرض الحقول الحساسة",
+  "guardians.read": "أولياء الأمور - قراءة أولياء الأمور العامة",
+  "guardians.read.summary": "أولياء الأمور - عرض أولياء الأمور",
+  "guardians.read.details": "أولياء الأمور - عرض تفاصيل أولياء الأمور",
+  "guardians.quick-actions.use": "أولياء الأمور - استخدام الاختصارات السريعة",
+  "student-enrollments.read": "قيود الطلاب - قراءة القيود العامة",
+  "student-enrollments.read.summary": "قيود الطلاب - عرض قيود الطلاب",
+  "student-enrollments.read.details": "قيود الطلاب - عرض تفاصيل قيود الطلاب",
+  "student-enrollments.quick-actions.use": "قيود الطلاب - استخدام الاختصارات السريعة",
+};
+
 export const PERMISSION_RESOURCE_LABELS: Record<string, string> = {
   users: "المستخدمون",
   roles: "الأدوار",
@@ -274,19 +290,76 @@ export const PERMISSION_RESOURCE_LABELS: Record<string, string> = {
   "student-period-component-scores": "درجات مكونات الفترات",
   "annual-results": "النتائج السنوية",
   "grading-reports": "تقارير الدرجات",
+  branches: "الفروع",
+  currencies: "العملات",
+  "currency-exchange-rates": "أسعار الصرف",
+  "fiscal-years": "السنوات المالية",
+  "fiscal-periods": "الفترات المالية",
+  "chart-of-accounts": "شجرة الحسابات",
+  "journal-entries": "القيود اليومية",
+  "payment-gateways": "بوابات الدفع",
+  "payment-transactions": "عمليات الدفع",
+  "bank-reconciliations": "التسويات البنكية",
+  "financial-reports": "التقارير المالية",
+  "fee-structures": "الهياكل الرسومية",
+  "discount-rules": "قواعد الخصومات",
+  "student-invoices": "فواتير الطلاب",
+  "invoice-installments": "أقساط الفواتير",
+  budgets: "الموازنات",
+  "cost-centers": "مراكز التكلفة",
+  "credit-debit-notes": "إشعارات الدائن والمدين",
+  "recurring-journals": "القيود المتكررة",
+  "tax-configurations": "إعدادات الضرائب",
+  billing: "الفوترة",
+  "finance-hr": "تكاملات المالية والموارد البشرية",
+  "finance-procurement": "تكاملات المالية والمشتريات",
+  "finance-transport": "تكاملات المالية والنقل",
+  "audit-trail": "أثر التدقيق",
+  "financial-funds": "الصناديق المالية",
+  "financial-categories": "الفئات المالية",
+  revenues: "الإيرادات",
+  expenses: "المصروفات",
+  "community-contributions": "المساهمات المجتمعية",
 };
 
 export const PERMISSION_ACTION_LABELS: Record<string, string> = {
   create: "إضافة",
   read: "عرض",
+  "read.summary": "عرض الملخص",
+  "read.details": "عرض التفاصيل",
   update: "تعديل",
   delete: "حذف",
   revoke: "سحب",
+  apply: "تطبيق",
+  "apply-discount": "تطبيق الخصم",
+  approve: "اعتماد",
+  "deduction-journal": "قيد الاستقطاعات",
+  "depreciation-journal": "قيد الإهلاك",
+  "employee-balance": "رصيد الموظف",
+  "fields.sensitive": "عرض الحقول الحساسة",
+  generate: "إنشاء تلقائي",
+  "generate-invoices": "إنشاء الفواتير",
   lock: "قفل",
+  "maintenance-expense": "مصروف الصيانة",
+  "notify-due": "التنبيه بالمواعيد المستحقة",
+  "notify-expiring": "التنبيه بقرب الانتهاء",
   unlock: "فتح القفل",
   calculate: "احتساب",
   "fill-final-exam": "تعبئة الاختبار النهائي",
   "assign-permissions": "تعيين الصلاحيات",
+  "payment-journal": "قيد المدفوعات",
+  "payroll-journal": "قيد الرواتب",
+  "payroll-summary": "ملخص الرواتب",
+  post: "ترحيل",
+  "process-withdrawal": "معالجة الانسحاب",
+  "purchase-journal": "قيد المشتريات",
+  "quick-actions.use": "استخدام الاختصارات السريعة",
+  "read-statement": "عرض الكشف",
+  reconcile: "تسوية",
+  reverse: "عكس القيد",
+  simulate: "محاكاة",
+  "subscription-fee": "رسوم الاشتراك",
+  transition: "تنفيذ الانتقال",
   manage: "إدارة كاملة",
 };
 
@@ -377,8 +450,14 @@ export function translateRoleCode(roleCode: string): string {
 }
 
 export function translatePermissionCode(permissionCode: string): string {
-  const [resourceCode, actionCode] = permissionCode.split(".", 2);
+  const explicitLabel = PERMISSION_CODE_LABELS[permissionCode];
+  if (explicitLabel) {
+    return explicitLabel;
+  }
+
+  const [resourceCode, ...actionParts] = permissionCode.split(".");
   const resourceLabel = PERMISSION_RESOURCE_LABELS[resourceCode] ?? resourceCode;
+  const actionCode = actionParts.join(".");
   const actionLabel = actionCode ? PERMISSION_ACTION_LABELS[actionCode] ?? actionCode : "";
 
   return actionLabel ? `${resourceLabel} - ${actionLabel}` : resourceLabel;

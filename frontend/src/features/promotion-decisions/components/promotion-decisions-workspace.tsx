@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Fab } from "@/components/ui/fab";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { Input } from "@/components/ui/input";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
@@ -536,26 +537,20 @@ export function PromotionDecisionsWorkspace() {
               placeholder="الوصف"
             />
             <div className="grid gap-2 md:grid-cols-2">
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نظامي</span>
-                <input
-                  type="checkbox"
-                  checked={form.isSystem}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, isSystem: event.target.checked }))
-                  }
-                />
-              </label>
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشط</span>
-                <input
-                  type="checkbox"
-                  checked={form.isActive}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                />
-              </label>
+              <FormBooleanField
+                label="نظامي"
+                checked={form.isSystem}
+                onCheckedChange={(checked) =>
+                  setForm((prev) => ({ ...prev, isSystem: checked }))
+                }
+              />
+              <FormBooleanField
+                label="نشط"
+                checked={form.isActive}
+                onCheckedChange={(checked) =>
+                  setForm((prev) => ({ ...prev, isActive: checked }))
+                }
+              />
             </div>
 
             {formError ? (

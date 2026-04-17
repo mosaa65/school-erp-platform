@@ -22,6 +22,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import type { AuthUser } from '../../common/interfaces/auth-user.interface';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
+import { ListEmployeeOptionsDto } from './dto/list-employee-options.dto';
 import {
   ListEmployeesDto,
   OperationalReadinessFilter,
@@ -69,6 +70,17 @@ export class EmployeesController {
   })
   findAll(@Query() query: ListEmployeesDto) {
     return this.employeesService.findAll(query);
+  }
+
+  @Get('options')
+  @RequirePermissions('employees.read')
+  @ApiOperation({ summary: 'Get lightweight employee options' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'isActive', required: false, type: Boolean })
+  findOptions(@Query() query: ListEmployeeOptionsDto) {
+    return this.employeesService.findOptions(query);
   }
 
   @Get('organization-options')

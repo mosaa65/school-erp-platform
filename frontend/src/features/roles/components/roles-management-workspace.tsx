@@ -10,13 +10,13 @@ import {
   ShieldPlus,
   Trash2,
   Type,
-  ToggleLeft,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SearchField } from "@/components/ui/search-field";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
@@ -37,7 +37,6 @@ import { useRolesQuery } from "@/features/roles/hooks/use-roles-query";
 import { usePermissionsOptionsQuery } from "@/features/roles/hooks/use-permissions-options-query";
 import { PermissionsSelector } from "@/components/ui/permissions-selector";
 import { ApiError, type RoleListItem } from "@/lib/api/client";
-import { cn } from "@/lib/utils";
 import { generateRoleCode } from "@/lib/auto-code";
 
 
@@ -379,16 +378,13 @@ export function RolesManagementWorkspace() {
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
-            <SearchField
-              containerClassName="flex-1"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="ابحث بالاسم..."
-            />
-          </div>
-        </div>
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="ابحث بالاسم..."
+          onFilterClick={() => undefined}
+          showFilterButton={false}
+        />
 
         <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
           <CardHeader className="space-y-3">
@@ -575,27 +571,16 @@ export function RolesManagementWorkspace() {
                 />
               </div>
 
-              <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-900/5 dark:bg-white/5 border border-border/20 backdrop-blur-sm group transition-all hover:bg-slate-900/10 dark:hover:bg-white/10">
-                <div className="flex items-center gap-3">
-                  <div className={cn(
-                    "flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-500 shadow-sm",
-                    formState.isActive ? "bg-emerald-500/20 text-emerald-500 border-emerald-500/20" : "bg-slate-500/20 text-slate-500 border-slate-500/20"
-                  )}>
-                    <ToggleLeft className={cn("h-5 w-5 transition-transform duration-500", formState.isActive && "rotate-180")} />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold">حالة الدور</span>
-                    <span className="text-[10px] text-muted-foreground">تفعيل أو تعطيل هذا الدور في النظام</span>
-                  </div>
-                </div>
-                <input
-                  type="checkbox"
-                  className="h-5 w-5 rounded-lg border-primary/20 bg-background/50 text-primary focus:ring-primary/20 accent-primary cursor-pointer transition-all hover:scale-110"
-                  checked={formState.isActive}
-                  onChange={(e) => setFormState({ ...formState, isActive: e.target.checked })}
-                  disabled={isFormSubmitting}
-                />
-              </div>
+              <FormBooleanField
+                label="حالة الدور"
+                description="تفعيل أو تعطيل هذا الدور في النظام"
+                checked={formState.isActive}
+                onCheckedChange={(checked) =>
+                  setFormState({ ...formState, isActive: checked })
+                }
+                disabled={isFormSubmitting}
+                className="rounded-2xl bg-slate-900/5 dark:bg-white/5"
+              />
 
               <div className="space-y-4 pt-2">
                 <div className="flex items-center justify-between gap-2 px-1">

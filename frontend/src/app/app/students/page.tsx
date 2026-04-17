@@ -4,7 +4,7 @@ import { StudentsWorkspace } from "@/features/students/components/students-works
 
 export default function StudentsPage() {
   return (
-    <PermissionGuard permission="students.read">
+    <PermissionGuard requiredAnyPermission={["students.read.summary"]}>
       <div className="space-y-4">
         <div className="space-y-2">
           <Badge variant="secondary" className="w-fit">

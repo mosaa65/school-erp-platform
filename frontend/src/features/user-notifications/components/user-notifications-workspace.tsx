@@ -20,6 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { Input } from "@/components/ui/input";
 import { SelectField } from "@/components/ui/select-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
@@ -358,72 +359,54 @@ export function UserNotificationsWorkspace() {
           {preferencesDraft ? (
             <>
               <div className="grid gap-2 md:grid-cols-2">
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>تفعيل إشعارات داخل التطبيق</span>
-                  <input
-                    type="checkbox"
-                    checked={preferencesDraft.inAppEnabled}
-                    onChange={(event) =>
-                      handleTogglePreference("inAppEnabled", event.target.checked)
-                    }
-                    data-testid="pref-in-app-enabled"
-                  />
-                </label>
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>الإجراءات المطلوبة فقط</span>
-                  <input
-                    type="checkbox"
-                    checked={preferencesDraft.actionRequiredOnly}
-                    onChange={(event) =>
-                      handleTogglePreference("actionRequiredOnly", event.target.checked)
-                    }
-                    data-testid="pref-action-required-only"
-                  />
-                </label>
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>إشعارات الإجازات</span>
-                  <input
-                    type="checkbox"
-                    checked={preferencesDraft.leaveNotificationsEnabled}
-                    onChange={(event) =>
-                      handleTogglePreference("leaveNotificationsEnabled", event.target.checked)
-                    }
-                    data-testid="pref-leave-enabled"
-                  />
-                </label>
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>إشعارات العقود</span>
-                  <input
-                    type="checkbox"
-                    checked={preferencesDraft.contractNotificationsEnabled}
-                    onChange={(event) =>
-                      handleTogglePreference("contractNotificationsEnabled", event.target.checked)
-                    }
-                    data-testid="pref-contract-enabled"
-                  />
-                </label>
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>إشعارات المستندات</span>
-                  <input
-                    type="checkbox"
-                    checked={preferencesDraft.documentNotificationsEnabled}
-                    onChange={(event) =>
-                      handleTogglePreference("documentNotificationsEnabled", event.target.checked)
-                    }
-                    data-testid="pref-document-enabled"
-                  />
-                </label>
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>إشعارات دورة الحياة</span>
-                  <input
-                    type="checkbox"
-                    checked={preferencesDraft.lifecycleNotificationsEnabled}
-                    onChange={(event) =>
-                      handleTogglePreference("lifecycleNotificationsEnabled", event.target.checked)
-                    }
-                    data-testid="pref-lifecycle-enabled"
-                  />
-                </label>
+                <FormBooleanField
+                  label="تفعيل إشعارات داخل التطبيق"
+                  checked={preferencesDraft.inAppEnabled}
+                  onCheckedChange={(checked) =>
+                    handleTogglePreference("inAppEnabled", checked)
+                  }
+                  data-testid="pref-in-app-enabled"
+                />
+                <FormBooleanField
+                  label="الإجراءات المطلوبة فقط"
+                  checked={preferencesDraft.actionRequiredOnly}
+                  onCheckedChange={(checked) =>
+                    handleTogglePreference("actionRequiredOnly", checked)
+                  }
+                  data-testid="pref-action-required-only"
+                />
+                <FormBooleanField
+                  label="إشعارات الإجازات"
+                  checked={preferencesDraft.leaveNotificationsEnabled}
+                  onCheckedChange={(checked) =>
+                    handleTogglePreference("leaveNotificationsEnabled", checked)
+                  }
+                  data-testid="pref-leave-enabled"
+                />
+                <FormBooleanField
+                  label="إشعارات العقود"
+                  checked={preferencesDraft.contractNotificationsEnabled}
+                  onCheckedChange={(checked) =>
+                    handleTogglePreference("contractNotificationsEnabled", checked)
+                  }
+                  data-testid="pref-contract-enabled"
+                />
+                <FormBooleanField
+                  label="إشعارات المستندات"
+                  checked={preferencesDraft.documentNotificationsEnabled}
+                  onCheckedChange={(checked) =>
+                    handleTogglePreference("documentNotificationsEnabled", checked)
+                  }
+                  data-testid="pref-document-enabled"
+                />
+                <FormBooleanField
+                  label="إشعارات دورة الحياة"
+                  checked={preferencesDraft.lifecycleNotificationsEnabled}
+                  onCheckedChange={(checked) =>
+                    handleTogglePreference("lifecycleNotificationsEnabled", checked)
+                  }
+                  data-testid="pref-lifecycle-enabled"
+                />
               </div>
               <div className="flex justify-end">
                 <Button

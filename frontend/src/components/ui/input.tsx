@@ -10,25 +10,26 @@ import {
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   icon?: React.ReactNode;
+  containerClassName?: string;
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, icon, ...props }, ref) => {
+  ({ className, containerClassName, type, icon, ...props }, ref) => {
     const resolvedIcon =
       icon ?? (props.required ? <Asterisk className="text-rose-500" /> : null);
     const renderedIcon =
       resolvedIcon && React.isValidElement(resolvedIcon)
         ? React.cloneElement(resolvedIcon as React.ReactElement<{ className?: string }>, {
             className: cn(
+              (resolvedIcon as React.ReactElement<{ className?: string }>).props.className,
+              "text-[color:var(--app-accent-color)]",
               FIELD_ICON_CLASS_NAME,
-              (resolvedIcon as React.ReactElement<{ className?: string }>).props.className ??
-                "text-[color:var(--app-accent-color)]",
             ),
           })
         : resolvedIcon;
 
     return (
-      <div className="group relative w-full">
+      <div className={cn("group relative w-full min-w-0 overflow-hidden", containerClassName)}>
         {renderedIcon ? (
           <div
             className={cn(

@@ -3,13 +3,14 @@ import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   FIELD_ICON_CLASS_NAME,
-  FIELD_ICON_BADGE_CLASS_NAME,
-  FIELD_ICON_EDGE_RIGHT_CLASS_NAME,
+  FIELD_ICON_SMALL_BADGE_CLASS_NAME,
+  FIELD_ICON_EDGE_LEFT_CLASS_NAME,
   FIELD_SURFACE_CLASS_NAME,
 } from "@/components/ui/field-styles";
 
 type SearchFieldProps = React.ComponentProps<"input"> & {
   containerClassName?: string;
+  "data-testid"?: string;
 };
 
 export function SearchField({
@@ -18,11 +19,11 @@ export function SearchField({
   ...props
 }: SearchFieldProps) {
   return (
-    <div className={cn("group relative w-full", containerClassName)}>
+    <div className={cn("group relative w-full min-w-0 overflow-hidden", containerClassName)}>
       <div
         className={cn(
-          FIELD_ICON_BADGE_CLASS_NAME,
-          FIELD_ICON_EDGE_RIGHT_CLASS_NAME,
+          FIELD_ICON_SMALL_BADGE_CLASS_NAME,
+          FIELD_ICON_EDGE_LEFT_CLASS_NAME,
           "group-focus-within:text-[color:var(--app-accent-color)]",
         )}
       >
@@ -32,7 +33,7 @@ export function SearchField({
         type="text"
         className={cn(
           FIELD_SURFACE_CLASS_NAME,
-          "pr-14 pl-4",
+          "pl-11 pr-4",
           className,
         )}
         {...props}

@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
@@ -349,19 +350,21 @@ export function UsersManagementWorkspace({
         ...basePayload,
         guardianId: toOptionalString(formState.guardianId),
       },
-      {
-        onSuccess: (createdUser) => {
-          resetForm();
-          setPage(1);
-          setActionSuccess("تم إنشاء المستخدم بنجاح.");
-          setCreatedActivationSummary(
-            `كلمة المرور الأولية لمرة واحدة: ${createdUser.activationSetup.initialOneTimePassword} | تنتهي: ${new Date(
-              createdUser.activationSetup.expiresAt,
-            ).toLocaleString("ar-EG")}`,
-          );
+        {
+          onSuccess: (createdUser) => {
+            resetForm();
+            setPage(1);
+            setActionSuccess("تم إنشاء المستخدم بنجاح.");
+            setCreatedActivationSummary(
+              `تم إرسال كلمة المرور الأولية إلى إشعارات مدير النظام فقط. تنتهي الصلاحية: ${new Date(
+                createdUser.activationSetup.expiresAt,
+              ).toLocaleString("ar-EG")} | عدد المدراء الذين تم إشعارهم: ${
+                createdUser.activationSetup.notifiedSystemAdminsCount ?? 0
+              }`,
+            );
+          },
         },
-      },
-    );
+      );
   };
 
   const handleToggleActive = (user: UserListItem) => {
@@ -936,19 +939,16 @@ export function UsersManagementWorkspace({
               </div>
             </div>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    isActive: event.target.checked,
-                  }))
-                }
-              />
-            </label>
+            <FormBooleanField
+              label="نشط"
+              checked={formState.isActive}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({
+                  ...prev,
+                  isActive: checked,
+                }))
+              }
+            />
 
             <div className="space-y-1">
               <Label>البريد الإلكتروني (اختياري)</Label>
@@ -983,9 +983,9 @@ export function UsersManagementWorkspace({
             ) : null}
             {createdActivationSummary ? (
               <div className="space-y-2 rounded-md border border-sky-300/40 bg-sky-500/10 p-3 text-xs text-sky-700 dark:text-sky-300">
-                <p className="font-medium">تم إصدار كلمة المرور الأولية لمرة واحدة.</p>
-                <p>شاركها مع المستخدم عبر قناة آمنة فقط، ولن تُعرض مرة أخرى بعد إغلاق هذه النافذة.</p>
-                <p className="break-all font-mono text-[11px] leading-6" dir="ltr">
+                <p className="font-medium">تم إصدار كلمة المرور الأولية بنجاح.</p>
+                <p>تم إرسال كلمة المرور مباشرة إلى إشعارات مدير النظام فقط، ولن تظهر هنا حفاظًا على الأمان.</p>
+                <p className="leading-6">
                   {createdActivationSummary}
                 </p>
               </div>

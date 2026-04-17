@@ -1,0 +1,96 @@
+
+> frontend@0.1.0 predev
+> node scripts/swc-workaround.cjs
+
+
+> frontend@0.1.0 dev
+> node scripts/run-next.cjs dev
+
+  ▲ Next.js 14.2.28
+  - Local:        http://localhost:3001
+  - Network:      http://0.0.0.0:3001
+  - Environments: .env.local, .env
+
+ ✓ Starting...
+ ✓ Ready in 5.8s
+ ○ Compiling / ...
+ ✓ Compiled /app/audit-logs in 33.5s (1069 modules)
+ GET / 307 in 1650ms
+ GET /app/audit-logs 200 in 10431ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 1632ms (590 modules)
+ GET /favicon.ico 200 in 2183ms
+ GET /app/students 200 in 486ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1243ms (1104 modules)
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 1663ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 51ms
+ ○ Compiling /app/profile ...
+ ✓ Compiled /app/profile in 2.2s (1187 modules)
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 507ms
+ ○ Compiling / ...
+ ✓ Compiled / in 901ms (625 modules)
+ GET / 307 in 1389ms
+ ○ Compiling /auth/login ...
+ ✓ Compiled /auth/login in 2.5s (1227 modules)
+ GET /auth/login 200 in 3209ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 2.1s (1192 modules)
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 2996ms
+ ✓ Compiled /auth/login in 432ms (617 modules)
+ ○ Compiling /app ...
+ ✓ Compiled /app in 2.9s (1237 modules)
+ ✓ Compiled in 694ms (606 modules)
+ ✓ Compiled in 2.9s (1237 modules)
+ ✓ Compiled in 2.2s (1223 modules)
+ ✓ Compiled in 3.1s (1223 modules)
+ ✓ Compiled in 3.7s (1237 modules)
+ ✓ Compiled in 1920ms (1237 modules)
+ ✓ Compiled in 3.1s (1219 modules)
+ GET /app/students 200 in 927ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 777ms (661 modules)
+ GET /favicon.ico 200 in 1225ms
+ ✓ Compiled in 1414ms (1251 modules)
+ GET /app/students 200 in 583ms
+ GET /favicon.ico 200 in 259ms
+ ✓ Compiled in 1811ms (1257 modules)
+ GET /app/students 200 in 582ms
+ GET /favicon.ico 200 in 394ms
+ ✓ Compiled in 3.2s (1227 modules)
+ GET /app/students 200 in 532ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 691ms (665 modules)
+ GET /favicon.ico 200 in 1118ms
+ ✓ Compiled in 2.6s (1231 modules)
+ GET /app/students 200 in 1160ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 854ms (667 modules)
+ GET /favicon.ico 200 in 1339ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 7.4s (1279 modules)
+ GET /app/students 200 in 1102ms
+ GET /favicon.ico 200 in 164ms
+ ○ Compiling /app/students/[studentId] ...
+ ✓ Compiled /app/students/[studentId] in 2s (1276 modules)
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 4s (1238 modules)
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 5001ms
+ ○ Compiling /app/guardians ...
+ ✓ Compiled /app/guardians in 1954ms (1256 modules)
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 1591ms (1489 modules)
+ GET /app/guardians 200 in 268ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 665ms (700 modules)
+ GET /favicon.ico 200 in 1044ms
+ ○ Compiling /app/students ...
+ ✓ Compiled /app/students in 569ms (685 modules)
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 819ms (1454 modules)
+ ○ Compiling /app/student-guardians ...
+ ✓ Compiled /app/student-guardians in 3.3s (1502 modules)
+ ○ Compiling /app/student-enrollments ...
+ ✓ Compiled /app/student-enrollments in 5.5s (1535 modules)
+ ○ Compiling /app/profile ...
+ ✓ Compiled /app/profile in 1329ms (706 modules)

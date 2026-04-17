@@ -29,9 +29,9 @@ export function SelectField({
     resolvedIcon && React.isValidElement(resolvedIcon)
       ? React.cloneElement(resolvedIcon as React.ReactElement<{ className?: string }>, {
           className: cn(
+            (resolvedIcon as React.ReactElement<{ className?: string }>).props.className,
+            "text-[color:var(--app-accent-color)]",
             FIELD_ICON_CLASS_NAME,
-            (resolvedIcon as React.ReactElement<{ className?: string }>).props.className ??
-              "text-[color:var(--app-accent-color)]",
           ),
         })
       : resolvedIcon;
@@ -60,7 +60,7 @@ export function SelectField({
       <select
         className={cn(
           FIELD_SURFACE_CLASS_NAME,
-          "appearance-none px-4",
+          "appearance-none px-4 text-ellipsis",
           hasIcon ? "pr-14" : "pr-4",
           "pl-14",
           className,

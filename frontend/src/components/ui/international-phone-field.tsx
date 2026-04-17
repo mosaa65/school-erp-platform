@@ -184,6 +184,7 @@ export function InternationalPhoneField({
           disabled={disabled}
           icon={<Phone className="h-4 w-4" />}
           className={cn("h-11 rounded-2xl", inputClassName)}
+          containerClassName="min-w-0 flex-1"
           dir="ltr"
         />
 

@@ -15,10 +15,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SearchField } from "@/components/ui/search-field";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import { StudentPickerSheet } from "@/components/ui/student-picker-sheet";
+import { SystemMessageInline } from "@/components/feedback/system-message-inline";
 import {
   Card,
   CardContent,
@@ -28,11 +29,11 @@ import {
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
 import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { FormField } from "@/components/ui/form-field";
 import { TextareaField } from "@/components/ui/textarea-field";
+import { useSystemMessage } from "@/hooks/use-system-message";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateStudentProblemMutation,
@@ -102,6 +103,10 @@ function formatDate(value: string | null): string {
   return date.toLocaleDateString("ar-YE");
 }
 
+function getErrorMessage(error: unknown, fallbackMessage: string): string {
+  return error instanceof Error ? error.message : fallbackMessage;
+}
+
 function toFormState(item: StudentProblemListItem): StudentProblemFormState {
   return {
     studentId: item.studentId,
@@ -131,6 +136,7 @@ function buildStudentPickerOptionFromProblem(
 
 export function StudentProblemsWorkspace() {
   const { hasPermission } = useRbac();
+  const { notify, preferences } = useSystemMessage();
   const canCreate = hasPermission("student-problems.create");
   const canUpdate = hasPermission("student-problems.update");
   const canDelete = hasPermission("student-problems.delete");
@@ -166,7 +172,10 @@ export function StudentProblemsWorkspace() {
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formState, setFormState] = React.useState<StudentProblemFormState>(DEFAULT_FORM_STATE);
-  const [formError, setFormError] = React.useState<string | null>(null);
+  const [formNotice, setFormNotice] = React.useState<{
+    tone: "warning" | "error";
+    message: string;
+  } | null>(null);
   const [selectedFormStudent, setSelectedFormStudent] =
     React.useState<StudentPickerOption | null>(null);
   const [selectedStudentFilterOption, setSelectedStudentFilterOption] =
@@ -194,12 +203,6 @@ export function StudentProblemsWorkspace() {
   const pagination = problemsQuery.data?.pagination;
   const isEditing = editingProblemId !== null;
 
-  const mutationError =
-    (createMutation.error as Error | null)?.message ??
-    (updateMutation.error as Error | null)?.message ??
-    (deleteMutation.error as Error | null)?.message ??
-    null;
-
   React.useEffect(() => {
     if (!isEditing) {
       return;
@@ -209,7 +212,7 @@ export function StudentProblemsWorkspace() {
     if (!stillExists) {
       setEditingProblemId(null);
       setFormState(DEFAULT_FORM_STATE);
-      setFormError(null);
+      setFormNotice(null);
       setSelectedFormStudent(null);
       setIsFormOpen(false);
     }
@@ -218,7 +221,7 @@ export function StudentProblemsWorkspace() {
   useDebounceEffect(() => {
       setPage(1);
       setSearch(searchInput.trim());
-    }, 400, [searchInput]);
+  }, 400, [searchInput]);
 
   React.useEffect(() => {
     if (!isFilterOpen) {
@@ -246,17 +249,18 @@ export function StudentProblemsWorkspace() {
   const resetForm = () => {
     setEditingProblemId(null);
     setFormState(DEFAULT_FORM_STATE);
-    setFormError(null);
+    setFormNotice(null);
     setSelectedFormStudent(null);
     setIsFormOpen(false);
   };
 
   const handleStartCreate = () => {
     if (!canCreate) {
+      notify.warning("لا تملك الصلاحية المطلوبة لإضافة قيد جديد.");
       return;
     }
 
-    setFormError(null);
+    setFormNotice(null);
     setEditingProblemId(null);
     setFormState(DEFAULT_FORM_STATE);
     setSelectedFormStudent(null);
@@ -265,30 +269,42 @@ export function StudentProblemsWorkspace() {
 
   const validateForm = (): boolean => {
     if (!formState.studentId || !formState.problemDate || !formState.problemDescription.trim()) {
-      setFormError("الطالب وتاريخ المشكلة ووصف المشكلة حقول مطلوبة.");
+      setFormNotice({
+        tone: "warning",
+        message: "الطالب وتاريخ المشكلة ووصف المشكلة حقول مطلوبة.",
+      });
       return false;
     }
 
     if (formState.problemType.trim().length > 50) {
-      setFormError("نوع المشكلة يجب ألا يتجاوز 50 حرفًا.");
+      setFormNotice({
+        tone: "warning",
+        message: "نوع المشكلة يجب ألا يتجاوز 50 حرفًا.",
+      });
       return false;
     }
 
     if (formState.problemDescription.trim().length > 1000) {
-      setFormError("وصف المشكلة يجب ألا يتجاوز 1000 حرف.");
+      setFormNotice({
+        tone: "warning",
+        message: "وصف المشكلة يجب ألا يتجاوز 1000 حرف.",
+      });
       return false;
     }
 
     if (formState.actionsTaken.trim().length > 1000) {
-      setFormError("الإجراءات المتخذة يجب ألا تتجاوز 1000 حرف.");
+      setFormNotice({
+        tone: "warning",
+        message: "الإجراءات المتخذة يجب ألا تتجاوز 1000 حرف.",
+      });
       return false;
     }
 
-    setFormError(null);
+    setFormNotice(null);
     return true;
   };
 
-  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmitForm = async (event?: React.FormEvent<HTMLFormElement>) => {
     event?.preventDefault();
 
     if (!validateForm()) {
@@ -308,51 +324,83 @@ export function StudentProblemsWorkspace() {
 
     if (isEditing && editingProblemId) {
       if (!canUpdate) {
-        setFormError("لا تملك الصلاحية المطلوبة: student-problems.update.");
+        const message = "لا تملك الصلاحية المطلوبة لتعديل قيد الطالب.";
+        setFormNotice({ tone: "error", message });
+        notify.error(message);
         return;
       }
 
-      updateMutation.mutate(
-        {
-          problemId: editingProblemId,
-          payload,
-        },
-        {
-          onSuccess: () => {
-            resetForm();
+      try {
+        await notify.promise(
+          () =>
+            updateMutation.mutateAsync({
+              problemId: editingProblemId,
+              payload,
+            }),
+          {
+            loading: "جارٍ تحديث قيد الطالب...",
+            success: "تم تحديث قيد الطالب بنجاح.",
+            error: (error) => ({
+              message: getErrorMessage(error, "تعذر تحديث قيد الطالب."),
+              persistent: true,
+            }),
           },
-        },
-      );
+        );
+        resetForm();
+      } catch (error) {
+        setFormNotice({
+          tone: "error",
+          message: getErrorMessage(error, "تعذر تحديث قيد الطالب."),
+        });
+      }
       return;
     }
 
     if (!canCreate) {
-      setFormError("لا تملك الصلاحية المطلوبة: student-problems.create.");
+      const message = "لا تملك الصلاحية المطلوبة لإضافة قيد جديد.";
+      setFormNotice({
+        tone: "error",
+        message,
+      });
+      notify.error(message);
       return;
     }
 
-    createMutation.mutate(payload, {
-      onSuccess: () => {
-        resetForm();
-        setPage(1);
-      },
-    });
+    try {
+      await notify.promise(() => createMutation.mutateAsync(payload), {
+        loading: "جارٍ إضافة قيد الطالب...",
+        success: "تمت إضافة قيد الطالب بنجاح.",
+        error: (error) => ({
+          message: getErrorMessage(error, "تعذر إضافة قيد الطالب."),
+          persistent: true,
+        }),
+      });
+      resetForm();
+      setPage(1);
+    } catch (error) {
+      setFormNotice({
+        tone: "error",
+        message: getErrorMessage(error, "تعذر إضافة قيد الطالب."),
+      });
+    }
   };
 
   const handleStartEdit = (item: StudentProblemListItem) => {
     if (!canUpdate) {
+      notify.warning("لا تملك الصلاحية المطلوبة لتعديل قيد الطالب.");
       return;
     }
 
-    setFormError(null);
+    setFormNotice(null);
     setEditingProblemId(item.id);
     setFormState(toFormState(item));
     setSelectedFormStudent(buildStudentPickerOptionFromProblem(item));
     setIsFormOpen(true);
   };
 
-  const handleDelete = (item: StudentProblemListItem) => {
+  const handleDelete = async (item: StudentProblemListItem) => {
     if (!canDelete) {
+      notify.warning("لا تملك الصلاحية المطلوبة لحذف قيد الطالب.");
       return;
     }
 
@@ -363,13 +411,47 @@ export function StudentProblemsWorkspace() {
       return;
     }
 
-    deleteMutation.mutate(item.id, {
-      onSuccess: () => {
-        if (editingProblemId === item.id) {
-          resetForm();
+    try {
+      await notify.promise(() => deleteMutation.mutateAsync(item.id), {
+        loading: `جارٍ حذف قيد الطالب ${item.student.fullName}...`,
+        success: `تم حذف قيد الطالب ${item.student.fullName}.`,
+        error: (error) => ({
+          message: getErrorMessage(error, "تعذر حذف قيد الطالب."),
+          persistent: true,
+        }),
+      });
+      if (editingProblemId === item.id) {
+        resetForm();
+      }
+    } catch (error) {
+      if (editingProblemId === item.id) {
+        setFormNotice({
+          tone: "error",
+          message: getErrorMessage(error, "تعذر حذف قيد الطالب."),
+        });
+      }
+    }
+  };
+
+  const handleRefresh = async () => {
+    try {
+      await notify.promise(async () => {
+        const result = await problemsQuery.refetch();
+        if (result.error) {
+          throw result.error;
         }
-      },
-    });
+        return result;
+      }, {
+        loading: "جارٍ تحديث قيود الطلاب...",
+        success: "تم تحديث قيود الطلاب.",
+        error: (error) => ({
+          message: getErrorMessage(error, "تعذر تحديث قيود الطلاب."),
+          persistent: true,
+        }),
+      });
+    } catch {
+      // Error message is already handled by the unified message layer.
+    }
   };
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
@@ -410,26 +492,30 @@ export function StudentProblemsWorkspace() {
     ].reduce((acc, value) => acc + value, 0);
     return count;
   }, [activeFilter, fromDateFilter, searchInput, statusFilter, studentFilter, toDateFilter]);
+  const hasActiveFilters = activeFiltersCount > 0;
+
+  const inlineMessageProps = {
+    colorMode: preferences.colorMode,
+    variant: preferences.variant,
+    dismissible: false,
+  } as const;
+
+  const emptyStateMessage = hasActiveFilters
+    ? "لا توجد نتائج مطابقة للفلاتر الحالية."
+    : canCreate
+      ? "لا توجد قيود طلاب بعد. يمكنك البدء بإضافة أول قيد."
+      : "لا توجد قيود طلاب متاحة حاليًا.";
 
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
-            <SearchField
-              containerClassName="flex-1"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="بحث بالطالب/الوصف..."
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterTriggerButton
-              count={activeFiltersCount}
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-            />
-          </div>
-        </div>
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="بحث بالطالب/الوصف..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+        />
 
         <FilterDrawer
           open={isFilterOpen}
@@ -520,126 +606,155 @@ export function StudentProblemsWorkspace() {
           </CardHeader>
 
           <CardContent className="space-y-3">
-          {problemsQuery.isPending ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ تحميل البيانات...
-            </div>
-          ) : null}
+            {problemsQuery.isPending ? (
+              <SystemMessageInline
+                tone="loading"
+                message="جارٍ تحميل بيانات قيود الطلاب..."
+                densityPreset={preferences.densityPreset}
+                {...inlineMessageProps}
+              />
+            ) : null}
 
-          {problemsQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {problemsQuery.error instanceof Error ? problemsQuery.error.message : "تعذّر تحميل البيانات."}
-            </div>
-          ) : null}
+            {problemsQuery.error ? (
+              <SystemMessageInline
+                tone="error"
+                message={getErrorMessage(problemsQuery.error, "تعذّر تحميل قيود الطلاب.")}
+                densityPreset={preferences.densityPreset}
+                action={{ label: "إعادة المحاولة", dismissOnClick: false }}
+                onAction={() => void handleRefresh()}
+                {...inlineMessageProps}
+              />
+            ) : null}
 
-          {!problemsQuery.isPending && problems.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              لا توجد نتائج مطابقة.
-            </div>
-          ) : null}
+            {!problemsQuery.isPending && !problemsQuery.error && problems.length === 0 ? (
+              <SystemMessageInline
+                tone="neutral"
+                message={emptyStateMessage}
+                densityPreset={preferences.densityPreset}
+                action={
+                  hasActiveFilters
+                    ? { label: "مسح الفلاتر", dismissOnClick: false }
+                    : canCreate
+                      ? { label: "إضافة قيد", dismissOnClick: false }
+                      : undefined
+                }
+                onAction={
+                  hasActiveFilters
+                    ? clearFilters
+                    : canCreate
+                      ? handleStartCreate
+                      : undefined
+                }
+                {...inlineMessageProps}
+              />
+            ) : null}
 
-          {problems.map((item) => (
-            <div
-              key={item.id}
-              data-testid="student-problem-card"
-              className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <p className="font-medium">
-                    {item.student.fullName} ({item.student.admissionNo ?? "بدون رقم"})
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    التاريخ: {formatDate(item.problemDate)} | النوع: {item.problemType ?? "-"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">الوصف: {item.problemDescription}</p>
-                  <p className="text-xs text-muted-foreground">الإجراء: {item.actionsTaken ?? "-"}</p>
+            {problems.map((item) => (
+              <div
+                key={item.id}
+                data-testid="student-problem-card"
+                className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="space-y-1">
+                    <p className="font-medium">
+                      {item.student.fullName} ({item.student.admissionNo ?? "بدون رقم"})
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      التاريخ: {formatDate(item.problemDate)} | النوع: {item.problemType ?? "-"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      الوصف: {item.problemDescription}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      الإجراء: {item.actionsTaken ?? "-"}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge variant={item.isResolved ? "default" : "outline"}>
+                      {item.isResolved ? "محلولة" : "غير محلولة"}
+                    </Badge>
+                    <Badge variant={item.hasMinutes ? "secondary" : "outline"}>
+                      {item.hasMinutes ? "محضر" : "بدون محضر"}
+                    </Badge>
+                    <Badge variant={item.isActive ? "default" : "outline"}>
+                      {item.isActive ? "نشط" : "غير نشط"}
+                    </Badge>
+                  </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant={item.isResolved ? "default" : "outline"}>
-                    {item.isResolved ? "محلولة" : "غير محلولة"}
-                  </Badge>
-                  <Badge variant={item.hasMinutes ? "secondary" : "outline"}>
-                    {item.hasMinutes ? "محضر" : "بدون محضر"}
-                  </Badge>
-                  <Badge variant={item.isActive ? "default" : "outline"}>
-                    {item.isActive ? "نشط" : "غير نشط"}
-                  </Badge>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    data-testid="student-problem-card-edit"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleStartEdit(item)}
+                    disabled={!canUpdate || updateMutation.isPending}
+                  >
+                    <PencilLine className="h-3.5 w-3.5" />
+                    تعديل
+                  </Button>
+                  <Button
+                    data-testid="student-problem-card-delete"
+                    variant="destructive"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleDelete(item)}
+                    disabled={!canDelete || deleteMutation.isPending}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    حذف
+                  </Button>
                 </div>
               </div>
+            ))}
 
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
+              <p className="text-xs text-muted-foreground">
+                الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
+              </p>
+              <div className="flex items-center gap-2">
                 <Button
-                  data-testid="student-problem-card-edit"
                   variant="outline"
                   size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleStartEdit(item)}
-                  disabled={!canUpdate || updateMutation.isPending}
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={!pagination || pagination.page <= 1 || problemsQuery.isFetching}
                 >
-                  <PencilLine className="h-3.5 w-3.5" />
-                  تعديل
+                  السابق
                 </Button>
                 <Button
-                  data-testid="student-problem-card-delete"
-                  variant="destructive"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setPage((prev) =>
+                      pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
+                    )
+                  }
+                  disabled={
+                    !pagination ||
+                    pagination.page >= pagination.totalPages ||
+                    problemsQuery.isFetching
+                  }
+                >
+                  التالي
+                </Button>
+                <Button
+                  variant="ghost"
                   size="sm"
                   className="gap-1.5"
-                  onClick={() => handleDelete(item)}
-                  disabled={!canDelete || deleteMutation.isPending}
+                  onClick={() => void handleRefresh()}
+                  disabled={problemsQuery.isFetching}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  حذف
+                  <RefreshCw
+                    className={`h-4 w-4 ${problemsQuery.isFetching ? "animate-spin" : ""}`}
+                  />
+                  تحديث
                 </Button>
               </div>
             </div>
-          ))}
-
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-            <p className="text-xs text-muted-foreground">
-              الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={!pagination || pagination.page <= 1 || problemsQuery.isFetching}
-              >
-                السابق
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPage((prev) =>
-                    pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                  )
-                }
-                disabled={
-                  !pagination ||
-                  pagination.page >= pagination.totalPages ||
-                  problemsQuery.isFetching
-                }
-              >
-                التالي
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => void problemsQuery.refetch()}
-                disabled={problemsQuery.isFetching}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${problemsQuery.isFetching ? "animate-spin" : ""}`}
-                />
-                تحديث
-              </Button>
-            </div>
-          </div>
-        </CardContent>
+          </CardContent>
         </Card>
       </div>
 
@@ -661,9 +776,12 @@ export function StudentProblemsWorkspace() {
         showFooter={false}
       >
         {!canCreate && !isEditing ? (
-          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            لا تملك الصلاحية المطلوبة: <code>student-problems.create</code>.
-          </div>
+          <SystemMessageInline
+            tone="warning"
+            message="لا تملك الصلاحية المطلوبة: student-problems.create."
+            densityPreset={preferences.densityPreset}
+            {...inlineMessageProps}
+          />
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
             <FormField label="الطالب" required>
@@ -756,16 +874,13 @@ export function StudentProblemsWorkspace() {
               />
             </div>
 
-            {formError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                {formError}
-              </div>
-            ) : null}
-
-            {mutationError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                {mutationError}
-              </div>
+            {formNotice ? (
+              <SystemMessageInline
+                tone={formNotice.tone}
+                message={formNotice.message}
+                densityPreset="compact"
+                {...inlineMessageProps}
+              />
             ) : null}
 
             <div className="flex gap-2">

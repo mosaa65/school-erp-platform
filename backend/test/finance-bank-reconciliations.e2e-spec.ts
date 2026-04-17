@@ -278,9 +278,7 @@ describe('Finance Bank Reconciliations (e2e)', () => {
       BankReconciliationStatus.RECONCILED,
     );
     expect(closedReconciliation.reconciledAt).toBeTruthy();
-    expect(closedReconciliation.reconciledByUser?.email).toBe(
-      'admin@school.local',
-    );
+    expect(closedReconciliation.reconciledByUser?.id).toBe(context.adminUserId);
 
     const closedAddItemResponse = await request(httpServer())
       .post(`/finance/bank-reconciliations/${reconciliation.id}/items`)

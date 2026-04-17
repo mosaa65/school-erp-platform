@@ -14,6 +14,7 @@ import {
   Phone,
   MonitorSmartphone,
   Palette,
+  ScanSearch,
   RotateCcw,
   ShieldCheck,
   Smartphone,
@@ -21,15 +22,18 @@ import {
   Trash2,
   UserCircle2,
   LayoutGrid,
+  PanelsTopLeft,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { startRegistration } from "@simplewebauthn/browser";
 import { ProfileAppearanceSection } from "@/components/layout/profile-appearance-section";
+import { ProfileMessagePreferences } from "@/components/layout/profile-message-preferences";
 import { ProfileNavigationSection } from "@/components/layout/profile-navigation-section";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InternationalPhoneField } from "@/components/ui/international-phone-field";
 import { PasswordFieldWithBiometricAction } from "@/components/ui/password-field-with-biometric-action";
+import { Switch } from "@/components/ui/switch";
 import { useAppearance } from "@/hooks/use-appearance";
 import { useBranchMode } from "@/hooks/use-branch-mode";
 import { useAuth } from "@/features/auth/providers/auth-provider";
@@ -42,7 +46,7 @@ import { translateRoleCode } from "@/lib/i18n/ar";
 import { findCountryDialCodeOptionByDialCode } from "@/lib/intl/phone";
 import { cn } from "@/lib/utils";
 
-type SectionId = "appearance" | "navigation" | "account" | "security";
+type SectionId = "appearance" | "entitySurface" | "navigation" | "account" | "security";
 type PasswordIdentityMethod = "phone" | "email";
 
 const APP_VERSION_LABEL = "School ERP Web v0.1.0";
@@ -131,41 +135,6 @@ function detectCurrentDeviceName(): string {
   return "";
 }
 
-/** iOS-style toggle switch */
-function IOSToggle({
-  checked,
-  onChange,
-  disabled,
-}: {
-  checked: boolean;
-  onChange: (value: boolean) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-      className={cn(
-        "relative inline-flex h-[30px] w-[52px] flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus-visible:outline-none",
-        checked
-          ? "bg-[color:var(--app-accent-color)]"
-          : "bg-slate-200 dark:bg-white/20",
-        disabled && "cursor-not-allowed opacity-50",
-      )}
-    >
-      <span
-        className={cn(
-          "pointer-events-none inline-block h-[26px] w-[26px] transform rounded-full bg-white shadow-[0_2px_8px_rgba(0,0,0,0.28)] ring-0 transition-transform duration-300",
-          checked ? "translate-x-[22px]" : "translate-x-0",
-        )}
-      />
-    </button>
-  );
-}
-
 function ProfileSection({
   title,
   icon: Icon,
@@ -239,6 +208,7 @@ export function ProfileWorkspace() {
   const [credentialName, setCredentialName] = React.useState("");
   const [expandedSections, setExpandedSections] = React.useState<Record<SectionId, boolean>>({
     appearance: false,
+    entitySurface: false,
     navigation: false,
     account: false,
     security: false,
@@ -570,6 +540,7 @@ export function ProfileWorkspace() {
           onToggle={() => toggleSection("appearance")}
         >
           <ProfileAppearanceSection />
+          <ProfileMessagePreferences className="mt-3" />
           <Button
             type="button"
             variant="ghost"
@@ -579,6 +550,42 @@ export function ProfileWorkspace() {
             <RotateCcw className="h-4 w-4" />
             إعادة المظهر
           </Button>
+        </ProfileSection>
+
+        {/* Entity surface */}
+        <ProfileSection
+          title="بطاقات العرض والتفاصيل"
+          icon={PanelsTopLeft}
+          open={expandedSections.entitySurface}
+          onToggle={() => toggleSection("entitySurface")}
+        >
+          <div className="space-y-3">
+            <div className="rounded-[1.25rem] border border-white/70 bg-background/78 p-4 dark:border-white/10 dark:bg-white/[0.04]">
+              <div className="flex items-start gap-3">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] border border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]">
+                  <ScanSearch className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1 text-right">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                    إعدادات بطاقات العرض والتفاصيل
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-white/55">
+                    افتح الصفحة المخصصة للتحكم في شكل البطاقات، الألوان، التفاعل، ومعاينة
+                    الصلاحيات قبل تطبيقها على واجهة الطلاب.
+                  </p>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                className="mt-3 h-11 w-full rounded-2xl"
+                onClick={() => router.push("/app/profile/entity-surface")}
+              >
+                <PanelsTopLeft className="h-4 w-4" />
+                فتح إعدادات البطاقات
+              </Button>
+            </div>
+          </div>
         </ProfileSection>
 
         {/* Navigation */}
@@ -898,11 +905,11 @@ export function ProfileWorkspace() {
               <span className="text-sm font-medium text-slate-800 dark:text-white/90">
                 تفعيل البصمة كعامل ثانوي
               </span>
-              <IOSToggle
+              <Switch
                 checked={profileDraft.webAuthnRequired}
                 disabled={!profile?.hasWebAuthnCredentials}
-                onChange={(value) =>
-                  setProfileDraft((prev) => ({ ...prev, webAuthnRequired: value }))
+                onCheckedChange={(checked) =>
+                  setProfileDraft((prev) => ({ ...prev, webAuthnRequired: checked }))
                 }
               />
             </div>

@@ -2,17 +2,26 @@
 
 import * as React from "react";
 import {
+  Activity,
+  CalendarRange,
   BellRing,
+  MessageSquareText,
   LoaderCircle,
   PencilLine,
   RefreshCw,
   Search,
   Trash2,
+  Type,
+  UserRound,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
+import { SelectField } from "@/components/ui/select-field";
 import { StudentPickerSheet } from "@/components/ui/student-picker-sheet";
+import { TextareaField } from "@/components/ui/textarea-field";
 import {
   Card,
   CardContent,
@@ -386,8 +395,7 @@ export function ParentNotificationsWorkspace() {
             </div>
           ) : (
             <form className="space-y-3" onSubmit={handleSubmitForm}>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">الطالب *</label>
+              <FormField label="الطالب" required>
                 <StudentPickerSheet
                   scope="parent-notifications"
                   variant="form"
@@ -400,14 +408,13 @@ export function ParentNotificationsWorkspace() {
                   disabled={!canReadStudents}
                   triggerTestId="parent-notification-form-student"
                 />
-              </div>
+              </FormField>
 
               <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">نوع الإشعار *</label>
-                  <select
+                <FormField label="نوع الإشعار" required>
+                  <SelectField
+                    icon={<BellRing />}
                     data-testid="parent-notification-form-type"
-                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                     value={formState.notificationType}
                     onChange={(event) =>
                       setFormState((prev) => ({
@@ -415,22 +422,22 @@ export function ParentNotificationsWorkspace() {
                         notificationType: event.target.value as ParentNotificationType,
                       }))
                     }
+                    required
                   >
                     {(Object.keys(NOTIFICATION_TYPE_LABELS) as ParentNotificationType[]).map(
                       (type) => (
                         <option key={type} value={type}>
                           {NOTIFICATION_TYPE_LABELS[type]}
                         </option>
-                      ),
+                        ),
                     )}
-                  </select>
-                </div>
+                  </SelectField>
+                </FormField>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">صفة ولي الأمر</label>
-                  <select
+                <FormField label="صفة ولي الأمر">
+                  <SelectField
+                    icon={<UserRound />}
                     data-testid="parent-notification-form-guardian-title"
-                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                     value={formState.guardianTitleId}
                     onChange={(event) =>
                       setFormState((prev) => ({ ...prev, guardianTitleId: event.target.value }))
@@ -443,13 +450,13 @@ export function ParentNotificationsWorkspace() {
                         {item.nameAr ?? item.code ?? item.id}
                       </option>
                     ))}
-                  </select>
-                </div>
+                  </SelectField>
+                </FormField>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">نوع السلوك</label>
+              <FormField label="نوع السلوك">
                 <Input
+                  icon={<Type />}
                   data-testid="parent-notification-form-behavior-type"
                   value={formState.behaviorType}
                   onChange={(event) =>
@@ -457,13 +464,12 @@ export function ParentNotificationsWorkspace() {
                   }
                   placeholder="مثال: سلوكي"
                 />
-              </div>
+              </FormField>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">وصف السلوك</label>
-                <textarea
+              <FormField label="وصف السلوك">
+                <TextareaField
+                  icon={<MessageSquareText />}
                   data-testid="parent-notification-form-behavior-description"
-                  className="min-h-[90px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   value={formState.behaviorDescription}
                   onChange={(event) =>
                     setFormState((prev) => ({
@@ -471,27 +477,27 @@ export function ParentNotificationsWorkspace() {
                       behaviorDescription: event.target.value,
                     }))
                   }
+                  rows={4}
                 />
-              </div>
+              </FormField>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">المطلوب من ولي الأمر</label>
-                <textarea
+              <FormField label="المطلوب من ولي الأمر">
+                <TextareaField
+                  icon={<MessageSquareText />}
                   data-testid="parent-notification-form-required-action"
-                  className="min-h-[90px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   value={formState.requiredAction}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, requiredAction: event.target.value }))
                   }
+                  rows={4}
                 />
-              </div>
+              </FormField>
 
               <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">طريقة الإرسال</label>
-                  <select
+                <FormField label="طريقة الإرسال">
+                  <SelectField
+                    icon={<BellRing />}
                     data-testid="parent-notification-form-send-method"
-                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                     value={formState.sendMethod}
                     onChange={(event) =>
                       setFormState((prev) => ({
@@ -505,38 +511,34 @@ export function ParentNotificationsWorkspace() {
                         <option key={method} value={method}>
                           {SEND_METHOD_LABELS[method]}
                         </option>
-                      ),
+                        ),
                     )}
-                  </select>
-                </div>
+                  </SelectField>
+                </FormField>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">اسم الرسول</label>
+                <FormField label="اسم الرسول">
                   <Input
+                    icon={<UserRound />}
                     data-testid="parent-notification-form-messenger-name"
                     value={formState.messengerName}
                     onChange={(event) =>
                       setFormState((prev) => ({ ...prev, messengerName: event.target.value }))
                     }
                   />
-                </div>
+                </FormField>
               </div>
 
               <div className="grid gap-3 md:grid-cols-2">
-                <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                  <span>تم الإرسال</span>
-                  <input
-                    data-testid="parent-notification-form-is-sent"
-                    type="checkbox"
-                    checked={formState.isSent}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, isSent: event.target.checked }))
-                    }
-                  />
-                </label>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">تاريخ الإرسال</label>
+                <FormBooleanField
+                  label="تم الإرسال"
+                  checked={formState.isSent}
+                  onCheckedChange={(checked) =>
+                    setFormState((prev) => ({ ...prev, isSent: checked }))
+                  }
+                />
+                <FormField label="تاريخ الإرسال">
                   <Input
+                    icon={<CalendarRange />}
                     data-testid="parent-notification-form-sent-date"
                     type="date"
                     value={formState.sentDate}
@@ -545,32 +547,28 @@ export function ParentNotificationsWorkspace() {
                     }
                     disabled={!formState.isSent}
                   />
-                </div>
+                </FormField>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">النتائج</label>
-                <textarea
+              <FormField label="النتائج">
+                <TextareaField
+                  icon={<MessageSquareText />}
                   data-testid="parent-notification-form-results"
-                  className="min-h-[90px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   value={formState.results}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, results: event.target.value }))
                   }
+                  rows={4}
                 />
-              </div>
+              </FormField>
 
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشط</span>
-                <input
-                  data-testid="parent-notification-form-active"
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                />
-              </label>
+              <FormBooleanField
+                label="نشط"
+                checked={formState.isActive}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({ ...prev, isActive: checked }))
+                }
+              />
 
               {formError ? (
                 <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
@@ -646,8 +644,8 @@ export function ParentNotificationsWorkspace() {
               disabled={!canReadStudents}
             />
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            <SelectField
+              icon={<BellRing />}
               value={typeFilter}
               onChange={(event) => {
                 setPage(1);
@@ -662,10 +660,10 @@ export function ParentNotificationsWorkspace() {
                   </option>
                 ),
               )}
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            <SelectField
+              icon={<Activity />}
               value={sentFilter}
               onChange={(event) => {
                 setPage(1);
@@ -675,10 +673,10 @@ export function ParentNotificationsWorkspace() {
               <option value="all">كل الحالات</option>
               <option value="sent">مرسل</option>
               <option value="not-sent">غير مرسل</option>
-            </select>
+            </SelectField>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            <SelectField
+              icon={<Activity />}
               value={activeFilter}
               onChange={(event) => {
                 setPage(1);
@@ -688,7 +686,7 @@ export function ParentNotificationsWorkspace() {
               <option value="all">كل الحالات</option>
               <option value="active">النشطة فقط</option>
               <option value="inactive">غير النشطة فقط</option>
-            </select>
+            </SelectField>
 
             <Button type="submit" variant="outline" className="gap-2">
               <Search className="h-4 w-4" />

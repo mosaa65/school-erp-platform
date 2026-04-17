@@ -1,7 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { Check, Menu, MonitorSmartphone, PanelRight, Rows3, Smartphone } from "lucide-react";
+import {
+  Check,
+  List,
+  Menu,
+  MonitorSmartphone,
+  PanelRight,
+  Rows3,
+  Smartphone,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useNavigationPreferences } from "@/hooks/use-navigation-preferences";
@@ -11,6 +19,7 @@ import {
   getNavigationDensityLabel,
   getNavigationLayoutLabel,
   getNavigationLandingPageLabel,
+  getNavigationSystemsViewModeLabel,
 } from "@/navigation/navigation-preferences";
 
 type ProfileNavigationSectionProps = {
@@ -61,7 +70,7 @@ export function ProfileNavigationSection({ className }: ProfileNavigationSection
   return (
     <div className={cn("space-y-3", className)}>
       {/* Summary tiles — 2 columns on mobile, more on larger screens */}
-      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 xl:grid-cols-6">
         <SummaryTile
           label="نمط الملاحة"
           value={getNavigationLayoutLabel(navigation.layoutMode)}
@@ -81,6 +90,11 @@ export function ProfileNavigationSection({ className }: ProfileNavigationSection
           label="ابدأ من"
           value={getNavigationLandingPageLabel(navigation.landingPage)}
           icon={MonitorSmartphone}
+        />
+        <SummaryTile
+          label="عرض الأنظمة"
+          value={getNavigationSystemsViewModeLabel(navigation.systemsViewMode)}
+          icon={List}
         />
         <SummaryTile
           label="زر الهيدر"
@@ -212,6 +226,33 @@ export function ProfileNavigationSection({ className }: ProfileNavigationSection
                     قريبًا
                   </span>
                 ) : null}
+              </button>
+            );
+          })}
+        </div>
+      </ControlBlock>
+
+      <ControlBlock title="عرض الأنظمة">
+        <div className="grid grid-cols-2 gap-2">
+          {navigation.systemsViewModeOptions.map((option) => {
+            const active = navigation.systemsViewMode === option.value;
+
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => navigation.setSystemsViewMode(option.value)}
+                className={cn(
+                  "rounded-[1.15rem] border px-3.5 py-3 text-right transition-all",
+                  active
+                    ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
+                    : "border-white/70 bg-background/75 text-slate-700 hover:bg-white hover:text-slate-900 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/80 dark:hover:bg-white/[0.06] dark:hover:text-white",
+                )}
+              >
+                <span className="text-sm font-semibold">{option.label}</span>
+                <p className="mt-1 text-[11px] leading-5 text-slate-500 dark:text-white/55">
+                  {option.description}
+                </p>
               </button>
             );
           })}

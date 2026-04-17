@@ -9,6 +9,10 @@ type ManagementToolbarProps = {
   searchValue: string;
   onSearchChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   searchPlaceholder: string;
+  searchInputProps?: Omit<
+    React.ComponentProps<typeof SearchField>,
+    "value" | "onChange" | "placeholder" | "containerClassName"
+  >;
   filterCount?: number;
   onFilterClick: () => void;
   showFilterButton?: boolean;
@@ -17,6 +21,8 @@ type ManagementToolbarProps = {
   searchFieldClassName?: string;
   actionsClassName?: string;
   filterButtonClassName?: string;
+  filterButtonTestId?: string;
+  beforeFilterActions?: React.ReactNode;
   actions?: React.ReactNode;
 };
 
@@ -24,6 +30,7 @@ export function ManagementToolbar({
   searchValue,
   onSearchChange,
   searchPlaceholder,
+  searchInputProps,
   filterCount = 0,
   onFilterClick,
   showFilterButton = true,
@@ -32,32 +39,48 @@ export function ManagementToolbar({
   searchFieldClassName,
   actionsClassName,
   filterButtonClassName,
+  filterButtonTestId,
+  beforeFilterActions,
   actions,
 }: ManagementToolbarProps) {
   return (
-    <div className={cn("flex flex-wrap items-center justify-between gap-2", className)}>
+    <div
+      className={cn(
+        "rounded-[1.75rem] border border-[color:var(--app-accent-strong)]/35 bg-gradient-to-br from-[color:var(--app-accent-soft)]/45 via-background/96 to-background/86 p-2.5 shadow-[0_24px_60px_-44px_rgba(15,23,42,0.45)] backdrop-blur-xl",
+        className,
+      )}
+    >
       <div
         className={cn(
-          "flex min-w-0 max-w-lg flex-1 flex-wrap items-center gap-2 sm:min-w-[240px]",
-          searchWrapperClassName,
+          "flex items-center gap-2",
         )}
       >
-        <SearchField
-          containerClassName={cn("flex-1", searchFieldClassName)}
-          value={searchValue}
-          onChange={onSearchChange}
-          placeholder={searchPlaceholder}
-        />
-      </div>
-      <div className={cn("flex flex-wrap items-center gap-2", actionsClassName)}>
-        {showFilterButton ? (
-          <FilterTriggerButton
-            count={filterCount}
-            onClick={onFilterClick}
-            className={filterButtonClassName}
+        <div
+          className={cn(
+            "flex min-w-0 flex-1 items-center gap-2",
+          searchWrapperClassName,
+        )}
+        >
+          <SearchField
+            containerClassName={cn("min-w-0 flex-1", searchFieldClassName)}
+            value={searchValue}
+            onChange={onSearchChange}
+            placeholder={searchPlaceholder}
+            {...searchInputProps}
           />
-        ) : null}
-        {actions}
+        </div>
+        <div className={cn("flex shrink-0 items-center gap-2", actionsClassName)}>
+          {beforeFilterActions}
+          {showFilterButton ? (
+            <FilterTriggerButton
+              count={filterCount}
+              onClick={onFilterClick}
+              className={filterButtonClassName}
+              data-testid={filterButtonTestId}
+            />
+          ) : null}
+          {actions}
+        </div>
       </div>
     </div>
   );

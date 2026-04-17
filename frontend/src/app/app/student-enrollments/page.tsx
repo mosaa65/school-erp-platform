@@ -4,7 +4,9 @@ import { StudentEnrollmentsWorkspace } from "@/features/student-enrollments/comp
 
 export default function StudentEnrollmentsPage() {
   return (
-    <PermissionGuard permission="student-enrollments.read">
+    <PermissionGuard
+      requiredAnyPermission={["student-enrollments.read.summary", "student-enrollments.read"]}
+    >
       <div className="space-y-4">
         <div className="space-y-2">
           <Badge variant="secondary" className="w-fit">
@@ -17,7 +19,6 @@ export default function StudentEnrollmentsPage() {
     </PermissionGuard>
   );
 }
-
 
 
 

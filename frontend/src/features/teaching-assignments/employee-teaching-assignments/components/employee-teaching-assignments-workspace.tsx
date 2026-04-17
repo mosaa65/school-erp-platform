@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
-import { CrudFormSheet } from "@/components/ui/crud-form-sheet";
+import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
   Card,
   CardContent,
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { SelectField } from "@/components/ui/select-field";
 import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
@@ -665,7 +666,7 @@ export function EmployeeTeachingAssignmentsWorkspace() {
         disabled={!canCreate}
       />
 
-      <CrudFormSheet
+      <BottomSheetForm
         open={isFormOpen}
         title={isEditing ? "تعديل إسناد تدريس" : "إضافة إسناد تدريس"}
         submitLabel={isEditing ? "حفظ التعديلات" : "حفظ إسناد التدريس"}
@@ -817,32 +818,26 @@ export function EmployeeTeachingAssignmentsWorkspace() {
             </div>
 
             <div className="grid gap-2 md:grid-cols-2">
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>مدرس أساسي</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isPrimary}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      isPrimary: event.target.checked,
-                    }))
-                  }
-                />
-              </label>
-              <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <span>نشط</span>
-                <input
-                  type="checkbox"
-                  checked={formState.isActive}
-                  onChange={(event) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      isActive: event.target.checked,
-                    }))
-                  }
-                />
-              </label>
+              <FormBooleanField
+                label="مدرس أساسي"
+                checked={formState.isPrimary}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    isPrimary: checked,
+                  }))
+                }
+              />
+              <FormBooleanField
+                label="نشط"
+                checked={formState.isActive}
+                onCheckedChange={(checked) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    isActive: checked,
+                  }))
+                }
+              />
             </div>
 
             {formError ? (
@@ -889,7 +884,7 @@ export function EmployeeTeachingAssignmentsWorkspace() {
             </div>
           </form>
         )}
-      </CrudFormSheet>
+      </BottomSheetForm>
     </>
   );
 }

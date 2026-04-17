@@ -4,7 +4,9 @@ import { StudentDistributionsWorkspace } from "@/features/student-distributions/
 
 export default function StudentDistributionsPage() {
   return (
-    <PermissionGuard permission="student-enrollments.read">
+    <PermissionGuard
+      requiredAnyPermission={["student-enrollments.read.summary", "student-enrollments.read"]}
+    >
       <div className="space-y-4">
         <div className="space-y-2">
           <Badge variant="secondary" className="w-fit">

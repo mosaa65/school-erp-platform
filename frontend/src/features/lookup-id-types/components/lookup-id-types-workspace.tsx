@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
+  Activity,
   BadgeCheck,
   LoaderCircle,
   PencilLine,
@@ -12,8 +13,11 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
+import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
-import { SearchField } from "@/components/ui/search-field";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import {
@@ -24,7 +28,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
@@ -274,59 +277,37 @@ export function LookupIdTypesWorkspace() {
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
-            <SearchField
-              containerClassName="flex-1"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="بحث..."
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterTriggerButton
-              count={activeFiltersCount}
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-            />
-          </div>
-        </div>
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="بحث..."
+          filterCount={activeFiltersCount}
+          onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+        />
 
         <FilterDrawer
           open={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
           title="فلاتر البحث"
-          actionButtons={
-            <div className="flex w-full gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={clearFilters}
-                className="flex-1 gap-1.5"
-              >
-                <Trash2 className="h-4 w-4" />
-                مسح
-              </Button>
-              <Button type="button" onClick={applyFilters} className="flex-1 gap-1.5">
-                تطبيق
-              </Button>
-            </div>
-          }
+          actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              value={filterDraft}
-              onChange={(event) =>
-                setFilterDraft(
-                  event.target.value as "all" | "active" | "inactive" | "deleted",
-                )
-              }
-            >
-              <option value="all">كل الحالات</option>
-              <option value="active">نشط فقط</option>
-              <option value="inactive">غير نشط فقط</option>
-              <option value="deleted">محذوف فقط</option>
-            </SelectField>
+            <FormField label="الحالة">
+              <SelectField
+                icon={<Activity />}
+                value={filterDraft}
+                onChange={(event) =>
+                  setFilterDraft(
+                    event.target.value as "all" | "active" | "inactive" | "deleted",
+                  )
+                }
+              >
+                <option value="all">كل الحالات</option>
+                <option value="active">نشط فقط</option>
+                <option value="inactive">غير نشط فقط</option>
+                <option value="deleted">محذوف فقط</option>
+              </SelectField>
+            </FormField>
           </div>
         </FilterDrawer>
 
@@ -469,9 +450,9 @@ export function LookupIdTypesWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm} data-testid="id-type-form">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">الاسم بالعربية *</label>
+            <FormField label="الاسم بالعربية" required>
               <Input
+                icon={<BadgeCheck />}
                 value={formState.nameAr}
                 onChange={(event) =>
                   setFormState((prev) => ({ ...prev, nameAr: event.target.value }))
@@ -480,19 +461,15 @@ export function LookupIdTypesWorkspace() {
                 required
                 data-testid="id-type-form-name-ar"
               />
-            </div>
+            </FormField>
 
-            <label className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-              <span>نشط</span>
-              <input
-                type="checkbox"
-                checked={formState.isActive}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, isActive: event.target.checked }))
-                }
-                data-testid="id-type-form-active"
-              />
-            </label>
+            <FormBooleanField
+              label="نشط"
+              checked={formState.isActive}
+              onCheckedChange={(checked) =>
+                setFormState((prev) => ({ ...prev, isActive: checked }))
+              }
+            />
 
             {formError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">

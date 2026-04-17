@@ -4,14 +4,18 @@ import * as React from "react";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   Activity,
+  ArrowUpRight,
+  ArrowUpDown,
   ArrowRightLeft,
   CalendarDays,
+  Eye,
   GraduationCap,
   Hash,
   LoaderCircle,
   PencilLine,
   Plus,
   RefreshCw,
+  ScanSearch,
   Trash2,
   Type,
   Undo2,
@@ -20,10 +24,23 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SearchField } from "@/components/ui/search-field";
+import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
 import { StudentPickerSheet } from "@/components/ui/student-picker-sheet";
+import { SystemMessageInline } from "@/components/feedback/system-message-inline";
+import { EntityDetailsShell } from "@/presentation/entity-surface/entity-details-shell";
+import { EntitySurfaceCard } from "@/presentation/entity-surface/entity-surface-card";
+import { EntitySurfaceGrid } from "@/presentation/entity-surface/entity-surface-grid";
+import { EntitySurfaceHeaderActionButton } from "@/presentation/entity-surface/entity-surface-header-action-button";
+import { EntitySurfaceQuickActions } from "@/presentation/entity-surface/entity-surface-quick-actions";
+import { getEntitySurfaceDefinition } from "@/presentation/entity-surface/entity-surface-registry";
+import { EntitySurfaceRow } from "@/presentation/entity-surface/entity-surface-row";
+import type {
+  EntityDetailsMode,
+  EntitySurfaceQuickAction,
+  EntitySurfaceViewMode,
+} from "@/presentation/entity-surface/entity-surface-types";
 import {
   Card,
   CardContent,
@@ -33,11 +50,13 @@ import {
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
-import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Fab } from "@/components/ui/fab";
 import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { FormField } from "@/components/ui/form-field";
+import { SortTriggerButton } from "@/components/ui/sort-trigger-button";
 import { TextareaField } from "@/components/ui/textarea-field";
+import { useEntitySurface } from "@/hooks/use-entity-surface";
+import { useSystemMessage } from "@/hooks/use-system-message";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import { useLookupEnrollmentStatusesQuery } from "@/features/lookup-enrollment-statuses/hooks/use-lookup-enrollment-statuses-query";
 import { useGradeLevelOptionsQuery } from "@/features/student-enrollments/hooks/use-grade-level-options-query";
@@ -49,10 +68,22 @@ import {
 import { useStudentEnrollmentsQuery } from "@/features/student-enrollments/hooks/use-student-enrollments-query";
 import { useAcademicYearOptionsQuery } from "@/features/student-enrollments/hooks/use-academic-year-options-query";
 import { useSectionOptionsQuery } from "@/features/student-enrollments/hooks/use-section-options-query";
+import { StudentEnrollmentDetailsContent } from "@/features/student-enrollments/components/student-enrollment-details-content";
+import {
+  buildStudentEnrollmentSurfacePreview,
+  getStudentEnrollmentDetailsPath,
+  STUDENT_ENROLLMENT_DETAILS_PERMISSION_CODES,
+  getStudentEnrollmentStatusChips,
+  studentEnrollmentSurfaceDefinition,
+} from "@/features/student-enrollments/presentation/student-enrollment-surface-definition";
 import type { StudentPickerOption } from "@/features/students/lib/student-picker";
+import { cn } from "@/lib/utils";
 import type {
   StudentEnrollmentDistributionStatus,
+  StudentEnrollmentGroupBy,
   StudentEnrollmentListItem,
+  StudentEnrollmentSortBy,
+  StudentEnrollmentSortDirection,
   StudentEnrollmentStatus,
 } from "@/lib/api/client";
 
@@ -104,6 +135,300 @@ const DISTRIBUTION_STATUS_OPTIONS: Array<{
   { code: "ASSIGNED", nameAr: "موزع" },
   { code: "TRANSFERRED", nameAr: "منقول" },
 ];
+
+type EnrollmentSortCriterion = {
+  sortBy: StudentEnrollmentSortBy | "NONE";
+  sortDirection: StudentEnrollmentSortDirection;
+};
+
+type EnrollmentSortState = {
+  criteria: EnrollmentSortCriterion[];
+  groupByCriteria: StudentEnrollmentGroupBy[];
+};
+
+type EnrollmentGroupedItems = {
+  key: string;
+  label: string;
+  items: StudentEnrollmentListItem[];
+};
+
+type EnrollmentSortOption = {
+  value: StudentEnrollmentSortBy | "NONE";
+  label: string;
+  ascendingLabel: string;
+  descendingLabel: string;
+};
+
+type EnrollmentGroupOption = {
+  value: StudentEnrollmentGroupBy;
+  label: string;
+};
+
+type EnrollmentSortSlot = {
+  id: string;
+  label: string;
+};
+
+type EnrollmentGroupSlot = {
+  id: string;
+  label: string;
+};
+
+const BASE_SORT_SLOTS: EnrollmentSortSlot[] = [
+  { id: "primary", label: "المعيار الأول" },
+  { id: "secondary", label: "المعيار الثاني" },
+  { id: "tertiary", label: "المعيار الثالث" },
+];
+
+const BASE_GROUP_SLOTS: EnrollmentGroupSlot[] = [
+  { id: "primary-group", label: "التجميع الأول" },
+];
+
+const ENROLLMENT_SORT_OPTIONS: EnrollmentSortOption[] = [
+  {
+    value: "ACADEMIC_YEAR_START_DATE",
+    label: "السنة الأكاديمية",
+    ascendingLabel: "الأقدم أولًا",
+    descendingLabel: "الأحدث أولًا",
+  },
+  {
+    value: "ENROLLMENT_DATE",
+    label: "تاريخ القيد",
+    ascendingLabel: "الأقدم أولًا",
+    descendingLabel: "الأحدث أولًا",
+  },
+  {
+    value: "STUDENT_NAME",
+    label: "اسم الطالب",
+    ascendingLabel: "أ إلى ي",
+    descendingLabel: "ي إلى أ",
+  },
+  {
+    value: "ADMISSION_NO",
+    label: "رقم الطالب",
+    ascendingLabel: "الأصغر أولًا",
+    descendingLabel: "الأكبر أولًا",
+  },
+  {
+    value: "YEARLY_ENROLLMENT_NO",
+    label: "رقم القيد السنوي",
+    ascendingLabel: "الأصغر أولًا",
+    descendingLabel: "الأكبر أولًا",
+  },
+  {
+    value: "GRADE_LEVEL",
+    label: "الصف",
+    ascendingLabel: "الأدنى أولًا",
+    descendingLabel: "الأعلى أولًا",
+  },
+  {
+    value: "SECTION_NAME",
+    label: "الشعبة",
+    ascendingLabel: "أ إلى ي",
+    descendingLabel: "ي إلى أ",
+  },
+  {
+    value: "STATUS",
+    label: "حالة القيد",
+    ascendingLabel: "أ إلى ي",
+    descendingLabel: "ي إلى أ",
+  },
+  {
+    value: "DISTRIBUTION_STATUS",
+    label: "حالة التوزيع",
+    ascendingLabel: "أ إلى ي",
+    descendingLabel: "ي إلى أ",
+  },
+  {
+    value: "ACTIVE_STATE",
+    label: "التفعيل",
+    ascendingLabel: "غير النشط أولًا",
+    descendingLabel: "النشط أولًا",
+  },
+  {
+    value: "CREATED_AT",
+    label: "تاريخ الإنشاء",
+    ascendingLabel: "الأقدم أولًا",
+    descendingLabel: "الأحدث أولًا",
+  },
+  {
+    value: "UPDATED_AT",
+    label: "آخر تحديث",
+    ascendingLabel: "الأقدم أولًا",
+    descendingLabel: "الأحدث أولًا",
+  },
+];
+
+const NONE_SORT_OPTION: EnrollmentSortOption = {
+  value: "NONE",
+  label: "بدون معيار",
+  ascendingLabel: "تصاعدي",
+  descendingLabel: "تنازلي",
+};
+
+const AVAILABLE_SORT_OPTIONS: EnrollmentSortOption[] = [
+  NONE_SORT_OPTION,
+  ...ENROLLMENT_SORT_OPTIONS,
+];
+
+const GROUP_BY_OPTIONS: EnrollmentGroupOption[] = [
+  { value: "NONE", label: "بدون تجميع" },
+  { value: "ACADEMIC_YEAR_START_DATE", label: "تجميع حسب السنة الأكاديمية" },
+  { value: "ENROLLMENT_DATE", label: "تجميع حسب تاريخ القيد" },
+  { value: "STUDENT_NAME", label: "تجميع حسب اسم الطالب" },
+  { value: "ADMISSION_NO", label: "تجميع حسب رقم الطالب" },
+  { value: "YEARLY_ENROLLMENT_NO", label: "تجميع حسب رقم القيد السنوي" },
+  { value: "GRADE_LEVEL", label: "تجميع حسب الصف" },
+  { value: "SECTION_NAME", label: "تجميع حسب الشعبة" },
+  { value: "STATUS", label: "تجميع حسب حالة القيد" },
+  { value: "DISTRIBUTION_STATUS", label: "تجميع حسب حالة التوزيع" },
+  { value: "ACTIVE_STATE", label: "تجميع حسب التفعيل" },
+  { value: "CREATED_AT", label: "تجميع حسب تاريخ الإنشاء" },
+  { value: "UPDATED_AT", label: "تجميع حسب آخر تحديث" },
+];
+
+function getDefaultSortCriteria(): EnrollmentSortCriterion[] {
+  return [
+    {
+      sortBy: "ACADEMIC_YEAR_START_DATE",
+      sortDirection: "desc",
+    },
+    {
+      sortBy: "NONE",
+      sortDirection: "asc",
+    },
+    {
+      sortBy: "NONE",
+      sortDirection: "asc",
+    },
+  ];
+}
+
+function getSortSlotLabel(index: number): string {
+  if (index < BASE_SORT_SLOTS.length) {
+    return BASE_SORT_SLOTS[index]?.label ?? `المعيار ${index + 1}`;
+  }
+
+  return `معيار إضافي ${index - BASE_SORT_SLOTS.length + 1}`;
+}
+
+function getGroupSlotLabel(index: number): string {
+  if (index < BASE_GROUP_SLOTS.length) {
+    return BASE_GROUP_SLOTS[index]?.label ?? `التجميع ${index + 1}`;
+  }
+
+  return `تجميع إضافي ${index - BASE_GROUP_SLOTS.length + 1}`;
+}
+
+function createDefaultSortState(): EnrollmentSortState {
+  return {
+    criteria: getDefaultSortCriteria(),
+    groupByCriteria: ["NONE"],
+  };
+}
+
+function resolveEnrollmentViewMode(
+  requestedMode: EntitySurfaceViewMode,
+  allowedViewModes: EntitySurfaceViewMode[] | undefined,
+  fallbackMode: EntitySurfaceViewMode,
+): EntitySurfaceViewMode {
+  if (!allowedViewModes || allowedViewModes.length === 0) {
+    return requestedMode;
+  }
+
+  if (allowedViewModes.includes(requestedMode)) {
+    return requestedMode;
+  }
+
+  return allowedViewModes.includes(fallbackMode) ? fallbackMode : allowedViewModes[0];
+}
+
+function resolveEnrollmentDetailsMode(
+  requestedMode: string,
+  currentViewMode: EntitySurfaceViewMode,
+  defaultMode: EntityDetailsMode,
+): EntityDetailsMode {
+  if (requestedMode === "screen-default") {
+    return currentViewMode === "dense-row" ? "inline" : defaultMode;
+  }
+
+  return requestedMode as EntityDetailsMode;
+}
+
+function sanitizeSortState(sortState: EnrollmentSortState): EnrollmentSortState {
+  const uniqueCriteria: EnrollmentSortCriterion[] = [];
+  const seen = new Set<StudentEnrollmentSortBy>();
+
+  for (const criterion of sortState.criteria) {
+    if (criterion.sortBy === "NONE") {
+      continue;
+    }
+
+    if (seen.has(criterion.sortBy)) {
+      continue;
+    }
+
+    seen.add(criterion.sortBy);
+    uniqueCriteria.push(criterion);
+  }
+
+  const normalizedCriteria =
+    uniqueCriteria.length > 0 ? uniqueCriteria : [getDefaultSortCriteria()[0]];
+
+  while (normalizedCriteria.length < BASE_SORT_SLOTS.length) {
+    normalizedCriteria.push({
+      sortBy: "NONE",
+      sortDirection: "asc",
+    });
+  }
+
+  const uniqueGroupByCriteria = sortState.groupByCriteria.filter(
+    (groupBy, index, array) => groupBy !== "NONE" && array.indexOf(groupBy) === index,
+  );
+  const normalizedGroupByCriteria: StudentEnrollmentGroupBy[] =
+    uniqueGroupByCriteria.length > 0 ? uniqueGroupByCriteria : ["NONE"];
+
+  return {
+    criteria: normalizedCriteria,
+    groupByCriteria: normalizedGroupByCriteria,
+  };
+}
+
+function getSortOption(sortBy: EnrollmentSortCriterion["sortBy"]): EnrollmentSortOption {
+  return AVAILABLE_SORT_OPTIONS.find((option) => option.value === sortBy) ?? NONE_SORT_OPTION;
+}
+
+function getAvailableSortOptions(
+  criteria: EnrollmentSortCriterion[],
+  currentIndex: number,
+): EnrollmentSortOption[] {
+  const selectedValues = new Set<StudentEnrollmentSortBy>(
+    criteria.flatMap((criterion, index) =>
+      index === currentIndex || criterion.sortBy === "NONE" ? [] : [criterion.sortBy],
+    ),
+  );
+
+  return AVAILABLE_SORT_OPTIONS.filter(
+    (option) => option.value === "NONE" || !selectedValues.has(option.value),
+  );
+}
+
+function getAvailableGroupOptions(
+  groupByCriteria: StudentEnrollmentGroupBy[],
+  currentIndex: number,
+): EnrollmentGroupOption[] {
+  const selectedValues = new Set<StudentEnrollmentGroupBy>(
+    groupByCriteria.flatMap((groupBy, index) =>
+      index === currentIndex || groupBy === "NONE" ? [] : [groupBy],
+    ),
+  );
+
+  return GROUP_BY_OPTIONS.filter(
+    (option) => option.value === "NONE" || !selectedValues.has(option.value),
+  );
+}
+
+const DEFAULT_SORT_STATE: EnrollmentSortState = createDefaultSortState();
 
 function isStudentEnrollmentStatus(value: string): value is StudentEnrollmentStatus {
   return STATUS_OPTIONS.includes(value as StudentEnrollmentStatus);
@@ -157,6 +482,61 @@ function formatDate(value: string | null): string {
   return date.toLocaleDateString("ar-SA");
 }
 
+function getEnrollmentGroupKey(
+  enrollment: StudentEnrollmentListItem,
+  groupBy: StudentEnrollmentGroupBy,
+  getStatusLabel: (value: StudentEnrollmentStatus) => string,
+  getDistributionStatusLabel: (value: StudentEnrollmentDistributionStatus) => string,
+): string {
+  switch (groupBy) {
+    case "ACADEMIC_YEAR_START_DATE":
+      return `${enrollment.academicYear.name} (${enrollment.academicYear.code})`;
+    case "ENROLLMENT_DATE":
+      return formatDate(enrollment.enrollmentDate);
+    case "STUDENT_NAME":
+      return enrollment.student.fullName;
+    case "ADMISSION_NO":
+      return enrollment.student.admissionNo ?? "بدون رقم طالب";
+    case "YEARLY_ENROLLMENT_NO":
+      return enrollment.yearlyEnrollmentNo ?? "بدون رقم قيد سنوي";
+    case "GRADE_LEVEL":
+      return (
+        enrollment.gradeLevel?.name ??
+        enrollment.section?.gradeLevel.name ??
+        "غير محدد"
+      );
+    case "SECTION_NAME":
+      return enrollment.section?.name ?? "غير موزع";
+    case "STATUS":
+      return getStatusLabel(enrollment.status);
+    case "DISTRIBUTION_STATUS":
+      return enrollment.distributionStatus
+        ? getDistributionStatusLabel(enrollment.distributionStatus)
+        : "غير محددة";
+    case "ACTIVE_STATE":
+      return enrollment.isActive ? "نشط" : "غير نشط";
+    case "CREATED_AT":
+      return formatDate(enrollment.createdAt);
+    case "UPDATED_AT":
+      return formatDate(enrollment.updatedAt);
+    case "NONE":
+    default:
+      return "كل القيود";
+  }
+}
+
+function getErrorMessage(error: unknown, fallbackMessage: string): string {
+  if (error instanceof Error) {
+    if (error.message.trim().toLowerCase() === "internal server error") {
+      return fallbackMessage;
+    }
+
+    return error.message;
+  }
+
+  return fallbackMessage;
+}
+
 function toFormState(enrollment: StudentEnrollmentListItem): EnrollmentFormState {
   return {
     studentId: enrollment.studentId,
@@ -198,11 +578,21 @@ function buildStudentPickerOptionFromEnrollment(
 
 export function StudentEnrollmentsWorkspace() {
   const router = useRouter();
-  const { hasPermission } = useRbac();
+  const entitySurface = useEntitySurface();
+  const { hasAnyPermission, hasPermission } = useRbac();
+  const { notify, preferences } = useSystemMessage();
+  const enrollmentsSurface = React.useMemo(
+    () =>
+      getEntitySurfaceDefinition<StudentEnrollmentListItem>("student-enrollments") ??
+      studentEnrollmentSurfaceDefinition,
+    [],
+  );
   const canCreate = hasPermission("student-enrollments.create");
   const canUpdate = hasPermission("student-enrollments.update");
   const canDelete = hasPermission("student-enrollments.delete");
-  const canReadStudents = hasPermission("students.read");
+  const canReadDetails = hasAnyPermission([...STUDENT_ENROLLMENT_DETAILS_PERMISSION_CODES]);
+  const canUseQuickActions = canReadDetails || canUpdate || canDelete;
+  const canReadStudents = hasAnyPermission(["students.read", "students.read.summary"]);
   const canReadAcademicYears = hasPermission("academic-years.read");
   const canReadGradeLevels = hasPermission("grade-levels.read");
   const canReadSections = hasPermission("sections.read");
@@ -242,11 +632,15 @@ export function StudentEnrollmentsWorkspace() {
   });
 
   const [editingEnrollmentId, setEditingEnrollmentId] = React.useState<string | null>(null);
+  const [selectedEnrollmentId, setSelectedEnrollmentId] = React.useState<string | null>(null);
+  const [contextEnrollmentId, setContextEnrollmentId] = React.useState<string | null>(null);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isSortOpen, setIsSortOpen] = React.useState(false);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
+  const [sortState, setSortState] = React.useState<EnrollmentSortState>(DEFAULT_SORT_STATE);
+  const [sortDraft, setSortDraft] = React.useState<EnrollmentSortState>(DEFAULT_SORT_STATE);
   const [formState, setFormState] = React.useState<EnrollmentFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
-  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
   const [selectedFormStudent, setSelectedFormStudent] = React.useState<StudentPickerOption | null>(
     null,
   );
@@ -267,6 +661,12 @@ export function StudentEnrollmentsWorkspace() {
     distributionStatus:
       distributionStatusFilter === "all" ? undefined : distributionStatusFilter,
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
+    sortBy: sortState.criteria.flatMap((criterion) =>
+      criterion.sortBy === "NONE" ? [] : [criterion.sortBy],
+    ),
+    sortDirection: sortState.criteria.flatMap((criterion) =>
+      criterion.sortBy === "NONE" ? [] : [criterion.sortDirection],
+    ),
   });
 
   const academicYearsQuery = useAcademicYearOptionsQuery();
@@ -313,15 +713,39 @@ export function StudentEnrollmentsWorkspace() {
     [enrollmentStatusOptions],
   );
   const pagination = enrollmentsQuery.data?.pagination;
+  const selectedEnrollment = React.useMemo(
+    () => enrollments.find((enrollment) => enrollment.id === selectedEnrollmentId) ?? null,
+    [enrollments, selectedEnrollmentId],
+  );
+  const contextEnrollment = React.useMemo(
+    () => enrollments.find((enrollment) => enrollment.id === contextEnrollmentId) ?? null,
+    [contextEnrollmentId, enrollments],
+  );
+  const resolvedViewMode = React.useMemo(
+    () =>
+      resolveEnrollmentViewMode(
+        entitySurface.defaultViewMode,
+        enrollmentsSurface.allowedViewModes,
+        enrollmentsSurface.defaultViewMode ?? "list",
+      ),
+    [
+      enrollmentsSurface.allowedViewModes,
+      enrollmentsSurface.defaultViewMode,
+      entitySurface.defaultViewMode,
+    ],
+  );
+  const enrollmentDetailsMode = React.useMemo(
+    () =>
+      resolveEnrollmentDetailsMode(
+        entitySurface.detailsOpenMode,
+        resolvedViewMode,
+        enrollmentsSurface.detailsMode ?? "sheet",
+      ),
+    [entitySurface.detailsOpenMode, enrollmentsSurface.detailsMode, resolvedViewMode],
+  );
   const isEditing = editingEnrollmentId !== null;
   const hasDependenciesReadPermissions =
     canReadStudents && canReadAcademicYears && canReadSections && canReadGradeLevels;
-
-  const mutationError =
-    (createMutation.error as Error | null)?.message ??
-    (updateMutation.error as Error | null)?.message ??
-    (deleteMutation.error as Error | null)?.message ??
-    null;
 
   React.useEffect(() => {
     if (!isEditing) {
@@ -337,6 +761,16 @@ export function StudentEnrollmentsWorkspace() {
       setIsFormOpen(false);
     }
   }, [editingEnrollmentId, enrollments, isEditing]);
+
+  React.useEffect(() => {
+    if (selectedEnrollmentId && !enrollments.some((item) => item.id === selectedEnrollmentId)) {
+      setSelectedEnrollmentId(null);
+    }
+
+    if (contextEnrollmentId && !enrollments.some((item) => item.id === contextEnrollmentId)) {
+      setContextEnrollmentId(null);
+    }
+  }, [contextEnrollmentId, enrollments, selectedEnrollmentId]);
 
   useDebounceEffect(() => {
       setPage(1);
@@ -370,6 +804,14 @@ export function StudentEnrollmentsWorkspace() {
     studentFilter,
   ]);
 
+  React.useEffect(() => {
+    if (!isSortOpen) {
+      return;
+    }
+
+    setSortDraft(sortState);
+  }, [isSortOpen, sortState]);
+
   const resetForm = () => {
     setEditingEnrollmentId(null);
     setFormState(DEFAULT_FORM_STATE);
@@ -380,10 +822,10 @@ export function StudentEnrollmentsWorkspace() {
 
   const handleStartCreate = () => {
     if (!canCreate) {
+      notify.warning("لا تملك الصلاحية المطلوبة: student-enrollments.create.");
       return;
     }
 
-    setActionSuccess(null);
     setFormError(null);
     setEditingEnrollmentId(null);
     setFormState(DEFAULT_FORM_STATE);
@@ -413,9 +855,8 @@ export function StudentEnrollmentsWorkspace() {
     return true;
   };
 
-  const handleSubmitForm = (event?: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmitForm = async (event?: React.FormEvent<HTMLFormElement>) => {
     event?.preventDefault();
-    setActionSuccess(null);
 
     if (!validateForm()) {
       return;
@@ -440,45 +881,64 @@ export function StudentEnrollmentsWorkspace() {
 
     if (isEditing && editingEnrollmentId) {
       if (!canUpdate) {
-        setFormError("لا تملك الصلاحية المطلوبة: student-enrollments.update.");
+        const message = "لا تملك الصلاحية المطلوبة: student-enrollments.update.";
+        setFormError(message);
+        notify.error(message);
         return;
       }
 
-      updateMutation.mutate(
-        {
-          enrollmentId: editingEnrollmentId,
-          payload,
-        },
-        {
-          onSuccess: () => {
-            resetForm();
-            setActionSuccess("تم تحديث قيد الطالب بنجاح.");
+      try {
+        await notify.promise(
+          () =>
+            updateMutation.mutateAsync({
+              enrollmentId: editingEnrollmentId,
+              payload,
+            }),
+          {
+            loading: "جارٍ تحديث قيد الطالب...",
+            success: "تم تحديث قيد الطالب بنجاح.",
+            error: (error) => ({
+              message: getErrorMessage(error, "تعذر تحديث قيد الطالب."),
+              persistent: true,
+            }),
           },
-        },
-      );
+        );
+        resetForm();
+      } catch (error) {
+        setFormError(getErrorMessage(error, "تعذر تحديث قيد الطالب."));
+      }
       return;
     }
 
     if (!canCreate) {
-      setFormError("لا تملك الصلاحية المطلوبة: student-enrollments.create.");
+      const message = "لا تملك الصلاحية المطلوبة: student-enrollments.create.";
+      setFormError(message);
+      notify.error(message);
       return;
     }
 
-    createMutation.mutate(payload, {
-      onSuccess: () => {
-        resetForm();
-        setPage(1);
-        setActionSuccess("تم إنشاء قيد الطالب بنجاح.");
-      },
-    });
+    try {
+      await notify.promise(() => createMutation.mutateAsync(payload), {
+        loading: "جارٍ إنشاء قيد الطالب...",
+        success: "تم إنشاء قيد الطالب بنجاح.",
+        error: (error) => ({
+          message: getErrorMessage(error, "تعذر إنشاء قيد الطالب."),
+          persistent: true,
+        }),
+      });
+      resetForm();
+      setPage(1);
+    } catch (error) {
+      setFormError(getErrorMessage(error, "تعذر إنشاء قيد الطالب."));
+    }
   };
 
   const handleStartEdit = (enrollment: StudentEnrollmentListItem) => {
     if (!canUpdate) {
+      notify.warning("لا تملك الصلاحية المطلوبة: student-enrollments.update.");
       return;
     }
 
-    setActionSuccess(null);
     setFormError(null);
     setEditingEnrollmentId(enrollment.id);
     setFormState(toFormState(enrollment));
@@ -486,30 +946,42 @@ export function StudentEnrollmentsWorkspace() {
     setIsFormOpen(true);
   };
 
-  const handleToggleActive = (enrollment: StudentEnrollmentListItem) => {
+  const handleToggleActive = async (enrollment: StudentEnrollmentListItem) => {
     if (!canUpdate) {
+      notify.warning("لا تملك الصلاحية المطلوبة: student-enrollments.update.");
       return;
     }
 
-    updateMutation.mutate(
-      {
-        enrollmentId: enrollment.id,
-        payload: {
-          isActive: !enrollment.isActive,
+    try {
+      await notify.promise(
+        () =>
+          updateMutation.mutateAsync({
+            enrollmentId: enrollment.id,
+            payload: {
+              isActive: !enrollment.isActive,
+            },
+          }),
+        {
+          loading: enrollment.isActive
+            ? "جارٍ تعطيل قيد الطالب..."
+            : "جارٍ تفعيل قيد الطالب...",
+          success: enrollment.isActive
+            ? "تم تعطيل القيد بنجاح."
+            : "تم تفعيل القيد بنجاح.",
+          error: (error) => ({
+            message: getErrorMessage(error, "تعذر تحديث حالة القيد."),
+            persistent: true,
+          }),
         },
-      },
-      {
-        onSuccess: () => {
-          setActionSuccess(
-            enrollment.isActive ? "تم تعطيل القيد بنجاح." : "تم تفعيل القيد بنجاح.",
-          );
-        },
-      },
-    );
+      );
+    } catch {
+      // handled by unified messages
+    }
   };
 
-  const handleDelete = (enrollment: StudentEnrollmentListItem) => {
+  const handleDelete = async (enrollment: StudentEnrollmentListItem) => {
     if (!canDelete) {
+      notify.warning("لا تملك الصلاحية المطلوبة: student-enrollments.delete.");
       return;
     }
 
@@ -520,25 +992,100 @@ export function StudentEnrollmentsWorkspace() {
       return;
     }
 
-    deleteMutation.mutate(enrollment.id, {
-      onSuccess: () => {
-        if (editingEnrollmentId === enrollment.id) {
-          resetForm();
-        }
-        setActionSuccess("تم حذف قيد الطالب بنجاح.");
-      },
-    });
+    try {
+      await notify.promise(() => deleteMutation.mutateAsync(enrollment.id), {
+        loading: `جارٍ حذف قيد الطالب ${enrollment.student.fullName}...`,
+        success: "تم حذف قيد الطالب بنجاح.",
+        error: (error) => ({
+          message: getErrorMessage(error, "تعذر حذف قيد الطالب."),
+          persistent: true,
+        }),
+      });
+      if (editingEnrollmentId === enrollment.id) {
+        resetForm();
+      }
+      if (selectedEnrollmentId === enrollment.id) {
+        setSelectedEnrollmentId(null);
+      }
+      if (contextEnrollmentId === enrollment.id) {
+        setContextEnrollmentId(null);
+      }
+    } catch (error) {
+      if (editingEnrollmentId === enrollment.id) {
+        setFormError(getErrorMessage(error, "تعذر حذف قيد الطالب."));
+      }
+    }
   };
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
   const requiresSection = formState.distributionStatus !== "PENDING_DISTRIBUTION";
-  const getStatusLabel = (value: StudentEnrollmentStatus) =>
-    enrollmentStatusLabels.get(value) ?? value;
-  const getDistributionStatusLabel = (
-    value: StudentEnrollmentDistributionStatus,
-  ) =>
-    DISTRIBUTION_STATUS_OPTIONS.find((option) => option.code === value)?.nameAr ??
-    value;
+  const groupedEnrollments = React.useMemo<EnrollmentGroupedItems[]>(() => {
+    const getStatusLabel = (value: StudentEnrollmentStatus) =>
+      enrollmentStatusLabels.get(value) ?? value;
+    const getDistributionStatusLabel = (
+      value: StudentEnrollmentDistributionStatus,
+    ) =>
+      DISTRIBUTION_STATUS_OPTIONS.find((option) => option.code === value)?.nameAr ??
+      value;
+    const activeGroupByCriteria = sortState.groupByCriteria.filter(
+      (groupBy) => groupBy !== "NONE",
+    );
+
+    if (activeGroupByCriteria.length === 0) {
+      return [
+        {
+          key: "all",
+          label: "كل القيود",
+          items: enrollments,
+        },
+      ];
+    }
+
+    const buildGroups = (
+      items: StudentEnrollmentListItem[],
+      criteria: StudentEnrollmentGroupBy[],
+      path: string[] = [],
+    ): EnrollmentGroupedItems[] => {
+      const [currentCriterion, ...restCriteria] = criteria;
+
+      if (!currentCriterion) {
+        return [
+          {
+            key: path.join("::"),
+            label: path.join(" / "),
+            items,
+          },
+        ];
+      }
+
+      const groups = new Map<string, StudentEnrollmentListItem[]>();
+
+      for (const enrollment of items) {
+        const key = getEnrollmentGroupKey(
+          enrollment,
+          currentCriterion,
+          getStatusLabel,
+          getDistributionStatusLabel,
+        );
+
+        if (!groups.has(key)) {
+          groups.set(key, []);
+        }
+
+        groups.get(key)?.push(enrollment);
+      }
+
+      return Array.from(groups.entries()).flatMap(([key, groupedItems]) =>
+        buildGroups(groupedItems, restCriteria, [...path, key]),
+      );
+    };
+
+    return buildGroups(enrollments, activeGroupByCriteria);
+  }, [
+    enrollments,
+    enrollmentStatusLabels,
+    sortState.groupByCriteria,
+  ]);
 
   const clearFilters = () => {
     setPage(1);
@@ -556,13 +1103,55 @@ export function StudentEnrollmentsWorkspace() {
     setIsFilterOpen(false);
   };
 
+  const clearSorting = () => {
+    setPage(1);
+    setSortState(DEFAULT_SORT_STATE);
+    setSortDraft(DEFAULT_SORT_STATE);
+    setIsSortOpen(false);
+  };
+
+  const handleAddSortCriterion = () => {
+    setSortDraft((prev) => ({
+      ...prev,
+      criteria: [
+        ...prev.criteria,
+        {
+          sortBy: "NONE",
+          sortDirection: "asc",
+        },
+      ],
+    }));
+  };
+
+  const handleAddGroupCriterion = () => {
+    setSortDraft((prev) => ({
+      ...prev,
+      groupByCriteria: [...prev.groupByCriteria, "NONE"],
+    }));
+  };
+
+  const handleRemoveSortCriterion = (index: number) => {
+    setSortDraft((prev) => ({
+      ...prev,
+      criteria: prev.criteria.filter((_, itemIndex) => itemIndex !== index),
+    }));
+  };
+
+  const handleRemoveGroupCriterion = (index: number) => {
+    setSortDraft((prev) => ({
+      ...prev,
+      groupByCriteria: prev.groupByCriteria.filter((_, itemIndex) => itemIndex !== index),
+    }));
+  };
+
   const handleOpenDistributionBoard = (enrollment: StudentEnrollmentListItem) => {
     const gradeLevelId =
       enrollment.gradeLevelId ?? enrollment.gradeLevel?.id ?? enrollment.section?.gradeLevel.id;
 
     if (!gradeLevelId) {
-      setActionSuccess(null);
-      setFormError("لا يمكن فتح شاشة التوزيع قبل توفر الصف على هذا القيد.");
+      const message = "لا يمكن فتح شاشة التوزيع قبل توفر الصف على هذا القيد.";
+      setFormError(message);
+      notify.warning(message);
       return;
     }
 
@@ -573,8 +1162,72 @@ export function StudentEnrollmentsWorkspace() {
     router.push(`/app/student-distributions?${query.toString()}`);
   };
 
-  const handleReturnToPendingDistribution = (enrollment: StudentEnrollmentListItem) => {
+  const handleOpenEnrollmentDetails = React.useCallback(
+    (enrollment: StudentEnrollmentListItem) => {
+      setContextEnrollmentId(null);
+
+      if (!canReadDetails) {
+        return;
+      }
+
+      if (enrollmentDetailsMode === "page") {
+        router.push(getStudentEnrollmentDetailsPath(enrollment));
+        return;
+      }
+
+      setSelectedEnrollmentId(enrollment.id);
+    },
+    [canReadDetails, enrollmentDetailsMode, router],
+  );
+  const showEnrollmentCardDetails =
+    canReadDetails && entitySurface.showExtendedDetailsInCards;
+
+  const renderEnrollmentHeaderActions = (enrollment: StudentEnrollmentListItem) => {
+    if (!canReadDetails && !canUpdate && !canDelete) {
+      return null;
+    }
+
+    return (
+      <div className="flex items-center gap-1">
+        {canReadDetails ? (
+          <EntitySurfaceHeaderActionButton
+            label="معاينة"
+            icon={<Eye className="h-3.5 w-3.5" />}
+            tone="preview"
+            colorMode={entitySurface.colorMode}
+            entityKey="students"
+            onClick={() => handleOpenEnrollmentDetails(enrollment)}
+          />
+        ) : null}
+
+        {canUpdate ? (
+          <EntitySurfaceHeaderActionButton
+            label="تعديل"
+            icon={<PencilLine className="h-3.5 w-3.5" />}
+            tone="edit"
+            colorMode={entitySurface.colorMode}
+            entityKey="students"
+            disabled={updateMutation.isPending}
+            onClick={() => handleStartEdit(enrollment)}
+          />
+        ) : null}
+
+        {canDelete ? (
+          <EntitySurfaceHeaderActionButton
+            label="حذف"
+            icon={<Trash2 className="h-3.5 w-3.5" />}
+            tone="delete"
+            disabled={deleteMutation.isPending}
+            onClick={() => handleDelete(enrollment)}
+          />
+        ) : null}
+      </div>
+    );
+  };
+
+  const handleReturnToPendingDistribution = async (enrollment: StudentEnrollmentListItem) => {
     if (!canUpdate) {
+      notify.warning("لا تملك الصلاحية المطلوبة: student-enrollments.update.");
       return;
     }
 
@@ -582,26 +1235,133 @@ export function StudentEnrollmentsWorkspace() {
       enrollment.gradeLevelId ?? enrollment.gradeLevel?.id ?? enrollment.section?.gradeLevel.id;
 
     if (!gradeLevelId) {
-      setActionSuccess(null);
-      setFormError("لا يمكن إعادة القيد إلى الانتظار قبل معرفة الصف المرتبط به.");
+      const message = "لا يمكن إعادة القيد إلى الانتظار قبل معرفة الصف المرتبط به.";
+      setFormError(message);
+      notify.warning(message);
       return;
     }
 
-    updateMutation.mutate(
-      {
-        enrollmentId: enrollment.id,
-        payload: {
-          gradeLevelId,
-          sectionId: "",
-          distributionStatus: "PENDING_DISTRIBUTION",
+    try {
+      await notify.promise(
+        () =>
+          updateMutation.mutateAsync({
+            enrollmentId: enrollment.id,
+            payload: {
+              gradeLevelId,
+              sectionId: "",
+              distributionStatus: "PENDING_DISTRIBUTION",
+            },
+          }),
+        {
+          loading: "جارٍ إعادة القيد إلى انتظار التوزيع...",
+          success: "تمت إعادة القيد إلى انتظار التوزيع بنجاح.",
+          error: (error) => ({
+            message: getErrorMessage(error, "تعذر إعادة القيد إلى انتظار التوزيع."),
+            persistent: true,
+          }),
         },
-      },
-      {
-        onSuccess: () => {
-          setActionSuccess("تمت إعادة القيد إلى انتظار التوزيع بنجاح.");
+      );
+    } catch {
+      // handled by unified messages
+    }
+  };
+
+  const buildEnrollmentQuickActions = (
+    enrollment: StudentEnrollmentListItem,
+  ): EntitySurfaceQuickAction[] => {
+    if (!canUseQuickActions) {
+      return [];
+    }
+
+    const actions: EntitySurfaceQuickAction[] = [];
+
+    if (canReadDetails) {
+      actions.push({
+        key: "details",
+        label: enrollmentDetailsMode === "page" ? "فتح الصفحة" : "تفاصيل",
+        icon:
+          enrollmentDetailsMode === "page" ? (
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          ) : (
+            <ScanSearch className="h-3.5 w-3.5" />
+          ),
+        tone: "accent",
+        onClick: () => handleOpenEnrollmentDetails(enrollment),
+      });
+    }
+
+    actions.push({
+      key: "distribution",
+      label: "شاشة التوزيع",
+      icon: <ArrowRightLeft className="h-3.5 w-3.5" />,
+      tone: "ghost",
+      onClick: () => handleOpenDistributionBoard(enrollment),
+    });
+
+    if (enrollment.sectionId && canUpdate) {
+      actions.push({
+        key: "return-pending",
+        label: "إرجاع للانتظار",
+        icon: <Undo2 className="h-3.5 w-3.5" />,
+        tone: "ghost",
+        onClick: () => void handleReturnToPendingDistribution(enrollment),
+        disabled: updateMutation.isPending,
+      });
+    }
+
+    if (canUpdate) {
+      actions.push(
+        {
+          key: "edit",
+          label: "تعديل",
+          icon: <PencilLine className="h-3.5 w-3.5" />,
+          onClick: () => handleStartEdit(enrollment),
+          disabled: updateMutation.isPending,
         },
-      },
-    );
+        {
+          key: "toggle-active",
+          label: enrollment.isActive ? "تعطيل" : "تفعيل",
+          icon: <Activity className="h-3.5 w-3.5" />,
+          tone: "ghost",
+          onClick: () => handleToggleActive(enrollment),
+          disabled: updateMutation.isPending,
+        },
+      );
+    }
+
+    if (canDelete) {
+      actions.push({
+        key: "delete",
+        label: "حذف",
+        icon: <Trash2 className="h-3.5 w-3.5" />,
+        tone: "danger",
+        onClick: () => handleDelete(enrollment),
+        disabled: deleteMutation.isPending,
+      });
+    }
+
+    return actions;
+  };
+
+  const handleRefresh = async () => {
+    try {
+      await notify.promise(async () => {
+        const result = await enrollmentsQuery.refetch();
+        if (result.error) {
+          throw result.error;
+        }
+        return result;
+      }, {
+        loading: "جارٍ تحديث قيود الطلاب...",
+        success: "تم تحديث قيود الطلاب.",
+        error: (error) => ({
+          message: getErrorMessage(error, "تعذّر تحميل بيانات قيود الطلاب."),
+          persistent: true,
+        }),
+      });
+    } catch {
+      // handled by unified messages
+    }
   };
 
   const applyFilters = () => {
@@ -615,6 +1375,12 @@ export function StudentEnrollmentsWorkspace() {
     setActiveFilter(filterDraft.active);
     setSelectedStudentFilterOption(filterDraftStudentOption);
     setIsFilterOpen(false);
+  };
+
+  const applySorting = () => {
+    setPage(1);
+    setSortState(sanitizeSortState(sortDraft));
+    setIsSortOpen(false);
   };
 
   const activeFiltersCount = React.useMemo(() => {
@@ -640,29 +1406,234 @@ export function StudentEnrollmentsWorkspace() {
     studentFilter,
   ]);
 
+  const hasActiveFilters = activeFiltersCount > 0;
+  const activeSortCount = React.useMemo(() => {
+    const activeCriteria = sortState.criteria.filter(
+      (criterion) => criterion.sortBy !== "NONE",
+    );
+    const hasDefaultOnly =
+      activeCriteria.length === 1 &&
+      activeCriteria[0]?.sortBy === "ACADEMIC_YEAR_START_DATE" &&
+      activeCriteria[0]?.sortDirection === "desc" &&
+      sortState.groupByCriteria.every((groupBy) => groupBy === "NONE");
+
+    if (hasDefaultOnly) {
+      return 0;
+    }
+
+    return (
+      activeCriteria.length +
+      sortState.groupByCriteria.filter((groupBy) => groupBy !== "NONE").length
+    );
+  }, [sortState]);
+  const usesBlurBackdrop = entitySurface.longPressMode === "enabled-with-blur";
+  const contextEnrollmentQuickActions = contextEnrollment
+    ? buildEnrollmentQuickActions(contextEnrollment)
+    : [];
+  const selectedEnrollmentQuickActions = selectedEnrollment
+    ? buildEnrollmentQuickActions(selectedEnrollment).filter((action) => action.key !== "details")
+    : [];
+  const inlineMessageProps = {
+    colorMode: preferences.colorMode,
+    variant: preferences.variant,
+    dismissible: false,
+  } as const;
+  const emptyStateMessage = hasActiveFilters
+    ? "لا توجد نتائج مطابقة للفلاتر الحالية."
+    : canCreate
+      ? "لا توجد قيود طلاب بعد. يمكنك البدء بإنشاء أول قيد."
+      : "لا توجد قيود طلاب متاحة حاليًا.";
+
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0 sm:min-w-[260px] max-w-lg">
-            <SearchField
-              containerClassName="flex-1"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="بحث بالطالب/رقم الطالب/رقم القيد السنوي/الصف/الشعبة/السنة..."
+        <ManagementToolbar
+          searchValue={searchInput}
+          onSearchChange={(event) => setSearchInput(event.target.value)}
+          searchPlaceholder="بحث بالطالب/رقم الطالب/رقم القيد السنوي/الصف/الشعبة/السنة..."
+          filterCount={activeFiltersCount}
+          beforeFilterActions={
+            <SortTriggerButton
+              count={activeSortCount}
+              onClick={() => setIsSortOpen((prev) => !prev)}
+              aria-label="فرز قيود الطلاب"
             />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterTriggerButton
-              count={activeFiltersCount}
-              onClick={() => setIsFilterOpen((prev) => !prev)}
-            />
-          </div>
-        </div>
+          }
+          onFilterClick={() => setIsFilterOpen((prev) => !prev)}
+        />
 
         <FilterDrawer
-          open={isFilterOpen}
-          onClose={() => setIsFilterOpen(false)}
+          open={isSortOpen}
+          onClose={() => setIsSortOpen(false)}
+          eyebrow="فرز"
+          title="فرز القيود"
+          actionButtons={
+            <FilterDrawerActions
+              onClear={clearSorting}
+              onApply={applySorting}
+              clearLabel="الافتراضي"
+              applyLabel="تطبيق الفرز"
+            />
+          }
+        >
+          <div className="space-y-3">
+            {sortDraft.criteria.map((criterion, index) => {
+              const slotLabel = getSortSlotLabel(index);
+              const availableOptions = getAvailableSortOptions(sortDraft.criteria, index);
+              const sortOption = getSortOption(criterion.sortBy);
+
+              return (
+                <div
+                  key={`sort-criterion-${index}`}
+                  className="grid gap-3 rounded-[1.35rem] border border-border/60 bg-background/60 p-3 sm:grid-cols-2"
+                >
+                  <FormField label={slotLabel}>
+                    <SelectField
+                      icon={<ArrowUpDown />}
+                      value={criterion.sortBy}
+                      onChange={(event) =>
+                        setSortDraft((prev) => ({
+                          ...prev,
+                          criteria: prev.criteria.map((item, itemIndex) =>
+                            itemIndex === index
+                              ? {
+                                  ...item,
+                                  sortBy: event.target.value as StudentEnrollmentSortBy | "NONE",
+                                }
+                              : item,
+                          ),
+                        }))
+                      }
+                    >
+                      {availableOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </SelectField>
+                  </FormField>
+
+                  <FormField label="الاتجاه">
+                    <SelectField
+                      icon={<ArrowUpDown />}
+                      value={criterion.sortDirection}
+                      disabled={criterion.sortBy === "NONE"}
+                      onChange={(event) =>
+                        setSortDraft((prev) => ({
+                          ...prev,
+                          criteria: prev.criteria.map((item, itemIndex) =>
+                            itemIndex === index
+                              ? {
+                                  ...item,
+                                  sortDirection: event.target.value as StudentEnrollmentSortDirection,
+                                }
+                              : item,
+                          ),
+                        }))
+                      }
+                    >
+                      <option value="asc">{sortOption.ascendingLabel}</option>
+                      <option value="desc">{sortOption.descendingLabel}</option>
+                    </SelectField>
+                  </FormField>
+
+                  {index >= BASE_SORT_SLOTS.length ? (
+                    <div className="sm:col-span-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={() => handleRemoveSortCriterion(index)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        إزالة هذا المعيار
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+
+            {sortDraft.criteria.length < ENROLLMENT_SORT_OPTIONS.length ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-2 rounded-[1.35rem]"
+                onClick={handleAddSortCriterion}
+              >
+                <Plus className="h-4 w-4" />
+                إضافة معيار آخر
+              </Button>
+            ) : null}
+
+            <div className="space-y-3 rounded-[1.35rem] border border-border/60 bg-background/60 p-3">
+              {sortDraft.groupByCriteria.map((groupBy, index) => {
+                const slotLabel = getGroupSlotLabel(index);
+                const availableOptions = getAvailableGroupOptions(
+                  sortDraft.groupByCriteria,
+                  index,
+                );
+
+                return (
+                  <div key={`group-criterion-${index}`} className="space-y-3">
+                    <FormField label={slotLabel}>
+                      <SelectField
+                        icon={<ArrowUpDown />}
+                        value={groupBy}
+                        onChange={(event) =>
+                          setSortDraft((prev) => ({
+                            ...prev,
+                            groupByCriteria: prev.groupByCriteria.map((item, itemIndex) =>
+                              itemIndex === index
+                                ? (event.target.value as StudentEnrollmentGroupBy)
+                                : item,
+                            ),
+                          }))
+                        }
+                      >
+                        {availableOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </SelectField>
+                    </FormField>
+
+                    {index >= BASE_GROUP_SLOTS.length ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={() => handleRemoveGroupCriterion(index)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        إزالة هذا التجميع
+                      </Button>
+                    ) : null}
+                  </div>
+                );
+              })}
+
+              {sortDraft.groupByCriteria.length < GROUP_BY_OPTIONS.length - 1 ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full gap-2 rounded-[1.35rem]"
+                  onClick={handleAddGroupCriterion}
+                >
+                  <Plus className="h-4 w-4" />
+                  إضافة تجميع بحسب
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        </FilterDrawer>
+
+        <FilterDrawer
+            open={isFilterOpen}
+            onClose={() => setIsFilterOpen(false)}
           title="فلاتر القيود"
           actionButtons={<FilterDrawerActions onClear={clearFilters} onApply={applyFilters} />}
         >
@@ -809,141 +1780,161 @@ export function StudentEnrollmentsWorkspace() {
           </CardHeader>
 
           <CardContent className="space-y-3">
-          {actionSuccess ? (
-            <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">
-              {actionSuccess}
-            </div>
-          ) : null}
-
-          {mutationError && !isFormOpen ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {mutationError}
-            </div>
-          ) : null}
-
           {formError && !isFormOpen ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {formError}
-            </div>
+            <SystemMessageInline
+              tone="warning"
+              message={formError}
+              densityPreset={preferences.densityPreset}
+              {...inlineMessageProps}
+            />
           ) : null}
 
           {enrollmentsQuery.isPending ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ تحميل البيانات...
-            </div>
+            <SystemMessageInline
+              tone="loading"
+              message="جارٍ تحميل بيانات قيود الطلاب..."
+              densityPreset={preferences.densityPreset}
+              {...inlineMessageProps}
+            />
           ) : null}
 
           {enrollmentsQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {enrollmentsQuery.error instanceof Error
-                ? enrollmentsQuery.error.message
-                : "تعذّر تحميل البيانات."}
-            </div>
+            <SystemMessageInline
+              tone="error"
+              message={getErrorMessage(enrollmentsQuery.error, "تعذّر تحميل البيانات.")}
+              densityPreset={preferences.densityPreset}
+              action={{ label: "إعادة المحاولة", dismissOnClick: false }}
+              onAction={() => void handleRefresh()}
+              {...inlineMessageProps}
+            />
           ) : null}
 
-          {!enrollmentsQuery.isPending && enrollments.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              لا توجد نتائج مطابقة.
-            </div>
+          {!enrollmentsQuery.isPending && !enrollmentsQuery.error && enrollments.length === 0 ? (
+            <SystemMessageInline
+              tone="neutral"
+              message={emptyStateMessage}
+              densityPreset={preferences.densityPreset}
+              action={
+                hasActiveFilters
+                  ? { label: "مسح الفلاتر", dismissOnClick: false }
+                  : canCreate
+                    ? { label: "إنشاء قيد", dismissOnClick: false }
+                    : undefined
+              }
+              onAction={
+                hasActiveFilters
+                  ? clearFilters
+                  : canCreate
+                    ? handleStartCreate
+                    : undefined
+              }
+              {...inlineMessageProps}
+            />
           ) : null}
 
-          {enrollments.map((enrollment) => (
-            <div
-              key={enrollment.id}
-              className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <p className="font-medium">
-                    {enrollment.student.fullName} (
-                    {enrollment.student.admissionNo ?? "بدون رقم طالب"})
+          {groupedEnrollments.map((group) => (
+            <div key={group.key} className="space-y-3">
+              {sortState.groupByCriteria.some((groupBy) => groupBy !== "NONE") ? (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-[1.1rem] border border-[color:var(--app-accent-strong)]/40 bg-[color:var(--app-accent-soft)]/30 px-3 py-2">
+                  <p className="text-sm font-semibold text-[color:var(--app-accent-color)]">
+                    {group.label}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    السنة: {enrollment.academicYear.name} ({enrollment.academicYear.code})
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    الصف:{" "}
-                    {enrollment.gradeLevel?.name ??
-                      enrollment.section?.gradeLevel.name ??
-                      "غير محدد"}
-                    {enrollment.section
-                      ? ` | الشعبة: ${enrollment.section.name} (${enrollment.section.code})`
-                      : " | الشعبة: غير موزع"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    رقم القيد السنوي: {enrollment.yearlyEnrollmentNo ?? "سيولد تلقائيًا"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    حالة التوزيع:{" "}
-                    {enrollment.distributionStatus
-                      ? getDistributionStatusLabel(enrollment.distributionStatus)
-                      : "غير محددة"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    تاريخ القيد: {formatDate(enrollment.enrollmentDate)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">ملاحظات: {enrollment.notes ?? "-"}</p>
+                  <Badge variant="outline">العناصر: {group.items.length}</Badge>
                 </div>
+              ) : null}
 
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <Badge variant="secondary">{getStatusLabel(enrollment.status)}</Badge>
-                  <Badge variant={enrollment.isActive ? "default" : "outline"}>
-                    {enrollment.isActive ? "نشط" : "غير نشط"}
-                  </Badge>
-                </div>
-              </div>
+              <EntitySurfaceGrid
+                viewMode={resolvedViewMode}
+                density={entitySurface.density}
+                richness={entitySurface.richness}
+                colorMode={entitySurface.colorMode}
+                visualStyle={entitySurface.visualStyle}
+                effectsPreset={entitySurface.effectsPreset}
+                shapePreset={entitySurface.shapePreset}
+                entityKey="students"
+                inlineActionsMode={entitySurface.inlineActionsMode}
+              >
+                {group.items.map((enrollment) => {
+                  const preview =
+                    enrollmentsSurface.buildPreview?.(enrollment) ??
+                    buildStudentEnrollmentSurfacePreview(enrollment);
+                  const contextQuickActions = buildEnrollmentQuickActions(enrollment);
+                  const headerActions = renderEnrollmentHeaderActions(enrollment);
+                  const canOpenContext =
+                    entitySurface.longPressMode !== "disabled" && contextQuickActions.length > 0;
+                  const handleCardClick = canReadDetails
+                    ? () => handleOpenEnrollmentDetails(enrollment)
+                    : undefined;
 
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleOpenDistributionBoard(enrollment)}
-                >
-                  <ArrowRightLeft className="h-3.5 w-3.5" />
-                  شاشة التوزيع
-                </Button>
-                {enrollment.sectionId ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => handleReturnToPendingDistribution(enrollment)}
-                    disabled={!canUpdate || updateMutation.isPending}
-                  >
-                    <Undo2 className="h-3.5 w-3.5" />
-                    إرجاع للانتظار
-                  </Button>
-                ) : null}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleStartEdit(enrollment)}
-                  disabled={!canUpdate || updateMutation.isPending}
-                >
-                  <PencilLine className="h-3.5 w-3.5" />
-                  تعديل
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleToggleActive(enrollment)}
-                  disabled={!canUpdate || updateMutation.isPending}
-                >
-                  {enrollment.isActive ? "تعطيل" : "تفعيل"}
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => handleDelete(enrollment)}
-                  disabled={!canDelete || deleteMutation.isPending}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  حذف
-                </Button>
-              </div>
+                  if (resolvedViewMode === "dense-row") {
+                    return (
+                      <EntitySurfaceRow
+                        key={enrollment.id}
+                        title={preview.title}
+                        subtitle={showEnrollmentCardDetails ? preview.subtitle : undefined}
+                        meta={showEnrollmentCardDetails ? preview.meta ?? preview.description : undefined}
+                        avatar={preview.avatar}
+                        headerActions={headerActions}
+                        statusChips={showEnrollmentCardDetails ? getStudentEnrollmentStatusChips(enrollment) : undefined}
+                        density={entitySurface.density}
+                        richness={entitySurface.richness}
+                        colorMode={entitySurface.colorMode}
+                        visualStyle={entitySurface.visualStyle}
+                        effectsPreset={entitySurface.effectsPreset}
+                        shapePreset={entitySurface.shapePreset}
+                        entityKey="students"
+                        inlineActionsMode={entitySurface.inlineActionsMode}
+                        motionPreset={entitySurface.motionPreset}
+                        reducedMotion={entitySurface.reducedMotion}
+                        longPressMode={entitySurface.longPressMode}
+                        avatarMode={entitySurface.avatarMode}
+                        contextOpen={contextEnrollmentId === enrollment.id}
+                        onClick={handleCardClick}
+                        onLongPress={() => {
+                          if (!canOpenContext) {
+                            return;
+                          }
+                          setContextEnrollmentId(enrollment.id);
+                        }}
+                      />
+                    );
+                  }
+
+                  return (
+                    <EntitySurfaceCard
+                      key={enrollment.id}
+                      title={preview.title}
+                      subtitle={showEnrollmentCardDetails ? preview.subtitle : undefined}
+                      description={showEnrollmentCardDetails ? preview.description : undefined}
+                      avatar={preview.avatar}
+                      headerActions={headerActions}
+                      fields={showEnrollmentCardDetails ? preview.fields : undefined}
+                      statusChips={showEnrollmentCardDetails ? getStudentEnrollmentStatusChips(enrollment) : undefined}
+                      viewMode={resolvedViewMode}
+                      density={entitySurface.density}
+                      richness={entitySurface.richness}
+                      colorMode={entitySurface.colorMode}
+                      visualStyle={entitySurface.visualStyle}
+                      effectsPreset={entitySurface.effectsPreset}
+                      shapePreset={entitySurface.shapePreset}
+                      entityKey="students"
+                      inlineActionsMode={entitySurface.inlineActionsMode}
+                      motionPreset={entitySurface.motionPreset}
+                      reducedMotion={entitySurface.reducedMotion}
+                      longPressMode={entitySurface.longPressMode}
+                      avatarMode={entitySurface.avatarMode}
+                      contextOpen={contextEnrollmentId === enrollment.id}
+                      onClick={handleCardClick}
+                      onLongPress={() => {
+                        if (!canOpenContext) {
+                          return;
+                        }
+                        setContextEnrollmentId(enrollment.id);
+                      }}
+                    />
+                  );
+                })}
+              </EntitySurfaceGrid>
             </div>
           ))}
 
@@ -981,7 +1972,7 @@ export function StudentEnrollmentsWorkspace() {
                 variant="ghost"
                 size="sm"
                 className="gap-1.5"
-                onClick={() => void enrollmentsQuery.refetch()}
+                onClick={() => void handleRefresh()}
                 disabled={enrollmentsQuery.isFetching}
               >
                 <RefreshCw
@@ -994,6 +1985,54 @@ export function StudentEnrollmentsWorkspace() {
         </CardContent>
         </Card>
       </div>
+
+      {contextEnrollment ? (
+        <div className="fixed inset-0 z-[85]">
+          <div
+            className={cn(
+              "absolute inset-0",
+              usesBlurBackdrop ? "bg-black/24 backdrop-blur-sm" : "bg-black/18",
+            )}
+            onClick={() => setContextEnrollmentId(null)}
+          />
+          <div className="absolute inset-x-4 bottom-4 mx-auto max-w-sm">
+            <div className="rounded-[1.6rem] border border-white/70 bg-white/88 p-3 shadow-[0_30px_90px_-36px_rgba(15,23,42,0.45)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/88">
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">اختصارات القيد</p>
+              <p className="mt-1 text-[11px] leading-5 text-slate-500 dark:text-white/55">
+                {contextEnrollment.student.fullName} • {contextEnrollment.yearlyEnrollmentNo ?? "بدون رقم قيد"}
+              </p>
+              {contextEnrollmentQuickActions.length > 0 ? (
+                <EntitySurfaceQuickActions actions={contextEnrollmentQuickActions} className="mt-3" />
+              ) : (
+                <p className="mt-3 text-xs text-slate-500 dark:text-white/55">
+                  لا توجد اختصارات متاحة حاليًا.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {selectedEnrollment ? (
+        <EntityDetailsShell
+          open
+          mode={enrollmentDetailsMode}
+          title={selectedEnrollment.student.fullName}
+          subtitle={`${selectedEnrollment.academicYear.name} • ${selectedEnrollment.yearlyEnrollmentNo ?? "بدون رقم قيد"}`}
+          statusChips={getStudentEnrollmentStatusChips(selectedEnrollment)}
+          actions={selectedEnrollmentQuickActions}
+          density={entitySurface.density}
+          visualStyle={entitySurface.visualStyle}
+          effectsPreset={entitySurface.effectsPreset}
+          shapePreset={entitySurface.shapePreset}
+          onClose={() => setSelectedEnrollmentId(null)}
+        >
+          <StudentEnrollmentDetailsContent
+            enrollment={selectedEnrollment}
+            quickActions={selectedEnrollmentQuickActions}
+          />
+        </EntityDetailsShell>
+      ) : null}
 
       <Fab
         icon={<Plus className="h-4 w-4" />}
@@ -1013,9 +2052,12 @@ export function StudentEnrollmentsWorkspace() {
         showFooter={false}
       >
         {!canCreate && !isEditing ? (
-          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-            لا تملك الصلاحية المطلوبة: <code>student-enrollments.create</code>.
-          </div>
+          <SystemMessageInline
+            tone="warning"
+            message="لا تملك الصلاحية المطلوبة: student-enrollments.create."
+            densityPreset={preferences.densityPreset}
+            {...inlineMessageProps}
+          />
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
             <FormField label="الطالب" required>
@@ -1204,28 +2246,21 @@ export function StudentEnrollmentsWorkspace() {
             />
 
             {formError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                {formError}
-              </div>
-            ) : null}
-
-            {mutationError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
-                {mutationError}
-              </div>
-            ) : null}
-            {actionSuccess ? (
-              <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
-                {actionSuccess}
-              </div>
+              <SystemMessageInline
+                tone="warning"
+                message={formError}
+                densityPreset="compact"
+                {...inlineMessageProps}
+              />
             ) : null}
 
             {!hasDependenciesReadPermissions ? (
-              <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-                يتطلب هذا الجزء صلاحيات القراءة: <code>students.read</code>,{" "}
-                <code>academic-years.read</code>, <code>grade-levels.read</code>,{" "}
-                <code>sections.read</code>.
-              </div>
+              <SystemMessageInline
+                tone="neutral"
+                message="يتطلب هذا الجزء صلاحيات القراءة: students.read, academic-years.read, grade-levels.read, sections.read."
+                densityPreset="compact"
+                {...inlineMessageProps}
+              />
             ) : null}
 
             <div className="flex gap-2">
