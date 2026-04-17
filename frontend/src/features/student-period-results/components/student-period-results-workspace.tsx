@@ -1108,7 +1108,7 @@ export function StudentPeriodResultsWorkspace({
             <CardContent className="space-y-3">
               {bulkRows.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  لا توجد نتائج مطابقة. استخدم زر "توليد النتائج الناقصة" لإنشائها تلقائيًا.
+                  لا توجد نتائج مطابقة. استخدم زر &quot;توليد النتائج الناقصة&quot; لإنشائها تلقائيًا.
                 </p>
               ) : null}
               {bulkComponents.length === 0 ? (

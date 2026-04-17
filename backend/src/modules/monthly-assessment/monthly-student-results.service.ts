@@ -144,7 +144,7 @@ export class MonthlyStudentResultsService {
     const offset = (page - 1) * limit;
 
     const where = this.buildWhere(query);
-    const whereSql = Prisma.join(where, Prisma.sql` AND `);
+    const whereSql = Prisma.join(where, ' AND ');
 
     const [items, countRows] = await this.prisma.$transaction([
       this.prisma.$queryRaw<MonthlyResultRow[]>(Prisma.sql`
@@ -395,7 +395,7 @@ export class MonthlyStudentResultsService {
       );
     }
 
-    const whereSql = Prisma.join(where, Prisma.sql` AND `);
+    const whereSql = Prisma.join(where, ' AND ');
 
     const targets = await this.prisma.$queryRaw<
       Array<{ id: string; total: Prisma.Decimal | number | string; componentCount: bigint | number }>

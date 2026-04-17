@@ -106,7 +106,7 @@ export class MonthlyStudentComponentScoresService {
     const offset = (page - 1) * limit;
 
     const where = this.buildWhere(query);
-    const whereSql = Prisma.join(where, Prisma.sql` AND `);
+    const whereSql = Prisma.join(where, ' AND ');
 
     const [items, countRows] = await this.prisma.$transaction([
       this.prisma.$queryRaw<MonthlyScoreRow[]>(Prisma.sql`

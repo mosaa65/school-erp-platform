@@ -152,8 +152,8 @@ export function YearFinalSourceLinksWorkspace() {
     [semesterPeriodsQuery.data],
   );
 
-  const sourceLinks = sourceLinksQuery.data ?? [];
   const linksByComponent = React.useMemo(() => {
+    const sourceLinks = sourceLinksQuery.data ?? [];
     const map = new Map<string, AssessmentComponentSourcePeriodListItem[]>();
     for (const link of sourceLinks) {
       const current = map.get(link.assessmentPeriodComponentId) ?? [];
@@ -161,7 +161,8 @@ export function YearFinalSourceLinksWorkspace() {
       map.set(link.assessmentPeriodComponentId, current);
     }
     return map;
-  }, [sourceLinks]);
+  }, [sourceLinksQuery.data]);
+  const sourceLinks = sourceLinksQuery.data ?? [];
 
   return (
     <div className="space-y-4">

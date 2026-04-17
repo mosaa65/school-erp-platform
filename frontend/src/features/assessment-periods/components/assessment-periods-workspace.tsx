@@ -395,13 +395,14 @@ export function AssessmentPeriodsWorkspace({
     onError: onAuthError,
   });
 
-  const allPeriods = periodsQuery.data?.data ?? [];
   const periods = React.useMemo(
-    () =>
-      allowedCategories && allowedCategories.length > 0
+    () => {
+      const allPeriods = periodsQuery.data?.data ?? [];
+      return allowedCategories && allowedCategories.length > 0
         ? allPeriods.filter((item) => allowedCategories.includes(item.category))
-        : allPeriods,
-    [allPeriods, allowedCategories],
+        : allPeriods;
+    },
+    [periodsQuery.data?.data, allowedCategories],
   );
   const components = React.useMemo(() => {
     const items = componentsQuery.data?.data ?? [];
@@ -905,7 +906,7 @@ export function AssessmentPeriodsWorkspace({
                 <CardTitle className="text-base">المكوّنات</CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-muted-foreground">
-                انتقل إلى عرض "المكوّنات" لمراجعة وتعديل مكوّنات الفترة.
+                انتقل إلى عرض &quot;المكوّنات&quot; لمراجعة وتعديل مكوّنات الفترة.
               </CardContent>
             </Card>
           )
