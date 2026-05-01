@@ -264,10 +264,8 @@ export function NavigationDrawer({
       <button
         type="button"
         className={cn(
-          "absolute inset-0 bg-slate-950/40 backdrop-blur-sm transition-opacity duration-300",
-          isBottomSheet ? "bottom-[calc(env(safe-area-inset-bottom)+5.75rem)]" : "",
-          open ? "pointer-events-auto" : "pointer-events-none",
-          open ? "opacity-100" : "opacity-0",
+          "fixed inset-0 bg-slate-950/40 backdrop-blur-md transition-opacity duration-300",
+          open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
         )}
         aria-label="إغلاق التنقل السريع"
         onClick={onClose}
@@ -281,8 +279,8 @@ export function NavigationDrawer({
         className={cn(
           open ? "pointer-events-auto" : "pointer-events-none",
           isBottomSheet
-            ? "absolute inset-x-0 top-3 bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] mx-auto flex w-full max-w-xl flex-col overflow-hidden rounded-[2rem] border border-white/45 bg-background/85 shadow-[0_30px_90px_-35px_rgba(15,23,42,0.55)] backdrop-blur-2xl transition-[transform,opacity] duration-300 dark:border-white/10 md:bottom-auto md:left-auto md:right-0 md:top-0 md:mx-0 md:h-full md:max-h-none md:max-w-[38rem] md:rounded-none md:border-l"
-            : "absolute right-0 top-0 flex h-full w-full max-w-[38rem] flex-col border-l border-white/35 bg-background/80 shadow-[0_30px_90px_-35px_rgba(15,23,42,0.8)] backdrop-blur-2xl transition-transform duration-300 dark:border-white/10",
+            ? "absolute inset-x-0 top-3 bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] mx-auto flex w-full max-w-xl flex-col overflow-hidden rounded-[2rem] border border-white/45 bg-background/40 shadow-[0_30px_90px_-35px_rgba(15,23,42,0.55)] backdrop-blur-2xl transition-[transform,opacity] duration-300 dark:border-white/10 md:bottom-auto md:left-auto md:right-0 md:top-0 md:mx-0 md:h-full md:max-h-none md:max-w-[38rem] md:rounded-none md:border-l"
+            : "absolute right-0 top-0 flex h-full w-full max-w-[38rem] flex-col border-l border-white/35 bg-background/40 shadow-[0_30px_90px_-35px_rgba(15,23,42,0.8)] backdrop-blur-2xl transition-transform duration-300 dark:border-white/10",
           isBottomSheet
             ? open
               ? "translate-y-0 opacity-100 md:translate-x-0 md:opacity-100"
@@ -338,19 +336,6 @@ export function NavigationDrawer({
               </p>
             </div>
 
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className={cn(
-                "rounded-2xl border border-border/60 bg-background/70 shadow-sm hover:bg-background",
-                isBottomSheet ? "h-9 w-9" : "h-11 w-11",
-              )}
-              onClick={onClose}
-              aria-label="إغلاق"
-            >
-              <X className={cn(isBottomSheet ? "h-4 w-4" : "h-5 w-5")} />
-            </Button>
           </div>
         </div>
 
@@ -361,11 +346,13 @@ export function NavigationDrawer({
                 type="button"
                 variant="outline"
                 size="icon"
-                className="h-11 w-11 shrink-0 rounded-2xl border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)] shadow-sm"
+                className="group relative h-11 w-11 shrink-0 rounded-full border border-[color:var(--app-accent-strong)]/60 bg-[color:var(--app-accent-soft)]/25 text-[color:var(--app-accent-color)] shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-[color:var(--app-accent-soft)]/40"
                 onClick={() => setSelectedGroupId(null)}
                 aria-label="الرجوع إلى الأنظمة"
               >
-                <ArrowRight className="h-4 w-4" />
+                <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--app-accent-strong)]/40 bg-black/90 text-[color:var(--app-accent-color)] shadow-inner shadow-white/5 dark:bg-black/60">
+                  <ArrowRight className="h-4 w-4" />
+                </span>
               </Button>
             ) : null}
             <div className="relative flex-1">
@@ -510,7 +497,9 @@ export function NavigationDrawer({
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-3">
+          <div className={cn(
+            isBottomSheet ? "grid grid-cols-2 gap-3 pb-2 sm:grid-cols-2" : "grid grid-cols-1 gap-3"
+          )}>
               {visibleGroups.map((group) => {
                 const groupAccent = resolveGroupAccent(group);
                 const groupHasActiveItem = group.items.some((item) =>
@@ -519,37 +508,43 @@ export function NavigationDrawer({
                 const isExpanded = expandedGroupIds.includes(group.id);
 
                 const cardClassName = cn(
-                  "relative overflow-hidden border transition-all self-start",
+                  "relative overflow-hidden border transition-all self-start shrink-0",
                   useTightMode ? "rounded-[22px] p-2" : "rounded-[28px] p-3",
+                  isBottomSheet ? "w-full" : "w-full",
                   groupHasActiveItem
-                    ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)]/30 shadow-[0_18px_42px_-28px_rgba(15,23,42,0.5)]"
-                    : "border-border/70 bg-background/55 hover:border-border/90",
+                    ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)]/40 shadow-[0_18px_42px_-28px_rgba(15,23,42,0.5)]"
+                    : "border-[color:var(--app-accent-strong)]/25 bg-[color:var(--app-accent-soft)]/15 hover:border-[color:var(--app-accent-strong)]/40 hover:bg-[color:var(--app-accent-soft)]/25",
                 );
 
                 const cardContent = (
                   <>
-                    {groupHasActiveItem ? (
+                    {groupHasActiveItem && !isBottomSheet ? (
                       <div className="pointer-events-none absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-[color:var(--app-accent-strong)] via-[color:var(--app-accent-soft)] to-transparent opacity-80" />
                     ) : null}
 
                     <div className="relative z-10">
-                      <div className={cn("flex items-center justify-between gap-3", useTightMode ? "mb-2.5" : "mb-3")}>
-                        <div className="flex min-w-0 items-center gap-3">
+                      <div className={cn(
+                        "flex items-center gap-3", 
+                        "justify-between mb-3"
+                      )}>
+                        <div className={cn("flex min-w-0 items-center gap-3")}>
                           <div
                             className={cn(
-                              "flex shrink-0 items-center justify-center rounded-2xl border shadow-sm",
+                              "flex shrink-0 items-center justify-center rounded-2xl border border-[color:var(--app-accent-strong)]/40 bg-[color:var(--app-accent-soft)]/25 shadow-sm",
                               useTightMode ? "h-9 w-9" : "h-11 w-11",
                               groupAccent,
                             )}
                           >
-                            <group.icon className={cn(useTightMode ? "h-4 w-4" : "h-5 w-5")} />
+                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black/90 text-[color:var(--app-accent-color)] shadow-inner shadow-white/5 dark:bg-black/60">
+                               <group.icon className={cn(useTightMode ? "h-4 w-4" : "h-5 w-5")} />
+                            </span>
                           </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
+                          <div className={cn("min-w-0 flex-1 text-right")}>
+                            <div className={cn("flex items-center gap-2")}>
                               <h3
                                 className={cn(
                                   "truncate font-semibold",
-                                  useTightMode ? "text-xs" : "text-sm",
+                                  isBottomSheet ? "text-xs" : "text-sm",
                                 )}
                               >
                                 {group.label}
@@ -557,7 +552,7 @@ export function NavigationDrawer({
                             </div>
                           </div>
                         </div>
-                        {isFocusedSystemMode ? null : (
+                        {isFocusedSystemMode || isBottomSheet ? null : (
                           <button
                             type="button"
                             onClick={() =>
@@ -585,7 +580,7 @@ export function NavigationDrawer({
                         )}
                       </div>
 
-                      {isFocusedSystemMode ? (
+                      {isFocusedSystemMode || isBottomSheet ? (
                         null
                       ) : isExpanded ? (
                         <div className={cn("grid gap-2", isBottomSheet ? "grid-cols-2" : "sm:grid-cols-2")}>
@@ -605,20 +600,25 @@ export function NavigationDrawer({
                                   useTightMode ? "px-2.5 py-2 text-xs" : "px-3 py-3 text-sm",
                                   active
                                     ? "border-[color:var(--app-accent-strong)] bg-background text-foreground shadow-[0_14px_36px_-26px_rgba(15,23,42,0.55)]"
-                                    : "border-border/70 bg-background/70 text-muted-foreground hover:-translate-y-0.5 hover:border-[color:var(--app-accent-strong)] hover:bg-[color:var(--app-accent-soft)]/35 hover:text-foreground",
+                                    : "border-border/40 bg-background/40 text-muted-foreground hover:-translate-y-0.5 hover:border-[color:var(--app-accent-strong)] hover:bg-[color:var(--app-accent-soft)]/20 hover:text-foreground",
                                 )}
                               >
                                 <span
                                   className={cn(
-                                    "flex shrink-0 items-center justify-center rounded-xl border shadow-sm transition-colors",
+                                    "flex shrink-0 items-center justify-center rounded-xl border transition-colors",
                                     useTightMode ? "h-8 w-8" : "h-10 w-10",
                                     active
-                                      ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
+                                      ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)]/30 text-[color:var(--app-accent-color)] shadow-sm"
                                       : item.iconClassName ??
-                                          "border-border/70 bg-background/80 text-muted-foreground group-hover:border-[color:var(--app-accent-strong)] group-hover:bg-[color:var(--app-accent-soft)] group-hover:text-[color:var(--app-accent-color)]",
+                                          "border-border/40 bg-background/40 text-muted-foreground group-hover:border-[color:var(--app-accent-strong)] group-hover:bg-[color:var(--app-accent-soft)]/25 group-hover:text-[color:var(--app-accent-color)]",
                                   )}
                                 >
-                                  <item.icon className={cn(useTightMode ? "h-3.5 w-3.5" : "h-4 w-4")} />
+                                  <span className={cn(
+                                    "flex h-7.5 w-7.5 items-center justify-center rounded-full transition-colors",
+                                    active ? "bg-black/90 shadow-inner shadow-white/5" : "group-hover:bg-black/10 dark:group-hover:bg-white/10"
+                                  )}>
+                                    <item.icon className={cn(useTightMode ? "h-4 w-4" : "h-5 w-5")} />
+                                  </span>
                                 </span>
 
                                 <span className="min-w-0 flex-1">
@@ -626,7 +626,7 @@ export function NavigationDrawer({
                                     {item.label}
                                   </span>
                                   {useTightMode ? null : (
-                                    <span className="block truncate text-[11px] text-muted-foreground">
+                                    <span className="block truncate text-[11px] text-muted-foreground/70">
                                       {item.href}
                                     </span>
                                   )}
@@ -649,13 +649,13 @@ export function NavigationDrawer({
                   </>
                 );
 
-                if (isFocusedSystemMode) {
+                if (isFocusedSystemMode || isBottomSheet) {
                   return (
                     <button
                       key={group.id}
                       type="button"
                       onClick={() => setSelectedGroupId(group.id)}
-                      className={cn(cardClassName, "block w-full text-right")}
+                      className={cn(cardClassName, "block text-right")}
                       aria-label={`عرض صفحات ${group.label}`}
                     >
                       {cardContent}
@@ -673,24 +673,6 @@ export function NavigationDrawer({
           )}
         </div>
 
-        {isBottomSheet ? null : (
-          <div className={cn("border-t border-border/70", isBottomSheet ? "px-4 py-3 sm:px-5" : "px-5 py-4 sm:px-6")}>
-            <Separator className="mb-4 bg-border/70" />
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs text-muted-foreground">
-                يمكنك الوصول السريع للأقسام المسموح بها من هنا.
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-11 rounded-2xl border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] px-4 text-[color:var(--app-accent-color)] shadow-sm hover:bg-[color:var(--app-accent-strong)] hover:text-[color:var(--app-accent-color)]"
-                onClick={onClose}
-              >
-                إغلاق
-              </Button>
-            </div>
-          </div>
-        )}
       </aside>
     </div>
   );

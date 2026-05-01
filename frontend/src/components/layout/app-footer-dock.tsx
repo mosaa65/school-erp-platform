@@ -69,9 +69,9 @@ function FooterButton({ action, mode = "standalone" }: { action: FooterAction; m
       >
         <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_26%,var(--app-accent-soft),transparent_60%)] opacity-90" />
         <span className="pointer-events-none absolute inset-[1px] rounded-full border border-white/35 dark:border-white/10" />
-        <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-background/75 shadow-inner shadow-white/20 dark:bg-background/60 sm:h-8 sm:w-8">
+        <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-black/90 shadow-inner shadow-white/10 dark:bg-black/60 sm:h-8 sm:w-8">
            <div className={cn(
-            "h-4.5 w-4.5 sm:h-4.5 sm:w-4.5 shrink-0 flex items-center justify-center",
+            "h-4.5 w-4.5 sm:h-4.5 sm:w-4.5 shrink-0 flex items-center justify-center text-[color:var(--app-accent-color)]",
           )}>
             {React.isValidElement(Icon) ? (
                React.cloneElement(Icon as React.ReactElement<any>, {
@@ -96,7 +96,7 @@ function FooterButton({ action, mode = "standalone" }: { action: FooterAction; m
       disabled={disabled}
       aria-pressed={active}
       className={cn(
-        "group relative flex items-center justify-center gap-2.5 rounded-full transition-all duration-300 ease-out hover:-translate-y-0.5",
+        "group relative flex flex-row-reverse items-center justify-center gap-2.5 rounded-full transition-all duration-300 ease-out hover:-translate-y-0.5",
         
         mode === "standalone" && "shadow-[0_14px_34px_-22px_rgba(15,23,42,0.55)] backdrop-blur-xl border",
         
@@ -117,22 +117,27 @@ function FooterButton({ action, mode = "standalone" }: { action: FooterAction; m
       )}
     >
       <div className={cn(
-        "relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors duration-300",
-        !active && "border border-transparent group-hover:border-white/35"
+        "relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-all duration-300",
+        active ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)]/25" : "border-transparent"
       )}>
         <div className={cn(
-          "h-4.5 w-4.5 sm:h-4.5 sm:w-4.5 shrink-0 transition-transform duration-300 flex items-center justify-center",
-          active ? "scale-110" : "group-hover:scale-110"
+          "flex h-6 w-6 shrink-0 transition-transform duration-300 items-center justify-center rounded-full",
+          active ? "bg-black/90 text-[color:var(--app-accent-color)] dark:bg-black/40 shadow-inner" : "group-hover:bg-black/5 dark:group-hover:bg-white/5"
         )}>
-          {React.isValidElement(Icon) ? (
-             React.cloneElement(Icon as React.ReactElement<any>, {
-               strokeWidth: active ? 2.5 : 2,
-               className: cn("h-full w-full", (Icon as React.ReactElement<any>).props.className)
-             })
-          ) : typeof Icon === 'function' ? (
-             // @ts-ignore
-             <Icon className="h-full w-full" strokeWidth={active ? 2.5 : 2} />
-          ) : Icon}
+          <div className={cn(
+            "h-4 w-4 sm:h-4 sm:w-4 shrink-0 transition-transform duration-300 flex items-center justify-center",
+            active ? "scale-110" : "group-hover:scale-110"
+          )}>
+            {React.isValidElement(Icon) ? (
+               React.cloneElement(Icon as React.ReactElement<any>, {
+                 strokeWidth: active ? 2.5 : 2,
+                 className: cn("h-full w-full", (Icon as React.ReactElement<any>).props.className)
+               })
+            ) : typeof Icon === 'function' ? (
+               // @ts-ignore
+               <Icon className="h-full w-full" strokeWidth={active ? 2.5 : 2} />
+            ) : Icon}
+          </div>
         </div>
         {typeof action.unreadCount === "number" && action.unreadCount > 0 ? (
           <span className={cn(

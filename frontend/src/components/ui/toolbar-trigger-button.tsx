@@ -28,29 +28,39 @@ export function ToolbarTriggerButton({
     <button
       type={type}
       className={cn(
-        "group inline-flex h-11 items-center gap-2.5 rounded-full border border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-sm font-semibold text-[color:var(--app-accent-color)] shadow-[0_14px_34px_-22px_rgba(15,23,42,0.55)] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:bg-[color:var(--app-accent-strong)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--app-accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "group relative inline-flex h-11 flex-row-reverse items-center gap-2.5 rounded-full border border-[color:var(--app-accent-strong)]/20 bg-[color:var(--app-accent-soft)]/15 p-1 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-[color:var(--app-accent-soft)]/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--app-accent-ring)] focus-visible:ring-offset-2",
         hideLabelOnMobile
-          ? "w-11 justify-center px-0 sm:w-auto sm:justify-start sm:px-4"
-          : "px-4",
+          ? "w-11 justify-center px-0 sm:w-auto sm:justify-start sm:px-1"
+          : "px-1",
         className,
       )}
       aria-label={props["aria-label"] ?? label}
       {...props}
     >
-      <span className="flex h-8 w-8 items-center justify-center rounded-full border border-white/35 bg-background/75 shadow-sm dark:border-white/10">
-        {icon}
+      {/* Simple Solid Icon Circle */}
+      <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-sm dark:bg-zinc-950">
+        <div className="h-4.5 w-4.5 flex items-center justify-center text-[color:var(--app-accent-color)] transition-transform group-hover:scale-110">
+          {icon}
+        </div>
+        
+        {count > 0 ? (
+          <span
+            className={cn(
+              "absolute -left-1 -top-1 flex h-4.5 min-w-[18px] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white shadow-md outline outline-2 outline-white dark:outline-zinc-950 ring-1 ring-white/20 transition-transform group-hover:scale-110",
+              hideCountOnMobile ? "hidden sm:inline-flex" : "",
+            )}
+          >
+            {count > 9 ? "+9" : count}
+          </span>
+        ) : null}
+      </div>
+
+      <span className={cn(
+        "px-2 text-[13px] font-bold tracking-tight text-[color:var(--app-accent-color)] transition-colors group-hover:brightness-110",
+        hideLabelOnMobile ? "hidden sm:inline" : ""
+      )}>
+        {label}
       </span>
-      <span className={cn(hideLabelOnMobile ? "hidden sm:inline" : "")}>{label}</span>
-      {count > 0 ? (
-        <span
-          className={cn(
-            "inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[color:var(--app-accent-color)] px-1.5 text-[10px] font-bold text-white shadow-sm",
-            hideCountOnMobile ? "hidden sm:inline-flex" : "",
-          )}
-        >
-          {count}
-        </span>
-      ) : null}
     </button>
   );
 }

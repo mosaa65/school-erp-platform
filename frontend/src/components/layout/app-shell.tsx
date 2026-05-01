@@ -706,7 +706,7 @@ export function AppShell({ children }: AppShellProps) {
       {!isHubMode ? (
         <aside
           className={cn(
-            "fixed inset-y-0 right-0 z-40 flex w-80 flex-col overflow-hidden border-l border-border/70 bg-card/95 p-4 shadow-lg backdrop-blur-sm transition-transform duration-200 md:static md:h-full md:translate-x-0 md:border-l-0 md:border-r",
+            "fixed inset-y-0 right-0 z-40 flex w-80 flex-col overflow-hidden border-l border-border/40 bg-background/20 p-4 shadow-xl backdrop-blur-2xl transition-transform duration-200 md:static md:h-full md:translate-x-0 md:border-l-0 md:border-r dark:bg-black/20",
             isRailMode ? "md:w-[104px] md:px-3 md:py-4" : "md:w-auto",
             isDesktopSidebarHidden
               ? "md:w-0 md:border-0 md:p-0 md:opacity-0 md:pointer-events-none"
@@ -1275,15 +1275,15 @@ export function AppShell({ children }: AppShellProps) {
                     className="md:hidden rounded-2xl border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)] shadow-sm hover:bg-[color:var(--app-accent-strong)] hover:text-[color:var(--app-accent-color)]"
                     onClick={() => {
                       if (isHubMode) {
-                        setNavigationDrawerOpen(true);
+                        setNavigationDrawerOpen(!isNavigationDrawerOpen);
                         return;
                       }
 
-                      setSidebarOpen(true);
+                      setSidebarOpen(!isSidebarOpen);
                     }}
-                    aria-label={isHubMode ? "فتح التنقل" : "فتح الشريط الجانبي"}
+                    aria-label={(isHubMode ? isNavigationDrawerOpen : isSidebarOpen) ? "إغلاق" : (isHubMode ? "فتح التنقل" : "فتح الشريط الجانبي")}
                   >
-                    <Menu className="h-5 w-5" />
+                    {(isHubMode ? isNavigationDrawerOpen : isSidebarOpen) ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                   </Button>
                 ) : null}
                 {ActivePageIcon ? (
@@ -1315,15 +1315,17 @@ export function AppShell({ children }: AppShellProps) {
                   </h1>
                 </div>
               </div>
-              <div className="flex shrink-0 items-center gap-2 rounded-full border border-white/35 bg-white/45 p-1.5 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/5">
+              <div className="flex shrink-0 items-center gap-2 rounded-full border border-border/40 bg-background/60 p-1.5 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-11 w-11 rounded-2xl bg-white/70 text-foreground shadow-sm hover:bg-white/90 dark:bg-white/5 dark:hover:bg-white/10"
+                  className="group relative h-11 w-11 rounded-full border border-[color:var(--app-accent-strong)]/60 bg-[color:var(--app-accent-soft)]/25 text-[color:var(--app-accent-color)] shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-[color:var(--app-accent-soft)]/40"
                   onClick={() => router.back()}
                   aria-label="الرجوع"
                 >
-                  <ArrowLeft className="h-5 w-5" />
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--app-accent-strong)]/40 bg-black/90 text-[color:var(--app-accent-color)] shadow-inner shadow-white/5 dark:bg-black/60">
+                    <ArrowLeft className="h-4.5 w-4.5" />
+                  </span>
                 </Button>
               </div>
             </div>

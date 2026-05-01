@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { ListFilter } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { ToolbarTriggerButton } from "@/components/ui/toolbar-trigger-button";
 
 type FilterTriggerButtonProps = Omit<
@@ -15,16 +16,18 @@ type FilterTriggerButtonProps = Omit<
 
 export function FilterTriggerButton({
   count = 0,
-  label = "فلترة",
+  label,
   icon,
+  className,
   ...props
 }: FilterTriggerButtonProps) {
   return (
     <ToolbarTriggerButton
-      label={label}
-      icon={icon ?? <ListFilter className="h-4 w-4" />}
+      label={label ?? "فلترة"}
+      icon={icon ?? <ListFilter className="h-3.5 w-3.5" />}
       count={count}
       hideLabelOnMobile
+      className={cn(!label && "w-11 justify-center px-0", className)}
       {...props}
     />
   );
