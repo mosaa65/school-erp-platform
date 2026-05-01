@@ -86,7 +86,6 @@ export function NavigationFilterControl({
         onClose={() => setOpen(false)}
         title="فلترة التنقل"
         actionButtons={<FilterDrawerActions onClear={clearDraft} onApply={applyDraft} />}
-        renderInPortal
       >
         <div className="space-y-5">
           <div className="rounded-2xl border border-[color:var(--app-accent-strong)]/40 bg-[color:var(--app-accent-soft)]/30 p-4">

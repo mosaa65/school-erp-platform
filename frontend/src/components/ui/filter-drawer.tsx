@@ -30,6 +30,8 @@ export type FilterDrawerProps = {
   children: React.ReactNode;
   actionButtons?: React.ReactNode;
   className?: string;
+  overlayClassName?: string;
+  renderInPortal?: boolean;
 };
 
 import { Drawer } from "vaul";

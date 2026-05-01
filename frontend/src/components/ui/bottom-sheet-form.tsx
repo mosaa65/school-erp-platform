@@ -19,6 +19,8 @@ export type BottomSheetFormProps = {
   showFooter?: boolean;
   panelClassName?: string;
   contentClassName?: string;
+  overlayClassName?: string;
+  renderInPortal?: boolean;
   contentRef?: React.Ref<HTMLDivElement>;
 };
 
