@@ -44,6 +44,7 @@ export function FilterDrawer({
   children,
   actionButtons,
   className,
+  overlayClassName,
 }: FilterDrawerProps) {
   const isDesktop = useMediaQuery(`(min-width: ${DESKTOP_BREAKPOINT}px)`);
 
