@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Filter } from "lucide-react";
+import { ListFilter } from "lucide-react";
 import { ToolbarTriggerButton } from "@/components/ui/toolbar-trigger-button";
 
 type FilterTriggerButtonProps = Omit<
@@ -22,8 +22,9 @@ export function FilterTriggerButton({
   return (
     <ToolbarTriggerButton
       label={label}
-      icon={icon ?? <Filter className="h-4 w-4" />}
+      icon={icon ?? <ListFilter className="h-4 w-4" />}
       count={count}
+      hideLabelOnMobile
       {...props}
     />
   );

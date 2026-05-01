@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  ArrowLeft,
   ArrowRight,
   BellRing,
   ChevronDown,
@@ -214,7 +215,7 @@ export function AppShell({ children }: AppShellProps) {
   const appearance = useAppearance();
   const navigationPreferences = useNavigationPreferences();
   const canReadUserNotifications = hasPermission("user-notifications.read");
-  const showFooterNotifications = false;
+  const showFooterNotifications = true;
   const navScrollContainerRef = React.useRef<HTMLDivElement | null>(null);
   const navScrollTopRef = React.useRef(0);
   const restoreFrameIdsRef = React.useRef<number[]>([]);
@@ -804,7 +805,7 @@ export function AppShell({ children }: AppShellProps) {
                   placeholder="ابحث عن صفحة أو نظام..."
                   className={cn(
                     navDensityClasses.searchClassName,
-                    "rounded-2xl border-border/70 bg-background/70 pl-10",
+                    "rounded-2xl border-border/70 bg-background/70",
                   )}
                 />
                 {navSearch ? (
@@ -1314,36 +1315,16 @@ export function AppShell({ children }: AppShellProps) {
                   </h1>
                 </div>
               </div>
-              <div className="flex shrink-0 items-center gap-2 rounded-[22px] border border-white/35 bg-white/45 p-1.5 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/5">
-                {canReadUserNotifications ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="relative h-11 gap-2 rounded-2xl border-white/40 bg-white/70 px-3.5 text-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:bg-white/90 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
-                    asChild
-                  >
-                    <Link
-                      href="/app/user-notifications"
-                      data-testid="header-user-notifications-link"
-                    >
-                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]">
-                        <BellRing className="h-4 w-4" />
-                      </span>
-                      <span className="hidden text-sm font-medium sm:inline">إشعاراتي</span>
-                      {unreadNotificationsCount > 0 ? (
-                        <Badge
-                          variant="destructive"
-                          className="min-w-6 rounded-full px-1.5 py-0 text-[10px]"
-                          data-testid="header-user-notifications-badge"
-                        >
-                          {unreadNotificationsCount > 99
-                            ? "99+"
-                            : unreadNotificationsCount}
-                        </Badge>
-                      ) : null}
-                    </Link>
-                  </Button>
-                ) : null}
+              <div className="flex shrink-0 items-center gap-2 rounded-full border border-white/35 bg-white/45 p-1.5 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/5">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-11 w-11 rounded-2xl bg-white/70 text-foreground shadow-sm hover:bg-white/90 dark:bg-white/5 dark:hover:bg-white/10"
+                  onClick={() => router.back()}
+                  aria-label="الرجوع"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
               </div>
             </div>
           </div>
