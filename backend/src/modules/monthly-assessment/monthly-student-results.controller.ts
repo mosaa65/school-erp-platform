@@ -25,6 +25,8 @@ import { CalculateStudentPeriodResultsDto } from '../assessment-periods/student-
 import { CreateStudentPeriodResultDto } from '../assessment-periods/student-period-results/dto/create-student-period-result.dto';
 import { ListStudentPeriodResultsDto } from '../assessment-periods/student-period-results/dto/list-student-period-results.dto';
 import { UpdateStudentPeriodResultDto } from '../assessment-periods/student-period-results/dto/update-student-period-result.dto';
+import { EnsureMonthlyStudentResultsDto } from './dto/ensure-monthly-student-results.dto';
+import { SyncMonthlyStudentResultsDto } from './dto/sync-monthly-student-results.dto';
 import { MonthlyStudentResultsService } from './monthly-student-results.service';
 
 @ApiTags('Monthly Student Results')
@@ -51,6 +53,29 @@ export class MonthlyStudentResultsController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.monthlyStudentResultsService.calculate(payload, user.userId);
+  }
+
+  @Post('ensure-bulk')
+  @RequirePermissions('student-period-results.create')
+  @ApiOperation({ summary: 'Ensure monthly student results exist for section/subject scope' })
+  ensureBulk(
+    @Body() payload: EnsureMonthlyStudentResultsDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.monthlyStudentResultsService.ensureBulk(payload, user.userId);
+  }
+
+  @Post('sync-auto-components')
+  @RequirePermissions('student-period-results.calculate')
+  @ApiOperation({ summary: 'Sync automatic monthly components from source systems' })
+  syncAutoComponents(
+    @Body() payload: SyncMonthlyStudentResultsDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.monthlyStudentResultsService.syncAutomaticComponents(
+      payload,
+      user.userId,
+    );
   }
 
   @Get()

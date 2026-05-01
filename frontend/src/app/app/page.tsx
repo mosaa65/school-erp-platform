@@ -56,10 +56,6 @@ export default function AppDashboardPage() {
   return (
     <div className="space-y-5">
       <section className="space-y-2">
-        <Badge variant="secondary" className="w-fit gap-1.5">
-          <ShieldCheck className="h-4 w-4" />
-          الجلسة نشطة
-        </Badge>
         <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
           نظرة عامة على لوحة التحكم
         </h2>

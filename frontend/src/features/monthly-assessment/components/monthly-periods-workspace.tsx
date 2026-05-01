@@ -131,6 +131,12 @@ export function MonthlyPeriodsWorkspace({ mode }: MonthlyPeriodsWorkspaceProps) 
   const canCreateComponent = hasPermission("assessment-period-components.create");
   const canUpdateComponent = hasPermission("assessment-period-components.update");
   const canDeleteComponent = hasPermission("assessment-period-components.delete");
+  const canReadPeriodOptions =
+    hasPermission("assessment-periods.read") ||
+    hasPermission("assessment-period-components.read") ||
+    canCreateComponent ||
+    canUpdateComponent ||
+    canDeleteComponent;
 
   const isPeriodsMode = mode === "periods";
   const isLinksMode = mode === "links";
@@ -165,34 +171,80 @@ export function MonthlyPeriodsWorkspace({ mode }: MonthlyPeriodsWorkspaceProps) 
   const [formError, setFormError] = React.useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
   const formAcademicYearId =
-    isPeriodsMode && isFormOpen && periodForm.academicYearId ? periodForm.academicYearId : yearFilter;
+    isPeriodsMode && isFormOpen ? periodForm.academicYearId || undefined : undefined;
+  const formAcademicTermId =
+    isPeriodsMode && isFormOpen ? periodForm.academicTermId || undefined : undefined;
+  const filterAcademicYearId = filterDraft.year !== "all" ? filterDraft.year : undefined;
+  const filterAcademicTermId = filterDraft.term !== "all" ? filterDraft.term : undefined;
+  const filterAcademicMonthId = filterDraft.month !== "all" ? filterDraft.month : undefined;
+  const activeAcademicYearId = yearFilter !== "all" ? yearFilter : undefined;
+  const activeAcademicTermId = termFilter !== "all" ? termFilter : undefined;
+  const activeAcademicMonthId = monthFilter !== "all" ? monthFilter : undefined;
 
   const yearsQuery = useQuery({
     queryKey: ["monthly-assessment-years"],
     queryFn: async () => (await apiClient.listAcademicYears({ page: 1, limit: 100 })).data,
   });
 
-  const termsQuery = useQuery({
-    queryKey: ["monthly-assessment-terms", formAcademicYearId],
+  const formTermsQuery = useQuery({
+    queryKey: ["monthly-assessment-terms", "form", formAcademicYearId ?? "all"],
     queryFn: async () =>
       (
         await apiClient.listAcademicTerms({
           page: 1,
           limit: 100,
-          academicYearId: formAcademicYearId === "all" ? undefined : formAcademicYearId,
+          academicYearId: formAcademicYearId,
           isActive: true,
         })
       ).data,
   });
 
-  const monthsQuery = useQuery({
-    queryKey: ["monthly-assessment-months", formAcademicYearId],
+  const filterTermsQuery = useQuery({
+    queryKey: ["monthly-assessment-terms", "filter", filterAcademicYearId ?? "all"],
+    queryFn: async () =>
+      (
+        await apiClient.listAcademicTerms({
+          page: 1,
+          limit: 100,
+          academicYearId: filterAcademicYearId,
+          isActive: true,
+        })
+      ).data,
+  });
+
+  const formMonthsQuery = useQuery({
+    queryKey: [
+      "monthly-assessment-months",
+      "form",
+      formAcademicYearId ?? "all",
+      formAcademicTermId ?? "all",
+    ],
     queryFn: async () =>
       (
         await apiClient.listAcademicMonths({
           page: 1,
           limit: 100,
-          academicYearId: formAcademicYearId === "all" ? undefined : formAcademicYearId,
+          academicYearId: formAcademicYearId,
+          academicTermId: formAcademicTermId,
+          isActive: true,
+        })
+      ).data,
+  });
+
+  const filterMonthsQuery = useQuery({
+    queryKey: [
+      "monthly-assessment-months",
+      "filter",
+      filterAcademicYearId ?? "all",
+      filterAcademicTermId ?? "all",
+    ],
+    queryFn: async () =>
+      (
+        await apiClient.listAcademicMonths({
+          page: 1,
+          limit: 100,
+          academicYearId: filterAcademicYearId,
+          academicTermId: filterAcademicTermId,
           isActive: true,
         })
       ).data,
@@ -239,17 +291,50 @@ export function MonthlyPeriodsWorkspace({ mode }: MonthlyPeriodsWorkspaceProps) 
   const periods = periodsQuery.data?.data ?? [];
   const periodsPagination = periodsQuery.data?.pagination;
   const allMonthlyPeriodsQuery = useQuery({
-    queryKey: ["monthly-assessment-periods-options"],
+    queryKey: [
+      "monthly-assessment-periods-options",
+      activeAcademicYearId ?? "all",
+      activeAcademicTermId ?? "all",
+      activeAcademicMonthId ?? "all",
+    ],
+    enabled: isPeriodsMode || canReadPeriodOptions,
     queryFn: async () =>
       (
         await apiClient.listMonthlyAssessmentPeriods({
           page: 1,
           limit: 200,
+          academicYearId: activeAcademicYearId,
+          academicTermId: activeAcademicTermId,
+          academicMonthId: activeAcademicMonthId,
           isActive: true,
         })
       ).data,
   });
   const monthlyPeriods = allMonthlyPeriodsQuery.data ?? [];
+  const filteredPeriodsForFilter = React.useMemo(() => {
+    if (isPeriodsMode) {
+      return monthlyPeriods;
+    }
+
+    return monthlyPeriods.filter((item) => {
+      if (filterAcademicYearId && item.academicYearId !== filterAcademicYearId) {
+        return false;
+      }
+      if (filterAcademicTermId && item.academicTermId !== filterAcademicTermId) {
+        return false;
+      }
+      if (filterAcademicMonthId && item.academicMonthId !== filterAcademicMonthId) {
+        return false;
+      }
+      return true;
+    });
+  }, [
+    filterAcademicMonthId,
+    filterAcademicTermId,
+    filterAcademicYearId,
+    isPeriodsMode,
+    monthlyPeriods,
+  ]);
   const components = React.useMemo(() => {
     const items = componentsQuery.data?.data ?? [];
     if (!isLinksMode) {
@@ -260,6 +345,10 @@ export function MonthlyPeriodsWorkspace({ mode }: MonthlyPeriodsWorkspaceProps) 
     );
   }, [componentsQuery.data?.data, isLinksMode]);
   const componentsPagination = componentsQuery.data?.pagination;
+  const monthlyPeriodsLoadError =
+    allMonthlyPeriodsQuery.error instanceof Error
+      ? allMonthlyPeriodsQuery.error.message
+      : null;
 
   const createPeriodMutation = useMutation({
     mutationFn: (payload: CreateAssessmentPeriodPayload) => apiClient.createMonthlyAssessmentPeriod(payload),
@@ -351,11 +440,11 @@ export function MonthlyPeriodsWorkspace({ mode }: MonthlyPeriodsWorkspaceProps) 
 
     setPeriodForm((prev) => {
       const nextTermId =
-        prev.academicTermId && (termsQuery.data ?? []).some((item) => item.id === prev.academicTermId)
+        prev.academicTermId && (formTermsQuery.data ?? []).some((item) => item.id === prev.academicTermId)
           ? prev.academicTermId
           : "";
       const nextMonthId =
-        prev.academicMonthId && (monthsQuery.data ?? []).some((item) => item.id === prev.academicMonthId)
+        prev.academicMonthId && (formMonthsQuery.data ?? []).some((item) => item.id === prev.academicMonthId)
           ? prev.academicMonthId
           : "";
 
@@ -369,7 +458,64 @@ export function MonthlyPeriodsWorkspace({ mode }: MonthlyPeriodsWorkspaceProps) 
         academicMonthId: nextMonthId,
       };
     });
-  }, [isPeriodsMode, termsQuery.data, monthsQuery.data]);
+  }, [formMonthsQuery.data, formTermsQuery.data, isPeriodsMode]);
+
+  React.useEffect(() => {
+    setFilterDraft((prev) => {
+      const nextTerm =
+        prev.term !== "all" && !(filterTermsQuery.data ?? []).some((item) => item.id === prev.term)
+          ? "all"
+          : prev.term;
+      const nextMonth =
+        prev.month !== "all" && !(filterMonthsQuery.data ?? []).some((item) => item.id === prev.month)
+          ? "all"
+          : prev.month;
+
+      if (nextTerm === prev.term && nextMonth === prev.month) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        term: nextTerm,
+        month: nextMonth,
+      };
+    });
+  }, [filterMonthsQuery.data, filterTermsQuery.data]);
+
+  React.useEffect(() => {
+    if (isPeriodsMode) {
+      return;
+    }
+
+    setFilterDraft((prev) => {
+      if (
+        prev.period !== "all" &&
+        !filteredPeriodsForFilter.some((item) => item.id === prev.period)
+      ) {
+        return { ...prev, period: "all" };
+      }
+
+      return prev;
+    });
+  }, [filteredPeriodsForFilter, isPeriodsMode]);
+
+  React.useEffect(() => {
+    if (isPeriodsMode) {
+      return;
+    }
+
+    setComponentForm((prev) => {
+      if (
+        prev.assessmentPeriodId &&
+        !monthlyPeriods.some((item) => item.id === prev.assessmentPeriodId)
+      ) {
+        return { ...prev, assessmentPeriodId: "" };
+      }
+
+      return prev;
+    });
+  }, [isPeriodsMode, monthlyPeriods]);
 
   function handleCloseForm() {
     setIsFormOpen(false);
@@ -388,10 +534,17 @@ export function MonthlyPeriodsWorkspace({ mode }: MonthlyPeriodsWorkspaceProps) 
     if (isPeriodsMode) {
       setPeriodForm(DEFAULT_PERIOD_FORM);
     } else {
+      if (!canReadPeriodOptions) {
+        setFormError("يتطلب إنشاء مكوّن شهري صلاحية قراءة الفترات الشهرية: assessment-periods.read.");
+        return;
+      }
       setComponentForm({
         ...DEFAULT_COMPONENT_FORM,
         entryMode: isLinksMode ? "AUTO_HOMEWORK" : "MANUAL",
-        assessmentPeriodId: periodFilter === "all" ? "" : periodFilter,
+        assessmentPeriodId:
+          periodFilter !== "all" && monthlyPeriods.some((item) => item.id === periodFilter)
+            ? periodFilter
+            : "",
       });
     }
     setIsFormOpen(true);
@@ -589,7 +742,18 @@ export function MonthlyPeriodsWorkspace({ mode }: MonthlyPeriodsWorkspaceProps) 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1">
               <Label>السنة الدراسية</Label>
-              <SelectField value={filterDraft.year} onChange={(event) => setFilterDraft((prev) => ({ ...prev, year: event.target.value }))} icon={<CalendarDays className="h-4 w-4" />}>
+              <SelectField
+                value={filterDraft.year}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    year: event.target.value,
+                    term: "all",
+                    month: "all",
+                  }))
+                }
+                icon={<CalendarDays className="h-4 w-4" />}
+              >
                 <option value="all">كل السنوات</option>
                 {(yearsQuery.data ?? []).map((item) => (
                   <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>
@@ -598,9 +762,18 @@ export function MonthlyPeriodsWorkspace({ mode }: MonthlyPeriodsWorkspaceProps) 
             </div>
             <div className="space-y-1">
               <Label>الفصل الدراسي</Label>
-              <SelectField value={filterDraft.term} onChange={(event) => setFilterDraft((prev) => ({ ...prev, term: event.target.value }))}>
+              <SelectField
+                value={filterDraft.term}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    term: event.target.value,
+                    month: "all",
+                  }))
+                }
+              >
                 <option value="all">كل الفصول</option>
-                {(termsQuery.data ?? []).map((item) => (
+                {(filterTermsQuery.data ?? []).map((item) => (
                   <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>
                 ))}
               </SelectField>
@@ -609,7 +782,7 @@ export function MonthlyPeriodsWorkspace({ mode }: MonthlyPeriodsWorkspaceProps) 
               <Label>الشهر الأكاديمي</Label>
               <SelectField value={filterDraft.month} onChange={(event) => setFilterDraft((prev) => ({ ...prev, month: event.target.value }))}>
                 <option value="all">كل الأشهر</option>
-                {(monthsQuery.data ?? []).map((item) => (
+                {(filterMonthsQuery.data ?? []).map((item) => (
                   <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>
                 ))}
               </SelectField>
@@ -619,7 +792,7 @@ export function MonthlyPeriodsWorkspace({ mode }: MonthlyPeriodsWorkspaceProps) 
                 <Label>الفترة الشهرية</Label>
                 <SelectField value={filterDraft.period} onChange={(event) => setFilterDraft((prev) => ({ ...prev, period: event.target.value }))}>
                   <option value="all">كل الفترات الشهرية</option>
-                  {monthlyPeriods.map((item) => (
+                  {filteredPeriodsForFilter.map((item) => (
                     <option key={item.id} value={item.id}>{item.name}</option>
                   ))}
                 </SelectField>
@@ -669,6 +842,11 @@ export function MonthlyPeriodsWorkspace({ mode }: MonthlyPeriodsWorkspaceProps) 
             {mutationError ? (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
                 {mutationError}
+              </div>
+            ) : null}
+            {!isPeriodsMode && monthlyPeriodsLoadError ? (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                تعذر تحميل الفترات الشهرية: {monthlyPeriodsLoadError}
               </div>
             ) : null}
 
@@ -791,7 +969,7 @@ export function MonthlyPeriodsWorkspace({ mode }: MonthlyPeriodsWorkspaceProps) 
       <Fab
         onClick={openCreate}
         ariaLabel={isPeriodsMode ? "إنشاء فترة شهرية" : "إنشاء مكوّن شهري"}
-        disabled={isPeriodsMode ? !canCreatePeriod : !canCreateComponent}
+        disabled={isPeriodsMode ? !canCreatePeriod : !canCreateComponent || !canReadPeriodOptions}
       />
 
       <BottomSheetForm
@@ -814,7 +992,17 @@ export function MonthlyPeriodsWorkspace({ mode }: MonthlyPeriodsWorkspaceProps) 
         {isPeriodsMode ? (
           <div className="space-y-3">
             <FormField label="السنة الدراسية" required error={!periodForm.academicYearId && formError ? formError : undefined}>
-              <SelectField value={periodForm.academicYearId} onChange={(event) => setPeriodForm((prev) => ({ ...prev, academicYearId: event.target.value }))}>
+              <SelectField
+                value={periodForm.academicYearId}
+                onChange={(event) =>
+                  setPeriodForm((prev) => ({
+                    ...prev,
+                    academicYearId: event.target.value,
+                    academicTermId: "",
+                    academicMonthId: "",
+                  }))
+                }
+              >
                 <option value="">اختر السنة الدراسية</option>
                 {(yearsQuery.data ?? []).map((item) => (
                   <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>
@@ -822,9 +1010,18 @@ export function MonthlyPeriodsWorkspace({ mode }: MonthlyPeriodsWorkspaceProps) 
               </SelectField>
             </FormField>
             <FormField label="الفصل الدراسي" required>
-              <SelectField value={periodForm.academicTermId} onChange={(event) => setPeriodForm((prev) => ({ ...prev, academicTermId: event.target.value }))}>
+              <SelectField
+                value={periodForm.academicTermId}
+                onChange={(event) =>
+                  setPeriodForm((prev) => ({
+                    ...prev,
+                    academicTermId: event.target.value,
+                    academicMonthId: "",
+                  }))
+                }
+              >
                 <option value="">اختر الفصل الدراسي</option>
-                {(termsQuery.data ?? []).map((item) => (
+                {(formTermsQuery.data ?? []).map((item) => (
                   <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>
                 ))}
               </SelectField>
@@ -832,7 +1029,7 @@ export function MonthlyPeriodsWorkspace({ mode }: MonthlyPeriodsWorkspaceProps) 
             <FormField label="الشهر الأكاديمي" required>
               <SelectField value={periodForm.academicMonthId} onChange={(event) => setPeriodForm((prev) => ({ ...prev, academicMonthId: event.target.value }))}>
                 <option value="">اختر الشهر الأكاديمي</option>
-                {(monthsQuery.data ?? []).map((item) => (
+                {(formMonthsQuery.data ?? []).map((item) => (
                   <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>
                 ))}
               </SelectField>
@@ -861,6 +1058,16 @@ export function MonthlyPeriodsWorkspace({ mode }: MonthlyPeriodsWorkspaceProps) 
                 ))}
               </SelectField>
             </FormField>
+            {!canReadPeriodOptions ? (
+              <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+                يلزم توفر صلاحية قراءة أو إدارة مكونات الفترات الشهرية لعرض الفترات داخل هذا الحقل.
+              </div>
+            ) : null}
+            {canReadPeriodOptions && monthlyPeriods.length === 0 && !allMonthlyPeriodsQuery.isLoading ? (
+              <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+                لا توجد فترات شهرية نشطة متاحة للاختيار حاليًا.
+              </div>
+            ) : null}
             <FormField label="اسم المكوّن" required>
               <Input value={componentForm.name} onChange={(event) => setComponentForm((prev) => ({ ...prev, name: event.target.value }))} placeholder="مثال: الواجبات" />
             </FormField>

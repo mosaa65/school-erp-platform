@@ -400,7 +400,7 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
   },
   {
     id: "system-05-grades-calendar",
-    label: "التعليم والدرجات - التقويم",
+    label: " التقويم",
     icon: CalendarRange,
     iconClassName: "border-cyan-500/20 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300",
     surfaceClassName: "bg-gradient-to-l from-cyan-500/10 via-transparent to-transparent",
@@ -421,7 +421,7 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
   },
   {
     id: "system-05-grades-setup",
-    label: "التعليم والدرجات - الإعدادات",
+    label: "الإعدادات",
     icon: Medal,
     iconClassName: "border-orange-500/20 bg-orange-500/10 text-orange-700 dark:text-orange-300",
     surfaceClassName: "bg-gradient-to-l from-orange-500/10 via-transparent to-transparent",
@@ -466,7 +466,7 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
   },
   {
     id: "system-05-assignments",
-    label: "التعليم والدرجات - نظام الواجبات",
+    label: "نظام الواجبات",
     icon: ClipboardCheck,
     iconClassName: "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
     surfaceClassName: "bg-gradient-to-l from-emerald-500/10 via-transparent to-transparent",
@@ -493,7 +493,7 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
   },
   {
     id: "system-05-attendance",
-    label: "التعليم والدرجات - حضور الطلاب",
+    label: " حضور الطلاب",
     icon: ClipboardCheck,
     iconClassName: "border-cyan-500/20 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300",
     surfaceClassName: "bg-gradient-to-l from-cyan-500/10 via-transparent to-transparent",
@@ -508,7 +508,7 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
   },
   {
     id: "system-05-exams",
-    label: "التعليم والدرجات - نظام الاختبارات",
+    label: "التعليم والدرجات-",
     icon: ClipboardCheck,
     iconClassName: "border-violet-500/20 bg-violet-500/10 text-violet-700 dark:text-violet-300",
     surfaceClassName: "bg-gradient-to-l from-violet-500/10 via-transparent to-transparent",
@@ -535,7 +535,7 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
   },
   {
     id: "system-05-monthly-periods",
-    label: "التعليم والدرجات - الفترات الشهرية",
+    label: " الفترات الشهرية",
     icon: Medal,
     iconClassName: "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300",
     surfaceClassName: "bg-gradient-to-l from-amber-500/10 via-transparent to-transparent",
@@ -580,7 +580,7 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
   },
   {
     id: "system-05-semester-periods",
-    label: "التعليم والدرجات - الفترات الفصلية",
+    label: "الفترات الفصلية",
     icon: Medal,
     iconClassName: "border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300",
     surfaceClassName: "bg-gradient-to-l from-rose-500/10 via-transparent to-transparent",
@@ -625,7 +625,7 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
   },
   {
     id: "system-05-year-final-periods",
-    label: "التعليم والدرجات - الفترات النهائية",
+    label: " الفترات النهائية",
     icon: Medal,
     iconClassName: "border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-300",
     surfaceClassName: "bg-gradient-to-l from-sky-500/10 via-transparent to-transparent",
@@ -658,7 +658,7 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
   },
   {
     id: "system-05-grades-results",
-    label: "التعليم والدرجات - النتائج",
+    label: " النتائج",
     icon: ScrollText,
     iconClassName: "border-fuchsia-500/20 bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-300",
     surfaceClassName: "bg-gradient-to-l from-fuchsia-500/10 via-transparent to-transparent",
@@ -879,7 +879,7 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
   },
   {
     id: "system-19-health",
-    label: "النظام 19 - الصحة المدرسية",
+    label: "الصحة المدرسية",
     icon: HeartPulse,
     items: [
       {

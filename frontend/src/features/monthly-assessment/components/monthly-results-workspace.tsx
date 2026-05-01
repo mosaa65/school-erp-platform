@@ -18,12 +18,15 @@ import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
 import { TextareaField } from "@/components/ui/textarea-field";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
+import { useAuth } from "@/features/auth/providers/auth-provider";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
+  ApiError,
   apiClient,
   type AssessmentPeriodComponentListItem,
   type CreateStudentPeriodComponentScorePayload,
   type CreateStudentPeriodResultPayload,
+  type EmployeeTeachingAssignmentListItem,
   type StudentPeriodComponentScoreListItem,
   type StudentPeriodResultListItem,
 } from "@/lib/api/client";
@@ -102,6 +105,7 @@ function toOptionalNumber(value: string) {
 
 export function MonthlyResultsWorkspace({ mode }: MonthlyResultsWorkspaceProps) {
   const queryClient = useQueryClient();
+  const auth = useAuth();
   const { hasPermission } = useRbac();
 
   const canCreateResult = hasPermission("student-period-results.create");
@@ -144,6 +148,15 @@ export function MonthlyResultsWorkspace({ mode }: MonthlyResultsWorkspaceProps) 
   const [resultForm, setResultForm] = React.useState(DEFAULT_RESULT_FORM);
   const [scoreForm, setScoreForm] = React.useState(DEFAULT_SCORE_FORM);
   const [bulkDrafts, setBulkDrafts] = React.useState<BulkDraftMap>({});
+  const bulkInputRefs = React.useRef(new Map<string, HTMLInputElement | null>());
+  const sectionScopeForSubjects = isFilterOpen ? filterDraft.section : sectionFilter;
+  const isPrivilegedUser = React.useMemo(
+    () =>
+      auth.session?.user.roleCodes.some((roleCode) =>
+        ["super_admin", "school_admin"].includes(roleCode),
+      ) ?? false,
+    [auth.session?.user.roleCodes],
+  );
 
   const periodsQuery = useQuery({
     queryKey: ["monthly-results-period-options"],
@@ -166,6 +179,69 @@ export function MonthlyResultsWorkspace({ mode }: MonthlyResultsWorkspaceProps) 
     queryKey: ["monthly-results-subject-options"],
     queryFn: async () => (await apiClient.listSubjects({ page: 1, limit: 100, isActive: true })).data,
   });
+
+  const activePeriod = React.useMemo(
+    () => (periodsQuery.data ?? []).find((item) => item.id === periodFilter),
+    [periodFilter, periodsQuery.data],
+  );
+
+  const teacherAssignmentsQuery = useQuery({
+    queryKey: ["monthly-results", "teacher-assignments", activePeriod?.academicYearId ?? "all"],
+    enabled: auth.isHydrated && auth.isAuthenticated && !isPrivilegedUser,
+    queryFn: async () => {
+      try {
+        return await apiClient.listMyActiveEmployeeTeachingAssignments({
+          academicYearId: activePeriod?.academicYearId,
+        });
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) {
+          auth.signOut();
+          throw error;
+        }
+
+        return [];
+      }
+    },
+  });
+
+  const teacherAssignments = teacherAssignmentsQuery.data ?? [];
+  const hasTeacherScopedAssignments =
+    !isPrivilegedUser && teacherAssignments.length > 0;
+
+  const visibleSections = React.useMemo(() => {
+    if (!hasTeacherScopedAssignments) {
+      return sectionsQuery.data ?? [];
+    }
+
+    const seen = new Map<string, EmployeeTeachingAssignmentListItem["section"]>();
+    for (const assignment of teacherAssignments) {
+      if (!seen.has(assignment.section.id)) {
+        seen.set(assignment.section.id, assignment.section);
+      }
+    }
+
+    return Array.from(seen.values());
+  }, [hasTeacherScopedAssignments, sectionsQuery.data, teacherAssignments]);
+
+  const visibleSubjects = React.useMemo(() => {
+    if (!hasTeacherScopedAssignments) {
+      return subjectsQuery.data ?? [];
+    }
+
+    const scopedAssignments =
+      sectionScopeForSubjects === "all"
+        ? teacherAssignments
+        : teacherAssignments.filter((assignment) => assignment.sectionId === sectionScopeForSubjects);
+
+    const seen = new Map<string, EmployeeTeachingAssignmentListItem["subject"]>();
+    for (const assignment of scopedAssignments) {
+      if (!seen.has(assignment.subject.id)) {
+        seen.set(assignment.subject.id, assignment.subject);
+      }
+    }
+
+    return Array.from(seen.values());
+  }, [hasTeacherScopedAssignments, sectionScopeForSubjects, subjectsQuery.data, teacherAssignments]);
 
   const selectedPeriodForForm = React.useMemo(
     () => (periodsQuery.data ?? []).find((item) => item.id === resultForm.assessmentPeriodId),
@@ -249,9 +325,17 @@ export function MonthlyResultsWorkspace({ mode }: MonthlyResultsWorkspaceProps) 
     [scoresQuery.data?.data],
   );
 
-  const bulkComponents = React.useMemo(
-    () => (componentsQuery.data?.data ?? []).filter((item) => scoreIsEditable(item)),
+  const monthlyComponents = React.useMemo(
+    () => componentsQuery.data?.data ?? [],
     [componentsQuery.data?.data],
+  );
+  const bulkComponents = React.useMemo(
+    () => monthlyComponents.filter((item) => scoreIsEditable(item)),
+    [monthlyComponents],
+  );
+  const bulkReadonlyComponents = React.useMemo(
+    () => monthlyComponents.filter((item) => !scoreIsEditable(item)),
+    [monthlyComponents],
   );
   const bulkRows = React.useMemo(
     () =>
@@ -361,37 +445,40 @@ export function MonthlyResultsWorkspace({ mode }: MonthlyResultsWorkspaceProps) 
       if (periodFilter === "all" || sectionFilter === "all" || subjectFilter === "all") {
         throw new Error("اختر الفترة والشعبة والمادة أولًا.");
       }
-      const period = (periodsQuery.data ?? []).find((item) => item.id === periodFilter);
-      const enrollments = await apiClient.listStudentEnrollments({
-        page: 1,
-        limit: 200,
-        academicYearId: period?.academicYearId,
+      return await apiClient.ensureMonthlyStudentResults({
+        assessmentPeriodId: periodFilter,
         sectionId: sectionFilter,
-        isActive: true,
+        subjectId: subjectFilter,
       });
-      let count = 0;
-      for (const enrollment of enrollments.data) {
-        const exists = filteredMonthlyResults.some(
-          (item) =>
-            item.assessmentPeriodId === periodFilter &&
-            item.subjectId === subjectFilter &&
-            item.studentEnrollmentId === enrollment.id,
-        );
-        if (exists) continue;
-        await apiClient.createMonthlyStudentResult({
-          assessmentPeriodId: periodFilter,
-          subjectId: subjectFilter,
-          studentEnrollmentId: enrollment.id,
-          status: "DRAFT",
-          isActive: true,
-        });
-        count += 1;
-      }
-      return count;
     },
-    onSuccess: (count) => {
+    onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: ["monthly-results"] });
-      setActionSuccess(count > 0 ? `تم إنشاء ${count} نتيجة شهرية ناقصة.` : "كل النتائج الشهرية موجودة.");
+      setActionSuccess(
+        result.createdResults > 0
+          ? `تم إنشاء ${result.createdResults} نتيجة شهرية ناقصة من أصل ${result.totalEnrollments} طالب.`
+          : "كل النتائج الشهرية موجودة.",
+      );
+    },
+  });
+
+  const syncAutoComponentsMutation = useMutation({
+    mutationFn: async () => {
+      if (periodFilter === "all") {
+        throw new Error("اختر الفترة الشهرية أولًا.");
+      }
+
+      return await apiClient.syncMonthlyStudentAutoComponents({
+        assessmentPeriodId: periodFilter,
+        sectionId: sectionFilter === "all" ? undefined : sectionFilter,
+        subjectId: subjectFilter === "all" ? undefined : subjectFilter,
+      });
+    },
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries({ queryKey: ["monthly-results"] });
+      void queryClient.invalidateQueries({ queryKey: ["monthly-result-scores"] });
+      setActionSuccess(
+        `تمت مزامنة المكونات التلقائية. نتائج ${result.updatedResults} ومكونات ${result.updatedComponents}.`,
+      );
     },
   });
 
@@ -399,6 +486,9 @@ export function MonthlyResultsWorkspace({ mode }: MonthlyResultsWorkspaceProps) 
     mutationFn: async () => {
       let changed = 0;
       for (const row of bulkRows) {
+        if (row.isLocked) {
+          continue;
+        }
         for (const component of bulkComponents) {
           const draftValue = bulkDrafts[row.id]?.[component.id];
           if (draftValue === undefined || draftValue === "") {
@@ -427,9 +517,91 @@ export function MonthlyResultsWorkspace({ mode }: MonthlyResultsWorkspaceProps) 
       }
       return changed;
     },
-    onSuccess: (changed) => {
-      void queryClient.invalidateQueries({ queryKey: ["monthly-result-scores"] });
-      setActionSuccess(changed > 0 ? `تم حفظ ${changed} درجة شهرية.` : "لا توجد تغييرات جديدة للحفظ.");
+    onSuccess: async (changed) => {
+      if (changed > 0 && periodFilter !== "all") {
+        await apiClient.calculateMonthlyStudentResults({
+          assessmentPeriodId: periodFilter,
+          sectionId: sectionFilter === "all" ? undefined : sectionFilter,
+          subjectId: subjectFilter === "all" ? undefined : subjectFilter,
+        });
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ["monthly-results"] });
+      await queryClient.invalidateQueries({ queryKey: ["monthly-result-scores"] });
+      setActionSuccess(
+        changed > 0 ? `تم حفظ ${changed} درجة شهرية وإعادة حساب النتائج.` : "لا توجد تغييرات جديدة للحفظ.",
+      );
+    },
+  });
+
+  const bulkRowSaveMutation = useMutation({
+    mutationFn: async (rowId: string) => {
+      const row = bulkRows.find((item) => item.id === rowId);
+      if (!row) {
+        throw new Error("تعذر العثور على صف الطالب المطلوب.");
+      }
+      if (row.isLocked) {
+        throw new Error("لا يمكن حفظ صف معتمد. فك الاعتماد أولًا.");
+      }
+
+      let changed = 0;
+      for (const component of bulkComponents) {
+        const draftValue = bulkDrafts[row.id]?.[component.id];
+        if (draftValue === undefined || draftValue === "") {
+          continue;
+        }
+        const rawScore = Number(draftValue);
+        if (!Number.isFinite(rawScore) || rawScore < 0 || rawScore > component.maxScore) {
+          throw new Error(`درجة ${component.name} للطالب ${row.studentEnrollment.student.fullName} غير صالحة.`);
+        }
+
+        const currentRaw = getBulkScore(row.id, component.id)?.rawScore;
+        if (String(currentRaw ?? "") === String(rawScore)) {
+          continue;
+        }
+
+        const existing = getBulkScore(row.id, component.id);
+        const payload: CreateStudentPeriodComponentScorePayload = {
+          studentPeriodResultId: row.id,
+          assessmentPeriodComponentId: component.id,
+          rawScore,
+          finalScore: rawScore,
+          isActive: true,
+        };
+
+        if (existing) {
+          await apiClient.updateMonthlyStudentComponentScore(existing.id, payload);
+        } else {
+          await apiClient.createMonthlyStudentComponentScore(payload);
+        }
+        changed += 1;
+      }
+
+      return {
+        changed,
+        rowId: row.id,
+        studentName: row.studentEnrollment.student.fullName,
+      };
+    },
+    onSuccess: async (result) => {
+      const row = bulkRows.find((item) => item.id === result.rowId);
+
+      if (row && result.changed > 0) {
+        await apiClient.calculateMonthlyStudentResults({
+          assessmentPeriodId: row.assessmentPeriodId,
+          subjectId: row.subjectId,
+          studentEnrollmentId: row.studentEnrollmentId,
+        });
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ["monthly-results"] });
+      await queryClient.invalidateQueries({ queryKey: ["monthly-result-scores"] });
+
+      setActionSuccess(
+        result.changed > 0
+          ? `تم حفظ ${result.changed} درجة وإعادة حساب نتيجة ${result.studentName}.`
+          : `لا توجد تغييرات جديدة في صف ${result.studentName}.`,
+      );
     },
   });
 
@@ -441,6 +613,28 @@ export function MonthlyResultsWorkspace({ mode }: MonthlyResultsWorkspaceProps) 
   React.useEffect(() => {
     setPage(1);
   }, [periodFilter, sectionFilter, subjectFilter, resultFilter, lockedFilter, activeFilter]);
+
+  React.useEffect(() => {
+    if (sectionFilter === "all") {
+      return;
+    }
+
+    const exists = visibleSections.some((item) => item.id === sectionFilter);
+    if (!exists) {
+      setSectionFilter("all");
+    }
+  }, [sectionFilter, visibleSections]);
+
+  React.useEffect(() => {
+    if (subjectFilter === "all") {
+      return;
+    }
+
+    const exists = visibleSubjects.some((item) => item.id === subjectFilter);
+    if (!exists) {
+      setSubjectFilter("all");
+    }
+  }, [subjectFilter, visibleSubjects]);
 
   React.useEffect(() => {
     if (!isBulkMode || bulkRows.length === 0) {
@@ -513,6 +707,81 @@ export function MonthlyResultsWorkspace({ mode }: MonthlyResultsWorkspaceProps) 
       isActive: item.isActive,
     });
     setIsFormOpen(true);
+  }
+
+  function updateBulkDraft(rowId: string, componentId: string, value: string) {
+    setBulkDrafts((prev) => ({
+      ...prev,
+      [rowId]: {
+        ...prev[rowId],
+        [componentId]: value,
+      },
+    }));
+  }
+
+  function getBulkScore(rowId: string, componentId: string) {
+    return bulkScoreMap.get(`${rowId}:${componentId}`);
+  }
+
+  function isBulkCellDirty(rowId: string, componentId: string) {
+    const draftValue = bulkDrafts[rowId]?.[componentId] ?? "";
+    const savedValue = getBulkScore(rowId, componentId)?.rawScore;
+    return draftValue !== String(savedValue ?? "");
+  }
+
+  function rowHasDirtyDrafts(rowId: string) {
+    return bulkComponents.some((component) => isBulkCellDirty(rowId, component.id));
+  }
+
+  function setBulkInputRef(rowId: string, componentId: string, element: HTMLInputElement | null) {
+    const key = `${rowId}:${componentId}`;
+    if (element) {
+      bulkInputRefs.current.set(key, element);
+    } else {
+      bulkInputRefs.current.delete(key);
+    }
+  }
+
+  function focusBulkCell(rowId: string, componentId: string) {
+    const target = bulkInputRefs.current.get(`${rowId}:${componentId}`);
+    target?.focus();
+    target?.select();
+  }
+
+  function handleBulkInputKeyDown(
+    event: React.KeyboardEvent<HTMLInputElement>,
+    rowIndex: number,
+    componentIndex: number,
+  ) {
+    if (event.key !== "ArrowRight" && event.key !== "ArrowLeft" && event.key !== "ArrowUp" && event.key !== "ArrowDown" && event.key !== "Enter") {
+      return;
+    }
+
+    event.preventDefault();
+
+    const rowDelta = event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" || event.key === "Enter" ? 1 : 0;
+    const componentDelta = event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0;
+
+    const nextRowIndex = rowIndex + rowDelta;
+    const nextComponentIndex = componentIndex + componentDelta;
+
+    if (
+      nextRowIndex < 0 ||
+      nextRowIndex >= bulkRows.length ||
+      nextComponentIndex < 0 ||
+      nextComponentIndex >= bulkComponents.length
+    ) {
+      return;
+    }
+
+    const nextRow = bulkRows[nextRowIndex];
+    const nextComponent = bulkComponents[nextComponentIndex];
+
+    if (!nextRow || !nextComponent || nextRow.isLocked) {
+      return;
+    }
+
+    focusBulkCell(nextRow.id, nextComponent.id);
   }
 
   function handleSubmit() {
@@ -627,6 +896,8 @@ export function MonthlyResultsWorkspace({ mode }: MonthlyResultsWorkspaceProps) 
     (deleteScoreMutation.error as Error | null)?.message ??
     (calculateMutation.error as Error | null)?.message ??
     (ensureResultsMutation.error as Error | null)?.message ??
+    (syncAutoComponentsMutation.error as Error | null)?.message ??
+    (bulkRowSaveMutation.error as Error | null)?.message ??
     (bulkSaveMutation.error as Error | null)?.message ??
     null;
   const isSubmitting =
@@ -680,9 +951,9 @@ export function MonthlyResultsWorkspace({ mode }: MonthlyResultsWorkspaceProps) 
             </div>
             <div className="space-y-1">
               <Label>الشعبة</Label>
-              <SelectField value={filterDraft.section} onChange={(event) => setFilterDraft((prev) => ({ ...prev, section: event.target.value }))}>
+              <SelectField value={filterDraft.section} onChange={(event) => setFilterDraft((prev) => ({ ...prev, section: event.target.value, subject: "all" }))}>
                 <option value="all">كل الشعب</option>
-                {(sectionsQuery.data ?? []).map((item) => (
+                {visibleSections.map((item) => (
                   <option key={item.id} value={item.id}>{formatSectionWithGradeLabel(item)}</option>
                 ))}
               </SelectField>
@@ -691,7 +962,7 @@ export function MonthlyResultsWorkspace({ mode }: MonthlyResultsWorkspaceProps) 
               <Label>المادة</Label>
               <SelectField value={filterDraft.subject} onChange={(event) => setFilterDraft((prev) => ({ ...prev, subject: event.target.value }))}>
                 <option value="all">كل المواد</option>
-                {(subjectsQuery.data ?? []).map((item) => (
+                {visibleSubjects.map((item) => (
                   <option key={item.id} value={item.id}>{formatNameCodeLabel(item.name, item.code)}</option>
                 ))}
               </SelectField>
@@ -745,19 +1016,35 @@ export function MonthlyResultsWorkspace({ mode }: MonthlyResultsWorkspaceProps) 
               </div>
             ) : null}
 
+            {hasTeacherScopedAssignments ? (
+              <div className="rounded-md border border-sky-300/40 bg-sky-500/10 p-3 text-sm text-sky-800">
+                تم تقييد خيارات الشعب والمواد حسب تكليفات التدريس المرتبطة بحسابك.
+              </div>
+            ) : null}
+
             {isBulkMode ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" onClick={() => ensureResultsMutation.mutate()} disabled={!canCreateResult || ensureResultsMutation.isPending || periodFilter === "all" || sectionFilter === "all" || subjectFilter === "all"}>
-                  توليد النتائج الناقصة
-                </Button>
-                <Button onClick={() => bulkSaveMutation.mutate()} disabled={!canCreateScore || bulkSaveMutation.isPending || bulkRows.length === 0 || bulkComponents.length === 0}>
-                  <Save className="h-4 w-4" />
-                  حفظ الإدخال الجماعي
-                </Button>
-                <Button variant="secondary" onClick={() => calculateMutation.mutate()} disabled={!canCalculate || calculateMutation.isPending || periodFilter === "all"}>
-                  <Calculator className="h-4 w-4" />
-                  إعادة حساب الشهر
-                </Button>
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button variant="outline" onClick={() => ensureResultsMutation.mutate()} disabled={!canCreateResult || ensureResultsMutation.isPending || periodFilter === "all" || sectionFilter === "all" || subjectFilter === "all"}>
+                    توليد النتائج الناقصة
+                  </Button>
+                  <Button variant="outline" onClick={() => syncAutoComponentsMutation.mutate()} disabled={!canCalculate || syncAutoComponentsMutation.isPending || periodFilter === "all"}>
+                    مزامنة المكونات التلقائية
+                  </Button>
+                  <Button onClick={() => bulkSaveMutation.mutate()} disabled={!canCreateScore || bulkSaveMutation.isPending || bulkRows.length === 0 || bulkComponents.length === 0}>
+                    <Save className="h-4 w-4" />
+                    حفظ الإدخال الجماعي
+                  </Button>
+                  <Button variant="secondary" onClick={() => calculateMutation.mutate()} disabled={!canCalculate || calculateMutation.isPending || periodFilter === "all"}>
+                    <Calculator className="h-4 w-4" />
+                    إعادة حساب الشهر
+                  </Button>
+                </div>
+                <div className="rounded-md border border-border/70 bg-muted/30 p-3 text-sm text-muted-foreground">
+                  ندخل هنا المكونات اليدوية فقط. أما المكونات المرتبطة بالاختبارات والواجبات والحضور فتظهر للمتابعة وتُحدّث من زر
+                  {" "}
+                  <span className="font-medium text-foreground">مزامنة المكونات التلقائية</span>.
+                </div>
               </div>
             ) : null}
 
@@ -766,36 +1053,142 @@ export function MonthlyResultsWorkspace({ mode }: MonthlyResultsWorkspaceProps) 
                 <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">لا توجد نتائج شهرية مطابقة.</div>
               ) : isBulkMode ? (
                 <div className="space-y-3">
-                  {bulkRows.map((row) => (
-                    <div key={row.id} className="rounded-lg border border-border/70 bg-background/70 p-3">
-                      <div className="mb-3 space-y-1">
-                        <p className="font-medium">{row.studentEnrollment.student.fullName}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {row.assessmentPeriod.name} | {formatNameCodeLabel(row.subject.name, row.subject.code)}
-                        </p>
-                      </div>
-                      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                        {bulkComponents.map((component) => (
-                          <div key={component.id} className="space-y-1">
-                            <Label>{component.name} ({component.maxScore})</Label>
-                            <Input
-                              type="number"
-                              value={bulkDrafts[row.id]?.[component.id] ?? ""}
-                              onChange={(event) =>
-                                setBulkDrafts((prev) => ({
-                                  ...prev,
-                                  [row.id]: {
-                                    ...prev[row.id],
-                                    [component.id]: event.target.value,
-                                  },
-                                }))
-                              }
-                            />
-                          </div>
-                        ))}
-                      </div>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div className="rounded-lg border border-border/70 bg-muted/30 p-3">
+                      <p className="text-xs text-muted-foreground">الطلاب الظاهرون</p>
+                      <p className="mt-1 text-xl font-semibold">{bulkRows.length}</p>
                     </div>
-                  ))}
+                    <div className="rounded-lg border border-border/70 bg-muted/30 p-3">
+                      <p className="text-xs text-muted-foreground">المكونات اليدوية</p>
+                      <p className="mt-1 text-xl font-semibold">{bulkComponents.length}</p>
+                    </div>
+                    <div className="rounded-lg border border-border/70 bg-muted/30 p-3">
+                      <p className="text-xs text-muted-foreground">المكونات التلقائية</p>
+                      <p className="mt-1 text-xl font-semibold">{bulkReadonlyComponents.length}</p>
+                    </div>
+                  </div>
+
+                  <div className="max-h-[70vh] overflow-auto rounded-lg border border-border/70">
+                    <table className="min-w-full border-collapse text-sm">
+                      <thead className="sticky top-0 z-20 bg-muted/80 backdrop-blur">
+                        <tr className="border-b border-border/70 align-top">
+                          <th className="sticky right-0 z-30 min-w-16 bg-muted/80 px-3 py-3 text-right font-medium backdrop-blur">الحالة</th>
+                          <th className="sticky right-16 z-30 min-w-52 bg-muted/80 px-3 py-3 text-right font-medium backdrop-blur">الطالب</th>
+                          <th className="sticky right-[17rem] z-30 min-w-32 bg-muted/80 px-3 py-3 text-right font-medium backdrop-blur">المجموع الحالي</th>
+                          <th className="sticky right-[25rem] z-30 min-w-28 bg-muted/80 px-3 py-3 text-right font-medium backdrop-blur">حفظ الصف</th>
+                          {bulkReadonlyComponents.map((component) => (
+                            <th key={component.id} className="min-w-32 px-3 py-3 text-right font-medium">
+                              <div className="space-y-1">
+                                <p>{component.name}</p>
+                                <div className="flex flex-wrap items-center gap-1">
+                                  <Badge variant="secondary">{entryModeLabel(component.entryMode)}</Badge>
+                                  <Badge variant="outline">{component.maxScore}</Badge>
+                                </div>
+                              </div>
+                            </th>
+                          ))}
+                          {bulkComponents.map((component) => (
+                            <th key={component.id} className="min-w-36 px-3 py-3 text-right font-medium">
+                              <div className="space-y-1">
+                                <p>{component.name}</p>
+                                <div className="flex flex-wrap items-center gap-1">
+                                  <Badge variant="outline">{entryModeLabel(component.entryMode)}</Badge>
+                                  <Badge variant="outline">{component.maxScore}</Badge>
+                                </div>
+                              </div>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {bulkRows.map((row, rowIndex) => (
+                          <tr key={row.id} className="border-b border-border/60 bg-background/80 align-top last:border-b-0">
+                            <td className="sticky right-0 z-10 bg-background/95 px-3 py-3">
+                              <Badge variant={row.isLocked ? "default" : "secondary"}>
+                                {row.isLocked ? "معتمد" : "مسودة"}
+                              </Badge>
+                            </td>
+                            <td className="sticky right-16 z-10 bg-background/95 px-3 py-3">
+                              <div className="space-y-1">
+                                <p className="font-medium">{row.studentEnrollment.student.fullName}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {row.assessmentPeriod.name} | {formatNameCodeLabel(row.subject.name, row.subject.code)}
+                                </p>
+                              </div>
+                            </td>
+                            <td className="sticky right-[17rem] z-10 bg-background/95 px-3 py-3">
+                              <div className="space-y-1">
+                                <p className="font-medium">{row.totalScore}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {row.isLocked ? "الصف مقفل" : "قابل للتحديث"}
+                                </p>
+                              </div>
+                            </td>
+                            <td className="sticky right-[25rem] z-10 bg-background/95 px-3 py-3">
+                              <Button
+                                variant={rowHasDirtyDrafts(row.id) ? "default" : "outline"}
+                                size="sm"
+                                className="gap-1.5"
+                                onClick={() => bulkRowSaveMutation.mutate(row.id)}
+                                disabled={
+                                  row.isLocked ||
+                                  !canCreateScore ||
+                                  bulkRowSaveMutation.isPending ||
+                                  !rowHasDirtyDrafts(row.id)
+                                }
+                              >
+                                <Save className="h-3.5 w-3.5" />
+                                {bulkRowSaveMutation.isPending && bulkRowSaveMutation.variables === row.id
+                                  ? "جارٍ الحفظ"
+                                  : "حفظ"}
+                              </Button>
+                            </td>
+                            {bulkReadonlyComponents.map((component) => {
+                              const existing = getBulkScore(row.id, component.id);
+
+                              return (
+                                <td key={component.id} className="px-3 py-3">
+                                  <Input
+                                    value={existing ? String(existing.finalScore) : ""}
+                                    readOnly
+                                    disabled
+                                    placeholder="تلقائي"
+                                    className="min-w-24"
+                                  />
+                                </td>
+                              );
+                            })}
+                            {bulkComponents.map((component, componentIndex) => (
+                              <td key={component.id} className="px-3 py-3">
+                                <Input
+                                  ref={(element) => setBulkInputRef(row.id, component.id, element)}
+                                  type="number"
+                                  min={0}
+                                  max={component.maxScore}
+                                  value={bulkDrafts[row.id]?.[component.id] ?? ""}
+                                  onChange={(event) => updateBulkDraft(row.id, component.id, event.target.value)}
+                                  onKeyDown={(event) => handleBulkInputKeyDown(event, rowIndex, componentIndex)}
+                                  disabled={row.isLocked}
+                                  placeholder={`من ${component.maxScore}`}
+                                  className={`min-w-28 ${
+                                    isBulkCellDirty(row.id, component.id)
+                                      ? "border-amber-400 bg-amber-50/80 focus-visible:ring-amber-400"
+                                      : ""
+                                  }`}
+                                />
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="rounded-md border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
+                    الجدول مخصص للإدخال السريع. الصفوف المعتمدة تظهر كمقفلة ولا تقبل تعديلًا يدويًا حتى يتم فك الاعتماد.
+                    استخدم `Enter` أو الأسهم للتنقل بين خلايا الدرجات.
+                    الخلايا المظللة تعني أن فيها تغييرات لم تُحفَظ بعد.
+                  </div>
                 </div>
               ) : (
                 filteredMonthlyResults.map((item) => (

@@ -221,6 +221,44 @@ export class EmployeeTeachingAssignmentsService {
     };
   }
 
+  async findMyActive(actorUserId: string, academicYearId?: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { id: actorUserId },
+      select: { employeeId: true },
+    });
+
+    if (!user?.employeeId) {
+      return [];
+    }
+
+    return this.prisma.employeeTeachingAssignment.findMany({
+      where: {
+        employeeId: user.employeeId,
+        academicYearId,
+        deletedAt: null,
+        isActive: true,
+      },
+      include: assignmentInclude,
+      orderBy: [
+        {
+          academicYear: {
+            startDate: 'desc',
+          },
+        },
+        {
+          section: {
+            name: 'asc',
+          },
+        },
+        {
+          subject: {
+            name: 'asc',
+          },
+        },
+      ],
+    });
+  }
+
   async findOne(id: string) {
     const assignment = await this.prisma.employeeTeachingAssignment.findFirst({
       where: {

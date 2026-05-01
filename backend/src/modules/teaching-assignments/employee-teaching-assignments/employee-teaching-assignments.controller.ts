@@ -59,6 +59,19 @@ export class EmployeeTeachingAssignmentsController {
     return this.employeeTeachingAssignmentsService.findAll(query);
   }
 
+  @Get('my-active')
+  @ApiOperation({ summary: 'Get active teaching assignments for current user' })
+  @ApiQuery({ name: 'academicYearId', required: false, type: String })
+  findMyActive(
+    @Query('academicYearId') academicYearId: string | undefined,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.employeeTeachingAssignmentsService.findMyActive(
+      user.userId,
+      academicYearId,
+    );
+  }
+
   @Get(':id')
   @RequirePermissions('employee-teaching-assignments.read')
   @ApiOperation({ summary: 'Get employee teaching assignment by ID' })

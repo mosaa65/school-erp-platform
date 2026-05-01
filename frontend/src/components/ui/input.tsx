@@ -29,7 +29,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         : resolvedIcon;
 
     return (
-      <div className={cn("group relative w-full min-w-0 overflow-hidden", containerClassName)}>
+      <div className={cn("group relative w-full min-w-0", containerClassName)}>
         {renderedIcon ? (
           <div
             className={cn(

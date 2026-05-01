@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PermissionGuard } from "@/features/auth/components/permission-guard";
@@ -9,14 +8,6 @@ export default function AnnualResultsPage() {
   return (
     <PermissionGuard permission="annual-results.read">
       <div className="space-y-4">
-        <div className="space-y-2">
-          <Badge variant="secondary" className="w-fit">
-            النظام 05 - التعليم والدرجات
-          </Badge>
-          <h2 className="text-2xl font-semibold tracking-tight">
-            النتائج السنوية والقرار النهائي
-          </h2>
-        </div>
         <Card>
           <CardHeader>
             <CardTitle className="text-base">طبقة القرار النهائي فوق الفترات</CardTitle>

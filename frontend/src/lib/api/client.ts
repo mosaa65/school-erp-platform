@@ -5116,6 +5116,20 @@ export type CalculateStudentPeriodResultsResponse = {
   updatedComponents: number;
 };
 
+export type EnsureMonthlyStudentResultsPayload = {
+  assessmentPeriodId: string;
+  sectionId: string;
+  subjectId: string;
+  termSubjectOfferingId?: string;
+};
+
+export type EnsureMonthlyStudentResultsResponse = {
+  success: boolean;
+  totalEnrollments: number;
+  existingResults: number;
+  createdResults: number;
+};
+
 export type CreateStudentPeriodComponentScorePayload = {
   studentPeriodResultId: string;
   assessmentPeriodComponentId: string;
@@ -10621,6 +10635,28 @@ export const apiClient = {
         json: payload,
       },
     ),
+  ensureMonthlyStudentResults: (
+    payload: EnsureMonthlyStudentResultsPayload,
+  ) =>
+    request<EnsureMonthlyStudentResultsResponse>(
+      "/monthly-student-results/ensure-bulk",
+      "POST",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  syncMonthlyStudentAutoComponents: (
+    payload: CalculateStudentPeriodResultsPayload,
+  ) =>
+    request<CalculateStudentPeriodResultsResponse>(
+      "/monthly-student-results/sync-auto-components",
+      "POST",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
   deleteMonthlyStudentResult: (studentPeriodResultId: string) =>
     request<DeleteEntityResponse>(`/monthly-student-results/${studentPeriodResultId}`, "DELETE", {
       withAuth: true,
@@ -10946,6 +10982,16 @@ export const apiClient = {
         subjectId: query?.subjectId,
         academicYearId: query?.academicYearId,
         isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  listMyActiveEmployeeTeachingAssignments: (query?: { academicYearId?: string }) =>
+    request<EmployeeTeachingAssignmentListItem[]>(
+      `/employee-teaching-assignments/my-active${buildQueryString({
+        academicYearId: query?.academicYearId,
       })}`,
       "GET",
       {

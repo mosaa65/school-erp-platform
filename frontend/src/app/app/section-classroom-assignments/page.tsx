@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import { PermissionGuard } from "@/features/auth/components/permission-guard";
 import { SectionClassroomAssignmentsWorkspace } from "@/features/section-classroom-assignments/components/section-classroom-assignments-workspace";
 
@@ -26,12 +25,6 @@ export default function SectionClassroomAssignmentsPage({
   return (
     <PermissionGuard permission="sections.read">
       <div className="space-y-4">
-        <div className="space-y-2">
-          <Badge variant="secondary" className="w-fit">
-            النواة الأكاديمية
-          </Badge>
-          <h2 className="text-2xl font-semibold tracking-tight">ربط الشعب بالغرف</h2>
-        </div>
         <SectionClassroomAssignmentsWorkspace
           initialSectionId={firstQueryValue(searchParams?.sectionId)}
           initialGradeLevelId={firstQueryValue(searchParams?.gradeLevelId)}

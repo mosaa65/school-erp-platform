@@ -48,65 +48,53 @@ type FooterAction = {
 
 function FooterButton({ action }: { action: FooterAction }) {
   const Icon = action.icon;
+  const active = action.active;
 
   return (
     <Button
       type="button"
       variant="ghost"
       onClick={action.onClick}
-      aria-pressed={action.active}
+      aria-pressed={active}
       className={cn(
-        "group relative h-[4.1rem] min-w-0 flex-col justify-center gap-0.5 rounded-[1.25rem] border-0 bg-transparent px-1.5 py-1 text-slate-500 shadow-none transition-colors duration-150 hover:bg-transparent hover:text-[color:var(--app-accent-color)] focus-visible:ring-2 focus-visible:ring-[color:var(--app-accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-white/30 dark:text-white/58 dark:hover:bg-transparent dark:hover:text-white",
-        action.active
-          ? "text-[color:var(--app-accent-color)]"
-          : "",
-        action.featured ? "px-2" : "",
+        "group relative flex h-11 items-center justify-center gap-2 overflow-hidden rounded-full border-0 transition-all duration-300 ease-out",
+        active
+          ? "w-auto bg-[color:var(--app-accent-color)] px-4 text-white shadow-[0_8px_16px_-6px_color-mix(in_oklab,var(--app-accent-color)_50%,transparent)] hover:bg-[color:var(--app-accent-strong)] hover:text-white"
+          : "w-11 bg-transparent px-0 text-muted-foreground hover:bg-muted/80 hover:text-foreground"
       )}
     >
-      <span
-        className={cn(
-          "relative flex h-9 w-9 items-center justify-center rounded-[1rem] border border-transparent bg-transparent transition-all duration-150 ease-out group-hover:-translate-y-0.5 group-hover:scale-[1.04] group-active:translate-y-0 group-active:scale-100 motion-reduce:transition-none",
-          action.featured ? "h-11 w-11 rounded-[1.2rem]" : "",
-          action.active
-            ? "text-[color:var(--app-accent-strong)] drop-shadow-[0_8px_18px_color-mix(in_oklab,var(--app-accent-color)_30%,transparent)]"
-            : "text-slate-700 group-hover:text-[color:var(--app-accent-color)] dark:text-white/74 dark:group-hover:text-white",
-          action.featured
-            ? action.active
-              ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-color)] text-white shadow-[0_14px_30px_-20px_color-mix(in_oklab,var(--app-accent-color)_60%,transparent)]"
-              : "border-[color:var(--app-accent-strong)]/55 bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
-            : "",
-        )}
-      >
+      <div className="relative flex items-center justify-center">
         <Icon
-          className={cn("h-[1.45rem] w-[1.45rem]", action.featured ? "h-[1.6rem] w-[1.6rem]" : "")}
-          strokeWidth={action.active ? 2.3 : 2.15}
+          className={cn(
+            "h-[1.15rem] w-[1.15rem] shrink-0 transition-transform duration-300",
+            active ? "scale-110" : "group-hover:scale-110"
+          )}
+          strokeWidth={active ? 2.5 : 2}
         />
-        {typeof action.unreadCount === "number" && action.unreadCount > 0 ? (
-          <Badge
-            variant="destructive"
-            className={cn(
-              "absolute min-w-5 rounded-full px-1.5 py-0 text-[10px] leading-none",
-              action.featured ? "-right-1 -top-1" : "-right-2 -top-2",
-            )}
-          >
+        {typeof action.unreadCount === "number" && action.unreadCount > 0 && !active ? (
+          <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white shadow-sm outline outline-2 outline-background">
             {action.unreadCount > 99 ? "99+" : action.unreadCount}
-          </Badge>
+          </span>
         ) : null}
-      </span>
+      </div>
 
       <span
         className={cn(
-          "truncate text-[10.5px] font-medium leading-none transition-colors duration-150",
-          action.featured && action.active
-            ? "text-[color:var(--app-accent-color)]"
-            : "",
-          action.active
-            ? "text-[color:var(--app-accent-color)]"
-            : "text-slate-700 group-hover:text-[color:var(--app-accent-color)] dark:text-white/64 dark:group-hover:text-white/86",
+          "overflow-hidden whitespace-nowrap text-[13px] font-semibold tracking-tight transition-all duration-300",
+          active ? "max-w-[100px] opacity-100" : "max-w-0 opacity-0"
         )}
       >
         {action.label}
       </span>
+      
+      {typeof action.unreadCount === "number" && action.unreadCount > 0 && active ? (
+          <Badge
+            variant="destructive"
+            className="ml-1 h-5 min-w-5 rounded-full px-1.5 py-0 text-[10px] shadow-none"
+          >
+            {action.unreadCount > 99 ? "99+" : action.unreadCount}
+          </Badge>
+        ) : null}
     </Button>
   );
 }
@@ -167,24 +155,14 @@ export function AppFooterDock({
   return (
     <div
       className={cn(
-        "pointer-events-none fixed inset-x-0 bottom-0 z-30 px-3 pb-[calc(env(safe-area-inset-bottom)+0.7rem)] sm:px-4 md:px-6",
+        "pointer-events-none fixed inset-x-0 bottom-0 z-30 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] flex justify-center",
         className,
       )}
     >
-      <div className="mx-auto flex max-w-lg justify-center">
-        <div className="pointer-events-auto relative w-full overflow-visible rounded-[1.9rem] border border-white/20 bg-white/6 px-2 py-1.5 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.16)] backdrop-blur-[26px] dark:border-white/8 dark:bg-white/[0.03] dark:shadow-[0_18px_40px_-28px_rgba(2,6,23,0.45)]">
-          <div className="pointer-events-none absolute inset-y-0 left-0 w-16 rounded-l-[1.9rem] bg-gradient-to-r from-[color:var(--app-accent-soft)]/70 via-transparent to-transparent" />
-          <div
-            className="relative grid items-center gap-1"
-            style={{
-              gridTemplateColumns: `repeat(${actions.length}, minmax(0, 1fr))`,
-            }}
-          >
-            {actions.map((action) => (
-              <FooterButton key={action.key} action={action} />
-            ))}
-          </div>
-        </div>
+      <div className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-border/40 bg-background/85 px-1.5 py-1.5 shadow-[0_20px_40px_-20px_rgba(15,23,42,0.2)] backdrop-blur-xl dark:border-white/10 dark:bg-black/60">
+        {actions.map((action) => (
+          <FooterButton key={action.key} action={action} />
+        ))}
       </div>
     </div>
   );

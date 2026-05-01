@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PermissionGuard } from "@/features/auth/components/permission-guard";
@@ -17,14 +16,6 @@ export default function StudentPeriodResultsPage() {
   return (
     <PermissionGuard permission="student-period-results.read">
       <div className="space-y-4">
-        <div className="space-y-2">
-          <Badge variant="secondary" className="w-fit">
-            النظام 05 - إعادة تنظيم النتائج
-          </Badge>
-          <h2 className="text-2xl font-semibold tracking-tight">
-            تم فصل نتائج الفترات إلى واجهات مستقلة
-          </h2>
-        </div>
 
         <Card className="border-border/70 bg-card/80">
           <CardHeader>

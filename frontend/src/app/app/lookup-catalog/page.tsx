@@ -68,19 +68,9 @@ export default function LookupCatalogIndexPage() {
       <section className="overflow-hidden rounded-[28px] border border-border/70 bg-gradient-to-br from-fuchsia-500/10 via-background to-sky-500/10 p-5 shadow-sm">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-3xl space-y-3">
-            <Badge variant="secondary" className="w-fit rounded-full px-3 py-1">
-              البنية المشتركة - مركز المرجعيات
-            </Badge>
             <div className="flex items-start gap-3">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-fuchsia-500/20 bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-300">
                 <Layers3 className="h-6 w-6" />
-              </div>
-              <div className="space-y-2">
-                <h2 className="text-2xl font-semibold tracking-tight">قاموس كل المرجعيات</h2>
-                <p className="text-sm leading-7 text-muted-foreground">
-                  بوابة منظمة لكل المرجعيات في النظام، مع تقسيم واضح حسب المجال، وأيقونات
-                  ملوّنة تساعدك تعرف كل مرجعية من أول نظرة.
-                </p>
               </div>
             </div>
           </div>
@@ -181,9 +171,6 @@ export default function LookupCatalogIndexPage() {
                             >
                               <Icon className={cn("h-6 w-6", visual.iconClassName)} />
                             </div>
-                            <Badge variant="secondary" className="rounded-full px-2.5 py-1 text-[11px]">
-                              {definition.fields.length} حقل
-                            </Badge>
                           </div>
                           <div className="space-y-1.5">
                             <CardTitle className="text-base leading-7">{definition.title}</CardTitle>

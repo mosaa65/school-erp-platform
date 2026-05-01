@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import Link from "next/link";
@@ -681,11 +681,11 @@ export function AppShell({ children }: AppShellProps) {
         ? isHubMode
           ? "home"
           : "navigator"
-      : pathname.startsWith("/app/profile")
-        ? "profile"
-        : showFooterNotifications && pathname.startsWith("/app/user-notifications")
-          ? "notifications"
-          : null;
+        : pathname.startsWith("/app/profile")
+          ? "profile"
+          : showFooterNotifications && pathname.startsWith("/app/user-notifications")
+            ? "notifications"
+            : null;
 
   return (
     <div
@@ -696,8 +696,8 @@ export function AppShell({ children }: AppShellProps) {
           ? isDesktopSidebarHidden
             ? "md:grid-cols-[0px_1fr]"
             : isRailMode
-            ? "md:grid-cols-[104px_1fr]"
-            : "md:grid-cols-[300px_1fr]"
+              ? "md:grid-cols-[104px_1fr]"
+              : "md:grid-cols-[300px_1fr]"
           : "",
       )}
       style={appShellStyle}
@@ -713,336 +713,171 @@ export function AppShell({ children }: AppShellProps) {
             isSidebarOpen ? "translate-x-0" : "translate-x-full",
           )}
         >
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="rounded-md bg-primary/10 p-2 text-primary">
-              <GraduationCap className="h-5 w-5" />
+          <div className="mb-6 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="rounded-md bg-primary/10 p-2 text-primary">
+                <GraduationCap className="h-5 w-5" />
+              </div>
+              <div className={cn(isRailMode ? "md:hidden" : "")}>
+                <p className="text-sm font-semibold">School ERP</p>
+                <p className="text-xs text-muted-foreground">لوحة تحكم الويب</p>
+              </div>
             </div>
-            <div className={cn(isRailMode ? "md:hidden" : "")}>
-              <p className="text-sm font-semibold">School ERP</p>
-              <p className="text-xs text-muted-foreground">لوحة تحكم الويب</p>
-            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-2xl"
+              onClick={() => {
+                if (typeof window !== "undefined" && window.innerWidth >= 768) {
+                  setDesktopSidebarHidden(true);
+                  return;
+                }
+
+                setSidebarOpen(false);
+              }}
+              aria-label="إخفاء الشريط الجانبي"
+            >
+              <PanelRightClose className="h-5 w-5" />
+            </Button>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-2xl"
-            onClick={() => {
-              if (typeof window !== "undefined" && window.innerWidth >= 768) {
-                setDesktopSidebarHidden(true);
-                return;
-              }
 
-              setSidebarOpen(false);
-            }}
-            aria-label="إخفاء الشريط الجانبي"
-          >
-            <PanelRightClose className="h-5 w-5" />
-          </Button>
-        </div>
-
-        <button
-          type="button"
-          className={cn(
-            "mb-5 w-full rounded-[1.4rem] border border-border/70 bg-background/60 p-3 text-right transition hover:border-[color:var(--app-accent-strong)] hover:bg-[color:var(--app-accent-soft)]/35",
-            isRailMode ? "md:flex md:flex-col md:items-center md:rounded-[1.6rem] md:px-2 md:py-3 md:text-center" : "",
-          )}
-          onClick={() => {
-            setSidebarOpen(false);
-            navigateTo("/app/profile");
-          }}
-        >
-          <div
+          <button
+            type="button"
             className={cn(
-              "mb-2 flex items-center gap-2 text-sm",
-              isRailMode ? "md:mb-0 md:flex-col md:gap-1" : "",
+              "mb-5 w-full rounded-[1.4rem] border border-border/70 bg-background/60 p-3 text-right transition hover:border-[color:var(--app-accent-strong)] hover:bg-[color:var(--app-accent-soft)]/35",
+              isRailMode ? "md:flex md:flex-col md:items-center md:rounded-[1.6rem] md:px-2 md:py-3 md:text-center" : "",
             )}
+            onClick={() => {
+              setSidebarOpen(false);
+              navigateTo("/app/profile");
+            }}
           >
-            <UserCircle2 className="h-4 w-4 text-[color:var(--app-accent-color)] md:h-5 md:w-5" />
-            <span className={cn("font-medium", isRailMode ? "md:hidden" : "")}>
-              {auth.session.user.firstName} {auth.session.user.lastName}
-            </span>
-            {isRailMode ? (
-              <span className="hidden text-[10px] font-medium text-muted-foreground md:block">
-                الحساب
+            <div
+              className={cn(
+                "mb-2 flex items-center gap-2 text-sm",
+                isRailMode ? "md:mb-0 md:flex-col md:gap-1" : "",
+              )}
+            >
+              <UserCircle2 className="h-4 w-4 text-[color:var(--app-accent-color)] md:h-5 md:w-5" />
+              <span className={cn("font-medium", isRailMode ? "md:hidden" : "")}>
+                {auth.session.user.firstName} {auth.session.user.lastName}
               </span>
-            ) : null}
-          </div>
-          <p className={cn("truncate text-xs text-muted-foreground", isRailMode ? "md:hidden" : "")}>
-            {auth.session.user.email}
-          </p>
-          <div className={cn("mt-2 flex flex-wrap gap-1", isRailMode ? "md:hidden" : "")}>
-            {auth.session.user.roleCodes.slice(0, 2).map((roleCode) => (
-              <Badge key={roleCode} variant="secondary">
-                {translateRoleCode(roleCode)}
-              </Badge>
-            ))}
-            {auth.session.user.roleCodes.length > 2 ? (
-              <Badge variant="outline">+{auth.session.user.roleCodes.length - 2}</Badge>
-            ) : null}
-          </div>
-        </button>
-
-        <div className={cn("mb-4", isRailMode ? "md:hidden" : "")}>
-          <div className="flex items-center gap-2">
-            {isFocusedSystemMode && selectedSidebarGroup ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-11 w-11 shrink-0 rounded-2xl border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)] shadow-sm"
-                onClick={() => setSelectedSidebarGroupId(null)}
-                aria-label="الرجوع إلى الأنظمة"
-              >
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            ) : null}
-            <div className="relative flex-1">
-              <SearchField
-                value={navSearch}
-                onChange={(event) => setNavSearch(event.target.value)}
-                placeholder="ابحث عن صفحة أو نظام..."
-                className={cn(
-                  navDensityClasses.searchClassName,
-                  "rounded-2xl border-border/70 bg-background/70 pr-14 pl-10",
-                )}
-              />
-              {navSearch ? (
-                <button
-                  type="button"
-                  className="absolute left-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                  aria-label="مسح البحث"
-                  onClick={() => setNavSearch("")}
-                >
-                  <X className="h-4 w-4" />
-                </button>
+              {isRailMode ? (
+                <span className="hidden text-[10px] font-medium text-muted-foreground md:block">
+                  الحساب
+                </span>
               ) : null}
             </div>
-            <NavigationFilterControl
-              groups={filterGroups}
-              value={navFilter}
-              onChange={setNavFilter}
-              activeGroupId={pathActiveGroupId}
-              className="shrink-0"
-            />
-          </div>
-        </div>
+            <p className={cn("truncate text-xs text-muted-foreground", isRailMode ? "md:hidden" : "")}>
+              {auth.session.user.email}
+            </p>
+            <div className={cn("mt-2 flex flex-wrap gap-1", isRailMode ? "md:hidden" : "")}>
+              {auth.session.user.roleCodes.slice(0, 2).map((roleCode) => (
+                <Badge key={roleCode} variant="secondary">
+                  {translateRoleCode(roleCode)}
+                </Badge>
+              ))}
+              {auth.session.user.roleCodes.length > 2 ? (
+                <Badge variant="outline">+{auth.session.user.roleCodes.length - 2}</Badge>
+              ) : null}
+            </div>
+          </button>
 
-        <div
-          ref={isRailMode ? null : navScrollContainerRef}
-          className={cn("min-h-0 flex-1 overflow-y-auto pe-1", isRailMode ? "md:hidden" : "")}
-          onScroll={(event) => {
-            if (!isRailMode) {
-              persistNavScrollPosition(event.currentTarget.scrollTop);
-            }
-          }}
-        >
-          <nav className="space-y-2">
-            {isFocusedSystemMode && selectedSidebarGroup ? (
-              <section className="space-y-3">
-                <section
-                  className={cn(
-                    "relative overflow-hidden rounded-2xl border p-2.5 transition-colors",
-                    `${resolveGroupTheme(
-                      selectedSidebarGroup.id,
-                      appearance.preset,
-                      appearance.resolvedSurfaceMode,
-                    ).panelClassName} shadow-sm ring-1 ring-border/40`,
-                  )}
+          <div className={cn("mb-4", isRailMode ? "md:hidden" : "")}>
+            <div className="flex items-center gap-2">
+              {isFocusedSystemMode && selectedSidebarGroup ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-11 w-11 shrink-0 rounded-2xl border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)] shadow-sm"
+                  onClick={() => setSelectedSidebarGroupId(null)}
+                  aria-label="الرجوع إلى الأنظمة"
                 >
-                  <div className="mb-2 flex items-center gap-3 px-2 py-1">
-                    <span
-                      className={cn(
-                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border shadow-sm",
-                        selectedSidebarGroup.iconClassName ??
-                          "border-primary/20 bg-primary/10 text-primary",
-                      )}
-                    >
-                      <selectedSidebarGroup.icon className="h-4 w-4" />
-                    </span>
-                    <span className="flex flex-col items-start leading-tight">
-                      <span className="text-sm font-semibold">{selectedSidebarGroup.label}</span>
-                    </span>
-                  </div>
-
-                  {focusedSidebarItems.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-border/70 bg-background/50 p-4 text-center text-xs text-muted-foreground">
-                      لا توجد صفحات مطابقة داخل هذا النظام.
-                    </div>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {focusedSidebarItems.map((item) => {
-                        const active = isNavItemActive(pathname, item.href);
-                        const itemIconClassName = resolveNavItemIconClassName(
-                          item,
-                          selectedSidebarGroup.iconClassName,
-                        );
-
-                        return (
-                          <Link
-                            key={item.href}
-                            href={item.href}
-                            onClick={() => {
-                              persistNavScrollPosition();
-                            }}
-                            className={cn(
-                              "flex items-center rounded-xl border text-sm transition-colors",
-                              navDensityClasses.itemClassName,
-                              active
-                                ? "border-primary/40 bg-primary/10 text-primary"
-                                : "border-transparent text-muted-foreground hover:border-border hover:bg-muted/60 hover:text-foreground",
-                            )}
-                          >
-                            <span
-                              className={cn(
-                                "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border bg-background/80 shadow-sm",
-                                itemIconClassName,
-                              )}
-                            >
-                              <item.icon className="h-4 w-4" />
-                            </span>
-                            <span className="flex-1">{item.label}</span>
-                            {active ? (
-                              <span className="h-2 w-2 rounded-full bg-current/80" />
-                            ) : null}
-                          </Link>
-                        );
-                      })}
-                    </div>
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              ) : null}
+              <div className="relative flex-1">
+                <SearchField
+                  value={navSearch}
+                  onChange={(event) => setNavSearch(event.target.value)}
+                  placeholder="ابحث عن صفحة أو نظام..."
+                  className={cn(
+                    navDensityClasses.searchClassName,
+                    "rounded-2xl border-border/70 bg-background/70 pl-10",
                   )}
-                </section>
-              </section>
-            ) : isFocusedSystemMode ? (
-              <>
-                {filteredNavGroups.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-border/70 bg-background/50 p-4 text-center text-xs text-muted-foreground">
-                    لا توجد أنظمة مطابقة للبحث الحالي.
-                  </div>
+                />
+                {navSearch ? (
+                  <button
+                    type="button"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground z-20"
+                    aria-label="مسح البحث"
+                    onClick={() => setNavSearch("")}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 ) : null}
+              </div>
+              <NavigationFilterControl
+                groups={filterGroups}
+                value={navFilter}
+                onChange={setNavFilter}
+                activeGroupId={pathActiveGroupId}
+                className="shrink-0"
+              />
+            </div>
+          </div>
 
-                <div className="grid grid-cols-1 gap-2">
-                  {filteredNavGroups.map((group) => {
-                    const hasActiveItem = group.items.some((item) =>
-                      isNavItemActive(pathname, item.href),
-                    );
-                    const groupTheme = resolveGroupTheme(
-                      group.id,
-                      appearance.preset,
-                      appearance.resolvedSurfaceMode,
-                    );
-
-                    return (
-                      <button
-                        key={group.id}
-                        type="button"
-                        onClick={() => setSelectedSidebarGroupId(group.id)}
+          <div
+            ref={isRailMode ? null : navScrollContainerRef}
+            className={cn("min-h-0 flex-1 overflow-y-auto pe-1", isRailMode ? "md:hidden" : "")}
+            onScroll={(event) => {
+              if (!isRailMode) {
+                persistNavScrollPosition(event.currentTarget.scrollTop);
+              }
+            }}
+          >
+            <nav className="space-y-2">
+              {isFocusedSystemMode && selectedSidebarGroup ? (
+                <section className="space-y-3">
+                  <section
+                    className={cn(
+                      "relative overflow-hidden rounded-2xl border p-2.5 transition-colors",
+                      `${resolveGroupTheme(
+                        selectedSidebarGroup.id,
+                        appearance.preset,
+                        appearance.resolvedSurfaceMode,
+                      ).panelClassName} shadow-sm ring-1 ring-border/40`,
+                    )}
+                  >
+                    <div className="mb-2 flex items-center gap-3 px-2 py-1">
+                      <span
                         className={cn(
-                          "relative overflow-hidden rounded-2xl border p-3 text-right transition-colors",
-                          hasActiveItem
-                            ? `${groupTheme.panelClassName} shadow-sm ring-1 ring-border/40`
-                            : "border-border/60 bg-background/50 hover:bg-muted/60",
+                          "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border shadow-sm",
+                          selectedSidebarGroup.iconClassName ??
+                          "border-primary/20 bg-primary/10 text-primary",
                         )}
                       >
-                        <span className="flex items-center gap-3">
-                          <span
-                            className={cn(
-                              "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border shadow-sm",
-                              group.iconClassName ??
-                                "border-primary/20 bg-primary/10 text-primary",
-                            )}
-                          >
-                            <group.icon className="h-4 w-4" />
-                          </span>
-                          <span className="flex min-w-0 flex-1 flex-col items-start leading-tight">
-                            <span className="truncate text-sm font-semibold">{group.label}</span>
-                          </span>
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
-            ) : filteredNavGroups.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border/70 bg-background/50 p-4 text-center text-xs text-muted-foreground">
-                لا توجد عناصر مطابقة للبحث الحالي.
-              </div>
-            ) : null}
-
-            {!isFocusedSystemMode
-              ? filteredNavGroups.map((group) => {
-              const isExpanded = navSearch ? true : expandedGroupIds.includes(group.id);
-              const hasActiveItem = group.items.some((item) =>
-                isNavItemActive(pathname, item.href),
-              );
-              const groupTheme = resolveGroupTheme(
-                group.id,
-                appearance.preset,
-                appearance.resolvedSurfaceMode,
-              );
-
-              return (
-                <section
-                  key={group.id}
-                  className={cn(
-                    "relative overflow-hidden rounded-2xl border transition-colors",
-                    navDensityClasses.groupSectionClassName,
-                    hasActiveItem
-                      ? `${groupTheme.panelClassName} shadow-sm ring-1 ring-border/40`
-                      : "border-border/60 bg-background/50",
-                  )}
-                >
-                  {hasActiveItem ? (
-                    <div
-                      className={cn(
-                        "pointer-events-none absolute inset-y-0 right-0 w-[38%] bg-gradient-to-l",
-                        groupTheme.activeGlowClassName,
-                      )}
-                    />
-                  ) : null}
-
-                  <div className="relative z-10">
-                    <button
-                      type="button"
-                      className={cn(
-                        "flex w-full items-center justify-between rounded-xl text-right hover:bg-background/60",
-                        navDensityClasses.groupHeaderClassName,
-                      )}
-                      onClick={() => {
-                        if (!navSearch) {
-                          toggleGroup(group.id);
-                        }
-                      }}
-                    >
-                      <span className="flex items-center gap-3">
-                        <span
-                          className={cn(
-                            "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border shadow-sm",
-                            group.iconClassName ??
-                              "border-primary/20 bg-primary/10 text-primary",
-                          )}
-                        >
-                          <group.icon className="h-4 w-4" />
-                        </span>
-                        <span className="flex flex-col items-start leading-tight">
-                          <span className="text-sm font-semibold">{group.label}</span>
-                        </span>
+                        <selectedSidebarGroup.icon className="h-4 w-4" />
                       </span>
-                      <ChevronDown
-                        className={cn(
-                          "h-4 w-4 transition-transform",
-                          isExpanded ? "rotate-180" : "",
-                        )}
-                      />
-                    </button>
+                      <span className="flex flex-col items-start leading-tight">
+                        <span className="text-sm font-semibold">{selectedSidebarGroup.label}</span>
+                      </span>
+                    </div>
 
-                    {isExpanded ? (
-                      <div className="mt-2 space-y-1.5">
-                        {group.items.map((item) => {
+                    {focusedSidebarItems.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-border/70 bg-background/50 p-4 text-center text-xs text-muted-foreground">
+                        لا توجد صفحات مطابقة داخل هذا النظام.
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {focusedSidebarItems.map((item) => {
                           const active = isNavItemActive(pathname, item.href);
                           const itemIconClassName = resolveNavItemIconClassName(
                             item,
-                            group.iconClassName,
+                            selectedSidebarGroup.iconClassName,
                           );
+
                           return (
                             <Link
                               key={item.href}
@@ -1074,163 +909,328 @@ export function AppShell({ children }: AppShellProps) {
                           );
                         })}
                       </div>
-                    ) : null}
-                  </div>
+                    )}
+                  </section>
                 </section>
-              );
-            })
-              : null}
-          </nav>
-        </div>
-
-        {isRailMode ? (
-          <div
-            ref={navScrollContainerRef}
-            className="hidden min-h-0 flex-1 overflow-y-auto md:block"
-            onScroll={(event) => {
-              persistNavScrollPosition(event.currentTarget.scrollTop);
-            }}
-        >
-            <nav className={cn("flex flex-col items-center", navDensityClasses.railGapClassName)}>
-              {isFocusedSystemMode && selectedSidebarGroup ? (
+              ) : isFocusedSystemMode ? (
                 <>
-                  <button
-                    type="button"
-                    title="الرجوع إلى الأنظمة"
-                    onClick={() => setSelectedSidebarGroupId(null)}
-                    className="flex h-11 w-11 items-center justify-center rounded-[1rem] border border-border/70 bg-background/80 text-muted-foreground shadow-sm transition-all hover:scale-[1.02] hover:bg-muted/60"
-                  >
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
-                  {focusedSidebarItems.map((item) => {
-                    const active = isNavItemActive(pathname, item.href);
-                    const itemIconClassName = resolveNavItemIconClassName(
-                      item,
-                      selectedSidebarGroup.iconClassName,
-                    );
+                  {filteredNavGroups.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-border/70 bg-background/50 p-4 text-center text-xs text-muted-foreground">
+                      لا توجد أنظمة مطابقة للبحث الحالي.
+                    </div>
+                  ) : null}
 
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        title={item.label}
-                        onClick={() => {
-                          persistNavScrollPosition();
-                        }}
-                        className={cn(
-                          "relative flex items-center justify-center rounded-[1rem] border shadow-sm transition-all hover:scale-[1.02]",
-                          navDensityClasses.railItemClassName,
-                          active
-                            ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
-                            : cn(
+                  <div className="grid grid-cols-1 gap-2">
+                    {filteredNavGroups.map((group) => {
+                      const hasActiveItem = group.items.some((item) =>
+                        isNavItemActive(pathname, item.href),
+                      );
+                      const groupTheme = resolveGroupTheme(
+                        group.id,
+                        appearance.preset,
+                        appearance.resolvedSurfaceMode,
+                      );
+
+                      return (
+                        <button
+                          key={group.id}
+                          type="button"
+                          onClick={() => setSelectedSidebarGroupId(group.id)}
+                          className={cn(
+                            "relative overflow-hidden rounded-2xl border p-3 text-right transition-colors",
+                            hasActiveItem
+                              ? `${groupTheme.panelClassName} shadow-sm ring-1 ring-border/40`
+                              : "border-border/60 bg-background/50 hover:bg-muted/60",
+                          )}
+                        >
+                          <span className="flex items-center gap-3">
+                            <span
+                              className={cn(
+                                "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border shadow-sm",
+                                group.iconClassName ??
+                                "border-primary/20 bg-primary/10 text-primary",
+                              )}
+                            >
+                              <group.icon className="h-4 w-4" />
+                            </span>
+                            <span className="flex min-w-0 flex-1 flex-col items-start leading-tight">
+                              <span className="truncate text-sm font-semibold">{group.label}</span>
+                            </span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : filteredNavGroups.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-border/70 bg-background/50 p-4 text-center text-xs text-muted-foreground">
+                  لا توجد عناصر مطابقة للبحث الحالي.
+                </div>
+              ) : null}
+
+              {!isFocusedSystemMode
+                ? filteredNavGroups.map((group) => {
+                  const isExpanded = navSearch ? true : expandedGroupIds.includes(group.id);
+                  const hasActiveItem = group.items.some((item) =>
+                    isNavItemActive(pathname, item.href),
+                  );
+                  const groupTheme = resolveGroupTheme(
+                    group.id,
+                    appearance.preset,
+                    appearance.resolvedSurfaceMode,
+                  );
+
+                  return (
+                    <section
+                      key={group.id}
+                      className={cn(
+                        "relative overflow-hidden rounded-2xl border transition-colors",
+                        navDensityClasses.groupSectionClassName,
+                        hasActiveItem
+                          ? `${groupTheme.panelClassName} shadow-sm ring-1 ring-border/40`
+                          : "border-border/60 bg-background/50",
+                      )}
+                    >
+                      {hasActiveItem ? (
+                        <div
+                          className={cn(
+                            "pointer-events-none absolute inset-y-0 right-0 w-[38%] bg-gradient-to-l",
+                            groupTheme.activeGlowClassName,
+                          )}
+                        />
+                      ) : null}
+
+                      <div className="relative z-10">
+                        <button
+                          type="button"
+                          className={cn(
+                            "flex w-full items-center justify-between rounded-xl text-right hover:bg-background/60",
+                            navDensityClasses.groupHeaderClassName,
+                          )}
+                          onClick={() => {
+                            if (!navSearch) {
+                              toggleGroup(group.id);
+                            }
+                          }}
+                        >
+                          <span className="flex items-center gap-3">
+                            <span
+                              className={cn(
+                                "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border shadow-sm",
+                                group.iconClassName ??
+                                "border-primary/20 bg-primary/10 text-primary",
+                              )}
+                            >
+                              <group.icon className="h-4 w-4" />
+                            </span>
+                            <span className="flex flex-col items-start leading-tight">
+                              <span className="text-sm font-semibold">{group.label}</span>
+                            </span>
+                          </span>
+                          <ChevronDown
+                            className={cn(
+                              "h-4 w-4 transition-transform",
+                              isExpanded ? "rotate-180" : "",
+                            )}
+                          />
+                        </button>
+
+                        {isExpanded ? (
+                          <div className="mt-2 space-y-1.5">
+                            {group.items.map((item) => {
+                              const active = isNavItemActive(pathname, item.href);
+                              const itemIconClassName = resolveNavItemIconClassName(
+                                item,
+                                group.iconClassName,
+                              );
+                              return (
+                                <Link
+                                  key={item.href}
+                                  href={item.href}
+                                  onClick={() => {
+                                    persistNavScrollPosition();
+                                  }}
+                                  className={cn(
+                                    "flex items-center rounded-xl border text-sm transition-colors",
+                                    navDensityClasses.itemClassName,
+                                    active
+                                      ? "border-primary/40 bg-primary/10 text-primary"
+                                      : "border-transparent text-muted-foreground hover:border-border hover:bg-muted/60 hover:text-foreground",
+                                  )}
+                                >
+                                  <span
+                                    className={cn(
+                                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border bg-background/80 shadow-sm",
+                                      itemIconClassName,
+                                    )}
+                                  >
+                                    <item.icon className="h-4 w-4" />
+                                  </span>
+                                  <span className="flex-1">{item.label}</span>
+                                  {active ? (
+                                    <span className="h-2 w-2 rounded-full bg-current/80" />
+                                  ) : null}
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+                      </div>
+                    </section>
+                  );
+                })
+                : null}
+            </nav>
+          </div>
+
+          {isRailMode ? (
+            <div
+              ref={navScrollContainerRef}
+              className="hidden min-h-0 flex-1 overflow-y-auto md:block"
+              onScroll={(event) => {
+                persistNavScrollPosition(event.currentTarget.scrollTop);
+              }}
+            >
+              <nav className={cn("flex flex-col items-center", navDensityClasses.railGapClassName)}>
+                {isFocusedSystemMode && selectedSidebarGroup ? (
+                  <>
+                    <button
+                      type="button"
+                      title="الرجوع إلى الأنظمة"
+                      onClick={() => setSelectedSidebarGroupId(null)}
+                      className="flex h-11 w-11 items-center justify-center rounded-[1rem] border border-border/70 bg-background/80 text-muted-foreground shadow-sm transition-all hover:scale-[1.02] hover:bg-muted/60"
+                    >
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                    {focusedSidebarItems.map((item) => {
+                      const active = isNavItemActive(pathname, item.href);
+                      const itemIconClassName = resolveNavItemIconClassName(
+                        item,
+                        selectedSidebarGroup.iconClassName,
+                      );
+
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          title={item.label}
+                          onClick={() => {
+                            persistNavScrollPosition();
+                          }}
+                          className={cn(
+                            "relative flex items-center justify-center rounded-[1rem] border shadow-sm transition-all hover:scale-[1.02]",
+                            navDensityClasses.railItemClassName,
+                            active
+                              ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
+                              : cn(
                                 "border-border/70 bg-background/78 text-muted-foreground hover:border-[color:var(--app-accent-strong)] hover:bg-[color:var(--app-accent-soft)]/35 hover:text-foreground",
                                 itemIconClassName,
                               ),
-                        )}
-                      >
-                        <item.icon className="h-4 w-4" />
-                        <span className="sr-only">{item.label}</span>
-                        {active ? (
-                          <span className="absolute -bottom-1 h-1.5 w-1.5 rounded-full bg-current" />
-                        ) : null}
-                      </Link>
-                    );
-                  })}
-                </>
-              ) : null}
+                          )}
+                        >
+                          <item.icon className="h-4 w-4" />
+                          <span className="sr-only">{item.label}</span>
+                          {active ? (
+                            <span className="absolute -bottom-1 h-1.5 w-1.5 rounded-full bg-current" />
+                          ) : null}
+                        </Link>
+                      );
+                    })}
+                  </>
+                ) : null}
 
-              {(isFocusedSystemMode && !selectedSidebarGroup ? filteredNavGroups : visibleNavGroups).map((group) => {
-                const isExpanded = expandedGroupIds.includes(group.id);
-                const hasActiveItem = group.items.some((item) =>
-                  isNavItemActive(pathname, item.href),
-                );
-                const groupTheme = resolveGroupTheme(
-                  group.id,
-                  appearance.preset,
-                  appearance.resolvedSurfaceMode,
-                );
+                {(isFocusedSystemMode && !selectedSidebarGroup ? filteredNavGroups : visibleNavGroups).map((group) => {
+                  const isExpanded = expandedGroupIds.includes(group.id);
+                  const hasActiveItem = group.items.some((item) =>
+                    isNavItemActive(pathname, item.href),
+                  );
+                  const groupTheme = resolveGroupTheme(
+                    group.id,
+                    appearance.preset,
+                    appearance.resolvedSurfaceMode,
+                  );
 
-                return (
-                  <section
-                    key={group.id}
-                    className={cn(
-                      "w-full overflow-hidden rounded-[1.6rem] border transition-all",
-                      navDensityClasses.railGroupClassName,
-                      hasActiveItem
-                        ? `${groupTheme.panelClassName} shadow-sm ring-1 ring-border/40`
-                        : "border-border/60 bg-background/55",
-                    )}
-                  >
-                    <button
-                      type="button"
-                      title={group.label}
+                  return (
+                    <section
+                      key={group.id}
                       className={cn(
-                        "mx-auto flex items-center justify-center rounded-[1rem] border shadow-sm transition-all hover:scale-[1.02]",
-                        navDensityClasses.railButtonClassName,
-                        group.iconClassName ?? "border-primary/20 bg-primary/10 text-primary",
-                        hasActiveItem ? "ring-2 ring-[color:var(--app-accent-ring)]" : "",
+                        "w-full overflow-hidden rounded-[1.6rem] border transition-all",
+                        navDensityClasses.railGroupClassName,
+                        hasActiveItem
+                          ? `${groupTheme.panelClassName} shadow-sm ring-1 ring-border/40`
+                          : "border-border/60 bg-background/55",
                       )}
-                      onClick={() => {
-                        if (isFocusedSystemMode) {
-                          setSelectedSidebarGroupId(group.id);
-                          return;
-                        }
-
-                        toggleGroup(group.id);
-                      }}
                     >
-                      <group.icon className="h-4 w-4" />
-                    </button>
-
-                    {!isFocusedSystemMode && isExpanded ? (
-                      <div
+                      <button
+                        type="button"
+                        title={group.label}
                         className={cn(
-                          "mt-2 flex flex-col items-center",
-                          navDensityClasses.railGapClassName,
+                          "mx-auto flex items-center justify-center rounded-[1rem] border shadow-sm transition-all hover:scale-[1.02]",
+                          navDensityClasses.railButtonClassName,
+                          group.iconClassName ?? "border-primary/20 bg-primary/10 text-primary",
+                          hasActiveItem ? "ring-2 ring-[color:var(--app-accent-ring)]" : "",
                         )}
-                      >
-                        {group.items.map((item) => {
-                          const active = isNavItemActive(pathname, item.href);
-                          const itemIconClassName = resolveNavItemIconClassName(
-                            item,
-                            group.iconClassName,
-                          );
+                        onClick={() => {
+                          if (isFocusedSystemMode) {
+                            setSelectedSidebarGroupId(group.id);
+                            return;
+                          }
 
-                          return (
-                            <Link
-                              key={item.href}
-                              href={item.href}
-                              title={item.label}
-                              onClick={() => {
-                                persistNavScrollPosition();
-                              }}
-                              className={cn(
-                                "relative flex items-center justify-center rounded-[1rem] border shadow-sm transition-all hover:scale-[1.02]",
-                                navDensityClasses.railItemClassName,
-                                active
-                                  ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
-                                  : cn(
+                          toggleGroup(group.id);
+                        }}
+                      >
+                        <group.icon className="h-4 w-4" />
+                      </button>
+
+                      {!isFocusedSystemMode && isExpanded ? (
+                        <div
+                          className={cn(
+                            "mt-2 flex flex-col items-center",
+                            navDensityClasses.railGapClassName,
+                          )}
+                        >
+                          {group.items.map((item) => {
+                            const active = isNavItemActive(pathname, item.href);
+                            const itemIconClassName = resolveNavItemIconClassName(
+                              item,
+                              group.iconClassName,
+                            );
+
+                            return (
+                              <Link
+                                key={item.href}
+                                href={item.href}
+                                title={item.label}
+                                onClick={() => {
+                                  persistNavScrollPosition();
+                                }}
+                                className={cn(
+                                  "relative flex items-center justify-center rounded-[1rem] border shadow-sm transition-all hover:scale-[1.02]",
+                                  navDensityClasses.railItemClassName,
+                                  active
+                                    ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
+                                    : cn(
                                       "border-border/70 bg-background/78 text-muted-foreground hover:border-[color:var(--app-accent-strong)] hover:bg-[color:var(--app-accent-soft)]/35 hover:text-foreground",
                                       itemIconClassName,
                                     ),
-                              )}
-                            >
-                              <item.icon className="h-4 w-4" />
-                              <span className="sr-only">{item.label}</span>
-                              {active ? (
-                                <span className="absolute -bottom-1 h-1.5 w-1.5 rounded-full bg-current" />
-                              ) : null}
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    ) : null}
-                  </section>
-                );
-              })}
-            </nav>
-          </div>
-        ) : null}
+                                )}
+                              >
+                                <item.icon className="h-4 w-4" />
+                                <span className="sr-only">{item.label}</span>
+                                {active ? (
+                                  <span className="absolute -bottom-1 h-1.5 w-1.5 rounded-full bg-current" />
+                                ) : null}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+                    </section>
+                  );
+                })}
+              </nav>
+            </div>
+          ) : null}
         </aside>
       ) : null}
 
@@ -1308,9 +1308,6 @@ export function AppShell({ children }: AppShellProps) {
                         {activePageBadgeLabel}
                       </Badge>
                     ) : null}
-                    <span className="text-[11px] text-muted-foreground md:text-xs">
-                      School ERP
-                    </span>
                   </div>
                   <h1 className="truncate text-base font-semibold tracking-tight md:text-xl">
                     {activePageLabel}

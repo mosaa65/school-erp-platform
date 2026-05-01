@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import { PermissionGuard } from "@/features/auth/components/permission-guard";
 import { StudentPeriodResultsWorkspace } from "@/features/student-period-results/components/student-period-results-workspace";
 
@@ -6,12 +5,6 @@ export default function SemesterPeriodComponentScoresPage() {
   return (
     <PermissionGuard permission="student-period-component-scores.read">
       <div className="space-y-4">
-        <div className="space-y-2">
-          <Badge variant="secondary" className="w-fit">
-            النظام 05 - الفترات الفصلية
-          </Badge>
-          <h2 className="text-2xl font-semibold tracking-tight">درجات مكونات الفترات الفصلية</h2>
-        </div>
         <StudentPeriodResultsWorkspace
           allowedCategories={["SEMESTER"]}
           fixedWorkspaceView="results"

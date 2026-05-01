@@ -1,7 +1,9 @@
 import { randomUUID } from 'crypto';
 import {
+  AssessmentComponentEntryMode,
   GradingWorkflowStatus,
   Prisma,
+  StudentAttendanceStatus,
 } from '@prisma/client';
 import {
   BadRequestException,
@@ -13,6 +15,8 @@ import { CalculateStudentPeriodResultsDto } from '../assessment-periods/student-
 import { CreateStudentPeriodResultDto } from '../assessment-periods/student-period-results/dto/create-student-period-result.dto';
 import { ListStudentPeriodResultsDto } from '../assessment-periods/student-period-results/dto/list-student-period-results.dto';
 import { UpdateStudentPeriodResultDto } from '../assessment-periods/student-period-results/dto/update-student-period-result.dto';
+import { EnsureMonthlyStudentResultsDto } from './dto/ensure-monthly-student-results.dto';
+import { SyncMonthlyStudentResultsDto } from './dto/sync-monthly-student-results.dto';
 
 type MonthlyResultRow = {
   id: string;
@@ -434,6 +438,179 @@ export class MonthlyStudentResultsService {
     return { updatedResults, updatedComponents };
   }
 
+  async ensureBulk(
+    payload: EnsureMonthlyStudentResultsDto,
+    actorUserId: string,
+  ) {
+    const period = await this.getMonthlyPeriod(payload.assessmentPeriodId);
+    await this.ensureSubject(payload.subjectId);
+
+    if (period.isLocked) {
+      throw new BadRequestException(
+        'Cannot create results inside a locked monthly period',
+      );
+    }
+
+    const enrollments = await this.prisma.$queryRaw<
+      Array<{ id: string }>
+    >(Prisma.sql`
+      SELECT id
+      FROM student_enrollments
+      WHERE academic_year_id = ${period.academicYearId}
+        AND section_id = ${payload.sectionId}
+        AND deleted_at IS NULL
+        AND is_active = true
+    `);
+
+    const existingRows = await this.prisma.$queryRaw<
+      Array<{ studentEnrollmentId: string }>
+    >(Prisma.sql`
+      SELECT student_enrollment_id AS studentEnrollmentId
+      FROM monthly_student_results
+      WHERE monthly_assessment_period_id = ${payload.assessmentPeriodId}
+        AND section_id = ${payload.sectionId}
+        AND subject_id = ${payload.subjectId}
+        AND deleted_at IS NULL
+    `);
+
+    const existingEnrollmentIds = new Set(
+      existingRows.map((item) => item.studentEnrollmentId),
+    );
+
+    let createdResults = 0;
+
+    for (const enrollment of enrollments) {
+      if (existingEnrollmentIds.has(enrollment.id)) {
+        continue;
+      }
+
+      const id = randomUUID();
+
+      await this.prisma.$executeRaw`
+        INSERT INTO monthly_student_results (
+          id,
+          monthly_assessment_period_id,
+          student_enrollment_id,
+          subject_id,
+          academic_year_id,
+          academic_term_id,
+          academic_month_id,
+          term_subject_offering_id,
+          section_id,
+          total_score,
+          status,
+          is_locked,
+          notes,
+          is_active,
+          created_at,
+          updated_at,
+          created_by,
+          updated_by
+        ) VALUES (
+          ${id},
+          ${payload.assessmentPeriodId},
+          ${enrollment.id},
+          ${payload.subjectId},
+          ${period.academicYearId},
+          ${period.academicTermId},
+          ${period.academicMonthId},
+          ${payload.termSubjectOfferingId ?? null},
+          ${payload.sectionId},
+          0,
+          ${GradingWorkflowStatus.DRAFT},
+          false,
+          NULL,
+          true,
+          NOW(),
+          NOW(),
+          ${actorUserId},
+          ${actorUserId}
+        )
+      `;
+
+      createdResults += 1;
+    }
+
+    return {
+      success: true,
+      totalEnrollments: enrollments.length,
+      existingResults: existingEnrollmentIds.size,
+      createdResults,
+    };
+  }
+
+  async syncAutomaticComponents(
+    payload: SyncMonthlyStudentResultsDto,
+    actorUserId: string,
+  ) {
+    await this.getMonthlyPeriod(payload.assessmentPeriodId);
+    const scope = await this.resolveMonthlyDateScope(payload.assessmentPeriodId);
+    const autoComponents = await this.getAutomaticMonthlyComponents(
+      payload.assessmentPeriodId,
+    );
+
+    if (
+      autoComponents.attendanceComponents.length === 0 &&
+      autoComponents.homeworkComponents.length === 0 &&
+      autoComponents.examComponents.length === 0
+    ) {
+      return {
+        success: true,
+        updatedResults: 0,
+        updatedComponents: 0,
+      };
+    }
+
+    const where: Prisma.Sql[] = [
+      Prisma.sql`r.deleted_at IS NULL`,
+      Prisma.sql`r.monthly_assessment_period_id = ${payload.assessmentPeriodId}`,
+      Prisma.sql`r.is_locked = false`,
+    ];
+
+    if (payload.sectionId) {
+      where.push(Prisma.sql`r.section_id = ${payload.sectionId}`);
+    }
+
+    if (payload.subjectId) {
+      where.push(Prisma.sql`r.subject_id = ${payload.subjectId}`);
+    }
+
+    if (payload.studentEnrollmentId) {
+      where.push(
+        Prisma.sql`r.student_enrollment_id = ${payload.studentEnrollmentId}`,
+      );
+    }
+
+    const whereSql = Prisma.join(where, ' AND ');
+
+    const rows = await this.prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+      SELECT r.id
+      FROM monthly_student_results r
+      WHERE ${whereSql}
+    `);
+
+    let updatedResults = 0;
+    let updatedComponents = 0;
+
+    for (const row of rows) {
+      updatedComponents += await this.syncAutomaticComponentsForResult(
+        row.id,
+        {
+          ...autoComponents,
+          scope,
+        },
+        actorUserId,
+      );
+      updatedResults += 1;
+    }
+
+    return {
+      success: true,
+      updatedResults,
+      updatedComponents,
+    };
+  }
+
   async lock(id: string, actorUserId: string) {
     await this.findOne(id);
 
@@ -621,6 +798,368 @@ export class MonthlyStudentResultsService {
     if (!rows[0]) {
       throw new BadRequestException('Subject not found');
     }
+  }
+
+  private async resolveMonthlyDateScope(assessmentPeriodId: string) {
+    const rows = await this.prisma.$queryRaw<
+      Array<{ startDate: Date; endDate: Date }>
+    >(Prisma.sql`
+      SELECT
+        COALESCE(am.start_date, ay.start_date) AS startDate,
+        COALESCE(am.end_date, ay.end_date) AS endDate
+      FROM monthly_assessment_periods p
+      INNER JOIN academic_years ay ON ay.id = p.academic_year_id
+      LEFT JOIN academic_months am ON am.id = p.academic_month_id
+      WHERE p.id = ${assessmentPeriodId}
+        AND p.deleted_at IS NULL
+      LIMIT 1
+    `);
+
+    const scope = rows[0];
+    if (!scope) {
+      throw new BadRequestException('Monthly assessment period not found');
+    }
+
+    return scope;
+  }
+
+  private async getAutomaticMonthlyComponents(assessmentPeriodId: string) {
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        id: string;
+        entryMode: AssessmentComponentEntryMode;
+        maxScore: Prisma.Decimal | number | string;
+      }>
+    >(Prisma.sql`
+      SELECT
+        id,
+        entry_mode AS entryMode,
+        max_score AS maxScore
+      FROM monthly_assessment_components
+      WHERE monthly_assessment_period_id = ${assessmentPeriodId}
+        AND deleted_at IS NULL
+        AND is_active = true
+        AND entry_mode IN (
+          ${AssessmentComponentEntryMode.AUTO_ATTENDANCE},
+          ${AssessmentComponentEntryMode.AUTO_HOMEWORK},
+          ${AssessmentComponentEntryMode.AUTO_EXAM}
+        )
+    `);
+
+    return {
+      attendanceComponents: rows.filter(
+        (item) => item.entryMode === AssessmentComponentEntryMode.AUTO_ATTENDANCE,
+      ),
+      homeworkComponents: rows.filter(
+        (item) => item.entryMode === AssessmentComponentEntryMode.AUTO_HOMEWORK,
+      ),
+      examComponents: rows.filter(
+        (item) => item.entryMode === AssessmentComponentEntryMode.AUTO_EXAM,
+      ),
+    };
+  }
+
+  private async syncAutomaticComponentsForResult(
+    resultId: string,
+    params: {
+      attendanceComponents: Array<{ id: string; maxScore: Prisma.Decimal | number | string }>;
+      homeworkComponents: Array<{ id: string; maxScore: Prisma.Decimal | number | string }>;
+      examComponents: Array<{ id: string; maxScore: Prisma.Decimal | number | string }>;
+      scope: { startDate: Date; endDate: Date };
+    },
+    actorUserId: string,
+  ) {
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        id: string;
+        studentEnrollmentId: string;
+        subjectId: string;
+        sectionId: string | null;
+        academicYearId: string;
+        academicTermId: string;
+      }>
+    >(Prisma.sql`
+      SELECT
+        id,
+        student_enrollment_id AS studentEnrollmentId,
+        subject_id AS subjectId,
+        section_id AS sectionId,
+        academic_year_id AS academicYearId,
+        academic_term_id AS academicTermId
+      FROM monthly_student_results
+      WHERE id = ${resultId}
+        AND deleted_at IS NULL
+      LIMIT 1
+    `);
+
+    const result = rows[0];
+    if (!result) {
+      throw new BadRequestException('Monthly student result not found');
+    }
+
+    let updatedCount = 0;
+
+    if (params.attendanceComponents.length > 0) {
+      const attendanceRows = await this.prisma.studentAttendance.findMany({
+        where: {
+          studentEnrollmentId: result.studentEnrollmentId,
+          attendanceDate: {
+            gte: params.scope.startDate,
+            lte: params.scope.endDate,
+          },
+          deletedAt: null,
+          isActive: true,
+        },
+        select: {
+          status: true,
+        },
+      });
+
+      const attendanceEarned = attendanceRows.reduce((sum, row) => {
+        switch (row.status) {
+          case StudentAttendanceStatus.PRESENT:
+            return sum + 1;
+          case StudentAttendanceStatus.LATE:
+            return sum + 0.5;
+          case StudentAttendanceStatus.EARLY_LEAVE:
+            return sum + 0.75;
+          case StudentAttendanceStatus.EXCUSED_ABSENCE:
+            return sum + 0.5;
+          default:
+            return sum;
+        }
+      }, 0);
+
+      const attendanceBase = attendanceRows.length;
+
+      for (const component of params.attendanceComponents) {
+        const maxScore = this.decimalToNumber(component.maxScore) ?? 0;
+        const finalScore =
+          attendanceBase > 0
+            ? this.round2((attendanceEarned / attendanceBase) * maxScore)
+            : 0;
+
+        await this.upsertAutomaticComponentScore(
+          result.id,
+          component.id,
+          this.round2(attendanceEarned),
+          finalScore,
+          actorUserId,
+        );
+        updatedCount += 1;
+      }
+    }
+
+    if (params.homeworkComponents.length > 0) {
+      const homeworkRows = await this.prisma.studentHomework.findMany({
+        where: {
+          studentEnrollmentId: result.studentEnrollmentId,
+          deletedAt: null,
+          isActive: true,
+          homework: {
+            subjectId: result.subjectId,
+            sectionId: result.sectionId ?? undefined,
+            academicYearId: result.academicYearId,
+            academicTermId: result.academicTermId ?? undefined,
+            homeworkDate: {
+              gte: params.scope.startDate,
+              lte: params.scope.endDate,
+            },
+            deletedAt: null,
+            isActive: true,
+          },
+        },
+        select: {
+          manualScore: true,
+          isCompleted: true,
+          homework: {
+            select: {
+              maxScore: true,
+            },
+          },
+        },
+      });
+
+      const homeworkEarned = homeworkRows.reduce((sum, row) => {
+        if (row.manualScore !== null && row.manualScore !== undefined) {
+          return sum + (this.decimalToNumber(row.manualScore) ?? 0);
+        }
+
+        return (
+          sum +
+          (row.isCompleted ? this.decimalToNumber(row.homework.maxScore) ?? 0 : 0)
+        );
+      }, 0);
+
+      const homeworkBase = homeworkRows.reduce(
+        (sum, row) => sum + (this.decimalToNumber(row.homework.maxScore) ?? 0),
+        0,
+      );
+
+      for (const component of params.homeworkComponents) {
+        const maxScore = this.decimalToNumber(component.maxScore) ?? 0;
+        const finalScore =
+          homeworkBase > 0
+            ? this.round2((homeworkEarned / homeworkBase) * maxScore)
+            : 0;
+
+        await this.upsertAutomaticComponentScore(
+          result.id,
+          component.id,
+          this.round2(homeworkEarned),
+          finalScore,
+          actorUserId,
+        );
+        updatedCount += 1;
+      }
+    }
+
+    if (params.examComponents.length > 0) {
+      const examRows = await this.prisma.studentExamScore.findMany({
+        where: {
+          studentEnrollmentId: result.studentEnrollmentId,
+          deletedAt: null,
+          isActive: true,
+          examAssessment: {
+            subjectId: result.subjectId,
+            sectionId: result.sectionId ?? undefined,
+            deletedAt: null,
+            isActive: true,
+            examDate: {
+              gte: params.scope.startDate,
+              lte: params.scope.endDate,
+            },
+            examPeriod: {
+              academicYearId: result.academicYearId,
+              academicTermId: result.academicTermId ?? undefined,
+              deletedAt: null,
+            },
+          },
+        },
+        select: {
+          score: true,
+          isPresent: true,
+          examAssessment: {
+            select: {
+              maxScore: true,
+            },
+          },
+        },
+      });
+
+      const examEarned = examRows.reduce(
+        (sum, row) =>
+          sum + (row.isPresent ? this.decimalToNumber(row.score) ?? 0 : 0),
+        0,
+      );
+      const examBase = examRows.reduce(
+        (sum, row) => sum + (this.decimalToNumber(row.examAssessment.maxScore) ?? 0),
+        0,
+      );
+
+      for (const component of params.examComponents) {
+        const maxScore = this.decimalToNumber(component.maxScore) ?? 0;
+        const finalScore =
+          examBase > 0 ? this.round2((examEarned / examBase) * maxScore) : 0;
+
+        await this.upsertAutomaticComponentScore(
+          result.id,
+          component.id,
+          this.round2(examEarned),
+          finalScore,
+          actorUserId,
+        );
+        updatedCount += 1;
+      }
+    }
+
+    await this.recalculateResultTotal(result.id, actorUserId);
+    return updatedCount;
+  }
+
+  private async upsertAutomaticComponentScore(
+    resultId: string,
+    componentId: string,
+    rawScore: number,
+    finalScore: number,
+    actorUserId: string,
+  ) {
+    await this.prisma.$executeRaw`
+      INSERT INTO monthly_student_component_scores (
+        id,
+        monthly_student_result_id,
+        monthly_assessment_component_id,
+        raw_score,
+        final_score,
+        is_auto_calculated,
+        notes,
+        is_active,
+        created_at,
+        updated_at,
+        created_by,
+        updated_by
+      ) VALUES (
+        ${randomUUID()},
+        ${resultId},
+        ${componentId},
+        ${rawScore},
+        ${finalScore},
+        true,
+        NULL,
+        true,
+        NOW(),
+        NOW(),
+        ${actorUserId},
+        ${actorUserId}
+      )
+      ON CONFLICT (monthly_student_result_id, monthly_assessment_component_id)
+      DO UPDATE SET
+        raw_score = EXCLUDED.raw_score,
+        final_score = EXCLUDED.final_score,
+        is_auto_calculated = true,
+        is_active = true,
+        updated_at = NOW(),
+        updated_by = ${actorUserId},
+        deleted_at = NULL
+    `;
+  }
+
+  private async recalculateResultTotal(resultId: string, actorUserId: string) {
+    const rows = await this.prisma.$queryRaw<
+      Array<{ total: Prisma.Decimal | number | string }>
+    >(Prisma.sql`
+      SELECT COALESCE(SUM(final_score), 0) AS total
+      FROM monthly_student_component_scores
+      WHERE monthly_student_result_id = ${resultId}
+        AND deleted_at IS NULL
+        AND is_active = true
+    `);
+
+    const total = Number(rows[0]?.total ?? 0);
+
+    await this.prisma.$executeRaw`
+      UPDATE monthly_student_results
+      SET
+        total_score = ${total},
+        calculated_at = NOW(),
+        updated_at = NOW(),
+        updated_by = ${actorUserId}
+      WHERE id = ${resultId}
+        AND deleted_at IS NULL
+    `;
+  }
+
+  private decimalToNumber(value: Prisma.Decimal | number | string | null | undefined) {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  private round2(value: number) {
+    return Math.round(value * 100) / 100;
   }
 
   private mapResult(item: MonthlyResultRow) {
