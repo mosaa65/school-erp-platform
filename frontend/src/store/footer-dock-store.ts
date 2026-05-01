@@ -1,8 +1,10 @@
+import * as React from "react";
 import { create } from "zustand";
 
 export type FooterDockAction = {
   onClick: () => void;
   label?: string;
+  icon?: React.ReactNode;
   disabled?: boolean;
 };
 

@@ -8,7 +8,6 @@ import {
   X,
   LayoutGrid,
   Plus,
-  type LucideIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,7 +41,7 @@ export type AppFooterDockProps = {
 type FooterAction = {
   key: AppFooterDockItemKey;
   label: string;
-  icon: LucideIcon;
+  icon: React.ReactNode;
   active: boolean;
   featured?: boolean;
   unreadCount?: number;
@@ -87,13 +86,20 @@ function FooterButton({ action, mode = "standalone" }: { action: FooterAction; m
         "relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors duration-300",
         !active && "border border-transparent group-hover:border-white/35 group-hover:bg-background/75 group-hover:dark:border-white/10 group-hover:shadow-sm"
       )}>
-        <Icon
-          className={cn(
-            "h-5 w-5 sm:h-4.5 sm:w-4.5 shrink-0 transition-transform duration-300",
-            active ? "scale-110" : "group-hover:scale-110"
-          )}
-          strokeWidth={active ? 2.5 : 2}
-        />
+        <div className={cn(
+          "h-5 w-5 sm:h-4.5 sm:w-4.5 shrink-0 transition-transform duration-300 flex items-center justify-center",
+          active ? "scale-110" : "group-hover:scale-110"
+        )}>
+          {React.isValidElement(Icon) ? (
+             React.cloneElement(Icon as React.ReactElement<any>, {
+               strokeWidth: active ? 2.5 : 2,
+               className: cn("h-full w-full", (Icon as React.ReactElement<any>).props.className)
+             })
+          ) : typeof Icon === 'function' ? (
+             // @ts-ignore
+             <Icon className="h-full w-full" strokeWidth={active ? 2.5 : 2} />
+          ) : Icon}
+        </div>
         {typeof action.unreadCount === "number" && action.unreadCount > 0 ? (
           <span className={cn(
             "absolute -right-1.5 -top-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white shadow-sm outline outline-2 outline-background z-10",
@@ -148,7 +154,7 @@ export function AppFooterDock({
     actions.push({
       key: "add",
       label: storeAddAction.label ?? "إضافة",
-      icon: Plus,
+      icon: storeAddAction.icon ?? <Plus />,
       active: activeItem === "add",
       disabled: storeAddAction.disabled,
       onClick: storeAddAction.onClick,
@@ -158,7 +164,7 @@ export function AppFooterDock({
   actions.push({
     key: "home",
     label: homeLabel,
-    icon: House,
+    icon: <House />,
     active: activeItem === "home",
     onClick: onHomeClick,
   });
@@ -166,7 +172,7 @@ export function AppFooterDock({
   actions.push({
     key: "navigator",
     label: navigatorOpen ? navigatorCloseLabel : navigatorLabel,
-    icon: navigatorOpen ? X : LayoutGrid,
+    icon: navigatorOpen ? <X /> : <LayoutGrid />,
     active: navigatorOpen || activeItem === "navigator",
     featured: true,
     onClick: onNavigatorClick,
@@ -176,7 +182,7 @@ export function AppFooterDock({
     actions.push({
       key: "notifications",
       label: notificationsLabel,
-      icon: Bell,
+      icon: <Bell />,
       active: activeItem === "notifications",
       unreadCount,
       onClick: onNotificationsClick,
@@ -186,7 +192,7 @@ export function AppFooterDock({
   actions.push({
     key: "profile",
     label: profileLabel,
-    icon: UserRound,
+    icon: <UserRound />,
     active: activeItem === "profile",
     onClick: onProfileClick,
   });
