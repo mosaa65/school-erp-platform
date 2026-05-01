@@ -74,12 +74,12 @@ function FooterButton({ action, mode = "standalone" }: { action: FooterAction; m
             "h-4.5 w-4.5 sm:h-4.5 sm:w-4.5 shrink-0 flex items-center justify-center text-[color:var(--app-accent-color)]",
           )}>
             {React.isValidElement(Icon) ? (
-               React.cloneElement(Icon as React.ReactElement<any>, {
+               React.cloneElement(Icon as React.ReactElement<React.SVGProps<SVGSVGElement>>, {
                  strokeWidth: 2.5,
-                 className: cn("h-full w-full", (Icon as React.ReactElement<any>).props.className)
+                 className: cn("h-full w-full", (Icon as React.ReactElement<React.SVGProps<SVGSVGElement>>).props.className)
                })
             ) : typeof Icon === 'function' ? (
-               // @ts-ignore
+               // @ts-expect-error - Icon might be a component function
                <Icon className="h-full w-full" strokeWidth={2.5} />
             ) : Icon}
           </div>
@@ -129,12 +129,12 @@ function FooterButton({ action, mode = "standalone" }: { action: FooterAction; m
             active ? "scale-110" : "group-hover:scale-110"
           )}>
             {React.isValidElement(Icon) ? (
-               React.cloneElement(Icon as React.ReactElement<any>, {
+               React.cloneElement(Icon as React.ReactElement<React.SVGProps<SVGSVGElement>>, {
                  strokeWidth: active ? 2.5 : 2,
-                 className: cn("h-full w-full", (Icon as React.ReactElement<any>).props.className)
+                 className: cn("h-full w-full", (Icon as React.ReactElement<React.SVGProps<SVGSVGElement>>).props.className)
                })
             ) : typeof Icon === 'function' ? (
-               // @ts-ignore
+               // @ts-expect-error - Icon might be a component function
                <Icon className="h-full w-full" strokeWidth={active ? 2.5 : 2} />
             ) : Icon}
           </div>

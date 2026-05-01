@@ -1,4 +1,3 @@
-import { Users } from "lucide-react";
 import { PermissionGuard } from "@/features/auth/components/permission-guard";
 import { UsersManagementWorkspace } from "@/features/users/components/users-management-workspace";
 

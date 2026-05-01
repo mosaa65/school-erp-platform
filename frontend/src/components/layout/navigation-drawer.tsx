@@ -17,7 +17,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import { useNavigationPreferences } from "@/hooks/use-navigation-preferences";
 import { cn } from "@/lib/utils";
 import type {

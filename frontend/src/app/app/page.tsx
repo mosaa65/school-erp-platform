@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { KeyRound, ShieldCheck } from "lucide-react";
+import { KeyRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,

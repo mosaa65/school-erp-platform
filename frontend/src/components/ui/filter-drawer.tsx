@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -31,8 +30,6 @@ export type FilterDrawerProps = {
   children: React.ReactNode;
   actionButtons?: React.ReactNode;
   className?: string;
-  overlayClassName?: string;
-  renderInPortal?: boolean;
 };
 
 import { Drawer } from "vaul";
@@ -45,8 +42,6 @@ export function FilterDrawer({
   children,
   actionButtons,
   className,
-  overlayClassName,
-  renderInPortal = false,
 }: FilterDrawerProps) {
   const isDesktop = useMediaQuery(`(min-width: ${DESKTOP_BREAKPOINT}px)`);
 

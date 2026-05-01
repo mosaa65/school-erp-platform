@@ -6,7 +6,6 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
-  BellRing,
   ChevronDown,
   Compass,
   GraduationCap,

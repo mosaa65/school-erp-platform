@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -20,8 +19,6 @@ export type BottomSheetFormProps = {
   showFooter?: boolean;
   panelClassName?: string;
   contentClassName?: string;
-  overlayClassName?: string;
-  renderInPortal?: boolean;
   contentRef?: React.Ref<HTMLDivElement>;
 };
 
@@ -41,8 +38,6 @@ export function BottomSheetForm({
   showFooter = true,
   panelClassName,
   contentClassName,
-  overlayClassName,
-  renderInPortal = false,
   contentRef,
 }: BottomSheetFormProps) {
   const content = (
