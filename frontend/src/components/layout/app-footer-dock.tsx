@@ -53,6 +53,40 @@ function FooterButton({ action, mode = "standalone" }: { action: FooterAction; m
   const Icon = action.icon;
   const active = action.active;
   const disabled = action.disabled;
+  const isAdd = action.key === "add";
+
+  if (isAdd) {
+    return (
+      <Button
+        type="button"
+        variant="ghost"
+        onClick={action.onClick}
+        disabled={disabled}
+        className={cn(
+          "group relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border border-[color:var(--app-accent-strong)] bg-gradient-to-br from-[color:var(--app-accent-soft)] via-background/70 to-background/55 text-[color:var(--app-accent-color)] shadow-[0_18px_42px_-24px_rgba(15,23,42,0.58)] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:from-[color:var(--app-accent-strong)] hover:to-background/60 hover:shadow-[0_22px_54px_-22px_rgba(15,23,42,0.62)] sm:h-11 sm:w-11 px-0",
+          disabled && "pointer-events-none opacity-50"
+        )}
+      >
+        <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_26%,var(--app-accent-soft),transparent_60%)] opacity-90" />
+        <span className="pointer-events-none absolute inset-[1px] rounded-full border border-white/35 dark:border-white/10" />
+        <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-background/75 shadow-inner shadow-white/20 dark:bg-background/60 sm:h-8 sm:w-8">
+           <div className={cn(
+            "h-5 w-5 sm:h-4.5 sm:w-4.5 shrink-0 flex items-center justify-center",
+          )}>
+            {React.isValidElement(Icon) ? (
+               React.cloneElement(Icon as React.ReactElement<any>, {
+                 strokeWidth: 2.5,
+                 className: cn("h-full w-full", (Icon as React.ReactElement<any>).props.className)
+               })
+            ) : typeof Icon === 'function' ? (
+               // @ts-ignore
+               <Icon className="h-full w-full" strokeWidth={2.5} />
+            ) : Icon}
+          </div>
+        </span>
+      </Button>
+    );
+  }
 
   return (
     <Button
@@ -78,7 +112,7 @@ function FooterButton({ action, mode = "standalone" }: { action: FooterAction; m
             ? "bg-[color:var(--app-accent-soft)] border-[color:var(--app-accent-strong)]"
             : "bg-background/80 border-border/40 hover:bg-background/90 dark:bg-black/60 dark:hover:bg-black/80"
           : active 
-            ? "bg-transparent sm:bg-[color:var(--app-accent-soft)] sm:border-[color:var(--app-accent-strong)]"
+            ? "bg-[color:var(--app-accent-soft)] sm:border-[color:var(--app-accent-strong)]"
             : "bg-transparent hover:bg-black/5 dark:hover:bg-white/10"
       )}
     >
@@ -214,11 +248,11 @@ export function AppFooterDock({
   return (
     <div
       className={cn(
-        "pointer-events-none fixed inset-x-0 bottom-0 z-30 px-2 sm:px-6 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] flex items-center justify-center",
+        "pointer-events-none fixed inset-x-0 bottom-0 z-30 px-2 sm:px-6 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] flex items-center justify-center transition-all duration-300 md:pr-[var(--app-desktop-sidebar-offset,0px)]",
         className,
       )}
     >
-      <div className="flex w-full max-w-[22rem] sm:max-w-lg md:max-w-2xl items-center justify-between">
+      <div className="flex w-full max-w-[21rem] sm:max-w-lg md:max-w-2xl items-center justify-between">
         {rightAction ? (
           <div className="pointer-events-auto">
             <FooterButton action={rightAction} mode="standalone" />
@@ -226,7 +260,7 @@ export function AppFooterDock({
         ) : null}
 
         {middleActions.length > 0 ? (
-          <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-border/40 bg-background/80 p-1 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-black/60">
+          <div className="pointer-events-auto flex items-center gap-0.5 rounded-full border border-border/40 bg-background/80 p-0.5 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-black/60">
             {middleActions.map((action) => (
               <FooterButton key={action.key} action={action} mode="pill" />
             ))}

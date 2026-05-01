@@ -678,13 +678,13 @@ export function AppShell({ children }: AppShellProps) {
     ? "navigator"
     : pathname === "/app"
       ? "home"
-      : pathname.startsWith("/app/navigation")
+      : pathname.includes("/app/navigation")
         ? isHubMode
           ? "home"
           : "navigator"
-        : pathname.startsWith("/app/profile")
+        : pathname.includes("/app/profile")
           ? "profile"
-          : showFooterNotifications && pathname.startsWith("/app/user-notifications")
+          : pathname.includes("/app/user-notifications")
             ? "notifications"
             : null;
 
