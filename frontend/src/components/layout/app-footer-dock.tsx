@@ -63,15 +63,15 @@ function FooterButton({ action, mode = "standalone" }: { action: FooterAction; m
         onClick={action.onClick}
         disabled={disabled}
         className={cn(
-          "group relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border border-[color:var(--app-accent-strong)] bg-gradient-to-br from-[color:var(--app-accent-soft)] via-background/70 to-background/55 text-[color:var(--app-accent-color)] shadow-[0_18px_42px_-24px_rgba(15,23,42,0.58)] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:from-[color:var(--app-accent-strong)] hover:to-background/60 hover:shadow-[0_22px_54px_-22px_rgba(15,23,42,0.62)] sm:h-11 sm:w-11 px-0",
+          "group relative flex h-[3.25rem] w-[3.25rem] items-center justify-center overflow-hidden rounded-full border border-[color:var(--app-accent-strong)] bg-gradient-to-br from-[color:var(--app-accent-soft)] via-background/70 to-background/55 text-[color:var(--app-accent-color)] shadow-[0_18px_42px_-24px_rgba(15,23,42,0.58)] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:from-[color:var(--app-accent-strong)] hover:to-background/60 hover:shadow-[0_22px_54px_-22px_rgba(15,23,42,0.62)] sm:h-11 sm:w-11 px-0",
           disabled && "pointer-events-none opacity-50"
         )}
       >
         <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_26%,var(--app-accent-soft),transparent_60%)] opacity-90" />
         <span className="pointer-events-none absolute inset-[1px] rounded-full border border-white/35 dark:border-white/10" />
-        <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-background/75 shadow-inner shadow-white/20 dark:bg-background/60 sm:h-8 sm:w-8">
+        <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-background/75 shadow-inner shadow-white/20 dark:bg-background/60 sm:h-8 sm:w-8">
            <div className={cn(
-            "h-5 w-5 sm:h-4.5 sm:w-4.5 shrink-0 flex items-center justify-center",
+            "h-4.5 w-4.5 sm:h-4.5 sm:w-4.5 shrink-0 flex items-center justify-center",
           )}>
             {React.isValidElement(Icon) ? (
                React.cloneElement(Icon as React.ReactElement<any>, {
@@ -100,7 +100,7 @@ function FooterButton({ action, mode = "standalone" }: { action: FooterAction; m
         
         mode === "standalone" && "shadow-[0_14px_34px_-22px_rgba(15,23,42,0.55)] backdrop-blur-xl border",
         
-        "h-14 w-14 sm:h-11 px-0",
+        "h-[3.25rem] w-[3.25rem] sm:h-11 px-0",
         active ? "sm:w-auto sm:px-4" : "sm:w-11 sm:px-0",
 
         active
@@ -113,15 +113,15 @@ function FooterButton({ action, mode = "standalone" }: { action: FooterAction; m
             : "bg-background/80 border-border/40 hover:bg-background/90 dark:bg-black/60 dark:hover:bg-black/80"
           : active 
             ? "bg-[color:var(--app-accent-soft)] sm:border-[color:var(--app-accent-strong)]"
-            : "bg-transparent hover:bg-black/5 dark:hover:bg-white/10"
+            : "bg-transparent"
       )}
     >
       <div className={cn(
         "relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors duration-300",
-        !active && "border border-transparent group-hover:border-white/35 group-hover:bg-background/75 group-hover:dark:border-white/10 group-hover:shadow-sm"
+        !active && "border border-transparent group-hover:border-white/35"
       )}>
         <div className={cn(
-          "h-5 w-5 sm:h-4.5 sm:w-4.5 shrink-0 transition-transform duration-300 flex items-center justify-center",
+          "h-4.5 w-4.5 sm:h-4.5 sm:w-4.5 shrink-0 transition-transform duration-300 flex items-center justify-center",
           active ? "scale-110" : "group-hover:scale-110"
         )}>
           {React.isValidElement(Icon) ? (
