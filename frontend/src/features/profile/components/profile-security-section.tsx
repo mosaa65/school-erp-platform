@@ -20,7 +20,6 @@ import { PasswordFieldWithBiometricAction } from "@/components/ui/password-field
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 import { apiClient, type AuthSessionView, type WebAuthnCredentialListItem } from "@/lib/api/client";
-import { findCountryDialCodeOptionByDialCode } from "@/lib/intl/phone";
 import { cn } from "@/lib/utils";
 
 type PasswordIdentityMethod = "phone" | "email";
