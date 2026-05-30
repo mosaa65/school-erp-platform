@@ -1,7 +1,8 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { Almarai, Cairo, JetBrains_Mono, Noto_Kufi_Arabic, Tajawal } from "next/font/google";
 import { AppProviders } from "@/components/providers/app-providers";
 import "./globals.css";
+import Script from "next/script";
 
 const cairo = Cairo({
   subsets: ["arabic", "latin"],
@@ -49,13 +50,15 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${cairo.variable} ${jetbrainsMono.variable} ${tajawal.variable} ${notoKufiArabic.variable} ${almarai.variable}`}
     >
+      <Script
+        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1544047732487982"
+        strategy="afterInteractive"
+        crossOrigin="anonymous"
+        async
+      />
       <body className="min-h-screen">
         <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );
 }
-
-
-
-
