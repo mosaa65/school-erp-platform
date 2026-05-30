@@ -28,8 +28,12 @@ type SectionLabelInput = {
 };
 
 export function formatSectionWithGradeLabel(
-  section: SectionLabelInput,
+  section?: SectionLabelInput | null,
 ): string {
+  if (!section) {
+    return "-";
+  }
+
   const sectionLabel = formatNameCodeLabel(section.name, section.code);
   const gradeLabel = section.gradeLevel
     ? formatNameCodeLabel(section.gradeLevel.name, section.gradeLevel.code)

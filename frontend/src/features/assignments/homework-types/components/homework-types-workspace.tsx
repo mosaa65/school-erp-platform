@@ -212,7 +212,18 @@ export function HomeworkTypesWorkspace() {
   };
 
   const validateForm = (): boolean => {
+    const code = formState.code.trim();
     const name = formState.name.trim();
+
+    if (!code) {
+      setFormError("الرمز مطلوب.");
+      return false;
+    }
+
+    if (code.length > 50) {
+      setFormError("الرمز يجب ألا يتجاوز 50 حرفًا.");
+      return false;
+    }
 
     if (!name) {
       setFormError("الاسم مطلوب.");
@@ -242,6 +253,7 @@ export function HomeworkTypesWorkspace() {
     }
 
     const payload = {
+      code: formState.code.trim(),
       name: formState.name.trim(),
       description: toOptionalString(formState.description),
       isSystem: formState.isSystem,
@@ -262,6 +274,7 @@ export function HomeworkTypesWorkspace() {
         {
           onSuccess: () => {
             resetFormState();
+            setIsFormOpen(false);
             setActionSuccess("تم تحديث نوع الواجب بنجاح.");
           },
         },
@@ -277,6 +290,7 @@ export function HomeworkTypesWorkspace() {
     createMutation.mutate(payload, {
       onSuccess: () => {
         resetFormState();
+        setIsFormOpen(false);
         setPage(1);
         setActionSuccess("تم إنشاء نوع الواجب بنجاح.");
       },
@@ -548,6 +562,19 @@ export function HomeworkTypesWorkspace() {
           </div>
         ) : (
           <form className="space-y-3" onSubmit={handleSubmitForm}>
+            <FormField label="الرمز" required>
+              <Input
+                icon={<BookOpenText />}
+                value={formState.code}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, code: event.target.value }))
+                }
+                placeholder="HOMEWORK"
+                required
+                disabled={isEditing}
+              />
+            </FormField>
+
             <FormField label="الاسم" required>
               <Input
                 icon={<BookOpenText />}

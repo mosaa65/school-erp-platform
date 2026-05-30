@@ -49,6 +49,13 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${cairo.variable} ${jetbrainsMono.variable} ${tajawal.variable} ${notoKufiArabic.variable} ${almarai.variable}`}
     >
+      <head>
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1544047732487982"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body className="min-h-screen">
         <AppProviders>{children}</AppProviders>
       </body>

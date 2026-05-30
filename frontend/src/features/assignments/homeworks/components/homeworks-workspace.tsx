@@ -26,7 +26,9 @@ import {
 } from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FormBooleanField } from "@/components/ui/form-boolean-field";
+import { FormField } from "@/components/ui/form-field";
 import { Fab } from "@/components/ui/fab";
+import { TextareaField } from "@/components/ui/textarea-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateHomeworkMutation,
@@ -105,6 +107,7 @@ function createDefaultFormState(): HomeworkFormState {
     ...DEFAULT_FORM_STATE,
     homeworkDate,
     dueDate: addDaysToDateInput(homeworkDate, DEFAULT_DUE_DATE_OFFSET_DAYS),
+    maxScore: "10",
   };
 }
 
@@ -146,6 +149,10 @@ function toDateInput(isoDate: string | null): string {
 
 function toDateIso(dateInput: string): string {
   return `${dateInput}T00:00:00.000Z`;
+}
+
+function toDateEndIso(dateInput: string): string {
+  return `${dateInput}T23:59:59.999Z`;
 }
 
 function formatDate(value: string | null): string {
@@ -196,6 +203,10 @@ export function HomeworksWorkspace() {
   const [sectionFilter, setSectionFilter] = React.useState("all");
   const [subjectFilter, setSubjectFilter] = React.useState("all");
   const [homeworkTypeFilter, setHomeworkTypeFilter] = React.useState("all");
+  const [fromHomeworkDateFilter, setFromHomeworkDateFilter] = React.useState("");
+  const [toHomeworkDateFilter, setToHomeworkDateFilter] = React.useState("");
+  const [fromDueDateFilter, setFromDueDateFilter] = React.useState("");
+  const [toDueDateFilter, setToDueDateFilter] = React.useState("");
   const [activeFilter, setActiveFilter] = React.useState<"all" | "active" | "inactive">(
     "all",
   );
@@ -205,6 +216,10 @@ export function HomeworksWorkspace() {
     section: string;
     subject: string;
     homeworkType: string;
+    fromHomeworkDate: string;
+    toHomeworkDate: string;
+    fromDueDate: string;
+    toDueDate: string;
     active: "all" | "active" | "inactive";
   }>({
     year: "all",
@@ -212,6 +227,10 @@ export function HomeworksWorkspace() {
     section: "all",
     subject: "all",
     homeworkType: "all",
+    fromHomeworkDate: "",
+    toHomeworkDate: "",
+    fromDueDate: "",
+    toDueDate: "",
     active: "all",
   });
 
@@ -233,6 +252,10 @@ export function HomeworksWorkspace() {
     sectionId: sectionFilter === "all" ? undefined : sectionFilter,
     subjectId: subjectFilter === "all" ? undefined : subjectFilter,
     homeworkTypeId: homeworkTypeFilter === "all" ? undefined : homeworkTypeFilter,
+    fromHomeworkDate: fromHomeworkDateFilter ? toDateIso(fromHomeworkDateFilter) : undefined,
+    toHomeworkDate: toHomeworkDateFilter ? toDateEndIso(toHomeworkDateFilter) : undefined,
+    fromDueDate: fromDueDateFilter ? toDateIso(fromDueDateFilter) : undefined,
+    toDueDate: toDueDateFilter ? toDateEndIso(toDueDateFilter) : undefined,
     isActive: activeFilter === "all" ? undefined : activeFilter === "active",
   });
 
@@ -278,6 +301,44 @@ export function HomeworksWorkspace() {
     }
   }, [editingHomeworkId, homeworks, isEditing]);
 
+  React.useEffect(() => {
+    if (!isFormOpen || isEditing) {
+      return;
+    }
+
+    const currentYear = (academicYearsQuery.data ?? []).find((year) => year.isCurrent);
+    if (!currentYear || formState.academicYearId) {
+      return;
+    }
+
+    setFormState((prev) => ({
+      ...prev,
+      academicYearId: currentYear.id,
+    }));
+  }, [academicYearsQuery.data, formState.academicYearId, isEditing, isFormOpen]);
+
+  React.useEffect(() => {
+    if (!isFormOpen || isEditing || formState.academicTermId) {
+      return;
+    }
+
+    const today = new Date();
+    const matchingTerm = (academicTermsQuery.data ?? []).find((term) => {
+      const startDate = new Date(term.startDate);
+      const endDate = new Date(term.endDate);
+      return today >= startDate && today <= endDate;
+    });
+
+    if (!matchingTerm) {
+      return;
+    }
+
+    setFormState((prev) => ({
+      ...prev,
+      academicTermId: matchingTerm.id,
+    }));
+  }, [academicTermsQuery.data, formState.academicTermId, isEditing, isFormOpen]);
+
   useDebounceEffect(() => {
       setPage(1);
       setSearch(searchInput.trim());
@@ -294,16 +355,24 @@ export function HomeworksWorkspace() {
       section: sectionFilter,
       subject: subjectFilter,
       homeworkType: homeworkTypeFilter,
+      fromHomeworkDate: fromHomeworkDateFilter,
+      toHomeworkDate: toHomeworkDateFilter,
+      fromDueDate: fromDueDateFilter,
+      toDueDate: toDueDateFilter,
       active: activeFilter,
     });
   }, [
     academicTermFilter,
     academicYearFilter,
     activeFilter,
+    fromDueDateFilter,
+    fromHomeworkDateFilter,
     homeworkTypeFilter,
     isFilterOpen,
     sectionFilter,
     subjectFilter,
+    toDueDateFilter,
+    toHomeworkDateFilter,
   ]);
 
   const resetFormState = () => {
@@ -409,6 +478,7 @@ export function HomeworksWorkspace() {
         {
           onSuccess: () => {
             resetFormState();
+            setIsFormOpen(false);
             setActionInfo("تم تحديث الواجب بنجاح.");
           },
         },
@@ -429,6 +499,7 @@ export function HomeworksWorkspace() {
       {
         onSuccess: () => {
           resetFormState();
+          setIsFormOpen(false);
           setPage(1);
           setActionInfo("تم إنشاء الواجب بنجاح.");
         },
@@ -526,6 +597,10 @@ export function HomeworksWorkspace() {
     setSectionFilter("all");
     setSubjectFilter("all");
     setHomeworkTypeFilter("all");
+    setFromHomeworkDateFilter("");
+    setToHomeworkDateFilter("");
+    setFromDueDateFilter("");
+    setToDueDateFilter("");
     setActiveFilter("all");
     setIsFilterOpen(false);
   };
@@ -537,6 +612,10 @@ export function HomeworksWorkspace() {
     setSectionFilter(filterDraft.section);
     setSubjectFilter(filterDraft.subject);
     setHomeworkTypeFilter(filterDraft.homeworkType);
+    setFromHomeworkDateFilter(filterDraft.fromHomeworkDate);
+    setToHomeworkDateFilter(filterDraft.toHomeworkDate);
+    setFromDueDateFilter(filterDraft.fromDueDate);
+    setToDueDateFilter(filterDraft.toDueDate);
     setActiveFilter(filterDraft.active);
     setIsFilterOpen(false);
   };
@@ -549,6 +628,10 @@ export function HomeworksWorkspace() {
       sectionFilter !== "all" ? 1 : 0,
       subjectFilter !== "all" ? 1 : 0,
       homeworkTypeFilter !== "all" ? 1 : 0,
+      fromHomeworkDateFilter ? 1 : 0,
+      toHomeworkDateFilter ? 1 : 0,
+      fromDueDateFilter ? 1 : 0,
+      toDueDateFilter ? 1 : 0,
       activeFilter !== "all" ? 1 : 0,
     ].reduce((acc, value) => acc + value, 0);
     return count;
@@ -556,10 +639,14 @@ export function HomeworksWorkspace() {
     academicTermFilter,
     academicYearFilter,
     activeFilter,
+    fromDueDateFilter,
+    fromHomeworkDateFilter,
     homeworkTypeFilter,
     searchInput,
     sectionFilter,
     subjectFilter,
+    toDueDateFilter,
+    toHomeworkDateFilter,
   ]);
 
   return (
@@ -674,6 +761,58 @@ export function HomeworksWorkspace() {
                 </option>
               ))}
             </SelectField>
+
+            <FormField label="من تاريخ الواجب">
+              <Input
+                type="date"
+                value={filterDraft.fromHomeworkDate}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    fromHomeworkDate: event.target.value,
+                  }))
+                }
+              />
+            </FormField>
+
+            <FormField label="إلى تاريخ الواجب">
+              <Input
+                type="date"
+                value={filterDraft.toHomeworkDate}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    toHomeworkDate: event.target.value,
+                  }))
+                }
+              />
+            </FormField>
+
+            <FormField label="من تاريخ التسليم">
+              <Input
+                type="date"
+                value={filterDraft.fromDueDate}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    fromDueDate: event.target.value,
+                  }))
+                }
+              />
+            </FormField>
+
+            <FormField label="إلى تاريخ التسليم">
+              <Input
+                type="date"
+                value={filterDraft.toDueDate}
+                onChange={(event) =>
+                  setFilterDraft((prev) => ({
+                    ...prev,
+                    toDueDate: event.target.value,
+                  }))
+                }
+              />
+            </FormField>
 
             <SelectField
               value={filterDraft.active}
@@ -861,175 +1000,199 @@ export function HomeworksWorkspace() {
             <CardDescription>إدارة واجبات الطلاب على مستوى الفصل والشعبة.</CardDescription>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <select
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                value={formState.academicYearId}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    academicYearId: event.target.value,
-                    academicTermId: "",
-                  }))
-                }
-                disabled={!canReadAcademicYears}
-              >
-                <option value="">اختر السنة</option>
-                {(academicYearsQuery.data ?? []).map((year) => (
-                  <option key={year.id} value={year.id}>
-                    {formatNameCodeLabel(year.name, year.code)}
-                  </option>
-                ))}
-              </select>
+              <FormField label="السنة الدراسية" required>
+                <SelectField
+                  value={formState.academicYearId}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      academicYearId: event.target.value,
+                      academicTermId: "",
+                    }))
+                  }
+                  disabled={!canReadAcademicYears}
+                  required
+                >
+                  <option value="">اختر السنة</option>
+                  {(academicYearsQuery.data ?? []).map((year) => (
+                    <option key={year.id} value={year.id}>
+                      {formatNameCodeLabel(year.name, year.code)}
+                    </option>
+                  ))}
+                </SelectField>
+              </FormField>
 
-              <select
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                value={formState.academicTermId}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, academicTermId: event.target.value }))
-                }
-                disabled={!canReadAcademicTerms}
-              >
-                <option value="">اختر الفصل</option>
-                {(academicTermsQuery.data ?? []).map((term) => (
-                  <option key={term.id} value={term.id}>
-                    {formatNameCodeLabel(term.name, term.code)}
-                  </option>
-                ))}
-              </select>
+              <FormField label="الفصل الدراسي" required>
+                <SelectField
+                  value={formState.academicTermId}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, academicTermId: event.target.value }))
+                  }
+                  disabled={!canReadAcademicTerms}
+                  required
+                >
+                  <option value="">اختر الفصل</option>
+                  {(academicTermsQuery.data ?? []).map((term) => (
+                    <option key={term.id} value={term.id}>
+                      {formatNameCodeLabel(term.name, term.code)}
+                    </option>
+                  ))}
+                </SelectField>
+              </FormField>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <select
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                value={formState.sectionId}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, sectionId: event.target.value }))
-                }
-                disabled={!canReadSections}
-              >
-                <option value="">اختر الشعبة</option>
-                {(sectionsQuery.data ?? []).map((section) => (
-                  <option key={section.id} value={section.id}>
-                    {formatSectionWithGradeLabel(section)}
-                  </option>
-                ))}
-              </select>
+              <FormField label="الشعبة" required>
+                <SelectField
+                  value={formState.sectionId}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, sectionId: event.target.value }))
+                  }
+                  disabled={!canReadSections}
+                  required
+                >
+                  <option value="">اختر الشعبة</option>
+                  {(sectionsQuery.data ?? []).map((section) => (
+                    <option key={section.id} value={section.id}>
+                      {formatSectionWithGradeLabel(section)}
+                    </option>
+                  ))}
+                </SelectField>
+              </FormField>
 
-              <select
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                value={formState.subjectId}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, subjectId: event.target.value }))
-                }
-                disabled={!canReadSubjects}
-              >
-                <option value="">اختر المادة</option>
-                {(subjectsQuery.data ?? []).map((subject) => (
-                  <option key={subject.id} value={subject.id}>
-                    {formatNameCodeLabel(subject.name, subject.code)}
-                  </option>
-                ))}
-              </select>
+              <FormField label="المادة" required>
+                <SelectField
+                  value={formState.subjectId}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, subjectId: event.target.value }))
+                  }
+                  disabled={!canReadSubjects}
+                  required
+                >
+                  <option value="">اختر المادة</option>
+                  {(subjectsQuery.data ?? []).map((subject) => (
+                    <option key={subject.id} value={subject.id}>
+                      {formatNameCodeLabel(subject.name, subject.code)}
+                    </option>
+                  ))}
+                </SelectField>
+              </FormField>
             </div>
             <p className="text-xs text-muted-foreground">
               ملاحظة: الشعبة مرتبطة بالصف، أما القاعة/مكان الحصة فيتم ضبطه من شاشة{" "}
               <code>الجدول الدراسي</code> عبر حقل القاعة.
             </p>
 
-            <select
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={formState.homeworkTypeId}
-              onChange={(event) =>
-                setFormState((prev) => ({ ...prev, homeworkTypeId: event.target.value }))
-              }
-              disabled={!canReadHomeworkTypes}
-            >
-              <option value="">اختر نوع الواجب</option>
-              {(homeworkTypesQuery.data ?? []).map((typeItem) => (
-                <option key={typeItem.id} value={typeItem.id}>
-                  {formatNameCodeLabel(typeItem.name, typeItem.code)}
-                </option>
-              ))}
-            </select>
-
-            <Input
-              value={formState.title}
-              onChange={(event) =>
-                setFormState((prev) => ({ ...prev, title: event.target.value }))
-              }
-              placeholder="عنوان الواجب"
-              required
-            />
-
-            <div className="grid gap-3 md:grid-cols-2">
-              <Input
-                type="date"
-                value={formState.homeworkDate}
+            <FormField label="نوع الواجب" required>
+              <SelectField
+                value={formState.homeworkTypeId}
                 onChange={(event) =>
-                  setFormState((prev) => {
-                    const nextHomeworkDate = event.target.value;
-
-                    if (!nextHomeworkDate) {
-                      return {
-                        ...prev,
-                        homeworkDate: "",
-                      };
-                    }
-
-                    const autoAdjustDueDate = shouldAutoAdjustDueDate(
-                      prev.homeworkDate,
-                      prev.dueDate,
-                    );
-
-                    return {
-                      ...prev,
-                      homeworkDate: nextHomeworkDate,
-                      dueDate: autoAdjustDueDate
-                        ? addDaysToDateInput(
-                            nextHomeworkDate,
-                            DEFAULT_DUE_DATE_OFFSET_DAYS,
-                          )
-                        : prev.dueDate,
-                    };
-                  })
+                  setFormState((prev) => ({ ...prev, homeworkTypeId: event.target.value }))
                 }
+                disabled={!canReadHomeworkTypes}
+                required
+              >
+                <option value="">اختر نوع الواجب</option>
+                {(homeworkTypesQuery.data ?? []).map((typeItem) => (
+                  <option key={typeItem.id} value={typeItem.id}>
+                    {formatNameCodeLabel(typeItem.name, typeItem.code)}
+                  </option>
+                ))}
+              </SelectField>
+            </FormField>
+
+            <FormField label="عنوان الواجب" required>
+              <Input
+                value={formState.title}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, title: event.target.value }))
+                }
+                placeholder="مثال: حل تمارين الدرس الثالث"
                 required
               />
-              <Input
-                type="date"
-                value={formState.dueDate}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, dueDate: event.target.value }))
-                }
-              />
+            </FormField>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <FormField label="تاريخ الواجب" required>
+                <Input
+                  type="date"
+                  value={formState.homeworkDate}
+                  onChange={(event) =>
+                    setFormState((prev) => {
+                      const nextHomeworkDate = event.target.value;
+
+                      if (!nextHomeworkDate) {
+                        return {
+                          ...prev,
+                          homeworkDate: "",
+                        };
+                      }
+
+                      const autoAdjustDueDate = shouldAutoAdjustDueDate(
+                        prev.homeworkDate,
+                        prev.dueDate,
+                      );
+
+                      return {
+                        ...prev,
+                        homeworkDate: nextHomeworkDate,
+                        dueDate: autoAdjustDueDate
+                          ? addDaysToDateInput(
+                              nextHomeworkDate,
+                              DEFAULT_DUE_DATE_OFFSET_DAYS,
+                            )
+                          : prev.dueDate,
+                      };
+                    })
+                  }
+                  required
+                />
+              </FormField>
+              <FormField label="تاريخ التسليم">
+                <Input
+                  type="date"
+                  value={formState.dueDate}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, dueDate: event.target.value }))
+                  }
+                />
+              </FormField>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <Input
-                type="number"
-                min={0.01}
-                step={0.01}
-                value={formState.maxScore}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, maxScore: event.target.value }))
-                }
-              />
-              <Input
-                value={formState.notes}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, notes: event.target.value }))
-                }
-                placeholder="ملاحظات"
-              />
+              <FormField label="الدرجة القصوى" required>
+                <Input
+                  type="number"
+                  min={0.01}
+                  step={0.01}
+                  value={formState.maxScore}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, maxScore: event.target.value }))
+                  }
+                  required
+                />
+              </FormField>
+              <FormField label="ملاحظات">
+                <Input
+                  value={formState.notes}
+                  onChange={(event) =>
+                    setFormState((prev) => ({ ...prev, notes: event.target.value }))
+                  }
+                  placeholder="ملاحظات داخلية"
+                />
+              </FormField>
             </div>
 
-            <Input
-              value={formState.content}
-              onChange={(event) =>
-                setFormState((prev) => ({ ...prev, content: event.target.value }))
-              }
-              placeholder="المحتوى"
-            />
+            <FormField label="المحتوى">
+              <TextareaField
+                value={formState.content}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, content: event.target.value }))
+                }
+                placeholder="تعليمات الواجب أو نص الأسئلة"
+                rows={4}
+              />
+            </FormField>
 
             <div className="grid gap-2 md:grid-cols-2">
               {!isEditing ? (
