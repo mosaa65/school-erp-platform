@@ -20,6 +20,7 @@ import { RequirePermissions } from '../../../common/decorators/permissions.decor
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import type { AuthUser } from '../../../common/interfaces/auth-user.interface';
+import { BulkUpdateStudentHomeworksDto } from './dto/bulk-update-student-homeworks.dto';
 import { CreateStudentHomeworkDto } from './dto/create-student-homework.dto';
 import { ListStudentHomeworksDto } from './dto/list-student-homeworks.dto';
 import { UpdateStudentHomeworkDto } from './dto/update-student-homework.dto';
@@ -42,6 +43,16 @@ export class StudentHomeworksController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.studentHomeworksService.create(payload, user.userId);
+  }
+
+  @Post('bulk-update')
+  @RequirePermissions('student-homeworks.bulk-update')
+  @ApiOperation({ summary: 'Bulk update student homework tracking records' })
+  bulkUpdate(
+    @Body() payload: BulkUpdateStudentHomeworksDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.studentHomeworksService.bulkUpdate(payload, user.userId);
   }
 
   @Get()

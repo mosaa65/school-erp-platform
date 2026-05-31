@@ -2,7 +2,18 @@
 
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BadgeCheck, Layers3, Mail, Phone, ShieldCheck } from "lucide-react";
+import {
+  BadgeCheck,
+  Bell,
+  Layers3,
+  Mail,
+  MonitorSmartphone,
+  Palette,
+  PanelsTopLeft,
+  Phone,
+  ShieldCheck,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { InternationalPhoneField } from "@/components/ui/international-phone-field";
 import { useAuth } from "@/features/auth/providers/auth-provider";
@@ -10,61 +21,19 @@ import { useBranchMode } from "@/hooks/use-branch-mode";
 import { apiClient } from "@/lib/api/client";
 import { translateRoleCode } from "@/lib/i18n/ar";
 import { findCountryDialCodeOptionByDialCode } from "@/lib/intl/phone";
-import { cn } from "@/lib/utils";
-
-function resolveBranchModeLabel(
-  isLoaded: boolean,
-  isMultiBranchEnabled: boolean,
-  defaultBranchId: number | null,
-): string {
-  if (!isLoaded) return "جارٍ مزامنة الفروع";
-  if (isMultiBranchEnabled)
-    return defaultBranchId ? `متعدد الفروع • #${defaultBranchId}` : "متعدد الفروع";
-  return "مدرسة واحدة";
-}
-
-function InfoRow({
-  label,
-  value,
-  icon: Icon,
-}: {
-  label: string;
-  value: string;
-  icon: React.ComponentType<{ className?: string }>;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-[1.1rem] border border-white/70 bg-background/78 px-3.5 py-3 dark:border-white/10 dark:bg-white/[0.04]">
-      <span className="flex min-w-0 items-center gap-2 text-sm text-slate-600 dark:text-white/65">
-        <Icon className="h-4 w-4 shrink-0 text-[color:var(--app-accent-color)]" />
-        <span className="text-sm">{label}</span>
-      </span>
-      <span className="truncate text-left text-sm font-semibold text-slate-900 dark:text-white">
-        {value}
-      </span>
-    </div>
-  );
-}
-
-function SectionCard({ title, description, children }: {
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-[1.4rem] border border-white/70 bg-background/78 p-4 dark:border-white/10 dark:bg-white/[0.04]">
-      <p className="text-sm font-semibold text-slate-900 dark:text-white">{title}</p>
-      {description ? (
-        <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-white/55">{description}</p>
-      ) : null}
-      <div className="mt-3">{children}</div>
-    </div>
-  );
-}
+import {
+  InfoRow,
+  NoticeText,
+  SectionCard,
+  ProfilePageWrapper,
+  resolveBranchModeLabel,
+} from "./profile-shared";
 
 export function ProfileAccountSection() {
   const auth = useAuth();
   const branchMode = useBranchMode();
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const [profileDraft, setProfileDraft] = React.useState({
     phoneCountryCode: "",
@@ -72,6 +41,7 @@ export function ProfileAccountSection() {
     webAuthnRequired: false,
   });
   const [profileInitialized, setProfileInitialized] = React.useState(false);
+  const [showPhoneForm, setShowPhoneForm] = React.useState(false);
   const [notice, setNotice] = React.useState<{
     type: "success" | "error";
     message: string;
@@ -97,13 +67,17 @@ export function ProfileAccountSection() {
         webAuthnRequired: updated.webAuthnRequired,
       });
       setProfileInitialized(true);
+      setShowPhoneForm(false);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["auth", "profile"] }),
-        queryClient.invalidateQueries({ queryKey: ["auth", "webauthn", "credentials"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["auth", "webauthn", "credentials"],
+        }),
       ]);
     },
     onError: (error) => {
-      const message = error instanceof Error ? error.message : "تعذر حفظ بيانات الحساب.";
+      const message =
+        error instanceof Error ? error.message : "تعذر حفظ بيانات الحساب.";
       setNotice({ type: "error", message });
     },
   });
@@ -123,15 +97,19 @@ export function ProfileAccountSection() {
   if (!auth.session) return null;
 
   const profile = profileQuery.data ?? null;
-  const profileError = profileQuery.error instanceof Error ? profileQuery.error.message : null;
-  const roleLabels = auth.session.user.roleCodes.map((roleCode) => translateRoleCode(roleCode));
+  const profileError =
+    profileQuery.error instanceof Error ? profileQuery.error.message : null;
+  const roleLabels = auth.session.user.roleCodes.map((roleCode) =>
+    translateRoleCode(roleCode),
+  );
   const branchModeLabel = resolveBranchModeLabel(
     branchMode.isLoaded,
     branchMode.isMultiBranchEnabled,
     branchMode.defaultBranchId,
   );
   const profilePhoneCountryIso2 =
-    findCountryDialCodeOptionByDialCode(profileDraft.phoneCountryCode)?.iso2 ?? "YE";
+    findCountryDialCodeOptionByDialCode(profileDraft.phoneCountryCode)?.iso2 ??
+    "YE";
 
   const handleSavePhone = () => {
     setNotice(null);
@@ -160,14 +138,38 @@ export function ProfileAccountSection() {
   };
 
   return (
-    <div className="space-y-3">
-
+    <ProfilePageWrapper
+      title="الحساب"
+      description="المعلومات الشخصية ورقم الهاتف"
+      icon={BadgeCheck}
+    >
       {/* Account info rows */}
       <div className="space-y-2">
-        <InfoRow label="البريد الإلكتروني" value={auth.session.user.email} icon={Mail} />
-        <InfoRow label="عدد الأدوار" value={`${roleLabels.length} دور`} icon={ShieldCheck} />
-        <InfoRow label="سياق العمل" value={branchModeLabel} icon={Layers3} />
-        <InfoRow label="المعرّف" value={`#${auth.session.user.id}`} icon={BadgeCheck} />
+        <InfoRow
+          label="البريد الإلكتروني"
+          value={auth.session.user.email}
+          icon={Mail}
+        />
+        <InfoRow
+          label="رقم الهاتف"
+          value={profileQuery.isLoading ? "جارٍ التحميل..." : (profile?.phoneE164 || "لا يوجد رقم هاتف")}
+          icon={Phone}
+        />
+        <InfoRow
+          label="عدد الأدوار"
+          value={`${roleLabels.length} دور`}
+          icon={ShieldCheck}
+        />
+        <InfoRow
+          label="سياق العمل"
+          value={branchModeLabel}
+          icon={Layers3}
+        />
+        <InfoRow
+          label="المعرّف"
+          value={`#${auth.session.user.id}`}
+          icon={BadgeCheck}
+        />
       </div>
 
       {/* Role badges */}
@@ -185,52 +187,124 @@ export function ProfileAccountSection() {
       {/* Phone number */}
       <SectionCard
         title="رقم الهاتف"
-        description="يُستخدم في تسجيل الدخول بالهاتف أو التحقق الثنائي."
+        description="يُسجَّل رقم هاتفك هنا لتمكين خيارات الدخول السريع والتحقق الإضافي."
       >
-        <InternationalPhoneField
-          countryIso2={profilePhoneCountryIso2}
-          nationalNumber={profileDraft.phoneNationalNumber}
-          onChange={(next) =>
-            setProfileDraft((prev) => ({
-              ...prev,
-              phoneCountryCode: next.dialCode,
-              phoneNationalNumber: next.nationalNumber,
-            }))
-          }
-          inputClassName="h-11 rounded-2xl"
-        />
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+        {!showPhoneForm ? (
           <Button
             type="button"
-            className="h-11 rounded-2xl sm:min-w-40"
-            onClick={handleSavePhone}
-            disabled={updateProfileMutation.isPending || !profile}
+            className="h-11 w-full rounded-2xl"
+            onClick={() => setShowPhoneForm(true)}
           >
-            {updateProfileMutation.isPending ? "جارٍ الحفظ..." : "حفظ الرقم"}
+            <Phone className="mr-2 h-4 w-4" />
+            تعديل رقم الهاتف
           </Button>
-          {profile?.phoneE164 ? (
-            <div className="flex items-center gap-2 rounded-2xl border border-white/70 bg-white/70 px-3 py-2 text-xs text-slate-700 dark:border-white/10 dark:bg-black/20 dark:text-white/70">
-              <Phone className="h-3.5 w-3.5 text-[color:var(--app-accent-color)]" />
-              <span dir="ltr">{profile.phoneE164}</span>
+        ) : (
+          <div className="space-y-3">
+            <InternationalPhoneField
+              countryIso2={profilePhoneCountryIso2}
+              nationalNumber={profileDraft.phoneNationalNumber}
+              onChange={(next) =>
+                setProfileDraft((prev) => ({
+                  ...prev,
+                  phoneCountryCode: next.dialCode,
+                  phoneNationalNumber: next.nationalNumber,
+                }))
+              }
+              inputClassName="h-11 rounded-2xl"
+            />
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+              <Button
+                type="button"
+                className="h-11 flex-1 rounded-2xl"
+                onClick={handleSavePhone}
+                disabled={updateProfileMutation.isPending || !profile}
+              >
+                {updateProfileMutation.isPending ? "جارٍ الحفظ..." : "حفظ رقم الهاتف"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 rounded-2xl sm:min-w-24"
+                onClick={() => {
+                  setShowPhoneForm(false);
+                  setNotice(null);
+                }}
+              >
+                إلغاء
+              </Button>
             </div>
-          ) : null}
-        </div>
-        {profileError ? (
-          <p className="mt-2 text-xs font-medium text-rose-700 dark:text-rose-300">{profileError}</p>
-        ) : null}
-        {notice ? (
-          <p
-            className={cn(
-              "mt-2 text-xs font-medium",
-              notice.type === "success"
-                ? "text-emerald-700 dark:text-emerald-300"
-                : "text-rose-700 dark:text-rose-300",
-            )}
-          >
-            {notice.message}
-          </p>
-        ) : null}
+            {profileError ? (
+              <p className="mt-2 text-xs font-medium text-rose-700 dark:text-rose-300">
+                {profileError}
+              </p>
+            ) : null}
+            <NoticeText notice={notice} />
+          </div>
+        )}
       </SectionCard>
-    </div>
+
+      {/* ── Quick Access Grid ─────────────────────────── */}
+      <div className="mt-6 space-y-3">
+        <p className="text-xs font-bold text-slate-400 dark:text-white/45 px-1">
+          الوصول السريع للأقسام
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[
+            {
+              title: "الأمان والخصوصية",
+              description: "كلمة المرور، البصمات، والتحقق الثنائي",
+              icon: ShieldCheck,
+              href: "/app/profile/security",
+            },
+            {
+              title: "الأجهزة والجلسات",
+              description: "الأجهزة النشطة وإدارة رموز الدخول",
+              icon: MonitorSmartphone,
+              href: "/app/profile/sessions",
+            },
+            {
+              title: "المظهر والسمات",
+              description: "تخصيص الألوان والخطوط والوضع الداكن",
+              icon: Palette,
+              href: "/app/profile/appearance",
+            },
+            {
+              title: "الإشعارات ورسائل النظام",
+              description: "تفضيلات التنبيهات ورسائل البريد",
+              icon: Bell,
+              href: "/app/profile/notifications",
+            },
+            {
+              title: "إعدادات متقدمة",
+              description: "تخطيط التنقل وإعدادات بطاقات العرض",
+              icon: PanelsTopLeft,
+              href: "/app/profile/advanced",
+            },
+          ].map((link) => {
+            const LinkIcon = link.icon;
+            return (
+              <button
+                key={link.href}
+                type="button"
+                onClick={() => router.push(link.href)}
+                className="flex items-start gap-3 rounded-[1.4rem] border border-white/70 bg-background/78 p-4 text-right transition-all duration-300 hover:scale-[1.02] hover:border-[color:var(--app-accent-strong)] hover:bg-[color:var(--app-accent-soft)]/20 dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.07]"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]">
+                  <LinkIcon className="h-5 w-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {link.title}
+                  </p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-500 dark:text-white/55">
+                    {link.description}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </ProfilePageWrapper>
   );
 }

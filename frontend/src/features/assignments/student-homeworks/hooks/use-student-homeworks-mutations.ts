@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ApiError,
   apiClient,
+  type BulkUpdateStudentHomeworksPayload,
   type CreateStudentHomeworkPayload,
   type UpdateStudentHomeworkPayload,
 } from "@/lib/api/client";
@@ -15,6 +16,9 @@ function useInvalidateStudentHomeworks() {
   return () => {
     void queryClient.invalidateQueries({
       queryKey: ["student-homeworks", "list"],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["homeworks", "dashboard"],
     });
   };
 }
@@ -54,6 +58,27 @@ export function useUpdateStudentHomeworkMutation() {
     }) => apiClient.updateStudentHomework(params.studentHomeworkId, params.payload),
     onSuccess: () => {
       invalidate();
+    },
+    onError: handleAuthFailure,
+  });
+}
+
+export function useBulkUpdateStudentHomeworksMutation() {
+  const invalidate = useInvalidateStudentHomeworks();
+  const queryClient = useQueryClient();
+  const handleAuthFailure = useHandleAuthFailure();
+
+  return useMutation({
+    mutationFn: (payload: BulkUpdateStudentHomeworksPayload) =>
+      apiClient.bulkUpdateStudentHomeworks(payload),
+    onSuccess: (_data, variables) => {
+      invalidate();
+      void queryClient.invalidateQueries({
+        queryKey: ["student-homeworks", "list"],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["student-homeworks", "entry", variables.homeworkId],
+      });
     },
     onError: handleAuthFailure,
   });

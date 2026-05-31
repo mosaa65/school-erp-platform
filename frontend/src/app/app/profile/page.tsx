@@ -1,5 +1,5 @@
-import { ProfileWorkspace } from "@/features/profile/components/profile-workspace";
+import { ProfileAccountSection } from "@/features/profile/components/profile-account-section";
 
 export default function ProfilePage() {
-  return <ProfileWorkspace />;
+  return <ProfileAccountSection />;
 }

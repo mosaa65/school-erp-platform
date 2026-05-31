@@ -1838,6 +1838,31 @@ export type HomeworkTypeListItem = {
   };
 };
 
+export type HomeworkTemplateListItem = {
+  id: string;
+  code: string;
+  name: string;
+  title: string;
+  content: string | null;
+  maxScore: number;
+  notes: string | null;
+  homeworkTypeId: string | null;
+  subjectId: string | null;
+  gradeLevelId: string | null;
+  isSystem: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: {
+    id: string;
+    email: string;
+  } | null;
+  updatedBy: {
+    id: string;
+    email: string;
+  } | null;
+};
+
 export type HomeworkListItem = {
   id: string;
   academicYearId: string;
@@ -1851,6 +1876,10 @@ export type HomeworkListItem = {
   dueDate: string | null;
   maxScore: number;
   notes: string | null;
+  status: GradingWorkflowStatus;
+  isLocked: boolean;
+  approvedAt: string | null;
+  lockedAt: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -1859,6 +1888,10 @@ export type HomeworkListItem = {
     email: string;
   } | null;
   updatedBy: {
+    id: string;
+    email: string;
+  } | null;
+  approvedBy: {
     id: string;
     email: string;
   } | null;
@@ -4652,6 +4685,23 @@ export type UpdateHomeworkTypePayload = {
   isActive?: boolean;
 };
 
+export type CreateHomeworkTemplatePayload = {
+  code?: string;
+  name: string;
+  title: string;
+  content?: string;
+  maxScore?: number;
+  notes?: string;
+  homeworkTypeId?: string;
+  subjectId?: string;
+  gradeLevelId?: string;
+  isSystem?: boolean;
+  isActive?: boolean;
+};
+
+export type UpdateHomeworkTemplatePayload =
+  Partial<CreateHomeworkTemplatePayload>;
+
 export type CreateHomeworkPayload = {
   academicYearId: string;
   academicTermId: string;
@@ -4701,6 +4751,95 @@ export type UpdateStudentHomeworkPayload = {
   manualScore?: number;
   teacherNotes?: string;
   isActive?: boolean;
+};
+
+export type HomeworkWorkflowActionPayload = {
+  notes?: string;
+  lockAfterApprove?: boolean;
+};
+
+export type SendHomeworkNotificationsPayload = {
+  requiredAction?: string;
+  markAsSent?: boolean;
+};
+
+export type SendHomeworkNotificationsResponse = {
+  homeworkId: string;
+  pendingCount: number;
+  createdCount: number;
+  skippedDuplicateCount: number;
+};
+
+export type BulkUpdateStudentHomeworksPayload = {
+  homeworkId: string;
+  items: Array<{
+    studentHomeworkId?: string;
+    studentEnrollmentId?: string;
+    isCompleted: boolean;
+    submittedAt?: string;
+    manualScore?: number;
+    teacherNotes?: string;
+  }>;
+};
+
+export type BulkUpdateStudentHomeworksResponse = {
+  data: StudentHomeworkListItem[];
+  summary: {
+    total: number;
+    completed: number;
+    pending: number;
+  };
+};
+
+export type HomeworksDashboardResponse = {
+  generatedAt: string;
+  metrics: {
+    totalHomeworks: number;
+    todayHomeworks: number;
+    dueSoonHomeworks: number;
+    overdueHomeworks: number;
+    totalStudentRows: number;
+    completedStudentRows: number;
+    pendingStudentRows: number;
+    completionRate: number;
+  };
+  recentHomeworks: HomeworkListItem[];
+  topPendingHomeworks: Array<{
+    homeworkId: string;
+    title: string;
+    dueDate: string | null;
+    homeworkDate: string;
+    pendingCount: number;
+    section: {
+      id: string;
+      code: string;
+      name: string;
+      gradeLevel: {
+        id: string;
+        code: string;
+        name: string;
+      };
+    };
+    subject: {
+      id: string;
+      code: string;
+      name: string;
+    };
+  }>;
+  reports: {
+    bySubject: Array<HomeworkDashboardGroupSummary>;
+    bySection: Array<HomeworkDashboardGroupSummary>;
+  };
+};
+
+export type HomeworkDashboardGroupSummary = {
+  id: string;
+  label: string;
+  code: string | null;
+  total: number;
+  completed: number;
+  pending: number;
+  completionRate: number;
 };
 
 export type CreateExamPeriodPayload = {
@@ -10759,6 +10898,55 @@ export const apiClient = {
         withAuth: true,
       },
     ),
+  listHomeworkTemplates: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    homeworkTypeId?: string;
+    subjectId?: string;
+    gradeLevelId?: string;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<HomeworkTemplateListItem>>(
+      `/homework-templates${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        homeworkTypeId: query?.homeworkTypeId,
+        subjectId: query?.subjectId,
+        gradeLevelId: query?.gradeLevelId,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  createHomeworkTemplate: (payload: CreateHomeworkTemplatePayload) =>
+    request<HomeworkTemplateListItem>("/homework-templates", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateHomeworkTemplate: (
+    homeworkTemplateId: string,
+    payload: UpdateHomeworkTemplatePayload,
+  ) =>
+    request<HomeworkTemplateListItem>(
+      `/homework-templates/${homeworkTemplateId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  deleteHomeworkTemplate: (homeworkTemplateId: string) =>
+    request<DeleteEntityResponse>(
+      `/homework-templates/${homeworkTemplateId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
   listHomeworks: (query?: {
     page?: number;
     limit?: number;
@@ -10795,6 +10983,30 @@ export const apiClient = {
         withAuth: true,
       },
     ),
+  listHomeworksDashboard: (query?: {
+    academicYearId?: string;
+    academicTermId?: string;
+    sectionId?: string;
+    subjectId?: string;
+    fromDate?: string;
+    toDate?: string;
+    asOfDate?: string;
+  }) =>
+    request<HomeworksDashboardResponse>(
+      `/homeworks/dashboard${buildQueryString({
+        academicYearId: query?.academicYearId,
+        academicTermId: query?.academicTermId,
+        sectionId: query?.sectionId,
+        subjectId: query?.subjectId,
+        fromDate: query?.fromDate,
+        toDate: query?.toDate,
+        asOfDate: query?.asOfDate,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
   createHomework: (payload: CreateHomeworkPayload) =>
     request<HomeworkListItem>("/homeworks", "POST", {
       withAuth: true,
@@ -10811,6 +11023,28 @@ export const apiClient = {
       "POST",
       {
         withAuth: true,
+      },
+    ),
+  approveHomework: (homeworkId: string, payload?: HomeworkWorkflowActionPayload) =>
+    request<HomeworkListItem>(`/homeworks/${homeworkId}/approve`, "POST", {
+      withAuth: true,
+      json: payload ?? {},
+    }),
+  reopenHomework: (homeworkId: string, payload?: HomeworkWorkflowActionPayload) =>
+    request<HomeworkListItem>(`/homeworks/${homeworkId}/reopen`, "POST", {
+      withAuth: true,
+      json: payload ?? {},
+    }),
+  sendHomeworkLateNotifications: (
+    homeworkId: string,
+    payload?: SendHomeworkNotificationsPayload,
+  ) =>
+    request<SendHomeworkNotificationsResponse>(
+      `/homeworks/${homeworkId}/send-late-notifications`,
+      "POST",
+      {
+        withAuth: true,
+        json: payload ?? {},
       },
     ),
   deleteHomework: (homeworkId: string) =>
@@ -10865,6 +11099,15 @@ export const apiClient = {
     request<StudentHomeworkListItem>(
       `/student-homeworks/${studentHomeworkId}`,
       "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  bulkUpdateStudentHomeworks: (payload: BulkUpdateStudentHomeworksPayload) =>
+    request<BulkUpdateStudentHomeworksResponse>(
+      "/student-homeworks/bulk-update",
+      "POST",
       {
         withAuth: true,
         json: payload,

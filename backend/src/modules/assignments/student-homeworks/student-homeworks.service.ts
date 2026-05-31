@@ -4,10 +4,16 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AuditStatus, Prisma, StudentHomework } from '@prisma/client';
+import {
+  AuditStatus,
+  GradingWorkflowStatus,
+  Prisma,
+  StudentHomework,
+} from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogsService } from '../../audit-logs/audit-logs.service';
 import { DataScopeService } from '../../teaching-assignments/data-scope/data-scope.service';
+import { BulkUpdateStudentHomeworksDto } from './dto/bulk-update-student-homeworks.dto';
 import { CreateStudentHomeworkDto } from './dto/create-student-homework.dto';
 import { ListStudentHomeworksDto } from './dto/list-student-homeworks.dto';
 import { UpdateStudentHomeworkDto } from './dto/update-student-homework.dto';
@@ -20,6 +26,8 @@ type HomeworkContext = {
   subjectId: string;
   academicYearId: string;
   maxScore: number;
+  status: GradingWorkflowStatus;
+  isLocked: boolean;
 };
 
 type EnrollmentContext = {
@@ -373,6 +381,163 @@ export class StudentHomeworksService {
     return studentHomework;
   }
 
+  async bulkUpdate(
+    payload: BulkUpdateStudentHomeworksDto,
+    actorUserId: string,
+  ) {
+    const homework = await this.ensureHomeworkExistsAndMutable(
+      payload.homeworkId,
+    );
+
+    await this.ensureActorAuthorized(
+      actorUserId,
+      homework.sectionId,
+      homework.subjectId,
+      homework.academicYearId,
+    );
+
+    const seenStudentHomeworkIds = new Set<string>();
+    const seenEnrollmentIds = new Set<string>();
+    const preparedItems = await Promise.all(
+      payload.items.map(async (item, index) => {
+        if (!item.studentHomeworkId && !item.studentEnrollmentId) {
+          throw new BadRequestException(
+            `السطر رقم ${index + 1} يحتاج studentHomeworkId أو studentEnrollmentId`,
+          );
+        }
+
+        if (item.studentHomeworkId) {
+          if (seenStudentHomeworkIds.has(item.studentHomeworkId)) {
+            throw new BadRequestException(
+              `يوجد تكرار في سجل واجب الطالب رقم ${index + 1}`,
+            );
+          }
+
+          seenStudentHomeworkIds.add(item.studentHomeworkId);
+        }
+
+        if (item.studentEnrollmentId) {
+          if (seenEnrollmentIds.has(item.studentEnrollmentId)) {
+            throw new BadRequestException(
+              `يوجد تكرار في قيد الطالب رقم ${index + 1}`,
+            );
+          }
+
+          seenEnrollmentIds.add(item.studentEnrollmentId);
+        }
+
+        const existing = item.studentHomeworkId
+          ? await this.ensureStudentHomeworkExists(item.studentHomeworkId)
+          : null;
+
+        if (existing && existing.homeworkId !== payload.homeworkId) {
+          throw new BadRequestException(
+            `سجل واجب الطالب رقم ${index + 1} لا يتبع الواجب المحدد`,
+          );
+        }
+
+        const studentEnrollmentId =
+          item.studentEnrollmentId ?? existing?.studentEnrollmentId;
+
+        if (!studentEnrollmentId) {
+          throw new BadRequestException(
+            `تعذر تحديد قيد الطالب في السطر رقم ${index + 1}`,
+          );
+        }
+
+        const enrollment =
+          await this.ensureEnrollmentExistsAndActive(studentEnrollmentId);
+        this.ensureEnrollmentMatchesHomework(enrollment, homework);
+
+        const normalizedPayload = this.normalizeSubmissionPayload(
+          item.isCompleted,
+          item.submittedAt,
+          item.manualScore,
+          homework.maxScore,
+        );
+
+        return {
+          id: existing?.id,
+          studentEnrollmentId,
+          normalizedPayload,
+          teacherNotes: item.teacherNotes,
+        };
+      }),
+    );
+
+    const updated = await this.prisma.$transaction(
+      preparedItems.map((item) => {
+        if (item.id) {
+          return this.prisma.studentHomework.update({
+            where: {
+              id: item.id,
+            },
+            data: {
+              isCompleted: item.normalizedPayload.isCompleted,
+              submittedAt: item.normalizedPayload.submittedAt,
+              manualScore: item.normalizedPayload.manualScore,
+              teacherNotes: item.teacherNotes,
+              updatedById: actorUserId,
+            },
+            include: studentHomeworkInclude,
+          });
+        }
+
+        return this.prisma.studentHomework.upsert({
+          where: {
+            homeworkId_studentEnrollmentId: {
+              homeworkId: payload.homeworkId,
+              studentEnrollmentId: item.studentEnrollmentId,
+            },
+          },
+          update: {
+            isCompleted: item.normalizedPayload.isCompleted,
+            submittedAt: item.normalizedPayload.submittedAt,
+            manualScore: item.normalizedPayload.manualScore,
+            teacherNotes: item.teacherNotes,
+            isActive: true,
+            deletedAt: null,
+            updatedById: actorUserId,
+          },
+          create: {
+            homeworkId: payload.homeworkId,
+            studentEnrollmentId: item.studentEnrollmentId,
+            isCompleted: item.normalizedPayload.isCompleted,
+            submittedAt: item.normalizedPayload.submittedAt,
+            manualScore: item.normalizedPayload.manualScore,
+            teacherNotes: item.teacherNotes,
+            createdById: actorUserId,
+            updatedById: actorUserId,
+          },
+          include: studentHomeworkInclude,
+        });
+      }),
+    );
+
+    const completedCount = updated.filter((item) => item.isCompleted).length;
+
+    await this.auditLogsService.record({
+      actorUserId,
+      action: 'STUDENT_HOMEWORK_BULK_UPDATE',
+      resource: 'student-homeworks',
+      details: {
+        homeworkId: payload.homeworkId,
+        updatedCount: updated.length,
+        completedCount,
+        pendingCount: updated.length - completedCount,
+      },
+    });
+
+    return {
+      data: updated,
+      summary: {
+        total: updated.length,
+        completed: completedCount,
+        pending: updated.length - completedCount,
+      },
+    };
+  }
+
   async update(
     id: string,
     payload: UpdateStudentHomeworkDto,
@@ -505,6 +670,8 @@ export class StudentHomeworksService {
         subjectId: true,
         academicYearId: true,
         maxScore: true,
+        status: true,
+        isLocked: true,
         isActive: true,
       },
     });
@@ -517,12 +684,23 @@ export class StudentHomeworksService {
       throw new ConflictException('الواجب غير نشط');
     }
 
+    if (
+      homework.isLocked ||
+      homework.status === GradingWorkflowStatus.APPROVED
+    ) {
+      throw new ConflictException(
+        'لا يمكن تعديل تنفيذ الطلاب لواجب معتمد أو مقفل. أعد فتح الواجب أولًا.',
+      );
+    }
+
     return {
       id: homework.id,
       sectionId: homework.sectionId,
       subjectId: homework.subjectId,
       academicYearId: homework.academicYearId,
       maxScore: Number(homework.maxScore),
+      status: homework.status,
+      isLocked: homework.isLocked,
     };
   }
 
@@ -627,7 +805,9 @@ export class StudentHomeworksService {
     const parsedDate = value instanceof Date ? value : new Date(value);
 
     if (Number.isNaN(parsedDate.getTime())) {
-      throw new BadRequestException(`تنسيق التاريخ غير صالح للحقل ${fieldName}`);
+      throw new BadRequestException(
+        `تنسيق التاريخ غير صالح للحقل ${fieldName}`,
+      );
     }
 
     return parsedDate;
@@ -669,4 +849,3 @@ export class StudentHomeworksService {
     return 'خطأ غير معروف';
   }
 }
-

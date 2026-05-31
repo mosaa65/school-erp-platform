@@ -16,6 +16,9 @@ function useInvalidateHomeworks() {
     void queryClient.invalidateQueries({
       queryKey: ["homeworks", "list"],
     });
+    void queryClient.invalidateQueries({
+      queryKey: ["homeworks", "dashboard"],
+    });
   };
 }
 
@@ -62,6 +65,60 @@ export function usePopulateHomeworkStudentsMutation() {
 
   return useMutation({
     mutationFn: (homeworkId: string) => apiClient.populateHomeworkStudents(homeworkId),
+    onSuccess: () => {
+      invalidate();
+    },
+    onError: handleAuthFailure,
+  });
+}
+
+export function useApproveHomeworkMutation() {
+  const invalidate = useInvalidateHomeworks();
+  const handleAuthFailure = useHandleAuthFailure();
+
+  return useMutation({
+    mutationFn: (params: { homeworkId: string; notes?: string; lockAfterApprove?: boolean }) =>
+      apiClient.approveHomework(params.homeworkId, {
+        notes: params.notes,
+        lockAfterApprove: params.lockAfterApprove,
+      }),
+    onSuccess: () => {
+      invalidate();
+    },
+    onError: handleAuthFailure,
+  });
+}
+
+export function useReopenHomeworkMutation() {
+  const invalidate = useInvalidateHomeworks();
+  const handleAuthFailure = useHandleAuthFailure();
+
+  return useMutation({
+    mutationFn: (params: { homeworkId: string; notes?: string }) =>
+      apiClient.reopenHomework(params.homeworkId, {
+        notes: params.notes,
+      }),
+    onSuccess: () => {
+      invalidate();
+    },
+    onError: handleAuthFailure,
+  });
+}
+
+export function useSendHomeworkLateNotificationsMutation() {
+  const invalidate = useInvalidateHomeworks();
+  const handleAuthFailure = useHandleAuthFailure();
+
+  return useMutation({
+    mutationFn: (params: {
+      homeworkId: string;
+      requiredAction?: string;
+      markAsSent?: boolean;
+    }) =>
+      apiClient.sendHomeworkLateNotifications(params.homeworkId, {
+        requiredAction: params.requiredAction,
+        markAsSent: params.markAsSent,
+      }),
     onSuccess: () => {
       invalidate();
     },

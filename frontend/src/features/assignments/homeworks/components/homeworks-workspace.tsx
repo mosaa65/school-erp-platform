@@ -1,15 +1,18 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useDebounceEffect } from "@/hooks/use-debounce-effect";
 import {
   ClipboardList,
+  BarChart3,
   LoaderCircle,
   PencilLine,
   Plus,
   RefreshCw,
   Trash2,
   UsersRound,
+  Wand2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,8 +35,10 @@ import { TextareaField } from "@/components/ui/textarea-field";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateHomeworkMutation,
+  useApproveHomeworkMutation,
   useDeleteHomeworkMutation,
   usePopulateHomeworkStudentsMutation,
+  useReopenHomeworkMutation,
   useUpdateHomeworkMutation,
 } from "@/features/assignments/homeworks/hooks/use-homeworks-mutations";
 import { useHomeworksQuery } from "@/features/assignments/homeworks/hooks/use-homeworks-query";
@@ -42,6 +47,7 @@ import { useAcademicTermOptionsQuery } from "@/features/assignments/homeworks/ho
 import { useSectionOptionsQuery } from "@/features/assignments/homeworks/hooks/use-section-options-query";
 import { useSubjectOptionsQuery } from "@/features/assignments/homeworks/hooks/use-subject-options-query";
 import { useHomeworkTypeOptionsQuery } from "@/features/assignments/homeworks/hooks/use-homework-type-options-query";
+import { useHomeworkTemplateOptionsQuery } from "@/features/assignments/homeworks/hooks/use-homework-template-options-query";
 import type { HomeworkListItem } from "@/lib/api/client";
 import {
   formatNameCodeLabel,
@@ -166,6 +172,26 @@ function formatDate(value: string | null): string {
   return date.toLocaleDateString("ar-SA");
 }
 
+function getHomeworkStatusLabel(status?: string, isLocked?: boolean): string {
+  if (isLocked) {
+    return "مقفل";
+  }
+
+  if (status === "APPROVED") {
+    return "معتمد";
+  }
+
+  if (status === "IN_REVIEW") {
+    return "قيد المراجعة";
+  }
+
+  if (status === "ARCHIVED") {
+    return "مؤرشف";
+  }
+
+  return "مسودة";
+}
+
 function toFormState(item: HomeworkListItem): HomeworkFormState {
   return {
     academicYearId: item.academicYearId,
@@ -189,6 +215,9 @@ export function HomeworksWorkspace() {
   const canCreate = hasPermission("homeworks.create");
   const canUpdate = hasPermission("homeworks.update");
   const canDelete = hasPermission("homeworks.delete");
+  const canPopulateStudents = hasPermission("homeworks.populate-students");
+  const canApprove = hasPermission("homeworks.approve");
+  const canReopen = hasPermission("homeworks.reopen");
   const canReadAcademicYears = hasPermission("academic-years.read");
   const canReadAcademicTerms = hasPermission("academic-terms.read");
   const canReadSections = hasPermission("sections.read");
@@ -270,10 +299,20 @@ export function HomeworksWorkspace() {
   const sectionsQuery = useSectionOptionsQuery();
   const subjectsQuery = useSubjectOptionsQuery();
   const homeworkTypesQuery = useHomeworkTypeOptionsQuery();
+  const homeworkTemplatesQuery = useHomeworkTemplateOptionsQuery({
+    homeworkTypeId: formState.homeworkTypeId || undefined,
+    subjectId: formState.subjectId || undefined,
+  });
+  const homeworkTemplates = React.useMemo(
+    () => homeworkTemplatesQuery.data ?? [],
+    [homeworkTemplatesQuery.data],
+  );
 
   const createMutation = useCreateHomeworkMutation();
   const updateMutation = useUpdateHomeworkMutation();
   const populateMutation = usePopulateHomeworkStudentsMutation();
+  const approveMutation = useApproveHomeworkMutation();
+  const reopenMutation = useReopenHomeworkMutation();
   const deleteMutation = useDeleteHomeworkMutation();
 
   const homeworks = React.useMemo(() => homeworksQuery.data?.data ?? [], [homeworksQuery.data?.data]);
@@ -284,6 +323,8 @@ export function HomeworksWorkspace() {
     (createMutation.error as Error | null)?.message ??
     (updateMutation.error as Error | null)?.message ??
     (populateMutation.error as Error | null)?.message ??
+    (approveMutation.error as Error | null)?.message ??
+    (reopenMutation.error as Error | null)?.message ??
     (deleteMutation.error as Error | null)?.message ??
     null;
 
@@ -550,7 +591,7 @@ export function HomeworksWorkspace() {
   };
 
   const handlePopulateStudents = (item: HomeworkListItem) => {
-    if (!canUpdate) {
+    if (!canPopulateStudents) {
       return;
     }
     populateMutation.mutate(item.id, {
@@ -560,6 +601,43 @@ export function HomeworksWorkspace() {
         );
       },
     });
+  };
+
+  const handleApprove = (item: HomeworkListItem) => {
+    if (!canApprove) {
+      return;
+    }
+
+    approveMutation.mutate(
+      {
+        homeworkId: item.id,
+        lockAfterApprove: true,
+        notes: item.notes ?? undefined,
+      },
+      {
+        onSuccess: () => {
+          setActionInfo("تم اعتماد الواجب وقفله بنجاح.");
+        },
+      },
+    );
+  };
+
+  const handleReopen = (item: HomeworkListItem) => {
+    if (!canReopen) {
+      return;
+    }
+
+    reopenMutation.mutate(
+      {
+        homeworkId: item.id,
+        notes: item.notes ?? undefined,
+      },
+      {
+        onSuccess: () => {
+          setActionInfo("تمت إعادة فتح الواجب للتعديل.");
+        },
+      },
+    );
   };
 
   const handleDelete = (item: HomeworkListItem) => {
@@ -652,6 +730,29 @@ export function HomeworksWorkspace() {
   return (
     <>
       <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-background p-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">مركز تشغيل الواجبات</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              انتقل بسرعة بين إنشاء الواجبات، لوحة المؤشرات، ورصد تنفيذ الطلاب.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link href="/app/homework-dashboard">
+                <BarChart3 />
+                لوحة التحكم
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/app/homework-entry">
+                <ClipboardList />
+                الإدخال السريع
+              </Link>
+            </Button>
+          </div>
+        </div>
+
         <ManagementToolbar
           searchValue={searchInput}
           onSearchChange={(event) => setSearchInput(event.target.value)}
@@ -882,6 +983,9 @@ export function HomeworksWorkspace() {
                 <Badge variant={item.isActive ? "default" : "outline"}>
                   {item.isActive ? "نشط" : "غير نشط"}
                 </Badge>
+                <Badge variant={item.isLocked ? "destructive" : "secondary"}>
+                  {getHomeworkStatusLabel(item.status, item.isLocked)}
+                </Badge>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
@@ -890,7 +994,7 @@ export function HomeworksWorkspace() {
                   size="sm"
                   className="gap-1.5"
                   onClick={() => handleStartEdit(item)}
-                  disabled={!canUpdate || updateMutation.isPending}
+                  disabled={!canUpdate || item.isLocked || updateMutation.isPending}
                 >
                   <PencilLine className="h-3.5 w-3.5" />
                   تعديل
@@ -900,16 +1004,35 @@ export function HomeworksWorkspace() {
                   size="sm"
                   className="gap-1.5"
                   onClick={() => handlePopulateStudents(item)}
-                  disabled={!canUpdate || populateMutation.isPending}
+                  disabled={!canPopulateStudents || item.isLocked || populateMutation.isPending}
                 >
                   <UsersRound className="h-3.5 w-3.5" />
                   تعبئة الطلاب
                 </Button>
+                {item.status === "APPROVED" || item.isLocked ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleReopen(item)}
+                    disabled={!canReopen || reopenMutation.isPending}
+                  >
+                    إعادة فتح
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleApprove(item)}
+                    disabled={!canApprove || approveMutation.isPending}
+                  >
+                    اعتماد وقفل
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handleToggleActive(item)}
-                  disabled={!canUpdate || updateMutation.isPending}
+                  disabled={!canUpdate || item.isLocked || updateMutation.isPending}
                 >
                   {item.isActive ? "تعطيل" : "تفعيل"}
                 </Button>
@@ -918,7 +1041,7 @@ export function HomeworksWorkspace() {
                   size="sm"
                   className="gap-1.5"
                   onClick={() => handleDelete(item)}
-                  disabled={!canDelete || deleteMutation.isPending}
+                  disabled={!canDelete || item.isLocked || deleteMutation.isPending}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                   حذف
@@ -1100,6 +1223,40 @@ export function HomeworksWorkspace() {
                 ))}
               </SelectField>
             </FormField>
+
+            {!isEditing && homeworkTemplates.length > 0 ? (
+              <div className="rounded-lg border bg-muted/20 p-3">
+                <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                  <Wand2 className="h-4 w-4 text-[color:var(--app-accent-color)]" />
+                  قوالب سريعة
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {homeworkTemplates.map((template) => (
+                    <Button
+                      key={template.id}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="justify-start"
+                      onClick={() =>
+                        setFormState((prev) => ({
+                          ...prev,
+                          title: template.title,
+                          content: template.content ?? "",
+                          maxScore: String(template.maxScore),
+                          notes: template.notes ?? "",
+                          homeworkTypeId:
+                            template.homeworkTypeId ?? prev.homeworkTypeId,
+                        }))
+                      }
+                    >
+                      <Wand2 />
+                      {template.name}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             <FormField label="عنوان الواجب" required>
               <Input

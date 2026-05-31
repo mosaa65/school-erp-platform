@@ -1,24 +1,24 @@
 "use client";
 
 import * as React from "react";
-import { RotateCcw } from "lucide-react";
+import { Palette, RotateCcw } from "lucide-react";
 import { ProfileAppearanceSection } from "@/components/layout/profile-appearance-section";
-import { ProfileMessagePreferences } from "@/components/layout/profile-message-preferences";
-import { ProfileNavigationSection } from "@/components/layout/profile-navigation-section";
-import { ProfileNotificationPreferences } from "@/components/layout/profile-notification-preferences";
 import { Button } from "@/components/ui/button";
 import { useAppearance } from "@/hooks/use-appearance";
+import { ProfilePageWrapper } from "./profile-shared";
 
 export function ProfilePreferencesSection() {
   const appearance = useAppearance();
 
   return (
-    <div className="space-y-4">
-
-      {/* ── Appearance ─────────────────────────────────── */}
+    <ProfilePageWrapper
+      title="المظهر"
+      description="تخصيص سمات وألوان وخطوط التطبيق."
+      icon={Palette}
+    >
       <div className="rounded-[1.4rem] border border-white/70 bg-background/78 p-4 dark:border-white/10 dark:bg-white/[0.04]">
         <div className="mb-3 flex items-center justify-between gap-2">
-          <p className="text-sm font-semibold text-slate-900 dark:text-white">المظهر</p>
+          <p className="text-sm font-semibold text-slate-900 dark:text-white">ألوان وسمات الواجهة</p>
           <Button
             type="button"
             variant="ghost"
@@ -32,25 +32,6 @@ export function ProfilePreferencesSection() {
         </div>
         <ProfileAppearanceSection />
       </div>
-
-      {/* ── Navigation ─────────────────────────────────── */}
-      <div className="rounded-[1.4rem] border border-white/70 bg-background/78 p-4 dark:border-white/10 dark:bg-white/[0.04]">
-        <p className="mb-3 text-sm font-semibold text-slate-900 dark:text-white">التنقل والتخطيط</p>
-        <ProfileNavigationSection />
-      </div>
-
-      {/* ── Message Preferences ────────────────────────── */}
-      <div className="rounded-[1.4rem] border border-white/70 bg-background/78 p-4 dark:border-white/10 dark:bg-white/[0.04]">
-        <p className="mb-3 text-sm font-semibold text-slate-900 dark:text-white">رسائل النظام</p>
-        <ProfileMessagePreferences />
-      </div>
-
-      {/* ── Notification Preferences ───────────────────── */}
-      <div className="rounded-[1.4rem] border border-white/70 bg-background/78 p-4 dark:border-white/10 dark:bg-white/[0.04]">
-        <p className="mb-3 text-sm font-semibold text-slate-900 dark:text-white">الإشعارات</p>
-        <ProfileNotificationPreferences />
-      </div>
-
-    </div>
+    </ProfilePageWrapper>
   );
 }

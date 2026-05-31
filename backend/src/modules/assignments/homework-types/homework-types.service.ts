@@ -296,4 +296,3 @@ export class HomeworkTypesService {
     return 'خطأ غير معروف';
   }
 }
-

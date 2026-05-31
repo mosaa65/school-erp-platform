@@ -277,14 +277,27 @@ const DEFAULT_PERMISSION_CODES = [
   'homework-types.read',
   'homework-types.update',
   'homework-types.delete',
+  'homework-templates.create',
+  'homework-templates.read',
+  'homework-templates.update',
+  'homework-templates.delete',
   'homeworks.create',
   'homeworks.read',
   'homeworks.update',
   'homeworks.delete',
+  'homeworks.dashboard',
+  'homeworks.populate-students',
+  'homeworks.approve',
+  'homeworks.reopen',
+  'homework-reports.read',
+  'homework-notifications.send',
+  'homework-settings.manage',
   'student-homeworks.create',
   'student-homeworks.read',
   'student-homeworks.update',
   'student-homeworks.delete',
+  'student-homeworks.bulk-update',
+  'student-homeworks.export',
   'academic-months.create',
   'academic-months.read',
   'academic-months.update',
@@ -538,4 +551,3 @@ const DEFAULT_PERMISSION_CODES = [
 ];
 
 export { DEFAULT_PERMISSION_CODES };
-

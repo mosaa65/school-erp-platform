@@ -4,12 +4,23 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AuditStatus, Homework, Prisma } from '@prisma/client';
+import {
+  AuditStatus,
+  GradingWorkflowStatus,
+  Homework,
+  ParentNotificationSendMethod,
+  ParentNotificationType,
+  Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogsService } from '../../audit-logs/audit-logs.service';
+import { ParentNotificationsService } from '../../parent-notifications/parent-notifications.service';
 import { DataScopeService } from '../../teaching-assignments/data-scope/data-scope.service';
 import { CreateHomeworkDto } from './dto/create-homework.dto';
+import { HomeworksDashboardDto } from './dto/homeworks-dashboard.dto';
+import { HomeworkWorkflowActionDto } from './dto/homework-workflow-action.dto';
 import { ListHomeworksDto } from './dto/list-homeworks.dto';
+import { SendHomeworkNotificationsDto } from './dto/send-homework-notifications.dto';
 import { UpdateHomeworkDto } from './dto/update-homework.dto';
 
 type DateInput = string | Date | null | undefined;
@@ -141,6 +152,7 @@ export class HomeworksService {
     private readonly prisma: PrismaService,
     private readonly auditLogsService: AuditLogsService,
     private readonly dataScopeService: DataScopeService,
+    private readonly parentNotificationsService: ParentNotificationsService,
   ) {}
 
   async create(payload: CreateHomeworkDto, actorUserId: string) {
@@ -373,6 +385,268 @@ export class HomeworksService {
     };
   }
 
+  async dashboard(query: HomeworksDashboardDto, actorUserId: string) {
+    const asOfDate = this.parseDate(query.asOfDate, 'asOfDate') ?? new Date();
+    const startOfToday = new Date(asOfDate);
+    startOfToday.setHours(0, 0, 0, 0);
+    const endOfToday = new Date(asOfDate);
+    endOfToday.setHours(23, 59, 59, 999);
+    const dueSoonEnd = new Date(endOfToday);
+    dueSoonEnd.setDate(dueSoonEnd.getDate() + 7);
+
+    const where: Prisma.HomeworkWhereInput = {
+      deletedAt: null,
+      isActive: true,
+      academicYearId: query.academicYearId,
+      academicTermId: query.academicTermId,
+      sectionId: query.sectionId,
+      subjectId: query.subjectId,
+      homeworkDate:
+        query.fromDate || query.toDate
+          ? {
+              gte: query.fromDate,
+              lte: query.toDate,
+            }
+          : undefined,
+    };
+
+    const scopedWhere = await this.applyHomeworkScope(
+      where,
+      actorUserId,
+      query.academicYearId,
+    );
+
+    if (!scopedWhere) {
+      return this.emptyDashboard();
+    }
+
+    const studentHomeworkWhere: Prisma.StudentHomeworkWhereInput = {
+      deletedAt: null,
+      isActive: true,
+      homework: scopedWhere,
+    };
+
+    const pendingStudentHomeworkWhere: Prisma.StudentHomeworkWhereInput = {
+      ...studentHomeworkWhere,
+      isCompleted: false,
+    };
+
+    const [
+      totalHomeworks,
+      todayHomeworks,
+      dueSoonHomeworks,
+      overdueHomeworks,
+      totalStudentRows,
+      completedStudentRows,
+      pendingStudentRows,
+      recentHomeworks,
+      pendingRows,
+      reportRows,
+    ] = await this.prisma.$transaction([
+      this.prisma.homework.count({ where: scopedWhere }),
+      this.prisma.homework.count({
+        where: {
+          ...scopedWhere,
+          homeworkDate: {
+            gte: startOfToday,
+            lte: endOfToday,
+          },
+        },
+      }),
+      this.prisma.homework.count({
+        where: {
+          ...scopedWhere,
+          dueDate: {
+            gte: startOfToday,
+            lte: dueSoonEnd,
+          },
+        },
+      }),
+      this.prisma.homework.count({
+        where: {
+          ...scopedWhere,
+          dueDate: {
+            lt: startOfToday,
+          },
+          studentHomeworks: {
+            some: {
+              deletedAt: null,
+              isActive: true,
+              isCompleted: false,
+            },
+          },
+        },
+      }),
+      this.prisma.studentHomework.count({ where: studentHomeworkWhere }),
+      this.prisma.studentHomework.count({
+        where: {
+          ...studentHomeworkWhere,
+          isCompleted: true,
+        },
+      }),
+      this.prisma.studentHomework.count({ where: pendingStudentHomeworkWhere }),
+      this.prisma.homework.findMany({
+        where: scopedWhere,
+        include: homeworkListInclude,
+        orderBy: [{ homeworkDate: 'desc' }, { createdAt: 'desc' }],
+        take: 6,
+      }),
+      this.prisma.studentHomework.findMany({
+        where: pendingStudentHomeworkWhere,
+        select: {
+          id: true,
+          homeworkId: true,
+          homework: {
+            select: {
+              id: true,
+              title: true,
+              dueDate: true,
+              homeworkDate: true,
+              section: {
+                select: {
+                  id: true,
+                  code: true,
+                  name: true,
+                  gradeLevel: {
+                    select: {
+                      id: true,
+                      code: true,
+                      name: true,
+                    },
+                  },
+                },
+              },
+              subject: {
+                select: {
+                  id: true,
+                  code: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: [
+          {
+            homework: {
+              dueDate: 'asc',
+            },
+          },
+          {
+            createdAt: 'asc',
+          },
+        ],
+        take: 500,
+      }),
+      this.prisma.studentHomework.findMany({
+        where: studentHomeworkWhere,
+        select: {
+          isCompleted: true,
+          homework: {
+            select: {
+              section: {
+                select: {
+                  id: true,
+                  code: true,
+                  name: true,
+                  gradeLevel: {
+                    select: {
+                      id: true,
+                      code: true,
+                      name: true,
+                    },
+                  },
+                },
+              },
+              subject: {
+                select: {
+                  id: true,
+                  code: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+        take: 2000,
+      }),
+    ]);
+
+    const pendingByHomework = new Map<
+      string,
+      {
+        homeworkId: string;
+        title: string;
+        dueDate: Date | null;
+        homeworkDate: Date;
+        section: (typeof pendingRows)[number]['homework']['section'];
+        subject: (typeof pendingRows)[number]['homework']['subject'];
+        pendingCount: number;
+      }
+    >();
+
+    for (const row of pendingRows) {
+      const current = pendingByHomework.get(row.homeworkId);
+      if (current) {
+        current.pendingCount += 1;
+        continue;
+      }
+
+      pendingByHomework.set(row.homeworkId, {
+        homeworkId: row.homeworkId,
+        title: row.homework.title,
+        dueDate: row.homework.dueDate,
+        homeworkDate: row.homework.homeworkDate,
+        section: row.homework.section,
+        subject: row.homework.subject,
+        pendingCount: 1,
+      });
+    }
+
+    const topPendingHomeworks = Array.from(pendingByHomework.values())
+      .sort((a, b) => b.pendingCount - a.pendingCount)
+      .slice(0, 6);
+    const bySubject = this.buildDashboardGroupSummary(
+      reportRows.map((row) => ({
+        key: row.homework.subject.id,
+        label: row.homework.subject.name,
+        code: row.homework.subject.code,
+        isCompleted: row.isCompleted,
+      })),
+    );
+    const bySection = this.buildDashboardGroupSummary(
+      reportRows.map((row) => ({
+        key: row.homework.section.id,
+        label: row.homework.section.name,
+        code: row.homework.section.code,
+        isCompleted: row.isCompleted,
+      })),
+    );
+
+    return {
+      generatedAt: new Date().toISOString(),
+      metrics: {
+        totalHomeworks,
+        todayHomeworks,
+        dueSoonHomeworks,
+        overdueHomeworks,
+        totalStudentRows,
+        completedStudentRows,
+        pendingStudentRows,
+        completionRate:
+          totalStudentRows > 0
+            ? Math.round((completedStudentRows / totalStudentRows) * 100)
+            : 0,
+      },
+      recentHomeworks,
+      topPendingHomeworks,
+      reports: {
+        bySubject,
+        bySection,
+      },
+    };
+  }
+
   async findOne(id: string, actorUserId: string) {
     const homework = await this.prisma.homework.findFirst({
       where: {
@@ -398,6 +672,7 @@ export class HomeworksService {
 
   async update(id: string, payload: UpdateHomeworkDto, actorUserId: string) {
     const existing = await this.ensureHomeworkExists(id);
+    this.ensureHomeworkEditable(existing);
 
     const resolvedAcademicYearId =
       payload.academicYearId ?? existing.academicYearId;
@@ -494,6 +769,7 @@ export class HomeworksService {
 
   async populateStudents(id: string, actorUserId: string) {
     const homework = await this.ensureHomeworkExists(id);
+    this.ensureHomeworkEditable(homework);
     await this.ensureActorAuthorized(
       actorUserId,
       homework.sectionId,
@@ -622,8 +898,193 @@ export class HomeworksService {
     };
   }
 
+  async approve(
+    id: string,
+    payload: HomeworkWorkflowActionDto,
+    actorUserId: string,
+  ) {
+    const homework = await this.ensureHomeworkExists(id);
+
+    await this.ensureActorAuthorized(
+      actorUserId,
+      homework.sectionId,
+      homework.subjectId,
+      homework.academicYearId,
+    );
+
+    const now = new Date();
+    const updated = await this.prisma.homework.update({
+      where: {
+        id,
+      },
+      data: {
+        status: GradingWorkflowStatus.APPROVED,
+        isLocked: payload.lockAfterApprove ?? true,
+        approvedAt: now,
+        approvedById: actorUserId,
+        lockedAt: payload.lockAfterApprove === false ? null : now,
+        notes: payload.notes?.trim() ?? homework.notes,
+        updatedById: actorUserId,
+      },
+      include: homeworkDetailsInclude,
+    });
+
+    await this.auditLogsService.record({
+      actorUserId,
+      action: 'HOMEWORK_APPROVE',
+      resource: 'homeworks',
+      resourceId: id,
+      details: {
+        lockAfterApprove: payload.lockAfterApprove ?? true,
+        notes: payload.notes,
+      },
+    });
+
+    return updated;
+  }
+
+  async reopen(
+    id: string,
+    payload: HomeworkWorkflowActionDto,
+    actorUserId: string,
+  ) {
+    const homework = await this.ensureHomeworkExists(id);
+    await this.ensureHomeworkNotInLockedMonthlyGrades(homework);
+
+    await this.ensureActorAuthorized(
+      actorUserId,
+      homework.sectionId,
+      homework.subjectId,
+      homework.academicYearId,
+    );
+
+    const updated = await this.prisma.homework.update({
+      where: {
+        id,
+      },
+      data: {
+        status: GradingWorkflowStatus.DRAFT,
+        isLocked: false,
+        lockedAt: null,
+        notes: payload.notes?.trim() ?? homework.notes,
+        updatedById: actorUserId,
+      },
+      include: homeworkDetailsInclude,
+    });
+
+    await this.auditLogsService.record({
+      actorUserId,
+      action: 'HOMEWORK_REOPEN',
+      resource: 'homeworks',
+      resourceId: id,
+      details: {
+        notes: payload.notes,
+      },
+    });
+
+    return updated;
+  }
+
+  async sendLateNotifications(
+    id: string,
+    payload: SendHomeworkNotificationsDto,
+    actorUserId: string,
+  ) {
+    const homework = await this.ensureHomeworkExists(id);
+
+    await this.ensureActorAuthorized(
+      actorUserId,
+      homework.sectionId,
+      homework.subjectId,
+      homework.academicYearId,
+    );
+
+    const pendingRows = await this.prisma.studentHomework.findMany({
+      where: {
+        homeworkId: id,
+        deletedAt: null,
+        isActive: true,
+        isCompleted: false,
+      },
+      select: {
+        studentEnrollment: {
+          select: {
+            studentId: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+
+    let createdCount = 0;
+    let skippedDuplicateCount = 0;
+    const behaviorType = 'واجبات';
+    const behaviorDescription = `لم ينفذ الطالب واجب: ${homework.title}`;
+
+    for (const row of pendingRows) {
+      const studentId = row.studentEnrollment.studentId;
+      const existingNotification =
+        await this.prisma.parentNotification.findFirst({
+          where: {
+            studentId,
+            deletedAt: null,
+            behaviorType,
+            behaviorDescription,
+          },
+          select: {
+            id: true,
+          },
+        });
+
+      if (existingNotification) {
+        skippedDuplicateCount += 1;
+        continue;
+      }
+
+      await this.parentNotificationsService.create(
+        {
+          studentId,
+          notificationType: ParentNotificationType.NEGATIVE,
+          behaviorType,
+          behaviorDescription,
+          requiredAction:
+            payload.requiredAction ??
+            'يرجى متابعة تنفيذ الواجب مع الطالب وإبلاغ المدرسة عند الحاجة.',
+          sendMethod: ParentNotificationSendMethod.PAPER,
+          isSent: payload.markAsSent ?? false,
+          sentDate: payload.markAsSent ? new Date().toISOString() : undefined,
+          results: `واجب: ${homework.title}`,
+        },
+        actorUserId,
+      );
+      createdCount += 1;
+    }
+
+    await this.auditLogsService.record({
+      actorUserId,
+      action: 'HOMEWORK_LATE_NOTIFICATIONS_SEND',
+      resource: 'homeworks',
+      resourceId: id,
+      details: {
+        pendingCount: pendingRows.length,
+        createdCount,
+        skippedDuplicateCount,
+      },
+    });
+
+    return {
+      homeworkId: id,
+      pendingCount: pendingRows.length,
+      createdCount,
+      skippedDuplicateCount,
+    };
+  }
+
   async remove(id: string, actorUserId: string) {
     const existing = await this.ensureHomeworkExists(id);
+    this.ensureHomeworkEditable(existing);
 
     await this.ensureActorAuthorized(
       actorUserId,
@@ -709,6 +1170,160 @@ export class HomeworksService {
     }
 
     return homework;
+  }
+
+  private ensureHomeworkEditable(homework: Homework) {
+    if (
+      homework.isLocked ||
+      homework.status === GradingWorkflowStatus.APPROVED
+    ) {
+      throw new ConflictException(
+        'لا يمكن تعديل واجب معتمد أو مقفل. أعد فتح الواجب أولًا ثم حاول مرة أخرى.',
+      );
+    }
+  }
+
+  private async ensureHomeworkNotInLockedMonthlyGrades(homework: Homework) {
+    const lockedMonthlyGrade = await this.prisma.monthlyGrade.findFirst({
+      where: {
+        academicYearId: homework.academicYearId,
+        academicTermId: homework.academicTermId,
+        subjectId: homework.subjectId,
+        deletedAt: null,
+        OR: [
+          {
+            isLocked: true,
+          },
+          {
+            status: GradingWorkflowStatus.APPROVED,
+          },
+        ],
+        studentEnrollment: {
+          sectionId: homework.sectionId,
+          deletedAt: null,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (lockedMonthlyGrade) {
+      throw new ConflictException(
+        'لا يمكن إعادة فتح الواجب لأنه مرتبط بمحصلة شهرية معتمدة أو مقفلة.',
+      );
+    }
+  }
+
+  private async applyHomeworkScope(
+    where: Prisma.HomeworkWhereInput,
+    actorUserId: string,
+    academicYearId?: string,
+  ): Promise<Prisma.HomeworkWhereInput | null> {
+    const scope = await this.dataScopeService.getSectionSubjectYearGrants({
+      actorUserId,
+      capability: 'MANAGE_HOMEWORKS',
+      academicYearId,
+    });
+
+    if (scope.isPrivileged) {
+      return where;
+    }
+
+    if (scope.grants.length === 0) {
+      return null;
+    }
+
+    return {
+      ...where,
+      AND: [
+        ...(Array.isArray(where.AND)
+          ? where.AND
+          : where.AND
+            ? [where.AND]
+            : []),
+        {
+          OR: scope.grants.map((grant) => ({
+            sectionId: grant.sectionId,
+            academicYearId: grant.academicYearId,
+            subjectId: grant.subjectId,
+          })),
+        },
+      ],
+    };
+  }
+
+  private emptyDashboard() {
+    return {
+      generatedAt: new Date().toISOString(),
+      metrics: {
+        totalHomeworks: 0,
+        todayHomeworks: 0,
+        dueSoonHomeworks: 0,
+        overdueHomeworks: 0,
+        totalStudentRows: 0,
+        completedStudentRows: 0,
+        pendingStudentRows: 0,
+        completionRate: 0,
+      },
+      recentHomeworks: [],
+      topPendingHomeworks: [],
+      reports: {
+        bySubject: [],
+        bySection: [],
+      },
+    };
+  }
+
+  private buildDashboardGroupSummary(
+    rows: Array<{
+      key: string;
+      label: string;
+      code: string | null;
+      isCompleted: boolean;
+    }>,
+  ) {
+    const grouped = new Map<
+      string,
+      {
+        id: string;
+        label: string;
+        code: string | null;
+        total: number;
+        completed: number;
+        pending: number;
+        completionRate: number;
+      }
+    >();
+
+    for (const row of rows) {
+      const current = grouped.get(row.key) ?? {
+        id: row.key,
+        label: row.label,
+        code: row.code,
+        total: 0,
+        completed: 0,
+        pending: 0,
+        completionRate: 0,
+      };
+
+      current.total += 1;
+      if (row.isCompleted) {
+        current.completed += 1;
+      } else {
+        current.pending += 1;
+      }
+
+      current.completionRate =
+        current.total > 0
+          ? Math.round((current.completed / current.total) * 100)
+          : 0;
+      grouped.set(row.key, current);
+    }
+
+    return Array.from(grouped.values()).sort(
+      (a, b) => b.pending - a.pending || b.total - a.total,
+    );
   }
 
   private async ensureReferencesExist(
@@ -890,7 +1505,9 @@ export class HomeworksService {
     const parsedDate = value instanceof Date ? value : new Date(value);
 
     if (Number.isNaN(parsedDate.getTime())) {
-      throw new BadRequestException(`تنسيق التاريخ غير صالح للحقل ${fieldName}`);
+      throw new BadRequestException(
+        `تنسيق التاريخ غير صالح للحقل ${fieldName}`,
+      );
     }
 
     return parsedDate;
@@ -988,4 +1605,3 @@ export class HomeworksService {
     return 'خطأ غير معروف';
   }
 }
-

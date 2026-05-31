@@ -667,8 +667,11 @@ model User {
   monthlyCustomComponentScoresUpdated MonthlyCustomComponentScore[]   @relation("monthly_custom_component_score_updated_by")
   homeworkTypesCreated                HomeworkType[]                  @relation("homework_type_created_by")
   homeworkTypesUpdated                HomeworkType[]                  @relation("homework_type_updated_by")
+  homeworkTemplatesCreated            HomeworkTemplate[]              @relation("homework_template_created_by")
+  homeworkTemplatesUpdated            HomeworkTemplate[]              @relation("homework_template_updated_by")
   homeworksCreated                    Homework[]                      @relation("homework_created_by")
   homeworksUpdated                    Homework[]                      @relation("homework_updated_by")
+  homeworksApproved                   Homework[]                      @relation("homework_approved_by")
   studentHomeworksCreated             StudentHomework[]               @relation("student_homework_created_by")
   studentHomeworksUpdated             StudentHomework[]               @relation("student_homework_updated_by")
   gradeDescriptionsCreated            LookupGradeDescription[]        @relation("lookup_grade_description_created_by")
@@ -3461,12 +3464,17 @@ model Homework {
   dueDate        DateTime? @map("due_date")
   maxScore       Decimal   @default(5.00) @map("max_score") @db.Decimal(6, 2)
   notes          String?   @db.VarChar(255)
+  status         GradingWorkflowStatus @default(DRAFT)
+  isLocked       Boolean   @default(false) @map("is_locked")
+  approvedAt     DateTime? @map("approved_at")
+  lockedAt       DateTime? @map("locked_at")
   isActive       Boolean   @default(true) @map("is_active")
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
   deletedAt      DateTime? @map("deleted_at")
   createdById    String?   @map("created_by") @db.VarChar(191)
   updatedById    String?   @map("updated_by") @db.VarChar(191)
+  approvedById   String?   @map("approved_by") @db.VarChar(191)
 
   academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
   academicTerm AcademicTerm @relation(fields: [academicTermId], references: [id], onDelete: Restrict)
@@ -3476,6 +3484,7 @@ model Homework {
 
   createdBy User? @relation("homework_created_by", fields: [createdById], references: [id], onDelete: SetNull)
   updatedBy User? @relation("homework_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+  approvedBy User? @relation("homework_approved_by", fields: [approvedById], references: [id], onDelete: SetNull)
 
   studentHomeworks StudentHomework[]
 
@@ -3487,9 +3496,42 @@ model Homework {
   @@index([homeworkTypeId, deletedAt], map: "hw_type_del_idx")
   @@index([homeworkDate, deletedAt], map: "hw_date_del_idx")
   @@index([dueDate, deletedAt], map: "hw_due_del_idx")
+  @@index([status, deletedAt], map: "hw_status_del_idx")
+  @@index([isLocked, deletedAt], map: "hw_locked_del_idx")
+  @@index([approvedById], map: "hw_approved_by_idx")
   @@index([isActive, deletedAt], map: "hw_active_del_idx")
   @@index([deletedAt], map: "hw_deleted_at_idx")
   @@map("homeworks")
+}
+
+model HomeworkTemplate {
+  id             String    @id @default(cuid()) @db.VarChar(191)
+  code           String    @unique @db.VarChar(50)
+  name           String    @db.VarChar(120)
+  title          String    @db.VarChar(120)
+  content        String?   @db.Text
+  maxScore       Decimal   @default(10.00) @map("max_score") @db.Decimal(6, 2)
+  notes          String?   @db.VarChar(255)
+  homeworkTypeId String?   @map("homework_type_id") @db.VarChar(191)
+  subjectId      String?   @map("subject_id") @db.VarChar(191)
+  gradeLevelId   String?   @map("grade_level_id") @db.VarChar(191)
+  isSystem       Boolean   @default(false) @map("is_system")
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+  createdById    String?   @map("created_by") @db.VarChar(191)
+  updatedById    String?   @map("updated_by") @db.VarChar(191)
+
+  createdBy User? @relation("homework_template_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("homework_template_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([homeworkTypeId, deletedAt], map: "hwtpl_type_del_idx")
+  @@index([subjectId, deletedAt], map: "hwtpl_subject_del_idx")
+  @@index([gradeLevelId, deletedAt], map: "hwtpl_grade_del_idx")
+  @@index([isActive, deletedAt], map: "hwtpl_active_del_idx")
+  @@index([deletedAt], map: "hwtpl_deleted_at_idx")
+  @@map("homework_templates")
 }
 
 model StudentHomework {

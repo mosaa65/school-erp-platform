@@ -37,6 +37,7 @@ const TEACHER_READ_RESOURCES = new Set([
   'student-problems',
   'parent-notifications',
   'homework-types',
+  'homework-templates',
   'homeworks',
   'student-homeworks',
   'exam-periods',
@@ -95,6 +96,7 @@ const CLASS_SUPERVISOR_EXTRA_WRITE_RESOURCES = new Set([
 
 const SUPERVISOR_EXTRA_WRITE_RESOURCES = new Set([
   'homework-types',
+  'homework-templates',
   'homeworks',
   'student-homeworks',
   'student-attendance',
@@ -113,6 +115,10 @@ const SUPERVISOR_EXTRA_WRITE_RESOURCES = new Set([
 ]);
 
 const SUPERVISOR_EXTRA_ACTION_CODES = new Set([
+  'homeworks.approve',
+  'homeworks.reopen',
+  'homework-reports.read',
+  'homework-notifications.send',
   'student-period-results.calculate',
   'assessment-periods.lock',
   'assessment-periods.unlock',
@@ -121,6 +127,12 @@ const SUPERVISOR_EXTRA_ACTION_CODES = new Set([
   'annual-results.calculate',
   'annual-results.lock',
   'annual-results.unlock',
+]);
+
+const TEACHER_EXTRA_ACTION_CODES = new Set([
+  'homeworks.dashboard',
+  'homeworks.populate-students',
+  'student-homeworks.bulk-update',
 ]);
 
 const EMPLOYEE_READ_RESOURCES = new Set([
@@ -165,10 +177,18 @@ function splitPermissionCode(code: string) {
 }
 
 function isReadPermission(code: string, action: string) {
-  return action === 'read' || code === 'grading-reports.read' || code === 'hr-reports.read';
+  return (
+    action === 'read' ||
+    code === 'grading-reports.read' ||
+    code === 'hr-reports.read'
+  );
 }
 
-function canTeacherAccess(params: { code: string; resource: string; action: string }) {
+function canTeacherAccess(params: {
+  code: string;
+  resource: string;
+  action: string;
+}) {
   if (isReadPermission(params.code, params.action)) {
     return TEACHER_READ_RESOURCES.has(params.resource);
   }
@@ -182,6 +202,10 @@ function canTeacherAccess(params: { code: string; resource: string; action: stri
 
   if (params.action === 'create' || params.action === 'update') {
     return TEACHER_WRITE_RESOURCES.has(params.resource);
+  }
+
+  if (TEACHER_EXTRA_ACTION_CODES.has(params.code)) {
+    return true;
   }
 
   return false;
@@ -221,7 +245,11 @@ const ROLE_DEFINITIONS: RoleSeedDefinition[] = [
     description: 'إدارة تشغيل المدرسة بالكامل مع صلاحيات إدارية متقدمة.',
     isSystem: true,
     includePermission: ({ code }) =>
-      !['permissions.create', 'permissions.update', 'permissions.delete'].includes(code),
+      ![
+        'permissions.create',
+        'permissions.update',
+        'permissions.delete',
+      ].includes(code),
   },
   {
     code: 'supervisor',
@@ -458,4 +486,3 @@ export async function seedSuperAdmin(
     email: adminUser.email,
   };
 }
-
