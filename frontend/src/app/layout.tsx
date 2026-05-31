@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Almarai, Cairo, JetBrains_Mono, Noto_Kufi_Arabic, Tajawal } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { AppProviders } from "@/components/providers/app-providers";
 import "./globals.css";
 
@@ -58,6 +59,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen">
         <AppProviders>{children}</AppProviders>
+        <SpeedInsights />
       </body>
     </html>
   );
