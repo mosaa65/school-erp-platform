@@ -8,5 +8,6 @@ import { ParentNotificationsService } from './parent-notifications.service';
   imports: [AuditLogsModule, StudentsModule],
   controllers: [ParentNotificationsController],
   providers: [ParentNotificationsService],
+  exports: [ParentNotificationsService],
 })
 export class ParentNotificationsModule {}
