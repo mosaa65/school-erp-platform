@@ -76,8 +76,9 @@ export function NavigationFilterControl({
     <>
       <FilterTriggerButton
         count={activeCount}
-        label="فلترة"
-        className={cn("h-11 -translate-y-px rounded-full px-3.5 text-xs", className)}
+        label=""
+        aria-label="فلترة"
+        className={cn("h-11 -translate-y-px rounded-full text-xs", className)}
         onClick={() => setOpen(true)}
       />
 

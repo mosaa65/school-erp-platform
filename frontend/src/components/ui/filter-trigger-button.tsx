@@ -21,13 +21,15 @@ export function FilterTriggerButton({
   className,
   ...props
 }: FilterTriggerButtonProps) {
+  const showLabel = label !== "";
+
   return (
     <ToolbarTriggerButton
-      label={label ?? "فلترة"}
+      label={label === undefined ? "فلترة" : label}
       icon={icon ?? <ListFilter className="h-3.5 w-3.5" />}
       count={count}
       hideLabelOnMobile
-      className={cn(!label && "w-11 justify-center px-0", className)}
+      className={cn(label === "" && "w-11 justify-center px-0", className)}
       {...props}
     />
   );

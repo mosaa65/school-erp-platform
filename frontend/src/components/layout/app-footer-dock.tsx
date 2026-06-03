@@ -96,7 +96,7 @@ function FooterButton({ action, mode = "standalone" }: { action: FooterAction; m
       disabled={disabled}
       aria-pressed={active}
       className={cn(
-        "group relative flex flex-row-reverse items-center justify-center gap-2.5 rounded-full transition-all duration-300 ease-out hover:-translate-y-0.5",
+        "group relative flex flex-row items-center justify-center gap-2.5 rounded-full transition-all duration-300 ease-out hover:-translate-y-0.5",
         
         mode === "standalone" && "shadow-[0_14px_34px_-22px_rgba(15,23,42,0.55)] backdrop-blur-xl border",
         

@@ -75,7 +75,11 @@ export function EntitySurfaceHeaderActionButton({
       className={cn(
         "h-8 rounded-full border text-[11px] shadow-none [&_svg]:size-3.5",
         resolveToneClassName(tone, colorMode, entityKey),
-        labelMode === "hidden" ? "h-8 w-8 min-w-8 px-0" : "gap-1.5 px-2.5",
+        labelMode === "hidden"
+          ? "h-8 w-8 min-w-8 px-0"
+          : labelMode === "responsive"
+            ? "h-8 w-8 min-w-8 px-0 gap-0 whitespace-nowrap sm:w-auto sm:min-w-max sm:px-3 sm:gap-1.5"
+            : "gap-1.5 px-2.5",
         className,
       )}
       disabled={disabled}

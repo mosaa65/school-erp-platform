@@ -31,9 +31,10 @@ import { StudentPickerSheet } from "@/components/ui/student-picker-sheet";
 import { SystemMessageInline } from "@/components/feedback/system-message-inline";
 import { EntityDetailsShell } from "@/presentation/entity-surface/entity-details-shell";
 import { EntitySurfaceCard } from "@/presentation/entity-surface/entity-surface-card";
+import { EntitySurfaceContextMenu } from "@/presentation/entity-surface/entity-surface-context-menu";
 import { EntitySurfaceGrid } from "@/presentation/entity-surface/entity-surface-grid";
 import { EntitySurfaceHeaderActionButton } from "@/presentation/entity-surface/entity-surface-header-action-button";
-import { EntitySurfaceQuickActions } from "@/presentation/entity-surface/entity-surface-quick-actions";
+import { EntitySurfaceRecords } from "@/presentation/entity-surface/entity-surface-records";
 import { getEntitySurfaceDefinition } from "@/presentation/entity-surface/entity-surface-registry";
 import { EntitySurfaceRow } from "@/presentation/entity-surface/entity-surface-row";
 import type {
@@ -77,7 +78,6 @@ import {
   studentEnrollmentSurfaceDefinition,
 } from "@/features/student-enrollments/presentation/student-enrollment-surface-definition";
 import type { StudentPickerOption } from "@/features/students/lib/student-picker";
-import { cn } from "@/lib/utils";
 import type {
   StudentEnrollmentDistributionStatus,
   StudentEnrollmentGroupBy,
@@ -743,6 +743,8 @@ export function StudentEnrollmentsWorkspace() {
       ),
     [entitySurface.detailsOpenMode, enrollmentsSurface.detailsMode, resolvedViewMode],
   );
+  const showEnrollmentCardDetails =
+    canReadDetails && entitySurface.showExtendedDetailsInCards;
   const isEditing = editingEnrollmentId !== null;
   const hasDependenciesReadPermissions =
     canReadStudents && canReadAcademicYears && canReadSections && canReadGradeLevels;
@@ -1179,8 +1181,47 @@ export function StudentEnrollmentsWorkspace() {
     },
     [canReadDetails, enrollmentDetailsMode, router],
   );
-  const showEnrollmentCardDetails =
-    canReadDetails && entitySurface.showExtendedDetailsInCards;
+
+  const handleReturnToPendingDistribution = async (enrollment: StudentEnrollmentListItem) => {
+    if (!canUpdate) {
+      notify.warning("لا تملك الصلاحية المطلوبة: student-enrollments.update.");
+      return;
+    }
+
+    const gradeLevelId =
+      enrollment.gradeLevelId ?? enrollment.gradeLevel?.id ?? enrollment.section?.gradeLevel.id;
+
+    if (!gradeLevelId) {
+      const message = "لا يمكن إعادة القيد إلى الانتظار قبل معرفة الصف المرتبط به.";
+      setFormError(message);
+      notify.warning(message);
+      return;
+    }
+
+    try {
+      await notify.promise(
+        () =>
+          updateMutation.mutateAsync({
+            enrollmentId: enrollment.id,
+            payload: {
+              gradeLevelId,
+              sectionId: "",
+              distributionStatus: "PENDING_DISTRIBUTION",
+            },
+          }),
+        {
+          loading: "جارٍ إعادة القيد إلى انتظار التوزيع...",
+          success: "تمت إعادة القيد إلى انتظار التوزيع بنجاح.",
+          error: (error) => ({
+            message: getErrorMessage(error, "تعذر إعادة القيد إلى انتظار التوزيع."),
+            persistent: true,
+          }),
+        },
+      );
+    } catch {
+      // handled by unified messages
+    }
+  };
 
   const renderEnrollmentHeaderActions = (enrollment: StudentEnrollmentListItem) => {
     if (!canReadDetails && !canUpdate && !canDelete) {
@@ -1223,47 +1264,6 @@ export function StudentEnrollmentsWorkspace() {
         ) : null}
       </div>
     );
-  };
-
-  const handleReturnToPendingDistribution = async (enrollment: StudentEnrollmentListItem) => {
-    if (!canUpdate) {
-      notify.warning("لا تملك الصلاحية المطلوبة: student-enrollments.update.");
-      return;
-    }
-
-    const gradeLevelId =
-      enrollment.gradeLevelId ?? enrollment.gradeLevel?.id ?? enrollment.section?.gradeLevel.id;
-
-    if (!gradeLevelId) {
-      const message = "لا يمكن إعادة القيد إلى الانتظار قبل معرفة الصف المرتبط به.";
-      setFormError(message);
-      notify.warning(message);
-      return;
-    }
-
-    try {
-      await notify.promise(
-        () =>
-          updateMutation.mutateAsync({
-            enrollmentId: enrollment.id,
-            payload: {
-              gradeLevelId,
-              sectionId: "",
-              distributionStatus: "PENDING_DISTRIBUTION",
-            },
-          }),
-        {
-          loading: "جارٍ إعادة القيد إلى انتظار التوزيع...",
-          success: "تمت إعادة القيد إلى انتظار التوزيع بنجاح.",
-          error: (error) => ({
-            message: getErrorMessage(error, "تعذر إعادة القيد إلى انتظار التوزيع."),
-            persistent: true,
-          }),
-        },
-      );
-    } catch {
-      // handled by unified messages
-    }
   };
 
   const buildEnrollmentQuickActions = (
@@ -1342,6 +1342,10 @@ export function StudentEnrollmentsWorkspace() {
 
     return actions;
   };
+
+  const contextEnrollmentQuickActions = contextEnrollment
+    ? buildEnrollmentQuickActions(contextEnrollment)
+    : [];
 
   const handleRefresh = async () => {
     try {
@@ -1426,10 +1430,6 @@ export function StudentEnrollmentsWorkspace() {
       sortState.groupByCriteria.filter((groupBy) => groupBy !== "NONE").length
     );
   }, [sortState]);
-  const usesBlurBackdrop = entitySurface.longPressMode === "enabled-with-blur";
-  const contextEnrollmentQuickActions = contextEnrollment
-    ? buildEnrollmentQuickActions(contextEnrollment)
-    : [];
   const selectedEnrollmentQuickActions = selectedEnrollment
     ? buildEnrollmentQuickActions(selectedEnrollment).filter((action) => action.key !== "details")
     : [];
@@ -1832,18 +1832,34 @@ export function StudentEnrollmentsWorkspace() {
             />
           ) : null}
 
-          {groupedEnrollments.map((group) => (
-            <div key={group.key} className="space-y-3">
-              {sortState.groupByCriteria.some((groupBy) => groupBy !== "NONE") ? (
-                <div className="flex flex-wrap items-center justify-between gap-2 rounded-[1.1rem] border border-[color:var(--app-accent-strong)]/40 bg-[color:var(--app-accent-soft)]/30 px-3 py-2">
-                  <p className="text-sm font-semibold text-[color:var(--app-accent-color)]">
-                    {group.label}
-                  </p>
-                  <Badge variant="outline">العناصر: {group.items.length}</Badge>
-                </div>
-              ) : null}
+          {enrollments.length > 0 ? (
+            <EntitySurfaceRecords
+              title="قيود الطلاب"
+              description="إدارة قيود الطلاب مع عرض مجموعات وفلترة ذكية."
+              total={pagination?.total ?? 0}
+              loaded={enrollments.length}
+              isInitialLoading={enrollmentsQuery.isPending}
+              isFetching={enrollmentsQuery.isFetching}
+              isFetchingMore={enrollmentsQuery.isFetchingNextPage}
+              hasMore={enrollmentsQuery.hasNextPage}
+              error={enrollmentsQuery.error}
+              emptyTitle="لا توجد سجلات مطابقة."
+              emptyDescription="جرّب تغيير الفلاتر أو إنشاء قيد جديد."
+              onRefresh={() => void handleRefresh()}
+              onLoadMore={() => void enrollmentsQuery.fetchNextPage()}
+            >
+              {groupedEnrollments.map((group) => (
+                <div key={group.key} className="space-y-3">
+                  {sortState.groupByCriteria.some((groupBy) => groupBy !== "NONE") ? (
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-[1.1rem] border border-[color:var(--app-accent-strong)]/40 bg-[color:var(--app-accent-soft)]/30 px-3 py-2">
+                      <p className="text-sm font-semibold text-[color:var(--app-accent-color)]">
+                        {group.label}
+                      </p>
+                      <Badge variant="outline">العناصر: {group.items.length}</Badge>
+                    </div>
+                  ) : null}
 
-              <EntitySurfaceGrid
+                  <EntitySurfaceGrid
                 viewMode={resolvedViewMode}
                 density={entitySurface.density}
                 richness={entitySurface.richness}
@@ -1858,8 +1874,8 @@ export function StudentEnrollmentsWorkspace() {
                   const preview =
                     enrollmentsSurface.buildPreview?.(enrollment) ??
                     buildStudentEnrollmentSurfacePreview(enrollment);
-                  const contextQuickActions = buildEnrollmentQuickActions(enrollment);
                   const headerActions = renderEnrollmentHeaderActions(enrollment);
+                  const contextQuickActions = buildEnrollmentQuickActions(enrollment);
                   const canOpenContext =
                     entitySurface.longPressMode !== "disabled" && contextQuickActions.length > 0;
                   const handleCardClick = canReadDetails
@@ -1901,15 +1917,15 @@ export function StudentEnrollmentsWorkspace() {
                   }
 
                   return (
-                    <EntitySurfaceCard
-                      key={enrollment.id}
-                      title={preview.title}
-                      subtitle={showEnrollmentCardDetails ? preview.subtitle : undefined}
-                      description={showEnrollmentCardDetails ? preview.description : undefined}
-                      avatar={preview.avatar}
-                      headerActions={headerActions}
-                      fields={showEnrollmentCardDetails ? preview.fields : undefined}
-                      statusChips={showEnrollmentCardDetails ? getStudentEnrollmentStatusChips(enrollment) : undefined}
+                  <EntitySurfaceCard
+                    key={enrollment.id}
+                    title={preview.title}
+                    subtitle={showEnrollmentCardDetails ? preview.subtitle : undefined}
+                    description={showEnrollmentCardDetails ? preview.description : undefined}
+                    avatar={preview.avatar}
+                    headerActions={headerActions}
+                    fields={showEnrollmentCardDetails ? preview.fields : undefined}
+                    statusChips={showEnrollmentCardDetails ? getStudentEnrollmentStatusChips(enrollment) : undefined}
                       viewMode={resolvedViewMode}
                       density={entitySurface.density}
                       richness={entitySurface.richness}
@@ -1937,6 +1953,7 @@ export function StudentEnrollmentsWorkspace() {
               </EntitySurfaceGrid>
             </div>
           ))}
+            </EntitySurfaceRecords>
 
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
             <p className="text-xs text-muted-foreground">
@@ -1987,30 +2004,28 @@ export function StudentEnrollmentsWorkspace() {
       </div>
 
       {contextEnrollment ? (
-        <div className="fixed inset-0 z-[85]">
-          <div
-            className={cn(
-              "absolute inset-0",
-              usesBlurBackdrop ? "bg-black/24 backdrop-blur-sm" : "bg-black/18",
-            )}
-            onClick={() => setContextEnrollmentId(null)}
-          />
-          <div className="absolute inset-x-4 bottom-4 mx-auto max-w-sm">
-            <div className="rounded-[1.6rem] border border-white/70 bg-white/88 p-3 shadow-[0_30px_90px_-36px_rgba(15,23,42,0.45)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/88">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">اختصارات القيد</p>
-              <p className="mt-1 text-[11px] leading-5 text-slate-500 dark:text-white/55">
-                {contextEnrollment.student.fullName} • {contextEnrollment.yearlyEnrollmentNo ?? "بدون رقم قيد"}
-              </p>
-              {contextEnrollmentQuickActions.length > 0 ? (
-                <EntitySurfaceQuickActions actions={contextEnrollmentQuickActions} className="mt-3" />
-              ) : (
-                <p className="mt-3 text-xs text-slate-500 dark:text-white/55">
-                  لا توجد اختصارات متاحة حاليًا.
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
+        <EntitySurfaceContextMenu
+          open
+          card={{
+            title: contextEnrollment.student.fullName,
+            avatar: buildStudentEnrollmentSurfacePreview(contextEnrollment).avatar,
+            viewMode: resolvedViewMode,
+            density: entitySurface.density,
+            richness: entitySurface.richness,
+            colorMode: entitySurface.colorMode,
+            visualStyle: entitySurface.visualStyle,
+            effectsPreset: entitySurface.effectsPreset,
+            shapePreset: entitySurface.shapePreset,
+            entityKey: "students",
+            inlineActionsMode: entitySurface.inlineActionsMode,
+            motionPreset: entitySurface.motionPreset,
+            reducedMotion: entitySurface.reducedMotion,
+            longPressMode: entitySurface.longPressMode,
+            avatarMode: entitySurface.avatarMode,
+          }}
+          actions={contextEnrollmentQuickActions}
+          onClose={() => setContextEnrollmentId(null)}
+        />
       ) : null}
 
       {selectedEnrollment ? (

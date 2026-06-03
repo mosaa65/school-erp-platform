@@ -7,35 +7,43 @@ import {
   LoaderCircle,
   PencilLine,
   Plus,
-  RefreshCw,
   Trash2,
   Type,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { Fab } from "@/components/ui/fab";
 import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { FormField } from "@/components/ui/form-field";
+import { useEntitySurface } from "@/hooks/use-entity-surface";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
 import {
   useCreateSubjectMutation,
   useDeleteSubjectMutation,
   useUpdateSubjectMutation,
 } from "@/features/subjects/hooks/use-subjects-mutations";
-import { useSubjectsQuery } from "@/features/subjects/hooks/use-subjects-query";
+import { useSubjectsInfiniteQuery } from "@/features/subjects/hooks/use-subjects-query";
+import {
+  buildSubjectSurfacePreview,
+  getSubjectCategoryLabel,
+  subjectSurfaceDefinition,
+} from "@/features/subjects/presentation/subject-surface-definition";
+import { EntitySurfaceCard } from "@/presentation/entity-surface/entity-surface-card";
+import { EntitySurfaceContextMenu } from "@/presentation/entity-surface/entity-surface-context-menu";
+import { EntitySurfaceGrid } from "@/presentation/entity-surface/entity-surface-grid";
+import { EntitySurfaceHeaderActionButton } from "@/presentation/entity-surface/entity-surface-header-action-button";
+import { getEntitySurfaceDefinition } from "@/presentation/entity-surface/entity-surface-registry";
+import { EntitySurfaceRecords } from "@/presentation/entity-surface/entity-surface-records";
+import { EntitySurfaceRow } from "@/presentation/entity-surface/entity-surface-row";
+import type {
+  EntitySurfaceQuickAction,
+  EntitySurfaceViewMode,
+} from "@/presentation/entity-surface/entity-surface-types";
 import type { SubjectCategory, SubjectListItem } from "@/lib/api/client";
 
 type SubjectFormState = {
@@ -80,55 +88,30 @@ function toFormState(subject: SubjectListItem): SubjectFormState {
   };
 }
 
-function categoryBadgeVariant(
-  category: SubjectCategory,
-): "default" | "secondary" | "outline" {
-  switch (category) {
-    case "CORE":
-    case "MATHEMATICS":
-      return "default";
-    case "SCIENCE":
-    case "LANGUAGE":
-      return "secondary";
-    default:
-      return "outline";
+function resolveSubjectViewMode(
+  requestedMode: EntitySurfaceViewMode,
+  allowedViewModes: EntitySurfaceViewMode[] | undefined,
+  fallbackMode: EntitySurfaceViewMode,
+): EntitySurfaceViewMode {
+  if (!allowedViewModes || allowedViewModes.includes(requestedMode)) {
+    return requestedMode;
   }
-}
 
-function categoryLabel(category: SubjectCategory): string {
-  switch (category) {
-    case "CORE":
-      return "أساسية";
-    case "ELECTIVE":
-      return "اختيارية";
-    case "LANGUAGE":
-      return "لغات";
-    case "SCIENCE":
-      return "علوم";
-    case "MATHEMATICS":
-      return "رياضيات";
-    case "HUMANITIES":
-      return "إنسانيات";
-    case "ARTS":
-      return "فنون";
-    case "SPORTS":
-      return "رياضة";
-    case "TECHNOLOGY":
-      return "تقنية";
-    case "OTHER":
-      return "أخرى";
-    default:
-      return category;
-  }
+  return allowedViewModes[0] ?? fallbackMode;
 }
 
 export function SubjectsWorkspace() {
   const { hasPermission } = useRbac();
+  const entitySurface = useEntitySurface();
+  const subjectsSurface = React.useMemo(
+    () => getEntitySurfaceDefinition<SubjectListItem>("subjects") ?? subjectSurfaceDefinition,
+    [],
+  );
   const canCreate = hasPermission("subjects.create");
   const canUpdate = hasPermission("subjects.update");
   const canDelete = hasPermission("subjects.delete");
+  const canUseQuickActions = canUpdate || canDelete;
 
-  const [page, setPage] = React.useState(1);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
   const [categoryFilter, setCategoryFilter] = React.useState<SubjectCategory | "all">("all");
@@ -149,9 +132,9 @@ export function SubjectsWorkspace() {
   const [formState, setFormState] = React.useState<SubjectFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
+  const [contextSubjectId, setContextSubjectId] = React.useState<string | null>(null);
 
-  const subjectsQuery = useSubjectsQuery({
-    page,
+  const subjectsQuery = useSubjectsInfiniteQuery({
     limit: PAGE_SIZE,
     search: search || undefined,
     category: categoryFilter === "all" ? undefined : categoryFilter,
@@ -162,9 +145,12 @@ export function SubjectsWorkspace() {
   const updateMutation = useUpdateSubjectMutation();
   const deleteMutation = useDeleteSubjectMutation();
 
-  const subjects = React.useMemo(() => subjectsQuery.data?.data ?? [], [subjectsQuery.data?.data]);
-  const pagination = subjectsQuery.data?.pagination;
   const isEditing = editingSubjectId !== null;
+  const subjects = React.useMemo(
+    () => subjectsQuery.data?.pages.flatMap((pageData) => pageData.data) ?? [],
+    [subjectsQuery.data?.pages],
+  );
+  const pagination = subjectsQuery.data?.pages.at(-1)?.pagination;
 
   const mutationError =
     (createMutation.error as Error | null)?.message ??
@@ -187,7 +173,6 @@ export function SubjectsWorkspace() {
   }, [editingSubjectId, isEditing, subjects]);
 
   useDebounceEffect(() => {
-      setPage(1);
       setSearch(searchInput.trim());
     }, 400, [searchInput]);
 
@@ -287,7 +272,6 @@ export function SubjectsWorkspace() {
     createMutation.mutate(payload, {
       onSuccess: () => {
         resetForm();
-        setPage(1);
         setActionSuccess("تم إنشاء المادة بنجاح.");
       },
     });
@@ -320,6 +304,7 @@ export function SubjectsWorkspace() {
         if (editingSubjectId === subject.id) {
           resetForm();
         }
+        setContextSubjectId(null);
         setActionSuccess("تم حذف المادة بنجاح.");
       },
     });
@@ -328,7 +313,6 @@ export function SubjectsWorkspace() {
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
 
   const clearFilters = () => {
-    setPage(1);
     setSearchInput("");
     setSearch("");
     setCategoryFilter("all");
@@ -337,7 +321,6 @@ export function SubjectsWorkspace() {
   };
 
   const applyFilters = () => {
-    setPage(1);
     setCategoryFilter(filterDraft.category);
     setActiveFilter(filterDraft.active);
     setIsFilterOpen(false);
@@ -349,6 +332,84 @@ export function SubjectsWorkspace() {
       0,
     );
   }, [activeFilter, categoryFilter, searchInput]);
+
+  const contextSubject = React.useMemo(
+    () => subjects.find((subject) => subject.id === contextSubjectId) ?? null,
+    [contextSubjectId, subjects],
+  );
+  const resolvedViewMode = resolveSubjectViewMode(
+    entitySurface.defaultViewMode,
+    subjectsSurface.allowedViewModes,
+    subjectsSurface.defaultViewMode ?? "smart-card",
+  );
+
+  const buildSubjectQuickActions = (subject: SubjectListItem): EntitySurfaceQuickAction[] => {
+    if (!canUseQuickActions) {
+      return [];
+    }
+
+    const actions: EntitySurfaceQuickAction[] = [];
+
+    if (canUpdate) {
+      actions.push({
+        key: "edit",
+        label: "تعديل",
+        icon: <PencilLine className="h-4 w-4" />,
+        tone: "accent",
+        disabled: updateMutation.isPending,
+        onClick: () => {
+          setContextSubjectId(null);
+          handleStartEdit(subject);
+        },
+      });
+    }
+
+    if (canDelete) {
+      actions.push({
+        key: "delete",
+        label: "حذف",
+        icon: <Trash2 className="h-4 w-4" />,
+        tone: "danger",
+        disabled: deleteMutation.isPending,
+        onClick: () => {
+          setContextSubjectId(null);
+          handleDelete(subject);
+        },
+      });
+    }
+
+    return actions;
+  };
+
+  const renderSubjectHeaderActions = (subject: SubjectListItem) => (
+    <div className="flex items-center gap-1">
+      {canUpdate ? (
+        <EntitySurfaceHeaderActionButton
+          label="تعديل"
+          icon={<PencilLine className="h-3.5 w-3.5" />}
+          tone="edit"
+          colorMode={entitySurface.colorMode}
+          entityKey="subjects"
+          onClick={() => handleStartEdit(subject)}
+          disabled={updateMutation.isPending}
+        />
+      ) : null}
+
+      {canDelete ? (
+        <EntitySurfaceHeaderActionButton
+          label="حذف"
+          icon={<Trash2 className="h-3.5 w-3.5" />}
+          tone="delete"
+          colorMode={entitySurface.colorMode}
+          entityKey="subjects"
+          onClick={() => handleDelete(subject)}
+          disabled={deleteMutation.isPending}
+        />
+      ) : null}
+    </div>
+  );
+
+  const contextSubjectQuickActions = contextSubject ? buildSubjectQuickActions(contextSubject) : [];
 
   return (
     <>
@@ -388,7 +449,7 @@ export function SubjectsWorkspace() {
                 <option value="all">كل التصنيفات</option>
                 {CATEGORY_OPTIONS.map((category) => (
                   <option key={category} value={category}>
-                    {categoryLabel(category)}
+                    {getSubjectCategoryLabel(category)}
                   </option>
                 ))}
               </SelectField>
@@ -413,134 +474,128 @@ export function SubjectsWorkspace() {
           </div>
         </FilterDrawer>
 
-        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-          <CardHeader className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>قائمة المواد</CardTitle>
-              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
-            </div>
-            <CardDescription>إدارة المواد مع بحث موحد وفلاتر واضحة للتصنيف والحالة.</CardDescription>
-          </CardHeader>
+        <EntitySurfaceRecords
+          title="قائمة المواد"
+          description="إدارة المواد عبر بطاقات موحدة وتحميل تلقائي عند النزول."
+          total={pagination?.total ?? 0}
+          loaded={subjects.length}
+          isInitialLoading={subjectsQuery.isPending}
+          isFetching={subjectsQuery.isFetching}
+          isFetchingMore={subjectsQuery.isFetchingNextPage}
+          hasMore={subjectsQuery.hasNextPage}
+          error={subjectsQuery.error}
+          emptyTitle="لا توجد مواد مطابقة."
+          onRefresh={() => void subjectsQuery.refetch()}
+          onLoadMore={() => void subjectsQuery.fetchNextPage()}
+        >
+          {subjects.length > 0 ? (
+            <EntitySurfaceGrid
+              viewMode={resolvedViewMode}
+              density={entitySurface.density}
+              richness={entitySurface.richness}
+              colorMode={entitySurface.colorMode}
+              visualStyle={entitySurface.visualStyle}
+              effectsPreset={entitySurface.effectsPreset}
+              shapePreset={entitySurface.shapePreset}
+              entityKey="subjects"
+              inlineActionsMode={entitySurface.inlineActionsMode}
+            >
+              {subjects.map((subject) => {
+                const preview =
+                  subjectsSurface.buildPreview?.(subject) ?? buildSubjectSurfacePreview(subject);
+                const headerActions = renderSubjectHeaderActions(subject);
+                const contextQuickActions = buildSubjectQuickActions(subject);
+                const canOpenContext =
+                  entitySurface.longPressMode !== "disabled" && contextQuickActions.length > 0;
 
-          <CardContent className="space-y-3">
-            {subjectsQuery.isPending ? (
-              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                جارٍ تحميل البيانات...
-              </div>
-            ) : null}
+                if (resolvedViewMode === "dense-row") {
+                    return (
+                      <EntitySurfaceRow
+                        key={subject.id}
+                        title={preview.title}
+                        avatar={preview.avatar}
+                        headerActions={headerActions}
+                        density={entitySurface.density}
+                        richness={entitySurface.richness}
+                      colorMode={entitySurface.colorMode}
+                      visualStyle={entitySurface.visualStyle}
+                      effectsPreset={entitySurface.effectsPreset}
+                      shapePreset={entitySurface.shapePreset}
+                      entityKey="subjects"
+                      inlineActionsMode={entitySurface.inlineActionsMode}
+                      motionPreset={entitySurface.motionPreset}
+                      reducedMotion={entitySurface.reducedMotion}
+                      longPressMode={entitySurface.longPressMode}
+                      avatarMode={entitySurface.avatarMode}
+                      contextOpen={contextSubjectId === subject.id}
+                      onLongPress={() => {
+                        if (!canOpenContext) {
+                          return;
+                        }
+                        setContextSubjectId(subject.id);
+                      }}
+                    />
+                  );
+                }
 
-            {subjectsQuery.error ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                {subjectsQuery.error instanceof Error
-                  ? subjectsQuery.error.message
-                  : "تعذّر تحميل البيانات."}
-              </div>
-            ) : null}
-
-            {!subjectsQuery.isPending && subjects.length === 0 ? (
-              <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                لا توجد مواد مطابقة.
-              </div>
-            ) : null}
-
-            {subjects.map((subject) => (
-              <div
-                key={subject.id}
-                className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="space-y-1">
-                    <p className="font-medium">{subject.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      <code>{subject.code}</code>
-                      {subject.shortName ? ` - ${subject.shortName}` : ""}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge variant={categoryBadgeVariant(subject.category)}>
-                      {categoryLabel(subject.category)}
-                    </Badge>
-                    <Badge variant={subject.isActive ? "default" : "outline"}>
-                      {subject.isActive ? "نشط" : "غير نشط"}
-                    </Badge>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => handleStartEdit(subject)}
-                    disabled={!canUpdate || updateMutation.isPending}
-                  >
-                    <PencilLine className="h-3.5 w-3.5" />
-                    تعديل
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => handleDelete(subject)}
-                    disabled={!canDelete || deleteMutation.isPending}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    حذف
-                  </Button>
-                </div>
-              </div>
-            ))}
-
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-              <p className="text-xs text-muted-foreground">
-                الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-              </p>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={!pagination || pagination.page <= 1 || subjectsQuery.isFetching}
-                >
-                  السابق
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setPage((prev) =>
-                      pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                    )
-                  }
-                  disabled={
-                    !pagination ||
-                    pagination.page >= pagination.totalPages ||
-                    subjectsQuery.isFetching
-                  }
-                >
-                  التالي
-                </Button>
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => void subjectsQuery.refetch()}
-                  disabled={subjectsQuery.isFetching}
-                >
-                  <RefreshCw
-                    className={`h-4 w-4 ${subjectsQuery.isFetching ? "animate-spin" : ""}`}
+                return (
+                  <EntitySurfaceCard
+                    key={subject.id}
+                    title={preview.title}
+                    avatar={preview.avatar}
+                    headerActions={headerActions}
+                    viewMode={resolvedViewMode}
+                    density={entitySurface.density}
+                    richness={entitySurface.richness}
+                    colorMode={entitySurface.colorMode}
+                    visualStyle={entitySurface.visualStyle}
+                    effectsPreset={entitySurface.effectsPreset}
+                    shapePreset={entitySurface.shapePreset}
+                    entityKey="subjects"
+                    inlineActionsMode={entitySurface.inlineActionsMode}
+                    motionPreset={entitySurface.motionPreset}
+                    reducedMotion={entitySurface.reducedMotion}
+                    longPressMode={entitySurface.longPressMode}
+                    avatarMode={entitySurface.avatarMode}
+                    contextOpen={contextSubjectId === subject.id}
+                    onLongPress={() => {
+                      if (!canOpenContext) {
+                        return;
+                      }
+                      setContextSubjectId(subject.id);
+                    }}
                   />
-                  تحديث
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                );
+              })}
+            </EntitySurfaceGrid>
+          ) : null}
+        </EntitySurfaceRecords>
       </div>
+
+      {contextSubject ? (
+        <EntitySurfaceContextMenu
+          open
+          card={{
+            title: contextSubject.name,
+            avatar: buildSubjectSurfacePreview(contextSubject).avatar,
+            viewMode: resolvedViewMode,
+            density: entitySurface.density,
+            richness: entitySurface.richness,
+            colorMode: entitySurface.colorMode,
+            visualStyle: entitySurface.visualStyle,
+            effectsPreset: entitySurface.effectsPreset,
+            shapePreset: entitySurface.shapePreset,
+            entityKey: "subjects",
+            inlineActionsMode: entitySurface.inlineActionsMode,
+            motionPreset: entitySurface.motionPreset,
+            reducedMotion: entitySurface.reducedMotion,
+            longPressMode: entitySurface.longPressMode,
+            avatarMode: entitySurface.avatarMode,
+          }}
+          actions={contextSubjectQuickActions}
+          onClose={() => setContextSubjectId(null)}
+        />
+      ) : null}
 
       <Fab
         icon={<Plus className="h-4 w-4" />}
@@ -603,7 +658,7 @@ export function SubjectsWorkspace() {
                 >
                   {CATEGORY_OPTIONS.map((category) => (
                     <option key={category} value={category}>
-                      {categoryLabel(category)}
+                      {getSubjectCategoryLabel(category)}
                     </option>
                   ))}
                 </SelectField>

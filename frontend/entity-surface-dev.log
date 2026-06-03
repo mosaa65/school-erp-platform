@@ -1,0 +1,216 @@
+
+> frontend@0.1.0 predev
+> node scripts/swc-workaround.cjs
+
+
+> frontend@0.1.0 dev
+> node scripts/run-next.cjs dev -p 3001 -H 0.0.0.0
+
+  ▲ Next.js 14.2.28
+  - Local:        http://localhost:3001
+  - Network:      http://0.0.0.0:3001
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 10.4s
+ ○ Compiling /app/subjects ...
+ ✓ Compiled /app/subjects in 11.1s (1174 modules)
+ GET /app/subjects 200 in 11882ms
+ ✓ Compiled in 830ms (559 modules)
+ ✓ Compiled in 177ms (545 modules)
+ ○ Compiling /auth/login ...
+ ✓ Compiled /auth/login in 3.5s (602 modules)
+ ✓ Compiled in 1260ms (582 modules)
+ GET /favicon.ico 200 in 5333ms
+ ○ Compiling / ...
+ ✓ Compiled / in 558ms (1209 modules)
+ GET / 307 in 813ms
+ GET /auth/login 200 in 128ms
+ ○ Compiling /app ...
+ ✓ Compiled /app in 1206ms (1221 modules)
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 1662ms (1454 modules)
+ ○ Compiling /app/grade-levels ...
+ ✓ Compiled /app/grade-levels in 635ms (1471 modules)
+ GET / 307 in 321ms
+ GET /auth/login 200 in 183ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 1601ms (715 modules)
+ GET /favicon.ico 200 in 2596ms
+ GET /app/subjects 200 in 160ms
+ GET /favicon.ico 200 in 106ms
+ GET /app/subjects 200 in 65ms
+ GET /favicon.ico 200 in 97ms
+ ○ Compiling /app/student-enrollments ...
+ ✓ Compiled /app/students in 5.7s (1569 modules)
+ ○ Compiling /app/students/[studentId] ...
+ ✓ Compiled /app/students/[studentId] in 841ms (1580 modules)
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 1166ms (1582 modules)
+ GET /auth/login 200 in 574ms
+ ✓ Compiled in 1404ms (1539 modules)
+ ✓ Compiled in 903ms (1553 modules)
+ GET /app/subjects 200 in 165ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 531ms (725 modules)
+ GET /favicon.ico 200 in 770ms
+ ✓ Compiled in 1901ms (1585 modules)
+ ✓ Compiled in 1112ms (1571 modules)
+ GET /app/students 200 in 241ms
+ GET /favicon.ico 200 in 163ms
+ ✓ Compiled in 530ms (1571 modules)
+ ✓ Compiled in 470ms (1571 modules)
+ ✓ Compiled in 751ms (1553 modules)
+ ✓ Compiled in 555ms (1539 modules)
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 1284ms (1541 modules)
+ GET /app/students 200 in 199ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 534ms (725 modules)
+ GET /favicon.ico 200 in 841ms
+ ○ Compiling /app ...
+ ✓ Compiled /app in 556ms (700 modules)
+ ○ Compiling /app/student-enrollments ...
+ ✓ Compiled /app/student-enrollments in 688ms (727 modules)
+ ✓ Compiled in 1800ms (1573 modules)
+ ✓ Compiled in 360ms (1555 modules)
+ ✓ Compiled in 817ms (1557 modules)
+ ✓ Compiled in 802ms (1557 modules)
+ ✓ Compiled in 706ms (1557 modules)
+ ✓ Compiled in 331ms (1557 modules)
+ ✓ Compiled in 452ms (1557 modules)
+ ✓ Compiled in 1242ms (1557 modules)
+ ✓ Compiled in 1210ms (1555 modules)
+ ✓ Compiled in 1444ms (1555 modules)
+ ✓ Compiled in 729ms (1555 modules)
+ ○ Compiling /app/profile ...
+ ✓ Compiled /app/profile in 847ms (1589 modules)
+ ○ Compiling /app/profile/appearance ...
+ ✓ Compiled /app/profile/appearance in 557ms (1604 modules)
+ ✓ Compiled /app/profile/advanced in 465ms (1613 modules)
+ ○ Compiling /app/profile/entity-surface ...
+ ✓ Compiled /app/profile/entity-surface in 632ms (1630 modules)
+ ✓ Compiled in 1075ms (1637 modules)
+ ✓ Compiled in 1322ms (1580 modules)
+ ✓ Compiled in 752ms (1580 modules)
+ ✓ Compiled /app/students in 261ms (731 modules)
+ ○ Compiling /app/students/[studentId] ...
+ ✓ Compiled /app/students/[studentId] in 730ms (710 modules)
+ GET /app/students 200 in 170ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 795ms (726 modules)
+ GET /favicon.ico 200 in 1048ms
+ ✓ Compiled in 1416ms (1599 modules)
+ ✓ Compiled in 464ms (1599 modules)
+ ✓ Compiled in 898ms (1599 modules)
+ ✓ Compiled in 713ms (1567 modules)
+ ✓ Compiled in 1089ms (1581 modules)
+ ✓ Compiled in 615ms (1567 modules)
+ ✓ Compiled in 178ms (873 modules)
+ ○ Compiling /app/subjects ...
+ ✓ Compiled /app/subjects in 753ms (707 modules)
+ ✓ Compiled in 1815ms (1585 modules)
+ GET /app/subjects 200 in 321ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 540ms (730 modules)
+ GET /favicon.ico 200 in 795ms
+ ✓ Compiled in 495ms (1603 modules)
+ GET /app/subjects 200 in 350ms
+ GET /favicon.ico 200 in 175ms
+ ✓ Compiled in 459ms (1603 modules)
+ ✓ Compiled in 374ms (1603 modules)
+ ✓ Compiled in 534ms (1603 modules)
+ ✓ Compiled in 664ms (1603 modules)
+ ✓ Compiled in 858ms (1571 modules)
+ ✓ Compiled in 508ms (1571 modules)
+ ✓ Compiled in 1262ms (1571 modules)
+ ✓ Compiled in 1516ms (1571 modules)
+ GET /app/student-enrollments 200 in 298ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 733ms (730 modules)
+ GET /favicon.ico 200 in 1099ms
+ ✓ Compiled in 574ms (1603 modules)
+ ✓ Compiled in 910ms (1603 modules)
+ ✓ Compiled in 472ms (1603 modules)
+ ✓ Compiled in 407ms (1603 modules)
+ ✓ Compiled in 843ms (1571 modules)
+ ✓ Compiled in 424ms (1571 modules)
+ ✓ Compiled in 728ms (1571 modules)
+ ✓ Compiled in 486ms (1571 modules)
+ ✓ Compiled in 374ms (1571 modules)
+ ✓ Compiled in 1106ms (1571 modules)
+ ✓ Compiled in 1121ms (1585 modules)
+ ✓ Compiled in 338ms (1571 modules)
+ ✓ Compiled in 459ms (1571 modules)
+ ✓ Compiled in 1496ms (1585 modules)
+ ✓ Compiled in 740ms (1585 modules)
+ ✓ Compiled in 691ms (1585 modules)
+ ✓ Compiled in 645ms (1571 modules)
+ ✓ Compiled in 444ms (1571 modules)
+ ✓ Compiled in 1352ms (1571 modules)
+ ✓ Compiled in 950ms (1571 modules)
+ ✓ Compiled in 706ms (1571 modules)
+ ✓ Compiled in 469ms (1571 modules)
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 623ms (1574 modules)
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 1081ms
+ ✓ Compiled in 1676ms (1585 modules)
+ ✓ Compiled in 581ms (887 modules)
+ ○ Compiling /app/users ...
+ ✓ Compiled /app/users in 1065ms (1571 modules)
+ ✓ Compiled in 1278ms (882 modules)
+ ✓ Compiled in 1639ms (1594 modules)
+ ✓ Compiled in 980ms (1580 modules)
+ ✓ Compiled in 1504ms (1594 modules)
+ GET /app/users 200 in 140ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 568ms (730 modules)
+ GET /favicon.ico 200 in 824ms
+ ✓ Compiled in 2.6s (1594 modules)
+ ✓ Compiled in 748ms (1594 modules)
+ GET /app/subjects 200 in 156ms
+ ✓ Compiled /favicon.ico in 477ms (730 modules)
+ GET /favicon.ico 200 in 703ms
+ ✓ Compiled in 897ms (1626 modules)
+ GET /app/subjects 200 in 134ms
+ GET /favicon.ico 200 in 109ms
+ ✓ Compiled in 1724ms (1580 modules)
+ ✓ Compiled in 555ms (1580 modules)
+ GET /app/subjects 200 in 279ms
+ ✓ Compiled /favicon.ico in 387ms (730 modules)
+ GET /favicon.ico 200 in 652ms
+ GET /app/subjects 200 in 167ms
+ GET /favicon.ico 200 in 143ms
+ GET /app/subjects 200 in 61ms
+ GET /favicon.ico 200 in 115ms
+ ○ Compiling /auth/login ...
+ ✓ Compiled /auth/login in 1092ms (758 modules)
+ ○ Compiling /app ...
+ ✓ Compiled /app in 589ms (717 modules)
+ ✓ Compiled /app/students in 156ms (726 modules)
+ ✓ Compiled in 819ms (1574 modules)
+ ✓ Compiled in 1475ms (1574 modules)
+ ✓ Compiled in 535ms (1574 modules)
+ ✓ Compiled in 724ms (1574 modules)
+ ○ Compiling /app/students/[studentId] ...
+ ✓ Compiled /app/students/[studentId] in 590ms (699 modules)
+ ✓ Compiled in 1909ms (1565 modules)
+ ✓ Compiled in 832ms (1565 modules)
+ ✓ Compiled in 804ms (1565 modules)
+ GET /app/students 200 in 266ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 762ms (715 modules)
+ GET /favicon.ico 200 in 988ms
+ ✓ Compiled in 683ms (1565 modules)
+ ✓ Compiled in 578ms (1565 modules)
+ ○ Compiling /app/profile ...
+ ✓ Compiled /app/profile in 787ms (702 modules)
+ ✓ Compiled /app/profile/advanced in 262ms (708 modules)
+ ✓ Compiled /app/profile/entity-surface in 386ms (676 modules)
+ ✓ Compiled in 2.1s (1551 modules)
+ ✓ Compiled in 875ms (1565 modules)
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1564ms (1568 modules)
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 1976ms
+ ✓ Compiled in 1209ms (1551 modules)
+ ○ Compiling /_error ...

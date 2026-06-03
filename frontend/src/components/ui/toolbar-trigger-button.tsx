@@ -24,14 +24,18 @@ export function ToolbarTriggerButton({
   type = "button",
   ...props
 }: ToolbarTriggerButtonProps) {
+  const hasLabel = label !== undefined && label !== "";
+
   return (
     <button
       type={type}
       className={cn(
-        "group relative inline-flex h-11 flex-row-reverse items-center gap-2.5 rounded-full border border-[color:var(--app-accent-strong)]/20 bg-[color:var(--app-accent-soft)]/15 p-1 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-[color:var(--app-accent-soft)]/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--app-accent-ring)] focus-visible:ring-offset-2",
-        hideLabelOnMobile
-          ? "w-11 justify-center px-0 sm:w-auto sm:justify-start sm:px-1"
-          : "px-1",
+        "group relative inline-flex h-11 items-center gap-2.5 rounded-full border border-[color:var(--app-accent-strong)]/20 bg-[color:var(--app-accent-soft)]/15 p-1 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-[color:var(--app-accent-soft)]/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--app-accent-ring)] focus-visible:ring-offset-2",
+        hasLabel
+          ? hideLabelOnMobile
+            ? "w-11 justify-center px-0 sm:w-auto sm:justify-start sm:px-1"
+            : "px-1"
+          : "w-11 justify-center px-0",
         className,
       )}
       aria-label={props["aria-label"] ?? label}
@@ -42,7 +46,7 @@ export function ToolbarTriggerButton({
         <div className="h-4.5 w-4.5 flex items-center justify-center text-[color:var(--app-accent-color)] transition-transform group-hover:scale-110">
           {icon}
         </div>
-        
+
         {count > 0 ? (
           <span
             className={cn(
@@ -55,12 +59,16 @@ export function ToolbarTriggerButton({
         ) : null}
       </div>
 
-      <span className={cn(
-        "px-2 text-[13px] font-bold tracking-tight text-[color:var(--app-accent-color)] transition-colors group-hover:brightness-110",
-        hideLabelOnMobile ? "hidden sm:inline" : ""
-      )}>
-        {label}
-      </span>
+      {hasLabel ? (
+        <span
+          className={cn(
+            "px-2 text-[13px] font-bold tracking-tight text-[color:var(--app-accent-color)] transition-colors group-hover:brightness-110",
+            hideLabelOnMobile ? "hidden sm:inline" : "",
+          )}
+        >
+          {label}
+        </span>
+      ) : null}
     </button>
   );
 }

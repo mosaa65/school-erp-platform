@@ -554,6 +554,50 @@ export function AppShell({ children }: AppShellProps) {
     }),
     [activeGroupTheme.accentVars, appearance.preset, isDesktopSidebarHidden, isHubMode, isRailMode, isSidebarOpen],
   );
+
+  React.useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    const root = document.documentElement;
+    const previousMobile = root.style.getPropertyValue("--app-mobile-sidebar-offset");
+    const previousDesktop = root.style.getPropertyValue("--app-desktop-sidebar-offset");
+    const previousFooter = root.style.getPropertyValue("--app-footer-dock-offset");
+
+    root.style.setProperty(
+      "--app-mobile-sidebar-offset",
+      appShellStyle["--app-mobile-sidebar-offset" as string] as string ?? "0px",
+    );
+    root.style.setProperty(
+      "--app-desktop-sidebar-offset",
+      appShellStyle["--app-desktop-sidebar-offset" as string] as string ?? "0px",
+    );
+    root.style.setProperty(
+      "--app-footer-dock-offset",
+      appShellStyle["--app-footer-dock-offset" as string] as string ?? "0px",
+    );
+
+    return () => {
+      if (previousMobile) {
+        root.style.setProperty("--app-mobile-sidebar-offset", previousMobile);
+      } else {
+        root.style.removeProperty("--app-mobile-sidebar-offset");
+      }
+
+      if (previousDesktop) {
+        root.style.setProperty("--app-desktop-sidebar-offset", previousDesktop);
+      } else {
+        root.style.removeProperty("--app-desktop-sidebar-offset");
+      }
+
+      if (previousFooter) {
+        root.style.setProperty("--app-footer-dock-offset", previousFooter);
+      } else {
+        root.style.removeProperty("--app-footer-dock-offset");
+      }
+    };
+  }, [appShellStyle]);
   const navigateTo = React.useCallback(
     (href: string) => {
       persistNavScrollPosition();

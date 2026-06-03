@@ -1,10 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EntitySurfaceAvatar } from "@/presentation/entity-surface/entity-surface-avatar";
-import { EntitySurfaceQuickActions } from "@/presentation/entity-surface/entity-surface-quick-actions";
 import { EntitySurfaceStatusChips } from "@/presentation/entity-surface/entity-surface-status-chips";
 import {
   resolveEntitySurfaceTokens,
@@ -45,8 +43,8 @@ type EntitySurfaceRowProps = {
   reducedMotion?: boolean;
   longPressMode?: EntitySurfaceLongPressMode;
   avatarMode?: "auto" | "fallback-only" | "hidden";
-  detailsAffordance?: boolean;
   contextOpen?: boolean;
+  detailsAffordance?: boolean;
   className?: string;
   onClick?: () => void;
   onLongPress?: () => void;
@@ -59,7 +57,6 @@ export function EntitySurfaceRow({
   avatar,
   headerActions,
   statusChips,
-  quickActions,
   density,
   richness,
   colorMode = "system",
@@ -72,7 +69,6 @@ export function EntitySurfaceRow({
   reducedMotion = false,
   longPressMode = "enabled-with-blur",
   avatarMode = "auto",
-  detailsAffordance = false,
   contextOpen = false,
   className,
   onClick,
@@ -108,6 +104,7 @@ export function EntitySurfaceRow({
     }
 
     longPressTimerRef.current = window.setTimeout(() => {
+      window.navigator.vibrate?.(10);
       onLongPress();
       longPressTimerRef.current = null;
     }, 420);
@@ -127,37 +124,41 @@ export function EntitySurfaceRow({
 
   return (
     <div
-      role={onClick ? "button" : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      onClick={onClick}
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
-      onPointerLeave={handlePointerUp}
-      onPointerCancel={handlePointerUp}
-      onKeyDown={handleKeyDown}
       className={cn(
-        "group w-full text-right",
+        "group relative",
         contextOpen ? tokens.longPressScaleClassName : isPressed ? "scale-[0.995]" : "",
-        contextOpen ? tokens.elevatedContainerClassName : tokens.containerClassName,
-        tokens.paddingClassName,
-        resolveEntitySurfaceTransitionClassName(motionPreset, reducedMotion),
-        className,
       )}
     >
-      <span
+      <div
+        role={onClick ? "button" : undefined}
+        tabIndex={onClick ? 0 : undefined}
+        onClick={onClick}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onKeyDown={handleKeyDown}
         className={cn(
-          "pointer-events-none absolute inset-0 opacity-100",
-          tokens.tintOverlayClassName,
+          "w-full text-right",
+          contextOpen ? tokens.elevatedContainerClassName : tokens.containerClassName,
+          tokens.paddingClassName,
+          resolveEntitySurfaceTransitionClassName(motionPreset, reducedMotion),
+          className,
         )}
-      />
-      <span
-        className={cn(
-          "pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r",
-          tokens.accentStripeClassName,
-        )}
-      />
-      <div className="flex items-center justify-between gap-2.5">
-        <div className="flex min-w-0 flex-1 items-center gap-2.5">
+      >
+        <span
+          className={cn(
+            "pointer-events-none absolute inset-0 opacity-100",
+            tokens.tintOverlayClassName,
+          )}
+        />
+        <span
+          className={cn(
+            "pointer-events-none absolute inset-x-5 top-0 h-px bg-gradient-to-r",
+            tokens.accentStripeClassName,
+          )}
+        />
+        <div className="flex items-center gap-2.5">
           <EntitySurfaceAvatar
             avatar={avatar}
             sizeClassName={tokens.avatarSizeClassName}
@@ -165,30 +166,26 @@ export function EntitySurfaceRow({
             className={tokens.avatarToneClassName}
           />
 
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 space-y-1">
             <div className="flex items-center justify-between gap-2">
-              <p className={cn("truncate", tokens.titleClassName)}>{title}</p>
-              <div className="flex shrink-0 items-center gap-1 px-1.5 sm:px-2">
-                {headerActions}
-                {detailsAffordance ? (
-                  <ChevronLeft className={cn("h-3.5 w-3.5", tokens.mutedTextClassName)} />
+              <div className="min-w-0">
+                <p className={cn("truncate", tokens.titleClassName)}>{title}</p>
+                {subtitle ? (
+                  <p className={cn("mt-0.5 truncate", tokens.subtitleClassName)}>{subtitle}</p>
                 ) : null}
               </div>
+
+              {headerActions ? (
+                <div className="flex shrink-0 items-center gap-1 px-1.5 sm:px-2">
+                  {headerActions}
+                </div>
+              ) : null}
             </div>
-            {subtitle ? <p className={cn("mt-0.5 truncate", tokens.subtitleClassName)}>{subtitle}</p> : null}
-            {meta ? <div className={cn("mt-1 truncate", tokens.fieldTextClassName)}>{meta}</div> : null}
+
+            {meta ? <div className={cn("truncate", tokens.fieldTextClassName)}>{meta}</div> : null}
             <EntitySurfaceStatusChips items={statusChips} className="mt-1.5" />
           </div>
         </div>
-
-        {quickActions && quickActions.length > 0 ? (
-          <EntitySurfaceQuickActions
-            actions={quickActions.slice(0, inlineActionsMode === "minimal" ? 1 : 2)}
-            className={tokens.quickActionsContainerClassName}
-            buttonClassName={tokens.quickActionSizeClassName}
-            compact
-          />
-        ) : null}
       </div>
     </div>
   );

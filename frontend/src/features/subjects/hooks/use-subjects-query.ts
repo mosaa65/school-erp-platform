@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import {
   ApiError,
   apiClient,
@@ -46,6 +46,45 @@ export function useSubjectsQuery(options: UseSubjectsQueryOptions = {}) {
 
         throw error;
       }
+    },
+  });
+}
+
+export function useSubjectsInfiniteQuery(options: Omit<UseSubjectsQueryOptions, "page"> = {}) {
+  const auth = useAuth();
+  const limit = options.limit ?? 12;
+
+  return useInfiniteQuery({
+    queryKey: [
+      "subjects",
+      "infinite-list",
+      limit,
+      options.search ?? "",
+      options.category ?? "all",
+      options.isActive === undefined ? "all" : options.isActive ? "active" : "inactive",
+    ],
+    enabled: auth.isHydrated && auth.isAuthenticated,
+    initialPageParam: 1,
+    queryFn: async ({ pageParam }) => {
+      try {
+        return await apiClient.listSubjects({
+          page: pageParam,
+          limit,
+          search: options.search,
+          category: options.category,
+          isActive: options.isActive,
+        });
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) {
+          auth.signOut();
+        }
+
+        throw error;
+      }
+    },
+    getNextPageParam: (lastPage) => {
+      const { page, totalPages } = lastPage.pagination;
+      return page < totalPages ? page + 1 : undefined;
     },
   });
 }

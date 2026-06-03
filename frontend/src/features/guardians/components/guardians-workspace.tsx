@@ -27,9 +27,10 @@ import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
 import { EntityDetailsShell } from "@/presentation/entity-surface/entity-details-shell";
 import { EntitySurfaceCard } from "@/presentation/entity-surface/entity-surface-card";
+import { EntitySurfaceContextMenu } from "@/presentation/entity-surface/entity-surface-context-menu";
 import { EntitySurfaceGrid } from "@/presentation/entity-surface/entity-surface-grid";
 import { EntitySurfaceHeaderActionButton } from "@/presentation/entity-surface/entity-surface-header-action-button";
-import { EntitySurfaceQuickActions } from "@/presentation/entity-surface/entity-surface-quick-actions";
+import { EntitySurfaceRecords } from "@/presentation/entity-surface/entity-surface-records";
 import { getEntitySurfaceDefinition } from "@/presentation/entity-surface/entity-surface-registry";
 import { EntitySurfaceRow } from "@/presentation/entity-surface/entity-surface-row";
 import type {
@@ -74,7 +75,6 @@ import {
   normalizePhoneValue,
   parseStoredPhoneValue,
 } from "@/lib/intl/phone";
-import { cn } from "@/lib/utils";
 import type {
   GuardianListItem,
   GuardianRelationship,
@@ -946,6 +946,10 @@ export function GuardiansWorkspace() {
     return actions;
   };
 
+  const contextGuardianQuickActions = contextGuardian
+    ? buildGuardianQuickActions(contextGuardian)
+    : [];
+
   const activeFiltersCount = React.useMemo(() => {
     return [genderFilter, idTypeFilter, localityFilter, activeFilter].filter(
       (value) => value !== "all",
@@ -953,8 +957,6 @@ export function GuardiansWorkspace() {
   }, [activeFilter, genderFilter, idTypeFilter, localityFilter]);
   const showGuardianCardDetails =
     canReadDetails && entitySurface.showExtendedDetailsInCards;
-  const usesBlurBackdrop = entitySurface.longPressMode === "enabled-with-blur";
-  const contextGuardianQuickActions = contextGuardian ? buildGuardianQuickActions(contextGuardian) : [];
   const selectedGuardianQuickActions = selectedGuardian
     ? buildGuardianQuickActions(selectedGuardian).filter((action) => action.key !== "details")
     : [];
@@ -1446,13 +1448,21 @@ export function GuardiansWorkspace() {
             </div>
           ) : null}
 
-          {!guardiansQuery.isPending && guardians.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              لا توجد سجلات مطابقة.
-            </div>
-          ) : null}
-
-          {!guardiansQuery.isPending && guardians.length > 0 ? (
+          <EntitySurfaceRecords
+            title="قائمة أولياء الأمور"
+            description="إدارة أولياء الأمور مع الفلترة وحالة الحساب."
+            total={pagination?.total ?? 0}
+            loaded={guardians.length}
+            isInitialLoading={guardiansQuery.isPending}
+            isFetching={guardiansQuery.isFetching}
+            isFetchingMore={guardiansQuery.isFetchingNextPage}
+            hasMore={guardiansQuery.hasNextPage}
+            error={guardiansQuery.error}
+            emptyTitle="لا توجد سجلات مطابقة."
+            emptyDescription="جرّب تغيير الفلاتر أو تحديث الصفحة."
+            onRefresh={() => void guardiansQuery.refetch()}
+            onLoadMore={() => void guardiansQuery.fetchNextPage()}
+          >
             <EntitySurfaceGrid
               viewMode={resolvedViewMode}
               density={entitySurface.density}
@@ -1467,8 +1477,8 @@ export function GuardiansWorkspace() {
               {guardians.map((guardian) => {
                 const preview =
                   guardiansSurface.buildPreview?.(guardian) ?? buildGuardianSurfacePreview(guardian);
-                const contextQuickActions = buildGuardianQuickActions(guardian);
                 const headerActions = renderGuardianHeaderActions(guardian);
+                const contextQuickActions = buildGuardianQuickActions(guardian);
                 const canOpenContext =
                   entitySurface.longPressMode !== "disabled" && contextQuickActions.length > 0;
                 const handleCardClick = canReadDetails
@@ -1544,7 +1554,7 @@ export function GuardiansWorkspace() {
                 );
               })}
             </EntitySurfaceGrid>
-          ) : null}
+            </EntitySurfaceRecords>
 
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
             <p className="text-xs text-muted-foreground">
@@ -1594,30 +1604,28 @@ export function GuardiansWorkspace() {
       </Card>
 
       {contextGuardian ? (
-        <div className="fixed inset-0 z-[85]">
-          <div
-            className={cn(
-              "absolute inset-0",
-              usesBlurBackdrop ? "bg-black/24 backdrop-blur-sm" : "bg-black/18",
-            )}
-            onClick={() => setContextGuardianId(null)}
-          />
-          <div className="absolute inset-x-4 bottom-4 mx-auto max-w-sm">
-            <div className="rounded-[1.6rem] border border-white/70 bg-white/88 p-3 shadow-[0_30px_90px_-36px_rgba(15,23,42,0.45)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/88">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">اختصارات ولي الأمر</p>
-              <p className="mt-1 text-[11px] leading-5 text-slate-500 dark:text-white/55">
-                {contextGuardian.fullName} • {contextGuardian.phonePrimary ?? "بدون هاتف"}
-              </p>
-              {contextGuardianQuickActions.length > 0 ? (
-                <EntitySurfaceQuickActions actions={contextGuardianQuickActions} className="mt-3" />
-              ) : (
-                <p className="mt-3 text-xs text-slate-500 dark:text-white/55">
-                  لا توجد اختصارات متاحة حاليًا.
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
+        <EntitySurfaceContextMenu
+          open
+          card={{
+            title: contextGuardian.fullName,
+            avatar: buildGuardianSurfacePreview(contextGuardian).avatar,
+            viewMode: resolvedViewMode,
+            density: entitySurface.density,
+            richness: entitySurface.richness,
+            colorMode: entitySurface.colorMode,
+            visualStyle: entitySurface.visualStyle,
+            effectsPreset: entitySurface.effectsPreset,
+            shapePreset: entitySurface.shapePreset,
+            entityKey: "students",
+            inlineActionsMode: entitySurface.inlineActionsMode,
+            motionPreset: entitySurface.motionPreset,
+            reducedMotion: entitySurface.reducedMotion,
+            longPressMode: entitySurface.longPressMode,
+            avatarMode: entitySurface.avatarMode,
+          }}
+          actions={contextGuardianQuickActions}
+          onClose={() => setContextGuardianId(null)}
+        />
       ) : null}
 
       {selectedGuardian ? (

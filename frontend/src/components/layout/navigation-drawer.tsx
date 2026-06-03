@@ -16,7 +16,7 @@ import {
 } from "@/components/layout/navigation-filter-control";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SearchField, normalizeArabic } from "@/components/ui/search-field";
 import { useNavigationPreferences } from "@/hooks/use-navigation-preferences";
 import { cn } from "@/lib/utils";
 import type {
@@ -44,7 +44,7 @@ type VisibleNavGroup = AppNavGroup & {
 };
 
 function normalizeText(value: string): string {
-  return value.trim().toLowerCase();
+  return normalizeArabic(value);
 }
 
 function isPathActive(activePath: string, href: string): boolean {
@@ -343,38 +343,24 @@ export function NavigationDrawer({
             {isFocusedSystemMode && selectedGroup ? (
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 size="icon"
                 className="group relative h-11 w-11 shrink-0 rounded-full border border-[color:var(--app-accent-strong)]/60 bg-[color:var(--app-accent-soft)]/25 text-[color:var(--app-accent-color)] shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-[color:var(--app-accent-soft)]/40"
                 onClick={() => setSelectedGroupId(null)}
                 aria-label="الرجوع إلى الأنظمة"
               >
                 <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--app-accent-strong)]/40 bg-black/90 text-[color:var(--app-accent-color)] shadow-inner shadow-white/5 dark:bg-black/60">
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowLeft className="h-4 w-4" />
                 </span>
               </Button>
             ) : null}
             <div className="relative flex-1">
-              <Input
+              <SearchField
                 value={searchValue}
                 onChange={(event) => setSearchValue(event.target.value)}
                 placeholder="ابحث عن نظام أو صفحة..."
-                className={cn(
-                  "rounded-2xl border-border/70 bg-background/75 pr-14 pl-10",
-                  useTightMode ? "h-9 text-xs" : "h-11",
-                )}
+                className={cn(useTightMode ? "h-9 text-xs" : "h-11")}
               />
-              <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              {searchValue ? (
-                <button
-                  type="button"
-                  className="absolute left-2 top-1/2 -translate-y-1/2 rounded-lg p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                  aria-label="مسح البحث"
-                  onClick={() => setSearchValue("")}
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              ) : null}
             </div>
             <NavigationFilterControl
               groups={filterGroups}

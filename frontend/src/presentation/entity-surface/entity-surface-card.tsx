@@ -1,11 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, Info, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EntitySurfaceAvatar } from "@/presentation/entity-surface/entity-surface-avatar";
 import { EntitySurfaceFieldStack } from "@/presentation/entity-surface/entity-surface-field-stack";
-import { EntitySurfaceQuickActions } from "@/presentation/entity-surface/entity-surface-quick-actions";
 import { EntitySurfaceStatusChips } from "@/presentation/entity-surface/entity-surface-status-chips";
 import {
   resolveEntitySurfaceTokens,
@@ -28,7 +26,7 @@ import type {
   EntitySurfaceVisualStyle,
 } from "@/presentation/entity-surface/entity-surface-types";
 
-type EntitySurfaceCardProps = {
+export type EntitySurfaceCardProps = {
   title: React.ReactNode;
   subtitle?: React.ReactNode;
   description?: React.ReactNode;
@@ -65,7 +63,6 @@ export function EntitySurfaceCard({
   headerActions,
   fields,
   statusChips,
-  quickActions,
   viewMode,
   density,
   richness,
@@ -80,7 +77,6 @@ export function EntitySurfaceCard({
   longPressMode = "enabled-with-blur",
   avatarMode = "auto",
   contextOpen = false,
-  detailsAffordance = false,
   className,
   onClick,
   onLongPress,
@@ -120,6 +116,7 @@ export function EntitySurfaceCard({
     }
 
     longPressTimerRef.current = window.setTimeout(() => {
+      window.navigator.vibrate?.(10);
       onLongPress();
       longPressTimerRef.current = null;
     }, 420);
@@ -131,7 +128,6 @@ export function EntitySurfaceCard({
   };
 
   const renderedFields = fields?.slice(0, tokens.maxFields);
-  const showQuickActions = inlineActionsMode !== "minimal" || contextOpen;
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
@@ -176,8 +172,14 @@ export function EntitySurfaceCard({
             tokens.accentStripeClassName,
           )}
         />
-        <div className={cn("flex items-start justify-between", tokens.contentGapClassName)}>
-          <div className={cn("min-w-0 flex-1", tokens.contentGapClassName, viewMode === "smart-card" ? "space-y-3" : "space-y-2.5")}>
+        <div className={cn("flex items-center justify-between", tokens.contentGapClassName)}>
+          <div
+            className={cn(
+              "min-w-0 flex-1",
+              tokens.contentGapClassName,
+              viewMode === "smart-card" ? "space-y-3" : "space-y-2.5",
+            )}
+          >
             <div className={cn("flex items-center", tokens.contentGapClassName)}>
               <EntitySurfaceAvatar
                 avatar={avatar}
@@ -187,25 +189,19 @@ export function EntitySurfaceCard({
               />
 
               <div className="min-w-0 flex-1 space-y-1">
-                <div className="flex items-center justify-between gap-3">
+                <div className={cn("flex items-center justify-between gap-2", tokens.contentGapClassName)}>
                   <div className="min-w-0">
                     <p className={cn("truncate", tokens.titleClassName)}>{title}</p>
                     {subtitle ? (
                       <p className={cn("mt-0.5 truncate", tokens.subtitleClassName)}>{subtitle}</p>
                     ) : null}
                   </div>
-                  <div className="flex shrink-0 items-center gap-1 px-1.5 sm:px-2">
-                    {headerActions}
-                    {detailsAffordance ? (
-                      <span className={cn("inline-flex", tokens.mutedTextClassName)}>
-                        <ChevronLeft className="h-3.5 w-3.5" />
-                      </span>
-                    ) : quickActions && quickActions.length > 0 ? (
-                      <span className={cn("inline-flex", tokens.mutedTextClassName)}>
-                        <MoreHorizontal className="h-3.5 w-3.5" />
-                      </span>
-                    ) : null}
-                  </div>
+
+                  {headerActions ? (
+                    <div className="flex shrink-0 items-center gap-1 px-1.5 sm:px-2">
+                      {headerActions}
+                    </div>
+                  ) : null}
                 </div>
 
                 <EntitySurfaceStatusChips items={statusChips} />
@@ -224,31 +220,7 @@ export function EntitySurfaceCard({
             />
           </div>
         </div>
-
-        {showQuickActions && quickActions && quickActions.length > 0 ? (
-          <EntitySurfaceQuickActions
-            actions={quickActions.slice(0, inlineActionsMode === "minimal" ? 1 : 2)}
-            className={cn("mt-3", tokens.quickActionsContainerClassName)}
-            buttonClassName={tokens.quickActionSizeClassName}
-            compact
-          />
-        ) : null}
-
-        {contextOpen ? (
-          <span
-            className={cn(
-              "pointer-events-none absolute inset-x-4 bottom-0 h-px bg-gradient-to-r",
-              tokens.accentStripeClassName,
-            )}
-          />
-        ) : null}
       </div>
-
-      {contextOpen && quickActions && quickActions.length > 0 ? (
-        <div className="pointer-events-none absolute left-4 top-4 rounded-full border border-white/70 bg-white/70 p-1.5 shadow-sm dark:border-white/10 dark:bg-white/[0.06]">
-          <Info className="h-3.5 w-3.5 text-[color:var(--app-accent-color)]" />
-        </div>
-      ) : null}
     </div>
   );
 }
