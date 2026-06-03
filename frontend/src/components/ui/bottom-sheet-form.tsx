@@ -42,16 +42,68 @@ export function BottomSheetForm({
   contentClassName,
   contentRef,
 }: BottomSheetFormProps) {
+  const pointerIdRef = React.useRef<number | null>(null);
+  const startYRef = React.useRef(0);
+  const [dragOffset, setDragOffset] = React.useState(0);
+  const [isDragging, setIsDragging] = React.useState(false);
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "mouse" && event.button !== 0) {
+      return;
+    }
+
+    pointerIdRef.current = event.pointerId;
+    startYRef.current = event.clientY;
+    setIsDragging(true);
+    setDragOffset(0);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging || pointerIdRef.current !== event.pointerId) {
+      return;
+    }
+
+    const offset = event.clientY - startYRef.current;
+    setDragOffset(offset > 0 ? offset : 0);
+  };
+
+  const finishDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (pointerIdRef.current !== event.pointerId) {
+      return;
+    }
+
+    if (dragOffset > 120) {
+      onClose();
+    } else {
+      setDragOffset(0);
+    }
+
+    setIsDragging(false);
+    pointerIdRef.current = null;
+  };
+
   const content = (
     <div
       className={cn(
         "relative flex w-full flex-col overflow-hidden border border-border/40 bg-background/40 shadow-2xl backdrop-blur-2xl transition-all duration-300",
-        "h-[92dvh] max-h-[92dvh] rounded-t-[32px] rounded-b-none md:h-[min(860px,calc(100vh-2rem))] md:max-w-[520px] md:rounded-[32px] md:border",
+        "h-[calc(92dvh-var(--app-footer-dock-offset,0px))] max-h-[calc(92dvh-var(--app-footer-dock-offset,0px))] rounded-t-[32px] rounded-b-none md:h-[min(860px,calc(100vh-2rem))] md:max-w-[520px] md:rounded-[32px] md:border",
         panelClassName,
       )}
       onClick={(event) => event.stopPropagation()}
+      onPointerMove={handlePointerMove}
+      onPointerUp={finishDrag}
+      onPointerCancel={finishDrag}
+      style={{
+        transform: `translateY(${dragOffset}px)`,
+        transition: isDragging ? "none" : "transform 180ms ease",
+      }}
     >
-      <div className="relative border-b border-border/40 bg-gradient-to-b from-[color:var(--app-accent-soft)]/20 via-background/40 to-background/20 px-5 pb-4 pt-3 backdrop-blur-md md:py-5">
+      <div
+        className="relative border-b border-border/40 bg-gradient-to-b from-[color:var(--app-accent-soft)]/20 via-background/40 to-background/20 px-5 pb-4 pt-3 backdrop-blur-md md:py-5"
+        onPointerDown={handlePointerDown}
+        style={{ touchAction: "pan-y" }}
+      >
         <div className="mb-2.5 flex justify-center md:hidden">
           <div className="h-1.5 w-12 rounded-full bg-border/60" />
         </div>
@@ -118,8 +170,8 @@ export function BottomSheetForm({
   return (
     <Drawer.Root open={open} onOpenChange={(val) => !val && onClose()} shouldScaleBackground={false}>
       <Drawer.Portal>
-        <Drawer.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md" />
-        <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 flex flex-col items-center focus:outline-none">
+        <Drawer.Overlay className="fixed inset-x-0 top-0 bottom-[var(--app-footer-dock-offset,0px)] z-20 bg-black/40 backdrop-blur-md" />
+        <Drawer.Content className="fixed inset-x-0 bottom-[var(--app-footer-dock-offset,0px)] z-50 flex flex-col items-center focus:outline-none">
           {content}
         </Drawer.Content>
       </Drawer.Portal>
