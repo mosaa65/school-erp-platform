@@ -21,8 +21,6 @@ export function FilterTriggerButton({
   className,
   ...props
 }: FilterTriggerButtonProps) {
-  const showLabel = label !== "";
-
   return (
     <ToolbarTriggerButton
       label={label === undefined ? "فلترة" : label}

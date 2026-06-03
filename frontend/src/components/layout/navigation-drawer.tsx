@@ -2,12 +2,10 @@
 
 import * as React from "react";
 import {
-  ArrowRight,
   ArrowLeft,
   ChevronDown,
   Search,
   Sparkles,
-  X,
 } from "lucide-react";
 import type { AppNavGroup } from "@/components/layout/app-navigation";
 import {

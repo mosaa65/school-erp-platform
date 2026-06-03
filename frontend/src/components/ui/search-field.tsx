@@ -34,7 +34,7 @@ export function SearchField({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!isControlled) setInternalValue(e.target.value);
-    props.onChange?.(e as any);
+    props.onChange?.(e);
   };
 
   const handleClear = (e?: React.MouseEvent) => {
@@ -44,13 +44,13 @@ export function SearchField({
       const event = {
         target: { value: "" },
       } as unknown as React.ChangeEvent<HTMLInputElement>;
-      props.onChange?.(event as any);
+      props.onChange?.(event);
     } else {
       setInternalValue("");
       const event = {
         target: { value: "" },
       } as unknown as React.ChangeEvent<HTMLInputElement>;
-      props.onChange?.(event as any);
+      props.onChange?.(event);
     }
     inputRef.current?.focus();
   };
