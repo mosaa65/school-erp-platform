@@ -111,7 +111,7 @@ export function resolveEntitySurfacePaletteClasses(
         : entityKey === "student-enrollments"
           ? "sunset"
           : entityKey === "subjects"
-            ? "berry"
+            ? "emerald"
             : "ocean"
       : colorMode;
 

@@ -16,8 +16,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -100,8 +98,16 @@ export function EntitySurfaceRecords({
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(
     () => new Set(),
   );
+  const loadedCount = typeof loaded === "number" ? loaded : recordIds.length;
+  const hasRemainingByCount =
+    typeof total === "number" && loadedCount < total;
+  const shouldShowMoreState = hasMore || hasRemainingByCount;
   const canLoadMore = Boolean(
-    hasMore && onLoadMore && !isInitialLoading && !isFetching && !isFetchingMore,
+    shouldShowMoreState &&
+      onLoadMore &&
+      !isInitialLoading &&
+      !isFetching &&
+      !isFetchingMore,
   );
   const hasLoadedItems = Boolean(loaded && loaded > 0);
   const selectedCount = selectedIds.size;
@@ -240,9 +246,9 @@ export function EntitySurfaceRecords({
     <EntitySurfaceRecordsSelectionContext.Provider value={selectionContextValue}>
       <section
         className={cn(
-          "relative overflow-visible rounded-[2.15rem] border border-white/75 bg-white/[0.64] p-3 shadow-[0_30px_96px_-48px_rgba(15,23,42,0.5)] backdrop-blur-2xl dark:border-white/10 dark:bg-white/[0.05] sm:p-4",
+          "relative isolate overflow-hidden rounded-[2.5rem] bg-white/[0.64] bg-clip-padding p-3 shadow-[0_30px_96px_-48px_rgba(15,23,42,0.5)] backdrop-blur-2xl dark:bg-white/[0.05] sm:rounded-[2.75rem] sm:p-4",
           isSelectionMode
-            ? "ring-2 ring-[color:var(--app-accent-color)]/20"
+            ? "shadow-[0_30px_96px_-48px_rgba(15,23,42,0.5),0_0_0_2px_color-mix(in_oklab,var(--app-accent-color)_22%,transparent)]"
             : "",
           className,
         )}
@@ -251,6 +257,8 @@ export function EntitySurfaceRecords({
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
       >
+        <span className="pointer-events-none absolute inset-0 rounded-[inherit] border border-[color:var(--app-accent-strong)]/45 dark:border-white/10" />
+        <span className="pointer-events-none absolute inset-[1px] rounded-[calc(2.5rem-1px)] border border-white/35 dark:border-white/[0.04] sm:rounded-[calc(2.75rem-1px)]" />
         <span className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[color:var(--app-accent-color)]/50 to-transparent" />
 
         <div className="relative px-1 py-1">
@@ -299,13 +307,10 @@ export function EntitySurfaceRecords({
                 <DropdownMenuContent
                   align="end"
                   sideOffset={8}
-                  className="w-60 rounded-[1.45rem] border-white/70 bg-white/[0.92] p-2 shadow-[0_24px_70px_-34px_rgba(15,23,42,0.55)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/[0.92]"
+                  className="w-56 overflow-hidden rounded-[1.35rem] border border-white/[0.65] bg-white/[0.88] p-0 text-slate-900 shadow-[0_24px_70px_-34px_rgba(15,23,42,0.55)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/[0.88] dark:text-white"
                 >
-                  <DropdownMenuLabel className="px-3 pb-2 pt-1 text-[11px] font-bold text-slate-500 dark:text-white/50">
-                    خيارات السجلات
-                  </DropdownMenuLabel>
                   <DropdownMenuItem
-                    className="h-11 cursor-pointer justify-between rounded-[1rem] px-3 text-sm font-semibold focus:bg-slate-100/[0.85] dark:focus:bg-white/10"
+                    className="h-12 cursor-pointer justify-between rounded-none border-b border-slate-200/80 bg-transparent px-4 text-right text-sm font-semibold focus:bg-slate-100/[0.85] dark:border-white/10 dark:focus:bg-white/10"
                     disabled={recordIds.length === 0}
                     onClick={enableSelectionMode}
                   >
@@ -315,7 +320,10 @@ export function EntitySurfaceRecords({
                     </span>
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    className="h-11 cursor-pointer justify-between rounded-[1rem] px-3 text-sm font-semibold focus:bg-slate-100/[0.85] dark:focus:bg-white/10"
+                    className={cn(
+                      "h-12 cursor-pointer justify-between rounded-none border-b border-slate-200/80 bg-transparent px-4 text-right text-sm font-semibold focus:bg-slate-100/[0.85] dark:border-white/10 dark:focus:bg-white/10",
+                      selectedCount > 0 ? "" : "border-b-0",
+                    )}
                     disabled={recordIds.length === 0}
                     onClick={selectAllCurrentPage}
                   >
@@ -325,18 +333,15 @@ export function EntitySurfaceRecords({
                     </span>
                   </DropdownMenuItem>
                   {selectedCount > 0 ? (
-                    <>
-                      <DropdownMenuSeparator className="my-2 bg-slate-200/80 dark:bg-white/10" />
-                      <DropdownMenuItem
-                        className="h-11 cursor-pointer justify-between rounded-[1rem] px-3 text-sm font-semibold text-rose-600 focus:bg-rose-500/10 focus:text-rose-700 dark:text-rose-300 dark:focus:text-rose-200"
-                        onClick={clearSelection}
-                      >
-                        <span>إلغاء التحديد</span>
-                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-rose-500/10">
-                          <X className="h-4 w-4" />
-                        </span>
-                      </DropdownMenuItem>
-                    </>
+                    <DropdownMenuItem
+                      className="h-12 cursor-pointer justify-between rounded-none border-b-0 bg-transparent px-4 text-right text-sm font-semibold text-rose-600 focus:bg-rose-500/10 focus:text-rose-700 dark:text-rose-300 dark:focus:text-rose-200"
+                      onClick={clearSelection}
+                    >
+                      <span>إلغاء التحديد</span>
+                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-rose-500/10">
+                        <X className="h-4 w-4" />
+                      </span>
+                    </DropdownMenuItem>
                   ) : null}
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -446,7 +451,7 @@ export function EntitySurfaceRecords({
                       <LoaderCircle className="h-4 w-4 animate-spin" />
                       يتم تحميل المزيد...
                     </span>
-                  ) : hasMore ? (
+                  ) : shouldShowMoreState ? (
                     <span className="rounded-full bg-slate-900/5 px-3 py-2 text-xs text-slate-500 dark:bg-white/5 dark:text-white/55">
                       انزل للنهاية لتحميل المزيد
                     </span>

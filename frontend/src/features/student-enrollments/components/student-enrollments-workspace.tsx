@@ -731,15 +731,20 @@ export function StudentEnrollmentsWorkspace() {
     [enrollmentStatusOptions],
   );
   const pagination = enrollmentsQuery.data?.pagination;
-  const hasMoreEnrollments = Boolean(pagination && pagination.page < pagination.totalPages);
+  const totalEnrollmentPages = pagination
+    ? Math.max(pagination.totalPages, Math.ceil(pagination.total / pagination.limit))
+    : 0;
+  const hasMoreEnrollments = Boolean(
+    pagination && (pagination.page < totalEnrollmentPages || enrollments.length < pagination.total),
+  );
   const isFetchingMoreEnrollments = enrollmentsQuery.isFetching && !enrollmentsQuery.isPending;
   const loadMoreEnrollments = React.useCallback(() => {
     if (!pagination || enrollmentsQuery.isFetching) {
       return;
     }
 
-    setPage((prev) => Math.min(prev + 1, pagination.totalPages));
-  }, [enrollmentsQuery.isFetching, pagination]);
+    setPage((prev) => Math.min(prev + 1, totalEnrollmentPages));
+  }, [enrollmentsQuery.isFetching, pagination, totalEnrollmentPages]);
   const selectedEnrollment = React.useMemo(
     () => enrollments.find((enrollment) => enrollment.id === selectedEnrollmentId) ?? null,
     [enrollments, selectedEnrollmentId],

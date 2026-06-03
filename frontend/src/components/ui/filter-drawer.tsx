@@ -125,8 +125,8 @@ export function FilterDrawer({
   return (
     <Drawer.Root open={open} onOpenChange={(val) => !val && onClose()} shouldScaleBackground={false}>
       <Drawer.Portal>
-        <Drawer.Overlay className="fixed inset-x-0 top-0 bottom-[var(--app-footer-dock-offset,0px)] z-20 bg-black/40 backdrop-blur-md" />
-        <Drawer.Content className="fixed inset-x-0 bottom-[var(--app-footer-dock-offset,0px)] z-50 flex flex-col focus:outline-none">
+        <Drawer.Overlay className="fixed inset-0 z-20 bg-black/40 backdrop-blur-md" />
+        <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 flex flex-col focus:outline-none">
           {drawerContent}
         </Drawer.Content>
       </Drawer.Portal>

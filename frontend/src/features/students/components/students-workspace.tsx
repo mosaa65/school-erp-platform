@@ -447,15 +447,20 @@ export function StudentsWorkspace() {
     [orphanStatusOptions],
   );
   const pagination = studentsQuery.data?.pagination;
-  const hasMoreStudents = Boolean(pagination && pagination.page < pagination.totalPages);
+  const totalStudentPages = pagination
+    ? Math.max(pagination.totalPages, Math.ceil(pagination.total / pagination.limit))
+    : 0;
+  const hasMoreStudents = Boolean(
+    pagination && (pagination.page < totalStudentPages || students.length < pagination.total),
+  );
   const isFetchingMoreStudents = studentsQuery.isFetching && !studentsQuery.isPending;
   const loadMoreStudents = React.useCallback(() => {
     if (!pagination || studentsQuery.isFetching) {
       return;
     }
 
-    setPage((prev) => Math.min(prev + 1, pagination.totalPages));
-  }, [pagination, studentsQuery.isFetching]);
+    setPage((prev) => Math.min(prev + 1, totalStudentPages));
+  }, [pagination, studentsQuery.isFetching, totalStudentPages]);
   const isEditing = editingStudentId !== null;
   const selectedStudent = React.useMemo(
     () => students.find((student) => student.id === selectedStudentId) ?? null,

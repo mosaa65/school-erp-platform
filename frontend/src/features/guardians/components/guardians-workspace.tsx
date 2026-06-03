@@ -443,15 +443,20 @@ export function GuardiansWorkspace() {
     [formState.localityId, geographyMaps],
   );
   const pagination = guardiansQuery.data?.pagination;
-  const hasMoreGuardians = Boolean(pagination && pagination.page < pagination.totalPages);
+  const totalGuardianPages = pagination
+    ? Math.max(pagination.totalPages, Math.ceil(pagination.total / pagination.limit))
+    : 0;
+  const hasMoreGuardians = Boolean(
+    pagination && (pagination.page < totalGuardianPages || guardians.length < pagination.total),
+  );
   const isFetchingMoreGuardians = guardiansQuery.isFetching && !guardiansQuery.isPending;
   const loadMoreGuardians = React.useCallback(() => {
     if (!pagination || guardiansQuery.isFetching) {
       return;
     }
 
-    setPage((prev) => Math.min(prev + 1, pagination.totalPages));
-  }, [guardiansQuery.isFetching, pagination]);
+    setPage((prev) => Math.min(prev + 1, totalGuardianPages));
+  }, [guardiansQuery.isFetching, pagination, totalGuardianPages]);
   const selectedGuardian = React.useMemo(
     () => guardians.find((guardian) => guardian.id === selectedGuardianId) ?? null,
     [guardians, selectedGuardianId],
