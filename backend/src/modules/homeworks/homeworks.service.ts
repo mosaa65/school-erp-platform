@@ -8,6 +8,7 @@ import { AuditStatus, Homework, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { DataScopeService } from '../data-scope/data-scope.service';
+import { ParentNotificationsService } from '../parent-notifications/parent-notifications.service';
 import { CreateHomeworkDto } from './dto/create-homework.dto';
 import { ListHomeworksDto } from './dto/list-homeworks.dto';
 import { UpdateHomeworkDto } from './dto/update-homework.dto';
@@ -141,6 +142,7 @@ export class HomeworksService {
     private readonly prisma: PrismaService,
     private readonly auditLogsService: AuditLogsService,
     private readonly dataScopeService: DataScopeService,
+    private readonly parentNotificationsService: ParentNotificationsService,
   ) {}
 
   async create(payload: CreateHomeworkDto, actorUserId: string) {
