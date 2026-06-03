@@ -419,6 +419,11 @@ export function GuardiansWorkspace() {
     [formState.localityId, geographyMaps],
   );
   const pagination = guardiansQuery.data?.pagination;
+  const hasMoreGuardians = Boolean(pagination && pagination.page < pagination.totalPages);
+  const isFetchingMoreGuardians = guardiansQuery.isFetching && !guardiansQuery.isPending;
+  const loadMoreGuardians = React.useCallback(() => {
+    setPage((prev) => (pagination ? Math.min(prev + 1, pagination.totalPages) : prev));
+  }, [pagination]);
   const selectedGuardian = React.useMemo(
     () => guardians.find((guardian) => guardian.id === selectedGuardianId) ?? null,
     [guardians, selectedGuardianId],
@@ -1455,13 +1460,13 @@ export function GuardiansWorkspace() {
             loaded={guardians.length}
             isInitialLoading={guardiansQuery.isPending}
             isFetching={guardiansQuery.isFetching}
-            isFetchingMore={guardiansQuery.isFetchingNextPage}
-            hasMore={guardiansQuery.hasNextPage}
+            isFetchingMore={isFetchingMoreGuardians}
+            hasMore={hasMoreGuardians}
             error={guardiansQuery.error}
             emptyTitle="لا توجد سجلات مطابقة."
             emptyDescription="جرّب تغيير الفلاتر أو تحديث الصفحة."
             onRefresh={() => void guardiansQuery.refetch()}
-            onLoadMore={() => void guardiansQuery.fetchNextPage()}
+            onLoadMore={loadMoreGuardians}
           >
             <EntitySurfaceGrid
               viewMode={resolvedViewMode}

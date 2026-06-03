@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AuditStatus, FinancialCategoryType, Prisma } from '@prisma/client';
+import { AuditStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogsService } from '../../audit-logs/audit-logs.service';
 import { CreateFinancialCategoryDto } from './dto/create-financial-category.dto';
@@ -47,7 +47,9 @@ export class FinancialCategoriesService {
     if (payload.parentId) {
       const parent = await this.ensureCategoryExists(payload.parentId);
       if (parent.categoryType !== payload.categoryType) {
-        throw new BadRequestException('Parent category type must match category type');
+        throw new BadRequestException(
+          'Parent category type must match category type',
+        );
       }
     }
 
@@ -72,7 +74,10 @@ export class FinancialCategoriesService {
         action: 'FINANCIAL_CATEGORY_CREATE',
         resource: 'financial-categories',
         resourceId: String(category.id),
-        details: { nameAr: category.nameAr, categoryType: category.categoryType },
+        details: {
+          nameAr: category.nameAr,
+          categoryType: category.categoryType,
+        },
       });
 
       return category;
@@ -97,11 +102,7 @@ export class FinancialCategoriesService {
       categoryType: query.categoryType,
       parentId: query.parentId,
       coaAccountId: query.coaAccountId,
-      OR: query.search
-        ? [
-            { nameAr: { contains: query.search } },
-          ]
-        : undefined,
+      OR: query.search ? [{ nameAr: { contains: query.search } }] : undefined,
     };
 
     const [total, items] = await this.prisma.$transaction([
@@ -139,11 +140,17 @@ export class FinancialCategoriesService {
     return category;
   }
 
-  async update(id: number, payload: UpdateFinancialCategoryDto, actorUserId: string) {
+  async update(
+    id: number,
+    payload: UpdateFinancialCategoryDto,
+    actorUserId: string,
+  ) {
     const existing = await this.ensureCategoryExists(id);
 
     if (payload.parentId && payload.parentId === id) {
-      throw new BadRequestException('Parent category cannot be the same category');
+      throw new BadRequestException(
+        'Parent category cannot be the same category',
+      );
     }
 
     const targetCategoryType = payload.categoryType ?? existing.categoryType;
@@ -152,7 +159,9 @@ export class FinancialCategoriesService {
     if (targetParentId) {
       const parent = await this.ensureCategoryExists(targetParentId);
       if (parent.categoryType !== targetCategoryType) {
-        throw new BadRequestException('Parent category type must match category type');
+        throw new BadRequestException(
+          'Parent category type must match category type',
+        );
       }
     }
 

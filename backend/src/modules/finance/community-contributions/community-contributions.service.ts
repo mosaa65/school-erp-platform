@@ -295,7 +295,9 @@ export class CommunityContributionsService {
           semesterId: payload.semesterId,
           monthId: payload.monthId,
           weekId: payload.weekId,
-          paymentDate: payload.paymentDate ? new Date(payload.paymentDate) : undefined,
+          paymentDate: payload.paymentDate
+            ? new Date(payload.paymentDate)
+            : undefined,
           paymentDateHijri: payload.paymentDateHijri?.trim(),
           requiredAmountId: payload.requiredAmountId,
           receivedAmount: payload.receivedAmount,
@@ -356,7 +358,10 @@ export class CommunityContributionsService {
     }
   }
 
-  private async ensureContributionUnique(enrollmentId: string, monthId: string) {
+  private async ensureContributionUnique(
+    enrollmentId: string,
+    monthId: string,
+  ) {
     const existing = await this.prisma.communityContribution.findFirst({
       where: {
         enrollmentId,
@@ -398,7 +403,10 @@ export class CommunityContributionsService {
   ) {
     const bridgeContext = await this.resolveAutoBridgeContext(payload);
 
-    if (bridgeContext.collectibleAmount <= 0 && bridgeContext.receivedAmount > 0) {
+    if (
+      bridgeContext.collectibleAmount <= 0 &&
+      bridgeContext.receivedAmount > 0
+    ) {
       throw new BadRequestException(
         'Cannot auto-bridge a positive receivedAmount when net contribution due is zero',
       );
@@ -425,7 +433,8 @@ export class CommunityContributionsService {
         dueDate: payload.paymentDate,
         currencyId: bridgeContext.currencyId ?? undefined,
         status: InvoiceStatus.ISSUED,
-        notes: payload.notes?.trim() ?? 'Auto-bridged from community contribution',
+        notes:
+          payload.notes?.trim() ?? 'Auto-bridged from community contribution',
         lines: [
           {
             feeType: FeeType.OTHER,
@@ -441,7 +450,8 @@ export class CommunityContributionsService {
             installmentNumber: 1,
             dueDate: payload.paymentDate,
             amount: bridgeContext.collectibleAmount,
-            notes: 'Auto-generated installment for community contribution bridge',
+            notes:
+              'Auto-generated installment for community contribution bridge',
           },
         ],
       },
@@ -467,7 +477,8 @@ export class CommunityContributionsService {
           receiptNumber: payload.receiptNumber?.trim(),
           payerName: payload.payerName?.trim(),
           notes:
-            payload.notes?.trim() ?? 'Auto-reconciled community contribution payment',
+            payload.notes?.trim() ??
+            'Auto-reconciled community contribution payment',
         },
         actorUserId,
       );
@@ -540,11 +551,15 @@ export class CommunityContributionsService {
       ]);
 
     if (!requiredAmount) {
-      throw new NotFoundException('Contribution amount configuration not found');
+      throw new NotFoundException(
+        'Contribution amount configuration not found',
+      );
     }
 
     if (!academicMonth) {
-      throw new NotFoundException('Academic month not found for the provided term/year');
+      throw new NotFoundException(
+        'Academic month not found for the provided term/year',
+      );
     }
 
     const fallbackRevenueAccount = await this.prisma.chartOfAccount.findFirst({

@@ -13,9 +13,7 @@ import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import type { AuthUser } from '../../../common/interfaces/auth-user.interface';
 import { ProcurementIntegrationsService } from './procurement-integrations.service';
 import { DepreciationJournalDto } from './dto/depreciation-journal.dto';
-import {
-  InventoryAdjustmentJournalDto,
-} from './dto/inventory-adjustment-journal.dto';
+import { InventoryAdjustmentJournalDto } from './dto/inventory-adjustment-journal.dto';
 import { InventoryAdjustmentJournalResponseDto } from './dto/inventory-adjustment-journal-response.dto';
 import { ProcurementPaymentJournalDto } from './dto/procurement-payment-journal.dto';
 import { ProcurementVendorBalanceResponseDto } from './dto/procurement-vendor-balance.dto';

@@ -109,7 +109,9 @@ describe('Finance HR Integrations (e2e)', () => {
 
     await ensureHrPostingAccounts(context);
     const fiscalYearId = await ensureCurrentFiscalYear(context);
-    createdFiscalYearId = fiscalYearId.created ? fiscalYearId.id : createdFiscalYearId;
+    createdFiscalYearId = fiscalYearId.created
+      ? fiscalYearId.id
+      : createdFiscalYearId;
 
     const now = new Date();
     const month = now.getMonth() + 1;
@@ -155,7 +157,9 @@ describe('Finance HR Integrations (e2e)', () => {
 
     await ensureHrPostingAccounts(context);
     const fiscalYearId = await ensureCurrentFiscalYear(context);
-    createdFiscalYearId = fiscalYearId.created ? fiscalYearId.id : createdFiscalYearId;
+    createdFiscalYearId = fiscalYearId.created
+      ? fiscalYearId.id
+      : createdFiscalYearId;
 
     const employee = await context.prisma.employee.create({
       data: {
@@ -205,7 +209,9 @@ describe('Finance HR Integrations (e2e)', () => {
       .set(authHeader())
       .expect(404);
 
-    expect(notFoundResponse.body.message ?? notFoundResponse.body.error).toBeDefined();
+    expect(
+      notFoundResponse.body.message ?? notFoundResponse.body.error,
+    ).toBeDefined();
 
     await context.prisma.employee.delete({
       where: {

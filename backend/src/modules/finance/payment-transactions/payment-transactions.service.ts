@@ -92,7 +92,10 @@ export class PaymentTransactionsService {
   async create(payload: CreatePaymentTransactionDto, actorUserId: string) {
     const gateway = await this.resolveGateway(payload.gatewayId);
     const invoiceId = this.parseOptionalBigInt(payload.invoiceId, 'invoiceId');
-    const installmentId = this.parseOptionalBigInt(payload.installmentId, 'installmentId');
+    const installmentId = this.parseOptionalBigInt(
+      payload.installmentId,
+      'installmentId',
+    );
 
     const status = payload.status ?? PaymentTransactionStatus.PENDING;
     const paidAt =
@@ -105,12 +108,13 @@ export class PaymentTransactionsService {
           : null;
 
     const referenceDate = paidAt ?? new Date();
-    const transactionNumber = await this.documentSequencesService.reserveNextNumber(
-      DocumentType.PAYMENT,
-      {
-        date: referenceDate,
-      },
-    );
+    const transactionNumber =
+      await this.documentSequencesService.reserveNextNumber(
+        DocumentType.PAYMENT,
+        {
+          date: referenceDate,
+        },
+      );
     const receiptNumber =
       payload.receiptNumber ??
       (status === PaymentTransactionStatus.COMPLETED
@@ -176,15 +180,19 @@ export class PaymentTransactionsService {
   async simulate(payload: SimulatePaymentDto, actorUserId: string) {
     const gateway = await this.resolveGateway(payload.gatewayId);
     const invoiceId = this.parseOptionalBigInt(payload.invoiceId, 'invoiceId');
-    const installmentId = this.parseOptionalBigInt(payload.installmentId, 'installmentId');
+    const installmentId = this.parseOptionalBigInt(
+      payload.installmentId,
+      'installmentId',
+    );
 
     const paidAt = new Date();
-    const transactionNumber = await this.documentSequencesService.reserveNextNumber(
-      DocumentType.PAYMENT,
-      {
-        date: paidAt,
-      },
-    );
+    const transactionNumber =
+      await this.documentSequencesService.reserveNextNumber(
+        DocumentType.PAYMENT,
+        {
+          date: paidAt,
+        },
+      );
     const receiptNumber = await this.documentSequencesService.reserveNextNumber(
       DocumentType.RECEIPT,
       {
@@ -287,159 +295,157 @@ export class PaymentTransactionsService {
     const amount = Number(transaction.amount);
 
     try {
-      const updatedTransaction = await this.prisma.$transaction(
-        async (tx) => {
-          const entryNumber =
-            await this.documentSequencesService.reserveNextNumber(
-              DocumentType.JOURNAL_ENTRY,
-              {
-                tx,
-                fiscalYearId: fiscalYear.id,
-                date: entryDate,
-              },
-            );
-          const journalEntry = await tx.journalEntry.create({
-            data: {
-              entryNumber,
-              entryDate,
+      const updatedTransaction = await this.prisma.$transaction(async (tx) => {
+        const entryNumber =
+          await this.documentSequencesService.reserveNextNumber(
+            DocumentType.JOURNAL_ENTRY,
+            {
+              tx,
               fiscalYearId: fiscalYear.id,
-              fiscalPeriodId: fiscalPeriod?.id,
-              description,
-              referenceType: PAYMENT_REFERENCE_TYPE,
-              referenceId: transaction.id.toString(),
-              status: JournalEntryStatus.POSTED,
-              totalDebit: amount,
-              totalCredit: amount,
-              currencyId: baseCurrency?.id,
-              exchangeRate: 1,
-              createdById: actorUserId,
-              updatedById: actorUserId,
-              approvedById: actorUserId,
-              approvedAt: now,
-              postedById: actorUserId,
-              postedAt: now,
-              lines: {
-                create: [
-                  {
-                    lineNumber: 1,
-                    accountId: debitAccount.id,
-                    description,
-                    debitAmount: amount,
-                    creditAmount: 0,
-                    isActive: true,
-                    createdById: actorUserId,
-                    updatedById: actorUserId,
-                  },
-                  {
-                    lineNumber: 2,
-                    accountId: creditAccount.id,
-                    description,
-                    debitAmount: 0,
-                    creditAmount: amount,
-                    isActive: true,
-                    createdById: actorUserId,
-                    updatedById: actorUserId,
-                  },
-                ],
-              },
+              date: entryDate,
             },
+          );
+        const journalEntry = await tx.journalEntry.create({
+          data: {
+            entryNumber,
+            entryDate,
+            fiscalYearId: fiscalYear.id,
+            fiscalPeriodId: fiscalPeriod?.id,
+            description,
+            referenceType: PAYMENT_REFERENCE_TYPE,
+            referenceId: transaction.id.toString(),
+            status: JournalEntryStatus.POSTED,
+            totalDebit: amount,
+            totalCredit: amount,
+            currencyId: baseCurrency?.id,
+            exchangeRate: 1,
+            createdById: actorUserId,
+            updatedById: actorUserId,
+            approvedById: actorUserId,
+            approvedAt: now,
+            postedById: actorUserId,
+            postedAt: now,
+            lines: {
+              create: [
+                {
+                  lineNumber: 1,
+                  accountId: debitAccount.id,
+                  description,
+                  debitAmount: amount,
+                  creditAmount: 0,
+                  isActive: true,
+                  createdById: actorUserId,
+                  updatedById: actorUserId,
+                },
+                {
+                  lineNumber: 2,
+                  accountId: creditAccount.id,
+                  description,
+                  debitAmount: 0,
+                  creditAmount: amount,
+                  isActive: true,
+                  createdById: actorUserId,
+                  updatedById: actorUserId,
+                },
+              ],
+            },
+          },
+        });
+
+        await tx.chartOfAccount.update({
+          where: { id: debitAccount.id },
+          data: {
+            currentBalance: {
+              increment: amount,
+            },
+          },
+        });
+
+        await tx.chartOfAccount.update({
+          where: { id: creditAccount.id },
+          data: {
+            currentBalance: {
+              increment: -amount,
+            },
+          },
+        });
+
+        const updateResult = await tx.paymentTransaction.updateMany({
+          where: {
+            id: transaction.id,
+            journalEntryId: null,
+          },
+          data: {
+            journalEntryId: journalEntry.id,
+          },
+        });
+
+        if (updateResult.count === 0) {
+          throw new BadRequestException(
+            'Payment transaction already reconciled',
+          );
+        }
+
+        // تحديث القسط إن وُجد
+        if (transaction.installmentId) {
+          const installment = await tx.invoiceInstallment.findFirst({
+            where: { id: transaction.installmentId },
+            select: { id: true, amount: true, paidAmount: true },
           });
 
-          await tx.chartOfAccount.update({
-            where: { id: debitAccount.id },
-            data: {
-              currentBalance: {
-                increment: amount,
-              },
-            },
-          });
+          if (installment) {
+            const newPaidAmount = Number(installment.paidAmount) + amount;
+            const installmentTotal = Number(installment.amount);
+            const installmentStatus =
+              newPaidAmount >= installmentTotal
+                ? 'PAID'
+                : newPaidAmount > 0
+                  ? 'PARTIAL'
+                  : 'PENDING';
 
-          await tx.chartOfAccount.update({
-            where: { id: creditAccount.id },
-            data: {
-              currentBalance: {
-                increment: -amount,
-              },
-            },
-          });
-
-          const updateResult = await tx.paymentTransaction.updateMany({
-            where: {
-              id: transaction.id,
-              journalEntryId: null,
-            },
-            data: {
-              journalEntryId: journalEntry.id,
-            },
-          });
-
-          if (updateResult.count === 0) {
-            throw new BadRequestException(
-              'Payment transaction already reconciled',
-            );
-          }
-
-          // تحديث القسط إن وُجد
-          if (transaction.installmentId) {
-            const installment = await tx.invoiceInstallment.findFirst({
+            await tx.invoiceInstallment.update({
               where: { id: transaction.installmentId },
-              select: { id: true, amount: true, paidAmount: true },
+              data: {
+                paidAmount: newPaidAmount,
+                paymentDate: new Date(),
+                status: installmentStatus as any,
+              },
             });
-
-            if (installment) {
-              const newPaidAmount = Number(installment.paidAmount) + amount;
-              const installmentTotal = Number(installment.amount);
-              const installmentStatus =
-                newPaidAmount >= installmentTotal
-                  ? 'PAID'
-                  : newPaidAmount > 0
-                    ? 'PARTIAL'
-                    : 'PENDING';
-
-              await tx.invoiceInstallment.update({
-                where: { id: transaction.installmentId },
-                data: {
-                  paidAmount: newPaidAmount,
-                  paymentDate: new Date(),
-                  status: installmentStatus as any,
-                },
-              });
-            }
           }
+        }
 
-          // تحديث الفاتورة إن وُجدت
-          if (transaction.invoiceId) {
-            const invoice = await tx.studentInvoice.findFirst({
-              where: { id: transaction.invoiceId },
-              select: { id: true, totalAmount: true, paidAmount: true },
-            });
-
-            if (invoice) {
-              const newPaidAmount = Number(invoice.paidAmount) + amount;
-              const invoiceTotal = Number(invoice.totalAmount);
-              const invoiceStatus =
-                newPaidAmount >= invoiceTotal
-                  ? 'PAID'
-                  : newPaidAmount > 0
-                    ? 'PARTIAL'
-                    : 'ISSUED';
-
-              await tx.studentInvoice.update({
-                where: { id: transaction.invoiceId },
-                data: {
-                  paidAmount: newPaidAmount,
-                  status: invoiceStatus as any,
-                },
-              });
-            }
-          }
-
-          return tx.paymentTransaction.findFirst({
-            where: { id: transaction.id },
-            include: paymentTransactionInclude,
+        // تحديث الفاتورة إن وُجدت
+        if (transaction.invoiceId) {
+          const invoice = await tx.studentInvoice.findFirst({
+            where: { id: transaction.invoiceId },
+            select: { id: true, totalAmount: true, paidAmount: true },
           });
-        },
-      );
+
+          if (invoice) {
+            const newPaidAmount = Number(invoice.paidAmount) + amount;
+            const invoiceTotal = Number(invoice.totalAmount);
+            const invoiceStatus =
+              newPaidAmount >= invoiceTotal
+                ? 'PAID'
+                : newPaidAmount > 0
+                  ? 'PARTIAL'
+                  : 'ISSUED';
+
+            await tx.studentInvoice.update({
+              where: { id: transaction.invoiceId },
+              data: {
+                paidAmount: newPaidAmount,
+                status: invoiceStatus as any,
+              },
+            });
+          }
+        }
+
+        return tx.paymentTransaction.findFirst({
+          where: { id: transaction.id },
+          include: paymentTransactionInclude,
+        });
+      });
 
       if (!updatedTransaction) {
         throw new NotFoundException('Payment transaction not found');
@@ -618,7 +624,8 @@ export class PaymentTransactionsService {
       throw new NotFoundException('Payment transaction not found');
     }
 
-    const receiptNumber = transaction.receiptNumber ?? transaction.transactionNumber;
+    const receiptNumber =
+      transaction.receiptNumber ?? transaction.transactionNumber;
     const issuedAt = transaction.paidAt ?? transaction.createdAt;
 
     return {
@@ -657,9 +664,10 @@ export class PaymentTransactionsService {
     const transactionId = this.parseRequiredBigInt(id, 'id');
     await this.ensureTransactionExists(transactionId);
 
-    const gateway = payload.gatewayId !== undefined
-      ? await this.resolveGateway(payload.gatewayId)
-      : null;
+    const gateway =
+      payload.gatewayId !== undefined
+        ? await this.resolveGateway(payload.gatewayId)
+        : null;
 
     const status = payload.status;
     const paidAt =
@@ -672,7 +680,10 @@ export class PaymentTransactionsService {
           : undefined;
 
     const invoiceId = this.parseOptionalBigInt(payload.invoiceId, 'invoiceId');
-    const installmentId = this.parseOptionalBigInt(payload.installmentId, 'installmentId');
+    const installmentId = this.parseOptionalBigInt(
+      payload.installmentId,
+      'installmentId',
+    );
 
     try {
       const updated = await this.prisma.paymentTransaction.update({
@@ -830,9 +841,7 @@ export class PaymentTransactionsService {
     });
 
     if (!account) {
-      throw new NotFoundException(
-        `Posting account ${accountId} was not found`,
-      );
+      throw new NotFoundException(`Posting account ${accountId} was not found`);
     }
 
     if (account.isHeader) {
@@ -869,7 +878,12 @@ export class PaymentTransactionsService {
   }
 
   private async resolveCreditAccountForTransaction(
-    transaction: Pick<Prisma.PaymentTransactionGetPayload<{ include: typeof paymentTransactionInclude }>, 'invoiceId'>,
+    transaction: Pick<
+      Prisma.PaymentTransactionGetPayload<{
+        include: typeof paymentTransactionInclude;
+      }>,
+      'invoiceId'
+    >,
   ) {
     if (transaction.invoiceId) {
       const groupedAccounts = await this.prisma.invoiceLineItem.groupBy({
@@ -917,22 +931,23 @@ export class PaymentTransactionsService {
   }
 
   private async resolveGateway(gatewayId?: number) {
-    const gateway = gatewayId !== undefined
-      ? await this.prisma.paymentGateway.findFirst({
-          where: {
-            id: gatewayId,
-            isActive: true,
-          },
-        })
-      : await this.prisma.paymentGateway.findFirst({
-          where: {
-            isActive: true,
-            gatewayType: PaymentGatewayType.ONLINE,
-          },
-          orderBy: {
-            id: 'asc',
-          },
-        });
+    const gateway =
+      gatewayId !== undefined
+        ? await this.prisma.paymentGateway.findFirst({
+            where: {
+              id: gatewayId,
+              isActive: true,
+            },
+          })
+        : await this.prisma.paymentGateway.findFirst({
+            where: {
+              isActive: true,
+              gatewayType: PaymentGatewayType.ONLINE,
+            },
+            orderBy: {
+              id: 'asc',
+            },
+          });
 
     if (!gateway) {
       throw new BadRequestException(
@@ -945,15 +960,15 @@ export class PaymentTransactionsService {
     return gateway;
   }
 
-  private async findPostingAccountByName(accountNameEn: string, accountNameAr: string) {
+  private async findPostingAccountByName(
+    accountNameEn: string,
+    accountNameAr: string,
+  ) {
     const account = await this.prisma.chartOfAccount.findFirst({
       where: {
         deletedAt: null,
         isActive: true,
-        OR: [
-          { nameEn: accountNameEn },
-          { nameAr: accountNameAr },
-        ],
+        OR: [{ nameEn: accountNameEn }, { nameAr: accountNameAr }],
       },
       select: {
         id: true,

@@ -3,7 +3,10 @@ import { Type } from 'class-transformer';
 import { IsInt, IsOptional, Max, Min } from 'class-validator';
 
 export class PayrollPreviewQueryDto {
-  @ApiPropertyOptional({ example: 2026, description: 'Year used to resolve payroll preview' })
+  @ApiPropertyOptional({
+    example: 2026,
+    description: 'Year used to resolve payroll preview',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -11,7 +14,10 @@ export class PayrollPreviewQueryDto {
   @Max(2100)
   year?: number;
 
-  @ApiPropertyOptional({ example: 3, description: 'Optional branch to scope payroll preview' })
+  @ApiPropertyOptional({
+    example: 3,
+    description: 'Optional branch to scope payroll preview',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()

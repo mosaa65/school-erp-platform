@@ -247,7 +247,9 @@ export class StudentProblemsService {
     };
   }
 
-  private async ensureStudentProblemExists(id: string): Promise<StudentProblem> {
+  private async ensureStudentProblemExists(
+    id: string,
+  ): Promise<StudentProblem> {
     const studentProblem = await this.prisma.studentProblem.findFirst({
       where: {
         id,
@@ -270,4 +272,3 @@ export class StudentProblemsService {
     return 'Unknown error';
   }
 }
-

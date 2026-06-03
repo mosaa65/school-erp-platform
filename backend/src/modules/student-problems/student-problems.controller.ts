@@ -85,4 +85,3 @@ export class StudentProblemsController {
     return this.studentProblemsService.remove(id, user.userId);
   }
 }
-

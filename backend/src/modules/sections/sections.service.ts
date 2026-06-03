@@ -21,14 +21,17 @@ export class SectionsService {
 
   async create(payload: CreateSectionDto, actorUserId: string) {
     const code =
-      payload.code?.trim().toLowerCase() || generateAutoCode('SEC').toLowerCase();
+      payload.code?.trim().toLowerCase() ||
+      generateAutoCode('SEC').toLowerCase();
     const name = payload.name.trim();
     const roomLabel = payload.roomLabel?.trim() || null;
 
     try {
       await this.ensureGradeLevelExistsAndActive(payload.gradeLevelId);
       const buildingLookupId =
-        payload.buildingLookupId === undefined ? undefined : payload.buildingLookupId;
+        payload.buildingLookupId === undefined
+          ? undefined
+          : payload.buildingLookupId;
 
       if (buildingLookupId !== undefined) {
         await this.ensureBuildingExistsAndActive(buildingLookupId);

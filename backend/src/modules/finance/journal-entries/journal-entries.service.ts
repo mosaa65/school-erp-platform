@@ -21,7 +21,10 @@ import {
   ensurePostingFiscalPeriod,
   findPostingFiscalPeriodForDate,
 } from '../utils/posting-fiscal-period';
-import { CreateJournalEntryDto, JournalEntryLineInputDto } from './dto/create-journal-entry.dto';
+import {
+  CreateJournalEntryDto,
+  JournalEntryLineInputDto,
+} from './dto/create-journal-entry.dto';
 import { ListJournalEntriesDto } from './dto/list-journal-entries.dto';
 import { UpdateJournalEntryDto } from './dto/update-journal-entry.dto';
 
@@ -141,7 +144,10 @@ export class JournalEntriesService {
   ) {}
 
   async create(payload: CreateJournalEntryDto, actorUserId: string) {
-    const description = this.normalizeRequiredText(payload.description, 'description');
+    const description = this.normalizeRequiredText(
+      payload.description,
+      'description',
+    );
     const entryDate = new Date(payload.entryDate);
 
     await this.ensureFiscalYearExists(payload.fiscalYearId);
@@ -191,15 +197,18 @@ export class JournalEntriesService {
       },
     );
     const approvedAt =
-      status === JournalEntryStatus.APPROVED || status === JournalEntryStatus.POSTED
+      status === JournalEntryStatus.APPROVED ||
+      status === JournalEntryStatus.POSTED
         ? new Date()
         : null;
     const approvedById =
-      status === JournalEntryStatus.APPROVED || status === JournalEntryStatus.POSTED
+      status === JournalEntryStatus.APPROVED ||
+      status === JournalEntryStatus.POSTED
         ? actorUserId
         : null;
     const postedAt = status === JournalEntryStatus.POSTED ? new Date() : null;
-    const postedById = status === JournalEntryStatus.POSTED ? actorUserId : null;
+    const postedById =
+      status === JournalEntryStatus.POSTED ? actorUserId : null;
 
     try {
       const entry = await this.prisma.journalEntry.create({
@@ -225,7 +234,11 @@ export class JournalEntriesService {
           postedAt,
           isActive: payload.isActive ?? true,
           lines: {
-            create: this.buildLineCreates(lines, actorUserId, payload.branchId ?? null),
+            create: this.buildLineCreates(
+              lines,
+              actorUserId,
+              payload.branchId ?? null,
+            ),
           },
         },
         include: journalEntryDetailInclude,
@@ -268,12 +281,13 @@ export class JournalEntriesService {
       status: query.status,
       fiscalYearId: query.fiscalYearId,
       fiscalPeriodId: query.fiscalPeriodId,
-      entryDate: query.dateFrom || query.dateTo
-        ? {
-            gte: query.dateFrom ? new Date(query.dateFrom) : undefined,
-            lte: query.dateTo ? new Date(query.dateTo) : undefined,
-          }
-        : undefined,
+      entryDate:
+        query.dateFrom || query.dateTo
+          ? {
+              gte: query.dateFrom ? new Date(query.dateFrom) : undefined,
+              lte: query.dateTo ? new Date(query.dateTo) : undefined,
+            }
+          : undefined,
     };
     const branchWhere = buildHybridBranchClause(query.branchId) as
       | Prisma.JournalEntryWhereInput
@@ -338,7 +352,11 @@ export class JournalEntriesService {
     return entry;
   }
 
-  async update(id: string, payload: UpdateJournalEntryDto, actorUserId: string) {
+  async update(
+    id: string,
+    payload: UpdateJournalEntryDto,
+    actorUserId: string,
+  ) {
     const existing = await this.ensureEntryExists(id);
 
     if (payload.fiscalYearId) {
@@ -365,20 +383,30 @@ export class JournalEntriesService {
         ? undefined
         : this.normalizeRequiredText(payload.description, 'description');
 
-    const entryDate = payload.entryDate ? new Date(payload.entryDate) : undefined;
+    const entryDate = payload.entryDate
+      ? new Date(payload.entryDate)
+      : undefined;
 
     let totals: { totalDebit?: number; totalCredit?: number } = {};
-    let lineCreates: Prisma.JournalEntryLineCreateManyJournalEntryInput[] | undefined;
+    let lineCreates:
+      | Prisma.JournalEntryLineCreateManyJournalEntryInput[]
+      | undefined;
 
     if (payload.lines) {
       const lines = this.normalizeLines(payload.lines);
       const { totalDebit, totalCredit } = this.calculateTotals(lines);
       this.assertBalanced(totalDebit, totalCredit);
       const targetBranchId =
-        payload.branchId === undefined ? existing.branchId ?? null : payload.branchId;
+        payload.branchId === undefined
+          ? (existing.branchId ?? null)
+          : payload.branchId;
       await this.ensureAccountsExist(lines, targetBranchId ?? null);
       totals = { totalDebit, totalCredit };
-      lineCreates = this.buildLineCreates(lines, actorUserId, targetBranchId ?? null);
+      lineCreates = this.buildLineCreates(
+        lines,
+        actorUserId,
+        targetBranchId ?? null,
+      );
     }
 
     const status = payload.status;
@@ -704,13 +732,12 @@ export class JournalEntriesService {
             prefixOverride: 'REV',
           },
         );
-      const reversalFiscalPeriod =
-        await findPostingFiscalPeriodForDate(
-          tx,
-          entry.fiscalYearId,
-          reversalDate,
-          'this reversal entry',
-        );
+      const reversalFiscalPeriod = await findPostingFiscalPeriodForDate(
+        tx,
+        entry.fiscalYearId,
+        reversalDate,
+        'this reversal entry',
+      );
       // عكس أرصدة الحسابات
       for (const line of entry.lines) {
         const debit = Number(line.debitAmount);
@@ -837,7 +864,9 @@ export class JournalEntriesService {
       );
 
       if (period.fiscalYearId !== fiscalYearId) {
-        throw new BadRequestException('Fiscal period does not belong to fiscal year');
+        throw new BadRequestException(
+          'Fiscal period does not belong to fiscal year',
+        );
       }
 
       return period.id;
@@ -865,15 +894,19 @@ export class JournalEntriesService {
 
   private normalizeLines(lines: JournalEntryLineInputDto[]) {
     if (!lines || lines.length === 0) {
-      throw new BadRequestException('Journal entry must include at least one line');
+      throw new BadRequestException(
+        'Journal entry must include at least one line',
+      );
     }
 
     return lines.map((line) => {
       const debitAmount = line.debitAmount ?? 0;
       const creditAmount = line.creditAmount ?? 0;
 
-      if ((debitAmount <= 0 && creditAmount <= 0) ||
-          (debitAmount > 0 && creditAmount > 0)) {
+      if (
+        (debitAmount <= 0 && creditAmount <= 0) ||
+        (debitAmount > 0 && creditAmount > 0)
+      ) {
         throw new BadRequestException(
           'Each line must have either debit or credit amount',
         );
@@ -887,7 +920,9 @@ export class JournalEntriesService {
     });
   }
 
-  private calculateTotals(lines: { debitAmount: number; creditAmount: number }[]) {
+  private calculateTotals(
+    lines: { debitAmount: number; creditAmount: number }[],
+  ) {
     const totalDebit = lines.reduce((sum, line) => sum + line.debitAmount, 0);
     const totalCredit = lines.reduce((sum, line) => sum + line.creditAmount, 0);
 
@@ -899,7 +934,9 @@ export class JournalEntriesService {
 
   private assertBalanced(totalDebit: number, totalCredit: number) {
     if (totalDebit <= 0 || totalCredit <= 0) {
-      throw new BadRequestException('Total debit and credit must be greater than zero');
+      throw new BadRequestException(
+        'Total debit and credit must be greater than zero',
+      );
     }
 
     if (Math.abs(totalDebit - totalCredit) > 0.0001) {
@@ -1022,7 +1059,9 @@ export class JournalEntriesService {
     }
 
     if (fiscalPeriod.fiscalYearId !== fiscalYearId) {
-      throw new BadRequestException('Fiscal period does not belong to fiscal year');
+      throw new BadRequestException(
+        'Fiscal period does not belong to fiscal year',
+      );
     }
   }
 

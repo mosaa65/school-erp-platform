@@ -1,6 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { Prisma, AssessmentType, GradingPolicy, GradingPolicyComponent } from '@prisma/client';
+import {
+  Prisma,
+  AssessmentType,
+  GradingPolicy,
+  GradingPolicyComponent,
+} from '@prisma/client';
 
 export type PolicyResolutionContext = {
   academicYearId: string;
@@ -21,13 +26,19 @@ export type ResolvedPolicy = GradingPolicy & {
 export class PolicyResolverService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async resolvePolicy(context: PolicyResolutionContext): Promise<ResolvedPolicy> {
-    const typeFilters: Array<Partial<Record<keyof Prisma.GradingPolicyWhereInput, any>>> = [];
+  async resolvePolicy(
+    context: PolicyResolutionContext,
+  ): Promise<ResolvedPolicy> {
+    const typeFilters: Array<
+      Partial<Record<keyof Prisma.GradingPolicyWhereInput, any>>
+    > = [];
     if (context.assessmentType) {
       typeFilters.push({ assessmentType: context.assessmentType });
     }
     if (context.assessmentTypeLookupId) {
-      typeFilters.push({ assessmentTypeLookupId: context.assessmentTypeLookupId });
+      typeFilters.push({
+        assessmentTypeLookupId: context.assessmentTypeLookupId,
+      });
     }
 
     const policies = await this.prisma.gradingPolicy.findMany({
@@ -51,7 +62,9 @@ export class PolicyResolverService {
     });
 
     if (policies.length === 0) {
-      throw new NotFoundException('لا توجد سياسة تقييم نشطة لهذا السياق (الصف والمادة والنوع)');
+      throw new NotFoundException(
+        'لا توجد سياسة تقييم نشطة لهذا السياق (الصف والمادة والنوع)',
+      );
     }
 
     // Only allow grade-level policies (no teacher/section overrides).
@@ -63,7 +76,10 @@ export class PolicyResolverService {
       }
 
       // Term match (optional)
-      if (context.academicTermId && policy.academicTermId === context.academicTermId) {
+      if (
+        context.academicTermId &&
+        policy.academicTermId === context.academicTermId
+      ) {
         score += 10;
       } else if (policy.academicTermId) {
         return { policy, score: -1 };
@@ -84,7 +100,9 @@ export class PolicyResolverService {
     const validPolicies = scoredPolicies.filter((p) => p.score > 0);
 
     if (validPolicies.length === 0) {
-      throw new NotFoundException('يوجد سياسات تقييم ولكنها لا تتطابق مع المعلمات الحالية (المعلم/الشعبة/الفصل)');
+      throw new NotFoundException(
+        'يوجد سياسات تقييم ولكنها لا تتطابق مع المعلمات الحالية (المعلم/الشعبة/الفصل)',
+      );
     }
 
     // Sort descending by score

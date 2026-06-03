@@ -204,7 +204,10 @@ export function MonthlyResultsWorkspace({ mode }: MonthlyResultsWorkspaceProps) 
     },
   });
 
-  const teacherAssignments = teacherAssignmentsQuery.data ?? [];
+  const teacherAssignments = React.useMemo(
+    () => teacherAssignmentsQuery.data ?? [],
+    [teacherAssignmentsQuery.data],
+  );
   const hasTeacherScopedAssignments =
     !isPrivilegedUser && teacherAssignments.length > 0;
 

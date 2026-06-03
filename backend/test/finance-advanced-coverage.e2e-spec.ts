@@ -328,12 +328,17 @@ describe('Finance Advanced Coverage (e2e)', () => {
       secondaryFixture,
       125,
     );
-    const sharedEntry = await createAndPostJournalEntry(context, primaryFixture, 75, {
-      branchId: null,
-      debitAccountId: sharedAccounts.debitAccountId,
-      creditAccountId: sharedAccounts.creditAccountId,
-      description: `Shared hybrid journal ${primaryFixture.suffix}`,
-    });
+    const sharedEntry = await createAndPostJournalEntry(
+      context,
+      primaryFixture,
+      75,
+      {
+        branchId: null,
+        debitAccountId: sharedAccounts.debitAccountId,
+        creditAccountId: sharedAccounts.creditAccountId,
+        description: `Shared hybrid journal ${primaryFixture.suffix}`,
+      },
+    );
 
     const [
       allLedgerResponse,

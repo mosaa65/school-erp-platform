@@ -1,5 +1,19 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards, ParseIntPipe } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+  ParseIntPipe,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { RequirePermissions } from '../../../common/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
@@ -25,7 +39,10 @@ export class HrIntegrationsController {
     @Body() payload: PayrollJournalDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.hrIntegrationsService.createPayrollJournal(payload, user.userId);
+    return this.hrIntegrationsService.createPayrollJournal(
+      payload,
+      user.userId,
+    );
   }
 
   @Get('payroll-summary/:month')
@@ -61,7 +78,10 @@ export class HrIntegrationsController {
     @Body() payload: DeductionJournalDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.hrIntegrationsService.createDeductionJournal(payload, user.userId);
+    return this.hrIntegrationsService.createDeductionJournal(
+      payload,
+      user.userId,
+    );
   }
 
   @Get('employee-balance/:id')

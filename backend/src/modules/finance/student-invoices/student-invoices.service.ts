@@ -125,10 +125,13 @@ export class StudentInvoicesService {
     const dueDate = new Date(payload.dueDate);
     const invoiceNumber =
       payload.invoiceNumber?.trim() ||
-      (await this.documentSequencesService.reserveNextNumber(DocumentType.INVOICE, {
-        branchId: payload.branchId ?? null,
-        date: invoiceDate,
-      }));
+      (await this.documentSequencesService.reserveNextNumber(
+        DocumentType.INVOICE,
+        {
+          branchId: payload.branchId ?? null,
+          date: invoiceDate,
+        },
+      ));
 
     if (dueDate < invoiceDate) {
       throw new BadRequestException('dueDate cannot be before invoiceDate');
@@ -241,17 +244,18 @@ export class StudentInvoicesService {
     const branchWhere = buildHybridBranchClause(query.branchId) as
       | Prisma.StudentInvoiceWhereInput
       | undefined;
-    const searchWhere: Prisma.StudentInvoiceWhereInput | undefined = query.search
-      ? {
-          OR: [
-            {
-              invoiceNumber: {
-                contains: query.search,
+    const searchWhere: Prisma.StudentInvoiceWhereInput | undefined =
+      query.search
+        ? {
+            OR: [
+              {
+                invoiceNumber: {
+                  contains: query.search,
+                },
               },
-            },
-          ],
-        }
-      : undefined;
+            ],
+          }
+        : undefined;
     const where = combineWhereClauses<Prisma.StudentInvoiceWhereInput>(
       baseWhere,
       branchWhere,
@@ -304,7 +308,9 @@ export class StudentInvoicesService {
     const invoiceId = this.parseRequiredBigInt(id, 'id');
     await this.ensureInvoiceExists(invoiceId);
 
-    const invoiceDate = payload.invoiceDate ? new Date(payload.invoiceDate) : undefined;
+    const invoiceDate = payload.invoiceDate
+      ? new Date(payload.invoiceDate)
+      : undefined;
     const dueDate = payload.dueDate ? new Date(payload.dueDate) : undefined;
 
     if (invoiceDate && dueDate && dueDate < invoiceDate) {
@@ -416,9 +422,14 @@ export class StudentInvoicesService {
     };
   }
 
-  private calculateTotals(lines: ReturnType<StudentInvoicesService['normalizeLine']>[]) {
+  private calculateTotals(
+    lines: ReturnType<StudentInvoicesService['normalizeLine']>[],
+  ) {
     const subtotal = this.roundMoney(
-      lines.reduce((sum, line) => sum + line.quantity * Number(line.unitPrice), 0),
+      lines.reduce(
+        (sum, line) => sum + line.quantity * Number(line.unitPrice),
+        0,
+      ),
     );
     const discountAmount = this.roundMoney(
       lines.reduce((sum, line) => sum + line.discountAmount, 0),
@@ -467,7 +478,9 @@ export class StudentInvoicesService {
         amount: this.roundMoney(installment.amount),
         installmentNumber: installment.installmentNumber,
         status: InstallmentStatus.PENDING,
-        paymentDate: installment.paymentDate ? new Date(installment.paymentDate) : undefined,
+        paymentDate: installment.paymentDate
+          ? new Date(installment.paymentDate)
+          : undefined,
         lateFee: installment.lateFee ?? 0,
         notes: installment.notes?.trim(),
       };
@@ -478,7 +491,9 @@ export class StudentInvoicesService {
     );
 
     if (Math.abs(sumInstallments - totalAmount) > 0.01) {
-      throw new BadRequestException('Installment total must match invoice total');
+      throw new BadRequestException(
+        'Installment total must match invoice total',
+      );
     }
 
     return normalized;

@@ -10,12 +10,18 @@ export class TransportRevenueReportQueryDto {
   @Min(1)
   branchId?: number;
 
-  @ApiPropertyOptional({ example: '2026-03-01', description: 'Invoice date from' })
+  @ApiPropertyOptional({
+    example: '2026-03-01',
+    description: 'Invoice date from',
+  })
   @IsOptional()
   @IsDateString()
   dateFrom?: string;
 
-  @ApiPropertyOptional({ example: '2026-03-31', description: 'Invoice date to' })
+  @ApiPropertyOptional({
+    example: '2026-03-31',
+    description: 'Invoice date to',
+  })
   @IsOptional()
   @IsDateString()
   dateTo?: string;

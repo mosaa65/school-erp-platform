@@ -107,12 +107,13 @@ export class CurrencyExchangeRatesService {
       isActive: query.isActive,
       fromCurrencyId: query.fromCurrencyId,
       toCurrencyId: query.toCurrencyId,
-      effectiveDate: query.dateFrom || query.dateTo
-        ? {
-            gte: query.dateFrom ? new Date(query.dateFrom) : undefined,
-            lte: query.dateTo ? new Date(query.dateTo) : undefined,
-          }
-        : undefined,
+      effectiveDate:
+        query.dateFrom || query.dateTo
+          ? {
+              gte: query.dateFrom ? new Date(query.dateFrom) : undefined,
+              lte: query.dateTo ? new Date(query.dateTo) : undefined,
+            }
+          : undefined,
     };
 
     const [total, items] = await this.prisma.$transaction([
@@ -262,7 +263,10 @@ export class CurrencyExchangeRatesService {
     return rate;
   }
 
-  private assertDistinctCurrencies(fromCurrencyId: number, toCurrencyId: number) {
+  private assertDistinctCurrencies(
+    fromCurrencyId: number,
+    toCurrencyId: number,
+  ) {
     if (fromCurrencyId === toCurrencyId) {
       throw new BadRequestException('Currencies must be different');
     }

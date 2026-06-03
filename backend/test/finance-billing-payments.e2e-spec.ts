@@ -1,4 +1,8 @@
-import { InvoiceStatus, PaymentMethod, PaymentTransactionStatus } from '@prisma/client';
+import {
+  InvoiceStatus,
+  PaymentMethod,
+  PaymentTransactionStatus,
+} from '@prisma/client';
 import request from 'supertest';
 import {
   bootstrapFinanceE2eContext,
@@ -341,9 +345,13 @@ describe('Finance Billing and Payments (e2e)', () => {
     expect(decimalToNumber(invoiceAfterSettlement.balanceDue)).toBe(0);
     expect(installmentsAfterSettlement).toHaveLength(2);
     expect(installmentsAfterSettlement[0].status).toBe('PAID');
-    expect(decimalToNumber(installmentsAfterSettlement[0].paidAmount)).toBe(575);
+    expect(decimalToNumber(installmentsAfterSettlement[0].paidAmount)).toBe(
+      575,
+    );
     expect(installmentsAfterSettlement[1].status).toBe('PAID');
-    expect(decimalToNumber(installmentsAfterSettlement[1].paidAmount)).toBe(575);
+    expect(decimalToNumber(installmentsAfterSettlement[1].paidAmount)).toBe(
+      575,
+    );
 
     const [statementResponse, familyBalanceResponse] = await Promise.all([
       request(httpServer())
@@ -394,7 +402,9 @@ describe('Finance Billing and Payments (e2e)', () => {
     expect(payment.journalEntryId ?? null).toBeNull();
 
     const completeResponse = await request(httpServer())
-      .post(`/finance/payment-transactions/${payment.id}/complete-and-reconcile`)
+      .post(
+        `/finance/payment-transactions/${payment.id}/complete-and-reconcile`,
+      )
       .set(authHeader())
       .expect(201);
 

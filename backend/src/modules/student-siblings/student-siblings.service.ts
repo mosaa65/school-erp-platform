@@ -4,12 +4,7 @@
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  AuditStatus,
-  Prisma,
-  StudentSibling,
-  StudentSiblingRelationship,
-} from '@prisma/client';
+import { AuditStatus, Prisma, StudentSibling } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { StudentsService } from '../students/students.service';
@@ -269,7 +264,9 @@ export class StudentSiblingsService {
     };
   }
 
-  private async ensureStudentSiblingExists(id: string): Promise<StudentSibling> {
+  private async ensureStudentSiblingExists(
+    id: string,
+  ): Promise<StudentSibling> {
     const studentSibling = await this.prisma.studentSibling.findFirst({
       where: {
         id,
@@ -341,4 +338,3 @@ export class StudentSiblingsService {
     return 'Unknown error';
   }
 }
-

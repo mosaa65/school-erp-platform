@@ -30,7 +30,9 @@ import { StudentInvoicesService } from './student-invoices.service';
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('finance/student-invoices')
 export class StudentInvoicesController {
-  constructor(private readonly studentInvoicesService: StudentInvoicesService) {}
+  constructor(
+    private readonly studentInvoicesService: StudentInvoicesService,
+  ) {}
 
   @Post()
   @RequirePermissions('student-invoices.create')

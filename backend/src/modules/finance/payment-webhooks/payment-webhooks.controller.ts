@@ -9,17 +9,25 @@ import { PaymentWebhookSuccessDto } from './dto/payment-webhook-success.dto';
 @ApiTags('Webhooks - Payment')
 @Controller('webhooks/payment')
 export class PaymentWebhooksController {
-  constructor(private readonly paymentWebhooksService: PaymentWebhooksService) {}
+  constructor(
+    private readonly paymentWebhooksService: PaymentWebhooksService,
+  ) {}
 
   @Post('success')
   @ApiOperation({ summary: 'Payment success webhook' })
-  handleSuccess(@Body() payload: PaymentWebhookSuccessDto, @Req() req: Request) {
+  handleSuccess(
+    @Body() payload: PaymentWebhookSuccessDto,
+    @Req() req: Request,
+  ) {
     return this.paymentWebhooksService.handleSuccess(payload, req);
   }
 
   @Post('failure')
   @ApiOperation({ summary: 'Payment failure webhook' })
-  handleFailure(@Body() payload: PaymentWebhookFailureDto, @Req() req: Request) {
+  handleFailure(
+    @Body() payload: PaymentWebhookFailureDto,
+    @Req() req: Request,
+  ) {
     return this.paymentWebhooksService.handleFailure(payload, req);
   }
 

@@ -1,8 +1,5 @@
-import {
-  Injectable,
-  Logger,
-} from '@nestjs/common';
-import { AuditStatus, Prisma } from '@prisma/client';
+import { Injectable, Logger } from '@nestjs/common';
+import { AuditStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 
@@ -58,18 +55,20 @@ export class GradingNotificationsService {
       });
 
       // Log to console for immediate visibility
-      this.logger.warn(`[GRADING NOTIFICATION] ${payload.type}: ${payload.message}`, {
-        sectionId: payload.sectionId,
-        subjectId: payload.subjectId,
-        academicTermId: payload.academicTermId,
-        academicYearId: payload.academicYearId,
-        affectedStudentsCount: payload.affectedStudentsCount,
-        details: payload.details,
-      });
+      this.logger.warn(
+        `[GRADING NOTIFICATION] ${payload.type}: ${payload.message}`,
+        {
+          sectionId: payload.sectionId,
+          subjectId: payload.subjectId,
+          academicTermId: payload.academicTermId,
+          academicYearId: payload.academicYearId,
+          affectedStudentsCount: payload.affectedStudentsCount,
+          details: payload.details,
+        },
+      );
 
       // TODO: In future, this could send emails, push notifications, or store in database
       // For now, we just log it
-
     } catch (error) {
       this.logger.error('Failed to create grading notification', error);
     }

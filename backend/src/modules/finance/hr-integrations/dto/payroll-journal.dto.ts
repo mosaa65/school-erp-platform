@@ -1,6 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsNumber, IsOptional, Max, MaxLength, Min, MinLength } from 'class-validator';
+import {
+  IsInt,
+  IsNumber,
+  IsOptional,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
 
 export class PayrollJournalDto {
   @ApiProperty({ example: 3, description: 'Month number (1-12)' })
@@ -37,7 +45,10 @@ export class PayrollJournalDto {
   @Min(1)
   branchId?: number;
 
-  @ApiPropertyOptional({ example: 'رواتب شهر مارس 2026', description: 'Description override' })
+  @ApiPropertyOptional({
+    example: 'رواتب شهر مارس 2026',
+    description: 'Description override',
+  })
   @IsOptional()
   @MinLength(2)
   @MaxLength(255)

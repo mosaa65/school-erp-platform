@@ -154,7 +154,9 @@ export class StudentEnrollmentsService {
         payload.academicYearId,
       );
       const providedSectionId = this.normalizeOptionalId(payload.sectionId);
-      const providedGradeLevelId = this.normalizeOptionalId(payload.gradeLevelId);
+      const providedGradeLevelId = this.normalizeOptionalId(
+        payload.gradeLevelId,
+      );
       let resolvedDistributionStatus =
         payload.distributionStatus ??
         (providedSectionId
@@ -171,7 +173,8 @@ export class StudentEnrollmentsService {
 
       if (
         !providedSectionId &&
-        resolvedDistributionStatus !== EnrollmentDistributionStatus.PENDING_DISTRIBUTION
+        resolvedDistributionStatus !==
+          EnrollmentDistributionStatus.PENDING_DISTRIBUTION
       ) {
         throw new BadRequestException(
           'Section-less enrollment must start with pending distribution',
@@ -183,7 +186,8 @@ export class StudentEnrollmentsService {
       let sectionSnapshot: string | null = null;
 
       if (providedSectionId) {
-        const section = await this.ensureSectionExistsAndActive(providedSectionId);
+        const section =
+          await this.ensureSectionExistsAndActive(providedSectionId);
         await this.ensureSectionHasCapacity(
           providedSectionId,
           payload.academicYearId,
@@ -208,9 +212,8 @@ export class StudentEnrollmentsService {
           );
         }
 
-        const gradeLevel = await this.ensureGradeLevelExistsAndActive(
-          providedGradeLevelId,
-        );
+        const gradeLevel =
+          await this.ensureGradeLevelExistsAndActive(providedGradeLevelId);
         resolvedGradeLevelId = gradeLevel.id;
         gradeSnapshot = gradeLevel.name;
       }
@@ -404,21 +407,22 @@ export class StudentEnrollmentsService {
       }
     }
 
-    const fallbackOrderBy: Prisma.StudentEnrollmentOrderByWithRelationInput[] = [
-      {
-        academicYear: {
-          startDate: 'desc',
+    const fallbackOrderBy: Prisma.StudentEnrollmentOrderByWithRelationInput[] =
+      [
+        {
+          academicYear: {
+            startDate: 'desc',
+          },
         },
-      },
-      {
-        student: {
-          fullName: 'asc',
+        {
+          student: {
+            fullName: 'asc',
+          },
         },
-      },
-      {
-        createdAt: 'desc',
-      },
-    ];
+        {
+          createdAt: 'desc',
+        },
+      ];
 
     for (const entry of fallbackOrderBy) {
       this.pushUniqueOrderBy(orderBy, entry);
@@ -437,7 +441,9 @@ export class StudentEnrollmentsService {
     return sortBy
       .split(',')
       .map((value) => value.trim())
-      .filter((value): value is StudentEnrollmentSortBy => validValues.has(value));
+      .filter((value): value is StudentEnrollmentSortBy =>
+        validValues.has(value),
+      );
   }
 
   private parseSortDirectionList(
@@ -454,9 +460,8 @@ export class StudentEnrollmentsService {
     return sortDirection
       .split(',')
       .map((value) => value.trim().toLowerCase())
-      .filter(
-        (value): value is StudentEnrollmentSortDirection =>
-          validValues.has(value),
+      .filter((value): value is StudentEnrollmentSortDirection =>
+        validValues.has(value),
       );
   }
 
@@ -593,75 +598,81 @@ export class StudentEnrollmentsService {
       },
     };
 
-    const [sections, sectionOccupancyRows, pendingCount, assignedCount, pendingEnrollments, assignedEnrollments] =
-      await this.prisma.$transaction([
-        this.prisma.section.findMany({
-          where: {
-            deletedAt: null,
-            isActive: true,
-            gradeLevelId: query.gradeLevelId,
+    const [
+      sections,
+      sectionOccupancyRows,
+      pendingCount,
+      assignedCount,
+      pendingEnrollments,
+      assignedEnrollments,
+    ] = await this.prisma.$transaction([
+      this.prisma.section.findMany({
+        where: {
+          deletedAt: null,
+          isActive: true,
+          gradeLevelId: query.gradeLevelId,
+        },
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          capacity: true,
+        },
+        orderBy: [{ code: 'asc' }, { name: 'asc' }],
+      }),
+      this.prisma.studentEnrollment.findMany({
+        where: {
+          deletedAt: null,
+          isActive: true,
+          academicYearId: query.academicYearId,
+          gradeLevelId: query.gradeLevelId,
+          sectionId: {
+            not: null,
           },
-          select: {
-            id: true,
-            code: true,
-            name: true,
-            capacity: true,
-          },
-          orderBy: [{ code: 'asc' }, { name: 'asc' }],
-        }),
-        this.prisma.studentEnrollment.findMany({
-          where: {
-            deletedAt: null,
-            isActive: true,
-            academicYearId: query.academicYearId,
-            gradeLevelId: query.gradeLevelId,
-            sectionId: {
-              not: null,
+        },
+        select: {
+          sectionId: true,
+        },
+      }),
+      this.prisma.studentEnrollment.count({
+        where: pendingWhere,
+      }),
+      this.prisma.studentEnrollment.count({
+        where: assignedWhere,
+      }),
+      this.prisma.studentEnrollment.findMany({
+        where: pendingWhere,
+        select: distributionBoardEnrollmentSelect,
+        orderBy: [
+          {
+            student: {
+              fullName: 'asc',
             },
           },
-          select: {
-            sectionId: true,
+          {
+            createdAt: 'asc',
           },
-        }),
-        this.prisma.studentEnrollment.count({
-          where: pendingWhere,
-        }),
-        this.prisma.studentEnrollment.count({
-          where: assignedWhere,
-        }),
-        this.prisma.studentEnrollment.findMany({
-          where: pendingWhere,
-          select: distributionBoardEnrollmentSelect,
-          orderBy: [
-            {
-              student: {
-                fullName: 'asc',
-              },
+        ],
+        take: limit,
+      }),
+      this.prisma.studentEnrollment.findMany({
+        where: assignedWhere,
+        select: distributionBoardEnrollmentSelect,
+        orderBy: [
+          {
+            section: {
+              code: 'asc',
             },
-            {
-              createdAt: 'asc',
+          },
+          {
+            student: {
+              fullName: 'asc',
             },
-          ],
-          take: limit,
-        }),
-        this.prisma.studentEnrollment.findMany({
-          where: assignedWhere,
-          select: distributionBoardEnrollmentSelect,
-          orderBy: [
-            {
-              section: {
-                code: 'asc',
-              },
-            },
-            {
-              student: {
-                fullName: 'asc',
-              },
-            },
-          ],
-          take: limit,
-        }),
-      ]);
+          },
+        ],
+        take: limit,
+      }),
+    ]);
 
     const sectionOccupancy = new Map<string, number>();
     for (const row of sectionOccupancyRows) {
@@ -715,82 +726,86 @@ export class StudentEnrollmentsService {
       payload.gradeLevelId,
     );
 
-    const [sections, pendingEnrollments, occupancyRows] = await this.prisma.$transaction([
-      this.prisma.section.findMany({
-        where: {
-          deletedAt: null,
-          isActive: true,
-          gradeLevelId: payload.gradeLevelId,
-          id:
-            requestedSectionIds.length > 0
-              ? {
-                  in: requestedSectionIds,
-                }
-              : undefined,
-        },
-        select: {
-          id: true,
-          code: true,
-          name: true,
-          capacity: true,
-        },
-        orderBy: [{ code: 'asc' }, { name: 'asc' }],
-      }),
-      this.prisma.studentEnrollment.findMany({
-        where: {
-          deletedAt: null,
-          isActive: true,
-          academicYearId: payload.academicYearId,
-          gradeLevelId: payload.gradeLevelId,
-          distributionStatus: EnrollmentDistributionStatus.PENDING_DISTRIBUTION,
-        },
-        select: {
-          id: true,
-          sectionId: true,
-          student: {
-            select: {
-              fullName: true,
-            },
+    const [sections, pendingEnrollments, occupancyRows] =
+      await this.prisma.$transaction([
+        this.prisma.section.findMany({
+          where: {
+            deletedAt: null,
+            isActive: true,
+            gradeLevelId: payload.gradeLevelId,
+            id:
+              requestedSectionIds.length > 0
+                ? {
+                    in: requestedSectionIds,
+                  }
+                : undefined,
           },
-        },
-        orderBy: [
-          {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            capacity: true,
+          },
+          orderBy: [{ code: 'asc' }, { name: 'asc' }],
+        }),
+        this.prisma.studentEnrollment.findMany({
+          where: {
+            deletedAt: null,
+            isActive: true,
+            academicYearId: payload.academicYearId,
+            gradeLevelId: payload.gradeLevelId,
+            distributionStatus:
+              EnrollmentDistributionStatus.PENDING_DISTRIBUTION,
+          },
+          select: {
+            id: true,
+            sectionId: true,
             student: {
-              fullName: 'asc',
+              select: {
+                fullName: true,
+              },
             },
           },
-          {
-            createdAt: 'asc',
+          orderBy: [
+            {
+              student: {
+                fullName: 'asc',
+              },
+            },
+            {
+              createdAt: 'asc',
+            },
+          ],
+          take: limit,
+        }),
+        this.prisma.studentEnrollment.findMany({
+          where: {
+            deletedAt: null,
+            isActive: true,
+            academicYearId: payload.academicYearId,
+            gradeLevelId: payload.gradeLevelId,
+            sectionId:
+              requestedSectionIds.length > 0
+                ? {
+                    in: requestedSectionIds,
+                  }
+                : {
+                    not: null,
+                  },
           },
-        ],
-        take: limit,
-      }),
-      this.prisma.studentEnrollment.findMany({
-        where: {
-          deletedAt: null,
-          isActive: true,
-          academicYearId: payload.academicYearId,
-          gradeLevelId: payload.gradeLevelId,
-          sectionId:
-            requestedSectionIds.length > 0
-              ? {
-                  in: requestedSectionIds,
-                }
-              : {
-                  not: null,
-                },
-        },
-        select: {
-          sectionId: true,
-        },
-      }),
-    ]);
+          select: {
+            sectionId: true,
+          },
+        }),
+      ]);
 
     if (
       requestedSectionIds.length > 0 &&
       sections.length !== requestedSectionIds.length
     ) {
-      throw new BadRequestException('One or more selected sections are invalid');
+      throw new BadRequestException(
+        'One or more selected sections are invalid',
+      );
     }
 
     if (sections.length === 0) {
@@ -815,7 +830,11 @@ export class StudentEnrollmentsService {
     let pointer = 0;
 
     for (const enrollment of pendingEnrollments) {
-      const section = this.pickNextAvailableSection(sections, occupancy, pointer);
+      const section = this.pickNextAvailableSection(
+        sections,
+        occupancy,
+        pointer,
+      );
       if (!section) {
         skippedEnrollmentIds.push(enrollment.id);
         continue;
@@ -827,7 +846,9 @@ export class StudentEnrollmentsService {
         sectionName: section.name,
       });
       occupancy.set(section.id, (occupancy.get(section.id) ?? 0) + 1);
-      pointer = (sections.findIndex((item) => item.id === section.id) + 1) % sections.length;
+      pointer =
+        (sections.findIndex((item) => item.id === section.id) + 1) %
+        sections.length;
     }
 
     if (assignments.length > 0) {
@@ -894,7 +915,9 @@ export class StudentEnrollmentsService {
     );
 
     if (enrollmentIds.length !== assignments.length) {
-      throw new BadRequestException('Duplicate enrollment assignments are not allowed');
+      throw new BadRequestException(
+        'Duplicate enrollment assignments are not allowed',
+      );
     }
 
     await this.ensureAcademicYearExists(payload.academicYearId);
@@ -902,64 +925,71 @@ export class StudentEnrollmentsService {
       payload.gradeLevelId,
     );
 
-    const [sections, enrollments, occupancyRows] = await this.prisma.$transaction([
-      this.prisma.section.findMany({
-        where: {
-          id: {
-            in: sectionIds,
+    const [sections, enrollments, occupancyRows] =
+      await this.prisma.$transaction([
+        this.prisma.section.findMany({
+          where: {
+            id: {
+              in: sectionIds,
+            },
+            deletedAt: null,
+            isActive: true,
+            gradeLevelId: payload.gradeLevelId,
           },
-          deletedAt: null,
-          isActive: true,
-          gradeLevelId: payload.gradeLevelId,
-        },
-        select: {
-          id: true,
-          code: true,
-          name: true,
-          capacity: true,
-        },
-      }),
-      this.prisma.studentEnrollment.findMany({
-        where: {
-          id: {
-            in: enrollmentIds,
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            capacity: true,
           },
-          deletedAt: null,
-          isActive: true,
-          academicYearId: payload.academicYearId,
-          gradeLevelId: payload.gradeLevelId,
-        },
-        select: {
-          id: true,
-          sectionId: true,
-          distributionStatus: true,
-        },
-      }),
-      this.prisma.studentEnrollment.findMany({
-        where: {
-          deletedAt: null,
-          isActive: true,
-          academicYearId: payload.academicYearId,
-          gradeLevelId: payload.gradeLevelId,
-          sectionId: {
-            in: sectionIds,
+        }),
+        this.prisma.studentEnrollment.findMany({
+          where: {
+            id: {
+              in: enrollmentIds,
+            },
+            deletedAt: null,
+            isActive: true,
+            academicYearId: payload.academicYearId,
+            gradeLevelId: payload.gradeLevelId,
           },
-        },
-        select: {
-          sectionId: true,
-        },
-      }),
-    ]);
+          select: {
+            id: true,
+            sectionId: true,
+            distributionStatus: true,
+          },
+        }),
+        this.prisma.studentEnrollment.findMany({
+          where: {
+            deletedAt: null,
+            isActive: true,
+            academicYearId: payload.academicYearId,
+            gradeLevelId: payload.gradeLevelId,
+            sectionId: {
+              in: sectionIds,
+            },
+          },
+          select: {
+            sectionId: true,
+          },
+        }),
+      ]);
 
     if (sections.length !== sectionIds.length) {
-      throw new BadRequestException('One or more selected sections are invalid');
+      throw new BadRequestException(
+        'One or more selected sections are invalid',
+      );
     }
 
     if (enrollments.length !== enrollmentIds.length) {
-      throw new BadRequestException('One or more selected enrollments are invalid');
+      throw new BadRequestException(
+        'One or more selected enrollments are invalid',
+      );
     }
 
-    const sectionMap = new Map(sections.map((section) => [section.id, section]));
+    const sectionMap = new Map(
+      sections.map((section) => [section.id, section]),
+    );
     const enrollmentMap = new Map(
       enrollments.map((enrollment) => [enrollment.id, enrollment]),
     );
@@ -1046,14 +1076,9 @@ export class StudentEnrollmentsService {
     const rawEnrollmentIds = payload.enrollments?.map(
       (item) => item.enrollmentId,
     );
-    const enrollmentIds = this.normalizeEnrollmentIds(
-      rawEnrollmentIds,
-    );
+    const enrollmentIds = this.normalizeEnrollmentIds(rawEnrollmentIds);
 
-    if (
-      rawEnrollmentIds &&
-      enrollmentIds.length !== rawEnrollmentIds.length
-    ) {
+    if (rawEnrollmentIds && enrollmentIds.length !== rawEnrollmentIds.length) {
       throw new BadRequestException(
         'Duplicate enrollment IDs are not allowed in transfer requests',
       );
@@ -1120,7 +1145,10 @@ export class StudentEnrollmentsService {
       ],
     });
 
-    if (enrollmentIds.length > 0 && enrollments.length !== enrollmentIds.length) {
+    if (
+      enrollmentIds.length > 0 &&
+      enrollments.length !== enrollmentIds.length
+    ) {
       throw new BadRequestException(
         'One or more selected enrollments are invalid or do not belong to the source section',
       );
@@ -1255,7 +1283,9 @@ export class StudentEnrollmentsService {
     }
 
     if (enrollments.length === 0) {
-      throw new BadRequestException('No enrollments found to return to pending');
+      throw new BadRequestException(
+        'No enrollments found to return to pending',
+      );
     }
 
     const updated = await this.prisma.$transaction(
@@ -1266,7 +1296,8 @@ export class StudentEnrollmentsService {
           },
           data: {
             sectionId: null,
-            distributionStatus: EnrollmentDistributionStatus.PENDING_DISTRIBUTION,
+            distributionStatus:
+              EnrollmentDistributionStatus.PENDING_DISTRIBUTION,
             gradeLevelId: gradeLevel.id,
             gradeNameSnapshot: gradeLevel.name,
             sectionNameSnapshot: null,
@@ -1317,8 +1348,8 @@ export class StudentEnrollmentsService {
     );
     const sectionWasProvided = payload.sectionId !== undefined;
     const resolvedSectionId = sectionWasProvided
-      ? providedSectionId ?? null
-      : existingSectionId ?? null;
+      ? (providedSectionId ?? null)
+      : (existingSectionId ?? null);
 
     await this.studentsService.ensureStudentExistsAndActive(resolvedStudentId);
     const academicYear = await this.ensureAcademicYearExists(
@@ -1343,12 +1374,15 @@ export class StudentEnrollmentsService {
     }
 
     let resolvedGradeLevelId =
-      providedGradeLevelId ?? this.normalizeOptionalId(existing.gradeLevelId) ?? '';
+      providedGradeLevelId ??
+      this.normalizeOptionalId(existing.gradeLevelId) ??
+      '';
     let gradeSnapshot: string | null = null;
     let sectionSnapshot: string | null = null;
 
     if (resolvedSectionId) {
-      const section = await this.ensureSectionExistsAndActive(resolvedSectionId);
+      const section =
+        await this.ensureSectionExistsAndActive(resolvedSectionId);
       await this.ensureSectionHasCapacity(
         resolvedSectionId,
         resolvedAcademicYearId,
@@ -1383,9 +1417,8 @@ export class StudentEnrollmentsService {
         );
       }
 
-      const gradeLevel = await this.ensureGradeLevelExistsAndActive(
-        resolvedGradeLevelId,
-      );
+      const gradeLevel =
+        await this.ensureGradeLevelExistsAndActive(resolvedGradeLevelId);
       resolvedGradeLevelId = gradeLevel.id;
       gradeSnapshot = gradeLevel.name;
     }
@@ -1684,7 +1717,14 @@ export class StudentEnrollmentsService {
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === 'P2002'
     ) {
-      const target = String(error.meta?.target ?? '');
+      const rawTarget = error.meta?.target;
+      const target = Array.isArray(rawTarget)
+        ? rawTarget.join(',')
+        : typeof rawTarget === 'string'
+          ? rawTarget
+          : rawTarget
+            ? JSON.stringify(rawTarget)
+            : '';
 
       if (target.includes('sen_year_enrollment_no_uq')) {
         throw new ConflictException(

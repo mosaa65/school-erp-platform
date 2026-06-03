@@ -23,4 +23,3 @@ export class CreateStudentTalentDto {
   @IsBoolean()
   isActive?: boolean;
 }
-

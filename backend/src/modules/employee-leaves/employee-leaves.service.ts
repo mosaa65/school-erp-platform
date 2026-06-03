@@ -67,9 +67,14 @@ export class EmployeeLeavesService {
 
   async create(payload: CreateEmployeeLeaveDto, actorUserId: string) {
     try {
-      await this.employeesService.ensureEmployeeExistsAndActive(payload.employeeId);
+      await this.employeesService.ensureEmployeeExistsAndActive(
+        payload.employeeId,
+      );
 
-      const totalDays = this.calculateTotalDays(payload.startDate, payload.endDate);
+      const totalDays = this.calculateTotalDays(
+        payload.startDate,
+        payload.endDate,
+      );
 
       const employeeLeave = await this.prisma.employeeLeaveRequest.create({
         data: {
@@ -216,11 +221,17 @@ export class EmployeeLeavesService {
     this.ensureLeaveRequestIsMutable(existing);
 
     const resolvedEmployeeId = payload.employeeId ?? existing.employeeId;
-    await this.employeesService.ensureEmployeeExistsAndActive(resolvedEmployeeId);
+    await this.employeesService.ensureEmployeeExistsAndActive(
+      resolvedEmployeeId,
+    );
 
-    const resolvedStartDate = payload.startDate ?? existing.startDate.toISOString();
+    const resolvedStartDate =
+      payload.startDate ?? existing.startDate.toISOString();
     const resolvedEndDate = payload.endDate ?? existing.endDate.toISOString();
-    const totalDays = this.calculateTotalDays(resolvedStartDate, resolvedEndDate);
+    const totalDays = this.calculateTotalDays(
+      resolvedStartDate,
+      resolvedEndDate,
+    );
 
     const employeeLeave = await this.prisma.employeeLeaveRequest.update({
       where: {
@@ -562,10 +573,13 @@ export class EmployeeLeavesService {
     }
 
     const millisecondsInDay = 24 * 60 * 60 * 1000;
-    const totalDays = Math.floor((end.getTime() - start.getTime()) / millisecondsInDay) + 1;
+    const totalDays =
+      Math.floor((end.getTime() - start.getTime()) / millisecondsInDay) + 1;
 
     if (totalDays < 1 || totalDays > 365) {
-      throw new BadRequestException('Leave total days must be between 1 and 365');
+      throw new BadRequestException(
+        'Leave total days must be between 1 and 365',
+      );
     }
 
     return totalDays;
@@ -675,7 +689,9 @@ export class EmployeeLeavesService {
   }
 
   private async safelyCreateNotifications(
-    inputs: Array<Parameters<UserNotificationsService['createForUsers']>[0][number]>,
+    inputs: Array<
+      Parameters<UserNotificationsService['createForUsers']>[0][number]
+    >,
     actorUserId: string,
     failureAction: string,
     leaveId: string,

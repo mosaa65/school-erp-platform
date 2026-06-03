@@ -35,7 +35,10 @@ export class AuditTrailService {
     userIp?: string,
     userAgent?: string,
   ) {
-    const tableName = this.normalizeRequiredText(payload.tableName, 'tableName');
+    const tableName = this.normalizeRequiredText(
+      payload.tableName,
+      'tableName',
+    );
     const recordId = this.parseRequiredBigInt(payload.recordId, 'recordId');
 
     try {

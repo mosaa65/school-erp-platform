@@ -46,5 +46,4 @@ export class ListInvoiceInstallmentsDto {
   @IsOptional()
   @IsDateString()
   dueDateTo?: string;
-
 }

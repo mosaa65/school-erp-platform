@@ -14,7 +14,13 @@ import {
 } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { compare as compareBcrypt } from 'bcrypt';
-import { createHash, randomBytes, randomInt, randomUUID, timingSafeEqual } from 'crypto';
+import {
+  createHash,
+  randomBytes,
+  randomInt,
+  randomUUID,
+  timingSafeEqual,
+} from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import {
   parsePhoneNumberFromString,
@@ -373,7 +379,9 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    if (user.activationStatus === UserActivationStatus.PENDING_INITIAL_PASSWORD) {
+    if (
+      user.activationStatus === UserActivationStatus.PENDING_INITIAL_PASSWORD
+    ) {
       if (
         user.initialPasswordExpiresAt &&
         user.initialPasswordExpiresAt.getTime() <= Date.now()
@@ -390,9 +398,8 @@ export class AuthService {
         loginId: loginIdentifier.normalized,
         activationStatus: UserActivationStatus.PENDING_INITIAL_PASSWORD,
         initialPasswordExpiresAt: user.initialPasswordExpiresAt,
-        requiresApproval: await this.requiresAdminApprovalForInitialActivation(
-          user,
-        ),
+        requiresApproval:
+          await this.requiresAdminApprovalForInitialActivation(user),
       };
     }
 
@@ -471,7 +478,10 @@ export class AuthService {
       where: {
         ...(normalizedLoginId.includes('@')
           ? { email: normalizedLoginId.toLowerCase() }
-          : { phoneE164: this.normalizePhoneToE164(normalizedLoginId) ?? '__none__' }),
+          : {
+              phoneE164:
+                this.normalizePhoneToE164(normalizedLoginId) ?? '__none__',
+            }),
         deletedAt: null,
       },
       select: {
@@ -488,7 +498,9 @@ export class AuthService {
       };
     }
 
-    if (user.activationStatus === UserActivationStatus.PENDING_INITIAL_PASSWORD) {
+    if (
+      user.activationStatus === UserActivationStatus.PENDING_INITIAL_PASSWORD
+    ) {
       return {
         status: 'PENDING_ACTIVATION',
         loginId: normalizedLoginId,
@@ -537,12 +549,18 @@ export class AuthService {
       throw new UnauthorizedException('Account suspended');
     }
 
-    if (user.activationStatus !== UserActivationStatus.PENDING_INITIAL_PASSWORD) {
-      throw new ConflictException('Account does not require initial activation');
+    if (
+      user.activationStatus !== UserActivationStatus.PENDING_INITIAL_PASSWORD
+    ) {
+      throw new ConflictException(
+        'Account does not require initial activation',
+      );
     }
 
     if (!user.employeeId && !user.guardianId) {
-      throw new ConflictException('Account must be linked to employee or guardian');
+      throw new ConflictException(
+        'Account must be linked to employee or guardian',
+      );
     }
 
     if (
@@ -562,9 +580,8 @@ export class AuthService {
     }
 
     const pendingPasswordHash = await argon2.hash(input.newPassword);
-    const requiresApproval = await this.requiresAdminApprovalForInitialActivation(
-      user,
-    );
+    const requiresApproval =
+      await this.requiresAdminApprovalForInitialActivation(user);
 
     if (!requiresApproval) {
       await this.prisma.user.update({
@@ -610,7 +627,6 @@ export class AuthService {
     }
 
     const approvalCode = this.generateApprovalCode();
-    const expiresAt = new Date(Date.now() + this.approvalCodeTtlSeconds * 1000);
 
     const request = await this.upsertApprovalRequest({
       user,
@@ -704,7 +720,9 @@ export class AuthService {
       throw new UnauthorizedException('Activation request expired');
     }
 
-    if (!this.verifyApprovalCode(input.approvalCode, request.approvalCodeHash)) {
+    if (
+      !this.verifyApprovalCode(input.approvalCode, request.approvalCodeHash)
+    ) {
       throw new UnauthorizedException('Invalid approval code');
     }
 
@@ -792,8 +810,12 @@ export class AuthService {
       throw new UnauthorizedException('Account suspended');
     }
 
-    if (user.activationStatus === UserActivationStatus.PENDING_INITIAL_PASSWORD) {
-      throw new ConflictException('Account must complete initial activation first');
+    if (
+      user.activationStatus === UserActivationStatus.PENDING_INITIAL_PASSWORD
+    ) {
+      throw new ConflictException(
+        'Account must complete initial activation first',
+      );
     }
 
     const approvalCode = this.generateApprovalCode();
@@ -893,7 +915,9 @@ export class AuthService {
       throw new UnauthorizedException('Password reset request expired');
     }
 
-    if (!this.verifyApprovalCode(input.approvalCode, request.approvalCodeHash)) {
+    if (
+      !this.verifyApprovalCode(input.approvalCode, request.approvalCodeHash)
+    ) {
       throw new UnauthorizedException('Invalid approval code');
     }
 
@@ -990,8 +1014,12 @@ export class AuthService {
       throw new UnauthorizedException('Account suspended');
     }
 
-    if (user.activationStatus === UserActivationStatus.PENDING_INITIAL_PASSWORD) {
-      throw new ConflictException('Account must complete initial activation first');
+    if (
+      user.activationStatus === UserActivationStatus.PENDING_INITIAL_PASSWORD
+    ) {
+      throw new ConflictException(
+        'Account must complete initial activation first',
+      );
     }
 
     const verification = await this.verifyPassword(
@@ -1108,7 +1136,9 @@ export class AuthService {
       throw new UnauthorizedException('Device approval request expired');
     }
 
-    if (!this.verifyApprovalCode(input.approvalCode, request.approvalCodeHash)) {
+    if (
+      !this.verifyApprovalCode(input.approvalCode, request.approvalCodeHash)
+    ) {
       throw new UnauthorizedException('Invalid approval code');
     }
 
@@ -1432,7 +1462,8 @@ export class AuthService {
   private async createWebAuthnChallengeForUser(
     userId: string,
   ): Promise<AuthWebAuthnChallengeResult> {
-    const begin = await this.authWebAuthnService.beginAuthenticationForUser(userId);
+    const begin =
+      await this.authWebAuthnService.beginAuthenticationForUser(userId);
 
     return {
       webauthnRequired: true,
@@ -1493,16 +1524,17 @@ export class AuthService {
     }
 
     const consumedAt = new Date();
-    const challengeConsumeResult = await this.prisma.authMfaChallenge.updateMany({
-      where: {
-        id: challenge.id,
-        consumedAt: null,
-        deletedAt: null,
-      },
-      data: {
-        consumedAt,
-      },
-    });
+    const challengeConsumeResult =
+      await this.prisma.authMfaChallenge.updateMany({
+        where: {
+          id: challenge.id,
+          consumedAt: null,
+          deletedAt: null,
+        },
+        data: {
+          consumedAt,
+        },
+      });
 
     if (challengeConsumeResult.count === 0) {
       throw new UnauthorizedException('Invalid MFA challenge');
@@ -1550,7 +1582,10 @@ export class AuthService {
     return this.authMfaService.setupTotp(user.id, user.email);
   }
 
-  async enableTotp(userId: string, code: string): Promise<{ enabled: boolean }> {
+  async enableTotp(
+    userId: string,
+    code: string,
+  ): Promise<{ enabled: boolean }> {
     await this.authMfaService.enableTotp(userId, code);
 
     return {
@@ -1637,7 +1672,9 @@ export class AuthService {
       });
 
       if (credentialsCount === 0) {
-        throw new BadRequestException('You must register a passkey before enabling it.');
+        throw new BadRequestException(
+          'You must register a passkey before enabling it.',
+        );
       }
     }
 
@@ -2302,9 +2339,8 @@ export class AuthService {
   }
 
   private resolveDefaultPhoneRegion(): CountryCode {
-    const configuredValue = process.env.AUTH_DEFAULT_PHONE_REGION
-      ?.trim()
-      .toUpperCase();
+    const configuredValue =
+      process.env.AUTH_DEFAULT_PHONE_REGION?.trim().toUpperCase();
 
     if (configuredValue && /^[A-Z]{2}$/.test(configuredValue)) {
       return configuredValue as CountryCode;
@@ -2558,7 +2594,9 @@ export class AuthService {
 
     const message = [
       `المستخدم: ${input.subjectUser.firstName} ${input.subjectUser.lastName}`.trim(),
-      input.subjectUser.phoneE164 ? `الهاتف: ${input.subjectUser.phoneE164}` : null,
+      input.subjectUser.phoneE164
+        ? `الهاتف: ${input.subjectUser.phoneE164}`
+        : null,
       `الكود: ${input.approvalCode}`,
       input.context.deviceLabel ? `الجهاز: ${input.context.deviceLabel}` : null,
       input.context.ipAddress ? `IP: ${input.context.ipAddress}` : null,

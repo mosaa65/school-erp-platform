@@ -2,7 +2,10 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsString, MaxLength } from 'class-validator';
 
 export class ApplySiblingDiscountDto {
-  @ApiProperty({ example: 'guardian-id-123', description: 'Guardian ID to find siblings' })
+  @ApiProperty({
+    example: 'guardian-id-123',
+    description: 'Guardian ID to find siblings',
+  })
   @IsString()
   @MaxLength(191)
   guardianId!: string;

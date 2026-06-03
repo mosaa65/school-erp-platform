@@ -161,9 +161,7 @@ export class AnnualStatusesService {
       payload.code &&
       payload.code !== annualStatus.code
     ) {
-      throw new ConflictException(
-        'لا يمكن تعديل رمز الحالة السنوية النظامية',
-      );
+      throw new ConflictException('لا يمكن تعديل رمز الحالة السنوية النظامية');
     }
 
     const normalizedCode =
@@ -290,4 +288,3 @@ export class AnnualStatusesService {
     return 'خطأ غير معروف';
   }
 }
-

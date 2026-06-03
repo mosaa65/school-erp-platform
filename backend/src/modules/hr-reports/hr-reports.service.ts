@@ -275,24 +275,25 @@ export class HrReportsService {
       isActive: true,
     };
 
-    const [activeEmployees, incompleteProfiles] = await this.prisma.$transaction([
-      this.prisma.employee.count({
-        where: activeEmployeeWhere,
-      }),
-      this.prisma.employee.count({
-        where: {
-          ...activeEmployeeWhere,
-          OR: [
-            { jobNumber: null },
-            { jobNumber: '' },
-            { idNumber: null },
-            { idNumber: '' },
-            { hireDate: null },
-            { departmentId: null },
-          ],
-        },
-      }),
-    ]);
+    const [activeEmployees, incompleteProfiles] =
+      await this.prisma.$transaction([
+        this.prisma.employee.count({
+          where: activeEmployeeWhere,
+        }),
+        this.prisma.employee.count({
+          where: {
+            ...activeEmployeeWhere,
+            OR: [
+              { jobNumber: null },
+              { jobNumber: '' },
+              { idNumber: null },
+              { idNumber: '' },
+              { hireDate: null },
+              { departmentId: null },
+            ],
+          },
+        }),
+      ]);
 
     const employeesWithDocumentIds = await this.prisma.fileAttachment.groupBy({
       by: ['entityId'],

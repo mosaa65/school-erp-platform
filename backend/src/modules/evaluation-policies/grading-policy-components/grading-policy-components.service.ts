@@ -4,7 +4,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AuditStatus, GradingComponentCalculationMode, Prisma } from '@prisma/client';
+import {
+  AuditStatus,
+  GradingComponentCalculationMode,
+  Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogsService } from '../../audit-logs/audit-logs.service';
 import { generateAutoCode } from '../../../common/utils/auto-code';
@@ -48,10 +52,7 @@ export class GradingPolicyComponentsService {
   async create(payload: CreateGradingPolicyComponentDto, actorUserId: string) {
     const gradingPolicyId = payload.gradingPolicyId;
     await this.ensurePolicyExists(gradingPolicyId);
-    await this.ensureAutoModeUnique(
-      gradingPolicyId,
-      payload.calculationMode,
-    );
+    await this.ensureAutoModeUnique(gradingPolicyId, payload.calculationMode);
 
     const code =
       payload.code?.trim().toUpperCase() || generateAutoCode('GPC', 50);

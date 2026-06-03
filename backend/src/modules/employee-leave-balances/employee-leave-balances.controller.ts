@@ -47,7 +47,10 @@ export class EmployeeLeaveBalancesController {
 
   @Post('generate')
   @RequirePermissions('employee-leave-balances.generate')
-  @ApiOperation({ summary: 'Generate annual employee leave balances from entitlement defaults' })
+  @ApiOperation({
+    summary:
+      'Generate annual employee leave balances from entitlement defaults',
+  })
   generate(
     @Body() payload: GenerateEmployeeLeaveBalancesDto,
     @CurrentUser() user: AuthUser,

@@ -16,7 +16,10 @@ export class DepreciationJournalDto {
   @Min(1)
   branchId?: number;
 
-  @ApiPropertyOptional({ example: 'قيد إهلاك شهري', description: 'Description' })
+  @ApiPropertyOptional({
+    example: 'قيد إهلاك شهري',
+    description: 'Description',
+  })
   @IsOptional()
   @MaxLength(255)
   description?: string;

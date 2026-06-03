@@ -138,7 +138,9 @@ export class StudentPeriodResultsService {
   ) {}
 
   async create(payload: CreateStudentPeriodResultDto, actorUserId: string) {
-    const period = await this.ensureAssessmentPeriod(payload.assessmentPeriodId);
+    const period = await this.ensureAssessmentPeriod(
+      payload.assessmentPeriodId,
+    );
     if (period.isLocked) {
       throw new ConflictException('Assessment period is locked');
     }
@@ -170,9 +172,7 @@ export class StudentPeriodResultsService {
       termSubjectOffering &&
       termSubjectOffering.gradeLevelSubject.subjectId !== subject.id
     ) {
-      throw new BadRequestException(
-        'Term subject offering subject mismatch',
-      );
+      throw new BadRequestException('Term subject offering subject mismatch');
     }
 
     const status = payload.status ?? GradingWorkflowStatus.DRAFT;
@@ -330,7 +330,8 @@ export class StudentPeriodResultsService {
         component.entryMode === AssessmentComponentEntryMode.AUTO_HOMEWORK,
     );
     const autoExamComponents = components.filter(
-      (component) => component.entryMode === AssessmentComponentEntryMode.AUTO_EXAM,
+      (component) =>
+        component.entryMode === AssessmentComponentEntryMode.AUTO_EXAM,
     );
 
     const componentIds = aggregatedComponents.map((component) => component.id);
@@ -341,17 +342,18 @@ export class StudentPeriodResultsService {
       ]),
     );
 
-    const sourceLinks = await this.prisma.assessmentComponentSourcePeriod.findMany({
-      where: {
-        assessmentPeriodComponentId: { in: componentIds },
-        deletedAt: null,
-        isActive: true,
-      },
-      select: {
-        assessmentPeriodComponentId: true,
-        sourcePeriodId: true,
-      },
-    });
+    const sourceLinks =
+      await this.prisma.assessmentComponentSourcePeriod.findMany({
+        where: {
+          assessmentPeriodComponentId: { in: componentIds },
+          deletedAt: null,
+          isActive: true,
+        },
+        select: {
+          assessmentPeriodComponentId: true,
+          sourcePeriodId: true,
+        },
+      });
 
     const componentSources = new Map<string, string[]>();
     const sourcePeriodIds = new Set<string>();
@@ -436,10 +438,7 @@ export class StudentPeriodResultsService {
         monthly.studentEnrollmentId,
         monthly.subjectId,
       );
-      monthlyScoreMap.set(
-        key,
-        this.decimalToNumber(monthly.totalScore) ?? 0,
-      );
+      monthlyScoreMap.set(key, this.decimalToNumber(monthly.totalScore) ?? 0);
     }
 
     const resultScope = await this.resolveResultDateScope(period.id);
@@ -456,7 +455,11 @@ export class StudentPeriodResultsService {
           sourceMaxTotal += sourceMaxScores.get(sourceId) ?? 0;
           rawSum +=
             monthlyScoreMap.get(
-              this.scoreKey(sourceId, result.studentEnrollmentId, result.subjectId),
+              this.scoreKey(
+                sourceId,
+                result.studentEnrollmentId,
+                result.subjectId,
+              ),
             ) ?? 0;
         }
 
@@ -800,14 +803,16 @@ export class StudentPeriodResultsService {
 
     if (period.category === AssessmentPeriodCategory.MONTHLY) {
       return {
-        startDate: period.academicMonth?.startDate ?? period.academicYear.startDate,
+        startDate:
+          period.academicMonth?.startDate ?? period.academicYear.startDate,
         endDate: period.academicMonth?.endDate ?? period.academicYear.endDate,
       };
     }
 
     if (period.category === AssessmentPeriodCategory.SEMESTER) {
       return {
-        startDate: period.academicTerm?.startDate ?? period.academicYear.startDate,
+        startDate:
+          period.academicTerm?.startDate ?? period.academicYear.startDate,
         endDate: period.academicTerm?.endDate ?? period.academicYear.endDate,
       };
     }
@@ -821,8 +826,14 @@ export class StudentPeriodResultsService {
   private async syncAutomaticComponentsForResult(
     studentPeriodResultId: string,
     params: {
-      attendanceComponents: Array<{ id: string; maxScore: Prisma.Decimal | number }>;
-      homeworkComponents: Array<{ id: string; maxScore: Prisma.Decimal | number }>;
+      attendanceComponents: Array<{
+        id: string;
+        maxScore: Prisma.Decimal | number;
+      }>;
+      homeworkComponents: Array<{
+        id: string;
+        maxScore: Prisma.Decimal | number;
+      }>;
       examComponents: Array<{ id: string; maxScore: Prisma.Decimal | number }>;
       scope: { startDate: Date; endDate: Date };
     },
@@ -931,7 +942,12 @@ export class StudentPeriodResultsService {
         if (row.manualScore !== null && row.manualScore !== undefined) {
           return sum + (this.decimalToNumber(row.manualScore) ?? 0);
         }
-        return sum + (row.isCompleted ? this.decimalToNumber(row.homework.maxScore) ?? 0 : 0);
+        return (
+          sum +
+          (row.isCompleted
+            ? (this.decimalToNumber(row.homework.maxScore) ?? 0)
+            : 0)
+        );
       }, 0);
 
       const homeworkBase = homeworkRows.reduce(
@@ -991,11 +1007,13 @@ export class StudentPeriodResultsService {
       });
 
       const examEarned = examRows.reduce(
-        (sum, row) => sum + (row.isPresent ? this.decimalToNumber(row.score) ?? 0 : 0),
+        (sum, row) =>
+          sum + (row.isPresent ? (this.decimalToNumber(row.score) ?? 0) : 0),
         0,
       );
       const examBase = examRows.reduce(
-        (sum, row) => sum + (this.decimalToNumber(row.examAssessment.maxScore) ?? 0),
+        (sum, row) =>
+          sum + (this.decimalToNumber(row.examAssessment.maxScore) ?? 0),
         0,
       );
 

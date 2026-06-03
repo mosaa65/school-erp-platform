@@ -38,7 +38,10 @@ export class CreatePaymentGatewayDto {
   @MaxLength(100)
   merchantId?: string;
 
-  @ApiPropertyOptional({ example: 1100, description: 'Settlement account CoA id' })
+  @ApiPropertyOptional({
+    example: 1100,
+    description: 'Settlement account CoA id',
+  })
   @IsOptional()
   @IsInt()
   @Min(1)

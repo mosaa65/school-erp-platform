@@ -88,4 +88,3 @@ export class StudentSiblingsController {
     return this.studentSiblingsService.remove(id, user.userId);
   }
 }
-

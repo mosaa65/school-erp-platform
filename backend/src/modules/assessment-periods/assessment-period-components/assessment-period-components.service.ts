@@ -167,7 +167,7 @@ export class AssessmentPeriodComponentsService {
     payload: UpdateAssessmentPeriodComponentDto,
     actorUserId: string,
   ) {
-    const existing = await this.ensureComponentExists(id);
+    await this.ensureComponentExists(id);
 
     const code = payload.code?.trim().toUpperCase();
     const name = payload.name?.trim();

@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { RecurringJournalsService } from './recurring-journals.service';
@@ -27,7 +32,9 @@ export class RecurringJournalsSchedulerService
     }, intervalMs);
 
     void this.runCycle();
-    this.logger.log(`Recurring journal scheduler started (interval ${intervalMs}ms)`);
+    this.logger.log(
+      `Recurring journal scheduler started (interval ${intervalMs}ms)`,
+    );
   }
 
   onModuleDestroy() {
@@ -54,7 +61,9 @@ export class RecurringJournalsSchedulerService
       return;
     }
 
-    const actorUserId = this.configService.get<string>('FINANCE_SYSTEM_USER_ID');
+    const actorUserId = this.configService.get<string>(
+      'FINANCE_SYSTEM_USER_ID',
+    );
     if (!actorUserId) {
       this.logger.warn(
         'FINANCE_SYSTEM_USER_ID is not configured; skipping recurring journal scheduler run.',
@@ -85,7 +94,10 @@ export class RecurringJournalsSchedulerService
 
       for (const template of dueTemplates) {
         try {
-          await this.recurringJournalsService.generate(template.id, actorUserId);
+          await this.recurringJournalsService.generate(
+            template.id,
+            actorUserId,
+          );
           successCount += 1;
         } catch (error) {
           this.logger.error(

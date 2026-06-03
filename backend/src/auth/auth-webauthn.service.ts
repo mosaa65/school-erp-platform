@@ -67,16 +67,17 @@ export class AuthWebAuthnService {
   async beginRegistration(
     input: BeginRegistrationInput,
   ): Promise<BeginWebAuthnRegistrationResult> {
-    const existingCredentials = await this.prisma.userWebAuthnCredential.findMany({
-      where: {
-        userId: input.userId,
-        deletedAt: null,
-      },
-      select: {
-        credentialId: true,
-        transports: true,
-      },
-    });
+    const existingCredentials =
+      await this.prisma.userWebAuthnCredential.findMany({
+        where: {
+          userId: input.userId,
+          deletedAt: null,
+        },
+        select: {
+          credentialId: true,
+          transports: true,
+        },
+      });
 
     const options = await generateRegistrationOptions({
       rpName: this.rpName,
@@ -136,7 +137,9 @@ export class AuthWebAuthnService {
     });
 
     if (!challenge || challenge.usedAt) {
-      throw new UnauthorizedException('Invalid WebAuthn registration challenge.');
+      throw new UnauthorizedException(
+        'Invalid WebAuthn registration challenge.',
+      );
     }
 
     this.assertChallengeActive(challenge.expiresAt);
@@ -150,7 +153,9 @@ export class AuthWebAuthnService {
     });
 
     if (!verification.verified) {
-      throw new UnauthorizedException('WebAuthn registration could not be verified.');
+      throw new UnauthorizedException(
+        'WebAuthn registration could not be verified.',
+      );
     }
 
     const transports = verification.registrationInfo.credential.transports;
@@ -351,7 +356,9 @@ export class AuthWebAuthnService {
     });
 
     if (!challenge || challenge.usedAt) {
-      throw new UnauthorizedException('Invalid WebAuthn authentication challenge.');
+      throw new UnauthorizedException(
+        'Invalid WebAuthn authentication challenge.',
+      );
     }
 
     this.assertChallengeActive(challenge.expiresAt);
@@ -359,7 +366,9 @@ export class AuthWebAuthnService {
     const response = input.response as unknown as AuthenticationResponseJSON;
     const responseCredentialId = response.id?.trim();
     if (!responseCredentialId) {
-      throw new BadRequestException('Missing credential id in authentication response.');
+      throw new BadRequestException(
+        'Missing credential id in authentication response.',
+      );
     }
 
     const credential = await this.prisma.userWebAuthnCredential.findFirst({
@@ -492,7 +501,9 @@ export class AuthWebAuthnService {
     return JSON.stringify([...new Set(transports)]);
   }
 
-  private parseTransports(rawValue: string | null): AuthenticatorTransportFuture[] {
+  private parseTransports(
+    rawValue: string | null,
+  ): AuthenticatorTransportFuture[] {
     if (!rawValue) {
       return [];
     }
@@ -514,7 +525,10 @@ export class AuthWebAuthnService {
       ]);
 
       return parsed.filter((value): value is AuthenticatorTransportFuture => {
-        return typeof value === 'string' && allowed.has(value as AuthenticatorTransportFuture);
+        return (
+          typeof value === 'string' &&
+          allowed.has(value as AuthenticatorTransportFuture)
+        );
       });
     } catch {
       return [];

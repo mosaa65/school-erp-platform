@@ -1,9 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import {
+  IsNumber,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class PurchaseJournalDto {
-  @ApiProperty({ example: 125000, description: 'Total purchase amount (including VAT if any)' })
+  @ApiProperty({
+    example: 125000,
+    description: 'Total purchase amount (including VAT if any)',
+  })
   @Type(() => Number)
   @IsNumber()
   @Min(0.01)
@@ -23,7 +32,10 @@ export class PurchaseJournalDto {
   @Min(1)
   branchId?: number;
 
-  @ApiPropertyOptional({ example: 'فاتورة مشتريات رقم 123', description: 'Description/notes' })
+  @ApiPropertyOptional({
+    example: 'فاتورة مشتريات رقم 123',
+    description: 'Description/notes',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(255)

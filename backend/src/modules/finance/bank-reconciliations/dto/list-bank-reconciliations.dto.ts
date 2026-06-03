@@ -47,5 +47,4 @@ export class ListBankReconciliationsDto {
   @IsOptional()
   @IsDateString()
   dateTo?: string;
-
 }

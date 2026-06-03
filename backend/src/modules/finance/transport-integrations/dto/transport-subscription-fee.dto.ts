@@ -1,6 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import {
+  IsNumber,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class TransportSubscriptionFeeDto {
   @ApiProperty({ example: '12345', description: 'Invoice ID' })
@@ -21,7 +27,10 @@ export class TransportSubscriptionFeeDto {
   @Min(0)
   vatRate?: number;
 
-  @ApiPropertyOptional({ example: 'رسوم نقل إضافية', description: 'Line description' })
+  @ApiPropertyOptional({
+    example: 'رسوم نقل إضافية',
+    description: 'Line description',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(200)

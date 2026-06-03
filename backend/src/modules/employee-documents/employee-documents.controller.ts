@@ -47,7 +47,9 @@ export class EmployeeDocumentsController {
 
   @Post('generate-expiry-alerts')
   @RequirePermissions('employee-documents.notify-expiring')
-  @ApiOperation({ summary: 'Generate expiry alerts for employee documents nearing expiration' })
+  @ApiOperation({
+    summary: 'Generate expiry alerts for employee documents nearing expiration',
+  })
   generateExpiryAlerts(
     @Body() payload: GenerateEmployeeDocumentExpiryAlertsDto,
     @CurrentUser() user: AuthUser,

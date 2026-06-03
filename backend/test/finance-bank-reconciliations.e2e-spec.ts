@@ -193,7 +193,8 @@ describe('Finance Bank Reconciliations (e2e)', () => {
       })
       .expect(201);
 
-    const reconciliation = reconciliationResponse.body as BankReconciliationBody;
+    const reconciliation =
+      reconciliationResponse.body as BankReconciliationBody;
     createdReconciliationIds.push(BigInt(reconciliation.id));
 
     expect(reconciliation.status).toBe(BankReconciliationStatus.OPEN);
@@ -210,9 +211,11 @@ describe('Finance Bank Reconciliations (e2e)', () => {
       })
       .expect(201);
 
-    const matchedTransactionItem = matchedTransactionResponse.body as
-      BankReconciliationBody['items'][number];
-    expect(matchedTransactionItem.itemType).toBe(ReconciliationItemType.MATCHED);
+    const matchedTransactionItem =
+      matchedTransactionResponse.body as BankReconciliationBody['items'][number];
+    expect(matchedTransactionItem.itemType).toBe(
+      ReconciliationItemType.MATCHED,
+    );
     expect(matchedTransactionItem.paymentTransaction?.id).toBe(
       paymentTransaction.id,
     );
@@ -227,8 +230,8 @@ describe('Finance Bank Reconciliations (e2e)', () => {
       })
       .expect(201);
 
-    const unmatchedBankItem = unmatchedBankResponse.body as
-      BankReconciliationBody['items'][number];
+    const unmatchedBankItem =
+      unmatchedBankResponse.body as BankReconciliationBody['items'][number];
     expect(unmatchedBankItem.itemType).toBe(
       ReconciliationItemType.UNMATCHED_BANK,
     );
@@ -244,8 +247,8 @@ describe('Finance Bank Reconciliations (e2e)', () => {
       })
       .expect(201);
 
-    const matchedJournalItem = matchedJournalResponse.body as
-      BankReconciliationBody['items'][number];
+    const matchedJournalItem =
+      matchedJournalResponse.body as BankReconciliationBody['items'][number];
     expect(matchedJournalItem.itemType).toBe(ReconciliationItemType.MATCHED);
     expect(matchedJournalItem.journalEntry?.id).toBe(postedJournalEntry.id);
 
@@ -303,9 +306,21 @@ describe('Finance Bank Reconciliations (e2e)', () => {
     const detail = detailResponse.body as BankReconciliationBody;
     expect(detail.status).toBe(BankReconciliationStatus.RECONCILED);
     expect(detail.items).toHaveLength(3);
-    expect(detail.items.some((item) => item.paymentTransaction?.id === paymentTransaction.id)).toBe(true);
-    expect(detail.items.some((item) => item.journalEntry?.id === postedJournalEntry.id)).toBe(true);
-    expect(detail.items.some((item) => item.itemType === ReconciliationItemType.UNMATCHED_BANK)).toBe(true);
+    expect(
+      detail.items.some(
+        (item) => item.paymentTransaction?.id === paymentTransaction.id,
+      ),
+    ).toBe(true);
+    expect(
+      detail.items.some(
+        (item) => item.journalEntry?.id === postedJournalEntry.id,
+      ),
+    ).toBe(true);
+    expect(
+      detail.items.some(
+        (item) => item.itemType === ReconciliationItemType.UNMATCHED_BANK,
+      ),
+    ).toBe(true);
   });
 
   it('rejects creating a reconciliation against a non-bank account', async () => {
@@ -340,7 +355,11 @@ describe('Finance Bank Reconciliations (e2e)', () => {
     fixture = await createFinanceJournalFixture(context);
 
     const bankAccountId = await createBankAccount(context, fixture);
-    const gateway = await createGatewayForBankAccount(context, fixture, bankAccountId);
+    const gateway = await createGatewayForBankAccount(
+      context,
+      fixture,
+      bankAccountId,
+    );
     const firstTransaction = await createCompletedPaymentTransaction(
       context,
       fixture,
@@ -369,11 +388,14 @@ describe('Finance Bank Reconciliations (e2e)', () => {
       })
       .expect(201);
 
-    const reconciliation = reconciliationResponse.body as BankReconciliationBody;
+    const reconciliation =
+      reconciliationResponse.body as BankReconciliationBody;
     createdReconciliationIds.push(BigInt(reconciliation.id));
 
     const autoMatchResponse = await request(httpServer())
-      .post(`/finance/bank-reconciliations/${reconciliation.id}/auto-match-transactions`)
+      .post(
+        `/finance/bank-reconciliations/${reconciliation.id}/auto-match-transactions`,
+      )
       .set(authHeader())
       .expect(201);
 
@@ -396,7 +418,9 @@ describe('Finance Bank Reconciliations (e2e)', () => {
     ).toBe(true);
 
     const secondAutoMatchResponse = await request(httpServer())
-      .post(`/finance/bank-reconciliations/${reconciliation.id}/auto-match-transactions`)
+      .post(
+        `/finance/bank-reconciliations/${reconciliation.id}/auto-match-transactions`,
+      )
       .set(authHeader())
       .expect(201);
 

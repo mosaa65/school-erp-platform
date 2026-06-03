@@ -115,14 +115,18 @@ export class AuthController {
 
   @Post('identify')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Identify whether account is active or pending activation' })
+  @ApiOperation({
+    summary: 'Identify whether account is active or pending activation',
+  })
   async identify(@Body() payload: IdentifyAuthAccountDto) {
     return this.authService.identifyAccount(payload.loginId);
   }
 
   @Post('device-approval/begin')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Begin new-device approval using login credentials' })
+  @ApiOperation({
+    summary: 'Begin new-device approval using login credentials',
+  })
   @ApiBody({ type: LoginDto })
   async beginDeviceApproval(
     @Body() loginDto: LoginDto,
@@ -163,7 +167,9 @@ export class AuthController {
 
   @Post('activation/begin')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Begin first-time password setup using one-time password' })
+  @ApiOperation({
+    summary: 'Begin first-time password setup using one-time password',
+  })
   async beginActivation(
     @Body() payload: BeginAccountActivationDto,
     @Req() req: Request,
@@ -199,7 +205,9 @@ export class AuthController {
 
   @Post('activation/complete')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Complete first-time password setup with approval code' })
+  @ApiOperation({
+    summary: 'Complete first-time password setup with approval code',
+  })
   async completeActivation(
     @Body() payload: CompleteAccountActivationDto,
     @Req() req: Request,
@@ -230,8 +238,7 @@ export class AuthController {
   @Post('password/forgot/begin')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary:
-      'Begin forgot-password flow and create admin approval request',
+    summary: 'Begin forgot-password flow and create admin approval request',
   })
   async beginForgotPassword(
     @Body() payload: BeginForgotPasswordDto,
@@ -253,7 +260,8 @@ export class AuthController {
   @Post('password/forgot/complete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Complete forgot-password flow with approval code and new password',
+    summary:
+      'Complete forgot-password flow with approval code and new password',
   })
   async completeForgotPassword(
     @Body() payload: CompleteForgotPasswordDto,
@@ -438,7 +446,9 @@ export class AuthController {
   @Patch('profile')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('bearer')
-  @ApiOperation({ summary: 'Update current user profile (phone/passkey policy)' })
+  @ApiOperation({
+    summary: 'Update current user profile (phone/passkey policy)',
+  })
   async updateProfile(
     @CurrentUser() currentUser: AuthUser,
     @Body() payload: UpdateProfileDto,
@@ -449,7 +459,9 @@ export class AuthController {
   @Post('webauthn/registration/options')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('bearer')
-  @ApiOperation({ summary: 'Generate WebAuthn registration options for current user' })
+  @ApiOperation({
+    summary: 'Generate WebAuthn registration options for current user',
+  })
   async beginWebAuthnRegistration(@CurrentUser() currentUser: AuthUser) {
     return this.authService.beginWebAuthnRegistration(currentUser.userId);
   }
@@ -500,7 +512,9 @@ export class AuthController {
 
   @Post('webauthn/authentication/options')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Generate WebAuthn authentication options for login' })
+  @ApiOperation({
+    summary: 'Generate WebAuthn authentication options for login',
+  })
   async beginWebAuthnAuthentication() {
     return this.authService.beginWebAuthnAuthentication();
   }
@@ -524,8 +538,7 @@ export class AuthController {
         ipAddress: this.resolveRequestIp(req),
         userAgent: req.headers['user-agent'] ?? null,
         deviceId:
-          webAuthnAuthenticationVerifyDto.deviceId ??
-          this.extractDeviceId(req),
+          webAuthnAuthenticationVerifyDto.deviceId ?? this.extractDeviceId(req),
         deviceLabel:
           webAuthnAuthenticationVerifyDto.deviceLabel ??
           this.extractDeviceLabel(req),
@@ -543,7 +556,9 @@ export class AuthController {
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Rotate refresh token and issue a new access token' })
+  @ApiOperation({
+    summary: 'Rotate refresh token and issue a new access token',
+  })
   @ApiOkResponse({
     description: 'Token refresh successful',
   })
@@ -575,11 +590,10 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Revoke current refresh token and clear auth cookie' })
-  async logout(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  @ApiOperation({
+    summary: 'Revoke current refresh token and clear auth cookie',
+  })
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     await this.authService.logout(this.extractRefreshToken(req));
     this.clearRefreshTokenCookie(res);
 

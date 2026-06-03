@@ -22,7 +22,10 @@ export class ProcurementPaymentJournalDto {
   @IsEnum(PaymentMethod)
   paymentMethod?: PaymentMethod;
 
-  @ApiPropertyOptional({ example: 'دفعة لمورد', description: 'Description/notes' })
+  @ApiPropertyOptional({
+    example: 'دفعة لمورد',
+    description: 'Description/notes',
+  })
   @IsOptional()
   @MaxLength(255)
   description?: string;

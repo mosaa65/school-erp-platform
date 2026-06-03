@@ -15,7 +15,10 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
-import { AssessmentPeriodCategory, GradingWorkflowStatus } from '@prisma/client';
+import {
+  AssessmentPeriodCategory,
+  GradingWorkflowStatus,
+} from '@prisma/client';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { RequirePermissions } from '../../../common/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
@@ -31,7 +34,9 @@ import { UpdateAssessmentPeriodDto } from './dto/update-assessment-period.dto';
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('assessment-periods')
 export class AssessmentPeriodsController {
-  constructor(private readonly assessmentPeriodsService: AssessmentPeriodsService) {}
+  constructor(
+    private readonly assessmentPeriodsService: AssessmentPeriodsService,
+  ) {}
 
   @Post()
   @RequirePermissions('assessment-periods.create')
@@ -52,7 +57,11 @@ export class AssessmentPeriodsController {
   @ApiQuery({ name: 'academicYearId', required: false, type: String })
   @ApiQuery({ name: 'academicTermId', required: false, type: String })
   @ApiQuery({ name: 'academicMonthId', required: false, type: String })
-  @ApiQuery({ name: 'category', required: false, enum: AssessmentPeriodCategory })
+  @ApiQuery({
+    name: 'category',
+    required: false,
+    enum: AssessmentPeriodCategory,
+  })
   @ApiQuery({ name: 'status', required: false, enum: GradingWorkflowStatus })
   @ApiQuery({ name: 'isLocked', required: false, type: Boolean })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })

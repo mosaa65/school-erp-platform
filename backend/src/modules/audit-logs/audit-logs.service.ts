@@ -84,7 +84,11 @@ const AUDIT_ROLLBACK_BLOCKED_FIELDS = new Set([
 
 const AUDIT_ROLLBACK_RESOURCE_MODEL_MAP: Record<
   string,
-  { delegate: string; idType: 'string' | 'number' | 'bigint'; whereKey?: string }
+  {
+    delegate: string;
+    idType: 'string' | 'number' | 'bigint';
+    whereKey?: string;
+  }
 > = {
   users: { delegate: 'user', idType: 'string' },
   roles: { delegate: 'role', idType: 'string' },
@@ -109,7 +113,10 @@ const AUDIT_ROLLBACK_RESOURCE_MODEL_MAP: Record<
   budgets: { delegate: 'budget', idType: 'number' },
   'chart-of-accounts': { delegate: 'chartOfAccount', idType: 'number' },
   currencies: { delegate: 'currency', idType: 'number' },
-  'currency-exchange-rates': { delegate: 'currencyExchangeRate', idType: 'number' },
+  'currency-exchange-rates': {
+    delegate: 'currencyExchangeRate',
+    idType: 'number',
+  },
   'fiscal-years': { delegate: 'fiscalYear', idType: 'number' },
   'fiscal-periods': { delegate: 'fiscalPeriod', idType: 'number' },
   'cost-centers': { delegate: 'costCenter', idType: 'number' },
@@ -123,14 +130,23 @@ const AUDIT_ROLLBACK_RESOURCE_MODEL_MAP: Record<
   revenues: { delegate: 'revenue', idType: 'number' },
   'audit-trail': { delegate: 'auditTrail', idType: 'bigint' },
   'bank-reconciliations': { delegate: 'bankReconciliation', idType: 'bigint' },
-  'bank-reconciliation-items': { delegate: 'reconciliationItem', idType: 'bigint' },
-  'community-contributions': { delegate: 'communityContribution', idType: 'bigint' },
+  'bank-reconciliation-items': {
+    delegate: 'reconciliationItem',
+    idType: 'bigint',
+  },
+  'community-contributions': {
+    delegate: 'communityContribution',
+    idType: 'bigint',
+  },
   'credit-debit-notes': { delegate: 'creditDebitNote', idType: 'bigint' },
   'invoice-installments': { delegate: 'invoiceInstallment', idType: 'bigint' },
   'payment-transactions': { delegate: 'paymentTransaction', idType: 'bigint' },
   'student-invoices': { delegate: 'studentInvoice', idType: 'bigint' },
   'payment-webhooks': { delegate: 'paymentWebhookEvent', idType: 'string' },
-  'recurring-journals': { delegate: 'recurringJournalTemplate', idType: 'number' },
+  'recurring-journals': {
+    delegate: 'recurringJournalTemplate',
+    idType: 'number',
+  },
 };
 
 const AUDIT_ROLLBACK_BLOCKED_RESOURCES: Record<string, string> = {
@@ -330,7 +346,10 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
 
     const timelineCountMap = await this.buildTimelineCountMap(items);
     const enrichedItems = items.map((item) => {
-      const timelineMeta = this.buildTimelineMetaForItem(item, timelineCountMap);
+      const timelineMeta = this.buildTimelineMetaForItem(
+        item,
+        timelineCountMap,
+      );
       return {
         ...item,
         timeline: timelineMeta,
@@ -476,7 +495,10 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
     payload: RollbackAuditLogDto = {},
   ): Promise<RollbackAuditLogResult> {
     const mode = payload.mode ?? AuditRollbackMode.PREVIOUS;
-    const timeline = await this.findTimelineByAuditLogId(id, AUDIT_TIMELINE_LIMIT);
+    const timeline = await this.findTimelineByAuditLogId(
+      id,
+      AUDIT_TIMELINE_LIMIT,
+    );
 
     if (!timeline.resourceId) {
       throw new BadRequestException(
@@ -521,7 +543,8 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
       [whereKey]: parsedResourceId,
     } satisfies Record<string, string | number | bigint>;
 
-    let rollbackPatchSnapshot: Record<string, Prisma.InputJsonValue | null> = {};
+    let rollbackPatchSnapshot: Record<string, Prisma.InputJsonValue | null> =
+      {};
     let rollbackAuditLog:
       | {
           id: string;
@@ -703,7 +726,10 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
     });
 
     const retentionDays = this.parseRetentionDays(setting?.settingValue);
-    return this.buildRetentionPolicyResponse(retentionDays, setting?.updatedAt ?? null);
+    return this.buildRetentionPolicyResponse(
+      retentionDays,
+      setting?.updatedAt ?? null,
+    );
   }
 
   async updateRetentionPolicy(
@@ -756,7 +782,9 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
       },
     });
 
-    const currentRetentionDays = this.parseRetentionDays(savedSetting.settingValue);
+    const currentRetentionDays = this.parseRetentionDays(
+      savedSetting.settingValue,
+    );
 
     await this.record({
       actorUserId,
@@ -847,10 +875,9 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
 
     const normalizedActionType = query.actionType?.trim().toUpperCase();
     if (normalizedActionType) {
-      const actionVariants =
-        AUDIT_LOG_ACTION_TYPE_ALIASES[normalizedActionType] ?? [
-          normalizedActionType,
-        ];
+      const actionVariants = AUDIT_LOG_ACTION_TYPE_ALIASES[
+        normalizedActionType
+      ] ?? [normalizedActionType];
       andConditions.push({
         OR: actionVariants.flatMap((actionVariant) => [
           {
@@ -867,7 +894,7 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
 
     const normalizedDomain = query.domain?.trim().toLowerCase();
     const domainKeywords = normalizedDomain
-      ? AUDIT_LOG_DOMAIN_RESOURCE_KEYWORDS[normalizedDomain] ?? []
+      ? (AUDIT_LOG_DOMAIN_RESOURCE_KEYWORDS[normalizedDomain] ?? [])
       : [];
     if (domainKeywords.length > 0) {
       andConditions.push({
@@ -993,13 +1020,19 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async buildTimelineCountMap(items: AuditLogListEntity[]) {
-    const uniqueGroups = new Map<string, { resource: string; resourceId: string }>();
+    const uniqueGroups = new Map<
+      string,
+      { resource: string; resourceId: string }
+    >();
     for (const item of items) {
       if (!item.resourceId) {
         continue;
       }
 
-      const groupKey = this.buildTimelineGroupKey(item.resource, item.resourceId);
+      const groupKey = this.buildTimelineGroupKey(
+        item.resource,
+        item.resourceId,
+      );
       if (!uniqueGroups.has(groupKey)) {
         uniqueGroups.set(groupKey, {
           resource: item.resource,
@@ -1102,7 +1135,9 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
-    const targetItem = timelineItems.find((item) => item.id === targetAuditLogId);
+    const targetItem = timelineItems.find(
+      (item) => item.id === targetAuditLogId,
+    );
     if (!targetItem) {
       throw new BadRequestException(
         'The selected rollback target is not in the latest timeline window (last 10 changes).',
@@ -1155,16 +1190,18 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
       return afterRecord;
     }
 
-    return this.pickFirstRecord(detailsRecord, [
-      'before',
-      'beforeState',
-      'beforeData',
-      'previous',
-      'oldValue',
-      'oldData',
-      'old',
-      'dataBefore',
-    ]) ?? detailsRecord;
+    return (
+      this.pickFirstRecord(detailsRecord, [
+        'before',
+        'beforeState',
+        'beforeData',
+        'previous',
+        'oldValue',
+        'oldData',
+        'old',
+        'dataBefore',
+      ]) ?? detailsRecord
+    );
   }
 
   private extractBeforeSnapshotFromDetails(
@@ -1460,9 +1497,7 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
-  private parseRetentionDays(
-    value: string | null | undefined,
-  ): number | null {
+  private parseRetentionDays(value: string | null | undefined): number | null {
     if (!value) {
       return null;
     }
@@ -1600,9 +1635,7 @@ export class AuditLogsService implements OnModuleInit, OnModuleDestroy {
     return this.parseRetentionDays(setting?.settingValue);
   }
 
-  private async purgeExpiredAuditLogs(
-    retentionDays: number,
-  ): Promise<{
+  private async purgeExpiredAuditLogs(retentionDays: number): Promise<{
     deletedCount: number;
     softDeletedCount: number;
     hardDeletedCount: number;

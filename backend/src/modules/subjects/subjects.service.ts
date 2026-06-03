@@ -20,7 +20,8 @@ export class SubjectsService {
 
   async create(payload: CreateSubjectDto, actorUserId: string) {
     const code =
-      payload.code?.trim().toLowerCase() || generateAutoCode('SUB').toLowerCase();
+      payload.code?.trim().toLowerCase() ||
+      generateAutoCode('SUB').toLowerCase();
     const name = payload.name.trim();
 
     try {

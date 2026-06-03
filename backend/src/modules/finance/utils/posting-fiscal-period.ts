@@ -21,8 +21,7 @@ type PostingFiscalPeriodDb = {
 
 function isOpenPostingStatus(status: FiscalPeriodStatus) {
   return (
-    status === FiscalPeriodStatus.OPEN ||
-    status === FiscalPeriodStatus.REOPENED
+    status === FiscalPeriodStatus.OPEN || status === FiscalPeriodStatus.REOPENED
   );
 }
 

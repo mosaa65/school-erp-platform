@@ -43,7 +43,8 @@ const DEFAULT_GATEWAY_ACCOUNT_NAME_EN = 'Electronic Payment Gateways';
 const DEFAULT_GATEWAY_ACCOUNT_NAME_AR = 'بوابات الدفع الإلكتروني';
 const DEFAULT_DEPRECIATION_EXPENSE_ACCOUNT_NAME_EN = 'Depreciation Expense';
 const DEFAULT_DEPRECIATION_EXPENSE_ACCOUNT_NAME_AR = 'مصروف الإهلاك';
-const DEFAULT_ACCUMULATED_DEPRECIATION_ACCOUNT_NAME_EN = 'Accumulated Depreciation';
+const DEFAULT_ACCUMULATED_DEPRECIATION_ACCOUNT_NAME_EN =
+  'Accumulated Depreciation';
 const DEFAULT_ACCUMULATED_DEPRECIATION_ACCOUNT_NAME_AR = 'مجمع الإهلاك';
 
 type PostingLineInput = {
@@ -62,7 +63,10 @@ export class ProcurementIntegrationsService {
     private readonly documentSequencesService: DocumentSequencesService,
   ) {}
 
-  async createPurchaseJournal(payload: PurchaseJournalDto, actorUserId: string) {
+  async createPurchaseJournal(
+    payload: PurchaseJournalDto,
+    actorUserId: string,
+  ) {
     const vatAmount = payload.vatAmount ?? 0;
     const baseAmount = this.roundMoney(payload.totalAmount - vatAmount);
 
@@ -243,7 +247,9 @@ export class ProcurementIntegrationsService {
       DEFAULT_ACCOUNTS_PAYABLE_ACCOUNT_NAME_AR,
       AccountType.LIABILITY,
     );
-    const creditAccountCode = this.resolveCreditAccountCode(payload.paymentMethod);
+    const creditAccountCode = this.resolveCreditAccountCode(
+      payload.paymentMethod,
+    );
     const creditAccountId = await this.findPostingAccountByCode(
       creditAccountCode.nameEn,
       creditAccountCode.nameAr,
@@ -322,7 +328,9 @@ export class ProcurementIntegrationsService {
     });
 
     if (expenses.length === 0) {
-      throw new NotFoundException(`Vendor ${normalizedVendorKey} was not found`);
+      throw new NotFoundException(
+        `Vendor ${normalizedVendorKey} was not found`,
+      );
     }
 
     const mappedExpenses = expenses.map((expense) =>
@@ -347,8 +355,10 @@ export class ProcurementIntegrationsService {
       vendorName: expenses[0]?.vendorName?.trim() ?? normalizedVendorKey,
       summary: {
         expenseCount: expenses.length,
-        approvedExpenseCount: expenses.filter((expense) => expense.isApproved).length,
-        pendingExpenseCount: expenses.filter((expense) => !expense.isApproved).length,
+        approvedExpenseCount: expenses.filter((expense) => expense.isApproved)
+          .length,
+        pendingExpenseCount: expenses.filter((expense) => !expense.isApproved)
+          .length,
         approvedExpenseTotal,
         pendingExpenseTotal,
         balanceDue,
@@ -424,7 +434,10 @@ export class ProcurementIntegrationsService {
       };
     }
 
-    if (paymentMethod === PaymentMethod.CARD || paymentMethod === PaymentMethod.MOBILE_WALLET) {
+    if (
+      paymentMethod === PaymentMethod.CARD ||
+      paymentMethod === PaymentMethod.MOBILE_WALLET
+    ) {
       return {
         nameEn: DEFAULT_GATEWAY_ACCOUNT_NAME_EN,
         nameAr: DEFAULT_GATEWAY_ACCOUNT_NAME_AR,
@@ -508,7 +521,8 @@ export class ProcurementIntegrationsService {
       });
 
       for (const line of input.lines) {
-        const balanceChange = Number(line.creditAmount) - Number(line.debitAmount);
+        const balanceChange =
+          Number(line.creditAmount) - Number(line.debitAmount);
         await tx.chartOfAccount.update({
           where: { id: line.accountId },
           data: {
@@ -523,7 +537,10 @@ export class ProcurementIntegrationsService {
     });
   }
 
-  private async findFiscalYearForDate(tx: Prisma.TransactionClient, date: Date) {
+  private async findFiscalYearForDate(
+    tx: Prisma.TransactionClient,
+    date: Date,
+  ) {
     return findActiveFiscalYearForDate(tx, date, 'the entry date');
   }
 
@@ -581,7 +598,9 @@ export class ProcurementIntegrationsService {
         : null);
 
     if (!account) {
-      throw new NotFoundException(`Posting account ${accountNameEn} was not found`);
+      throw new NotFoundException(
+        `Posting account ${accountNameEn} was not found`,
+      );
     }
 
     if (account.isHeader) {
@@ -593,17 +612,15 @@ export class ProcurementIntegrationsService {
     return account.id;
   }
 
-  private mapVendorBalanceExpenseItem(
-    expense: {
-      id: number;
-      amount: Prisma.Decimal | number | string;
-      expenseDate: Date;
-      isApproved: boolean;
-      journalEntryId: string | null;
-      invoiceNumber: string | null;
-      description: string | null;
-    },
-  ): ProcurementVendorBalanceExpenseItemDto {
+  private mapVendorBalanceExpenseItem(expense: {
+    id: number;
+    amount: Prisma.Decimal | number | string;
+    expenseDate: Date;
+    isApproved: boolean;
+    journalEntryId: string | null;
+    invoiceNumber: string | null;
+    description: string | null;
+  }): ProcurementVendorBalanceExpenseItemDto {
     return {
       id: expense.id,
       amount: this.roundMoney(Number(expense.amount)),
@@ -632,7 +649,9 @@ export class ProcurementIntegrationsService {
 
   private assertBalanced(totalDebit: number, totalCredit: number) {
     if (totalDebit <= 0 || totalCredit <= 0) {
-      throw new BadRequestException('Total debit and credit must be greater than zero');
+      throw new BadRequestException(
+        'Total debit and credit must be greater than zero',
+      );
     }
 
     if (Math.abs(totalDebit - totalCredit) > 0.01) {

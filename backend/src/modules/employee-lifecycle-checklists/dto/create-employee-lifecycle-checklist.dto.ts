@@ -8,9 +8,7 @@ import {
   MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  EmployeeLifecycleChecklistType,
-} from '@prisma/client';
+import { EmployeeLifecycleChecklistType } from '@prisma/client';
 
 export class CreateEmployeeLifecycleChecklistDto {
   @ApiProperty({ example: 'cmf2f32b60000uvh95h7tk7q1' })

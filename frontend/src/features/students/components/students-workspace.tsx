@@ -427,6 +427,11 @@ export function StudentsWorkspace() {
     [orphanStatusOptions],
   );
   const pagination = studentsQuery.data?.pagination;
+  const hasMoreStudents = Boolean(pagination && pagination.page < pagination.totalPages);
+  const isFetchingMoreStudents = studentsQuery.isFetching && !studentsQuery.isPending;
+  const loadMoreStudents = React.useCallback(() => {
+    setPage((prev) => (pagination ? Math.min(prev + 1, pagination.totalPages) : prev));
+  }, [pagination]);
   const isEditing = editingStudentId !== null;
   const selectedStudent = React.useMemo(
     () => students.find((student) => student.id === selectedStudentId) ?? null,
@@ -1175,13 +1180,13 @@ export function StudentsWorkspace() {
               loaded={students.length}
               isInitialLoading={studentsQuery.isPending}
               isFetching={studentsQuery.isFetching}
-              isFetchingMore={studentsQuery.isFetchingNextPage}
-              hasMore={studentsQuery.hasNextPage}
+              isFetchingMore={isFetchingMoreStudents}
+              hasMore={hasMoreStudents}
               error={studentsQuery.error}
               emptyTitle="لا توجد سجلات مطابقة."
               emptyDescription="جرّب تغيير الفلاتر أو تحديث الصفحة."
               onRefresh={() => void studentsQuery.refetch()}
-              onLoadMore={() => void studentsQuery.fetchNextPage()}
+              onLoadMore={loadMoreStudents}
             >
               <EntitySurfaceGrid
                 viewMode={resolvedViewMode}

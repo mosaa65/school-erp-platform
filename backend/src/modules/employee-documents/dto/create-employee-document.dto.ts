@@ -20,7 +20,9 @@ export class CreateEmployeeDocumentDto {
   @MaxLength(255)
   fileName!: string;
 
-  @ApiProperty({ example: 'https://cdn.school.local/hr/employees/emp-1/id-card.pdf' })
+  @ApiProperty({
+    example: 'https://cdn.school.local/hr/employees/emp-1/id-card.pdf',
+  })
   @IsString()
   @MaxLength(500)
   filePath!: string;

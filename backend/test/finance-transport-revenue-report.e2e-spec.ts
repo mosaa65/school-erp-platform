@@ -256,7 +256,9 @@ describe('Finance Transport Revenue Report (e2e)', () => {
     expect(branchReport.summary.outstandingRevenue).toBe(500);
 
     const dateResponse = await request(httpServer())
-      .get(`/finance/transport/revenue-report?dateTo=${dateOnly(fixture.startDate)}`)
+      .get(
+        `/finance/transport/revenue-report?dateTo=${dateOnly(fixture.startDate)}`,
+      )
       .set(authHeader())
       .expect(200);
 

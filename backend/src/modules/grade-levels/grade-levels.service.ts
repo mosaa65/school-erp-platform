@@ -20,7 +20,8 @@ export class GradeLevelsService {
 
   async create(payload: CreateGradeLevelDto, actorUserId: string) {
     const code =
-      payload.code?.trim().toLowerCase() || generateAutoCode('GL').toLowerCase();
+      payload.code?.trim().toLowerCase() ||
+      generateAutoCode('GL').toLowerCase();
     const name = payload.name.trim();
 
     try {

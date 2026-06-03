@@ -111,12 +111,13 @@ export class FiscalYearsService {
       isActive: query.isActive,
       isClosed: query.isClosed,
       academicYearId: query.academicYearId,
-      startDate: query.dateFrom || query.dateTo
-        ? {
-            gte: query.dateFrom ? new Date(query.dateFrom) : undefined,
-            lte: query.dateTo ? new Date(query.dateTo) : undefined,
-          }
-        : undefined,
+      startDate:
+        query.dateFrom || query.dateTo
+          ? {
+              gte: query.dateFrom ? new Date(query.dateFrom) : undefined,
+              lte: query.dateTo ? new Date(query.dateTo) : undefined,
+            }
+          : undefined,
       OR: query.search
         ? [
             {
@@ -190,7 +191,7 @@ export class FiscalYearsService {
       isClosed === undefined
         ? undefined
         : isClosed
-          ? existing.closedAt ?? new Date()
+          ? (existing.closedAt ?? new Date())
           : null;
     const closedByUserId =
       isClosed === undefined ? undefined : isClosed ? actorUserId : null;

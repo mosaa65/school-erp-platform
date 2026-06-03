@@ -11,7 +11,10 @@ import {
   Min,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { AssessmentPeriodCategory, GradingWorkflowStatus } from '@prisma/client';
+import {
+  AssessmentPeriodCategory,
+  GradingWorkflowStatus,
+} from '@prisma/client';
 
 export class CreateAssessmentPeriodDto {
   @ApiProperty({ example: 'cmabc123year' })

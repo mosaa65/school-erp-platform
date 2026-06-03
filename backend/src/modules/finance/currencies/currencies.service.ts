@@ -62,7 +62,9 @@ export class CurrenciesService {
           include: currencyInclude,
         }),
       ]);
-      const currency = results[results.length - 1] as Prisma.CurrencyGetPayload<{
+      const currency = results[
+        results.length - 1
+      ] as Prisma.CurrencyGetPayload<{
         include: typeof currencyInclude;
       }>;
 
@@ -173,10 +175,10 @@ export class CurrenciesService {
             ]
           : []),
         this.prisma.currency.update({
-        where: { id },
-        data: {
-          nameAr,
-          symbol,
+          where: { id },
+          data: {
+            nameAr,
+            symbol,
             decimalPlaces: payload.decimalPlaces,
             isBase: payload.isBase,
             isActive: payload.isActive,
@@ -185,7 +187,9 @@ export class CurrenciesService {
           include: currencyInclude,
         }),
       ]);
-      const currency = results[results.length - 1] as Prisma.CurrencyGetPayload<{
+      const currency = results[
+        results.length - 1
+      ] as Prisma.CurrencyGetPayload<{
         include: typeof currencyInclude;
       }>;
 

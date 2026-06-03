@@ -1,13 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import {
-  IsEnum,
-  IsInt,
-  IsOptional,
-  IsString,
-  Max,
-  Min,
-} from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { InvoiceStatus } from '@prisma/client';
 
 export class ListStudentInvoicesDto {
@@ -59,5 +52,4 @@ export class ListStudentInvoicesDto {
   @IsOptional()
   @IsString()
   search?: string;
-
 }

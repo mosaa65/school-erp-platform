@@ -170,9 +170,7 @@ export class PromotionDecisionsService {
       payload.code &&
       payload.code !== promotionDecision.code
     ) {
-      throw new ConflictException(
-        'لا يمكن تعديل رمز قرار الترفيع النظامي',
-      );
+      throw new ConflictException('لا يمكن تعديل رمز قرار الترفيع النظامي');
     }
 
     const normalizedCode =
@@ -216,9 +214,7 @@ export class PromotionDecisionsService {
     const promotionDecision = await this.ensurePromotionDecisionExists(id);
 
     if (promotionDecision.isSystem) {
-      throw new ConflictException(
-        'لا يمكن حذف قرار الترفيع النظامي',
-      );
+      throw new ConflictException('لا يمكن حذف قرار الترفيع النظامي');
     }
 
     const linkedAnnualResults = await this.prisma.annualResult.count({
@@ -321,4 +317,3 @@ export class PromotionDecisionsService {
     return 'خطأ غير معروف';
   }
 }
-

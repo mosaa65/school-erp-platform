@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditStatus, InstallmentStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogsService } from '../../audit-logs/audit-logs.service';
@@ -36,7 +40,9 @@ export class InvoiceInstallmentsService {
           paidAmount: payload.paidAmount ?? 0,
           status: payload.status ?? InstallmentStatus.PENDING,
           installmentNumber: payload.installmentNumber,
-          paymentDate: payload.paymentDate ? new Date(payload.paymentDate) : undefined,
+          paymentDate: payload.paymentDate
+            ? new Date(payload.paymentDate)
+            : undefined,
           lateFee: payload.lateFee ?? 0,
           notes: payload.notes?.trim(),
         },
@@ -80,12 +86,13 @@ export class InvoiceInstallmentsService {
         ? this.parseRequiredBigInt(query.invoiceId, 'invoiceId')
         : undefined,
       status: query.status,
-      dueDate: query.dueDateFrom || query.dueDateTo
-        ? {
-            gte: query.dueDateFrom ? new Date(query.dueDateFrom) : undefined,
-            lte: query.dueDateTo ? new Date(query.dueDateTo) : undefined,
-          }
-        : undefined,
+      dueDate:
+        query.dueDateFrom || query.dueDateTo
+          ? {
+              gte: query.dueDateFrom ? new Date(query.dueDateFrom) : undefined,
+              lte: query.dueDateTo ? new Date(query.dueDateTo) : undefined,
+            }
+          : undefined,
     };
 
     const [total, items] = await this.prisma.$transaction([
@@ -149,7 +156,9 @@ export class InvoiceInstallmentsService {
           paidAmount: payload.paidAmount,
           status: payload.status,
           installmentNumber: payload.installmentNumber,
-          paymentDate: payload.paymentDate ? new Date(payload.paymentDate) : undefined,
+          paymentDate: payload.paymentDate
+            ? new Date(payload.paymentDate)
+            : undefined,
           lateFee: payload.lateFee,
           notes: payload.notes?.trim(),
         },

@@ -3,7 +3,12 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  randomBytes,
+} from 'crypto';
 import speakeasy from 'speakeasy';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -17,11 +22,15 @@ export interface TotpSetupResponse {
 
 @Injectable()
 export class AuthMfaService {
-  private readonly totpIssuer = process.env.AUTH_TOTP_ISSUER?.trim() || 'School ERP';
+  private readonly totpIssuer =
+    process.env.AUTH_TOTP_ISSUER?.trim() || 'School ERP';
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async setupTotp(userId: string, accountName: string): Promise<TotpSetupResponse> {
+  async setupTotp(
+    userId: string,
+    accountName: string,
+  ): Promise<TotpSetupResponse> {
     const secret = speakeasy.generateSecret({
       length: 20,
       issuer: this.totpIssuer,
@@ -79,7 +88,10 @@ export class AuthMfaService {
       throw new BadRequestException('MFA setup is required before enabling.');
     }
 
-    const isValid = this.verifyTotpCode(this.decryptSecret(factor.secretEncrypted), code);
+    const isValid = this.verifyTotpCode(
+      this.decryptSecret(factor.secretEncrypted),
+      code,
+    );
     if (!isValid) {
       throw new UnauthorizedException('Invalid MFA verification code.');
     }
@@ -114,7 +126,10 @@ export class AuthMfaService {
       throw new BadRequestException('MFA is not enabled.');
     }
 
-    const isValid = this.verifyTotpCode(this.decryptSecret(factor.secretEncrypted), code);
+    const isValid = this.verifyTotpCode(
+      this.decryptSecret(factor.secretEncrypted),
+      code,
+    );
     if (!isValid) {
       throw new UnauthorizedException('Invalid MFA verification code.');
     }
@@ -165,7 +180,10 @@ export class AuthMfaService {
       throw new UnauthorizedException('MFA factor is not enabled.');
     }
 
-    const isValid = this.verifyTotpCode(this.decryptSecret(factor.secretEncrypted), code);
+    const isValid = this.verifyTotpCode(
+      this.decryptSecret(factor.secretEncrypted),
+      code,
+    );
     if (!isValid) {
       throw new UnauthorizedException('Invalid MFA verification code.');
     }

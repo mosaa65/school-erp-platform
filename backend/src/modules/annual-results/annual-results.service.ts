@@ -1556,7 +1556,9 @@ export class AnnualResultsService {
       if (!gradesByEnrollment.has(grade.studentEnrollmentId)) {
         gradesByEnrollment.set(grade.studentEnrollmentId, new Set());
       }
-      gradesByEnrollment.get(grade.studentEnrollmentId)!.add(grade.academicTermId);
+      gradesByEnrollment
+        .get(grade.studentEnrollmentId)!
+        .add(grade.academicTermId);
     }
 
     // Check each enrollment has all terms

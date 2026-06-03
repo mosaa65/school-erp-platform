@@ -197,7 +197,8 @@ export class EmployeeContractsService {
   }
 
   async createRenewalDraft(sourceContractId: string, actorUserId: string) {
-    const sourceContract = await this.ensureEmployeeContractExists(sourceContractId);
+    const sourceContract =
+      await this.ensureEmployeeContractExists(sourceContractId);
 
     if (!sourceContract.isActive) {
       throw new BadRequestException(
@@ -608,10 +609,7 @@ export class EmployeeContractsService {
     });
 
     return Array.from(
-      new Set([
-        ...managerIds,
-        ...(employeeUser ? [employeeUser.id] : []),
-      ]),
+      new Set([...managerIds, ...(employeeUser ? [employeeUser.id] : [])]),
     );
   }
 
@@ -630,7 +628,10 @@ export class EmployeeContractsService {
 
     return Math.max(
       0,
-      Math.floor((endOfContractDay.getTime() - startOfToday.getTime()) / millisecondsInDay),
+      Math.floor(
+        (endOfContractDay.getTime() - startOfToday.getTime()) /
+          millisecondsInDay,
+      ),
     );
   }
 

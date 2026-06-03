@@ -48,10 +48,7 @@ export class PaymentTransactionsController {
   @Post('simulate')
   @RequirePermissions('payment-transactions.simulate')
   @ApiOperation({ summary: 'Simulate payment transaction (internal)' })
-  simulate(
-    @Body() payload: SimulatePaymentDto,
-    @CurrentUser() user: AuthUser,
-  ) {
+  simulate(@Body() payload: SimulatePaymentDto, @CurrentUser() user: AuthUser) {
     return this.paymentTransactionsService.simulate(payload, user.userId);
   }
 
@@ -68,10 +65,7 @@ export class PaymentTransactionsController {
     summary:
       'Complete payment transaction if needed, then reconcile it in one step',
   })
-  completeAndReconcile(
-    @Param('id') id: string,
-    @CurrentUser() user: AuthUser,
-  ) {
+  completeAndReconcile(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.paymentTransactionsService.completeAndReconcile(
       id,
       user.userId,

@@ -36,7 +36,10 @@ export class FinancialFundsController {
   @Post()
   @RequirePermissions('financial-funds.create')
   @ApiOperation({ summary: 'Create financial fund' })
-  create(@Body() payload: CreateFinancialFundDto, @CurrentUser() user: AuthUser) {
+  create(
+    @Body() payload: CreateFinancialFundDto,
+    @CurrentUser() user: AuthUser,
+  ) {
     return this.financialFundsService.create(payload, user.userId);
   }
 

@@ -38,7 +38,10 @@ export class RecurringJournalsController {
   @Post()
   @RequirePermissions('recurring-journals.create')
   @ApiOperation({ summary: 'Create recurring journal template' })
-  create(@Body() payload: CreateRecurringJournalDto, @CurrentUser() user: AuthUser) {
+  create(
+    @Body() payload: CreateRecurringJournalDto,
+    @CurrentUser() user: AuthUser,
+  ) {
     return this.recurringJournalsService.create(payload, user.userId);
   }
 
@@ -75,7 +78,10 @@ export class RecurringJournalsController {
   @Post(':id/generate')
   @RequirePermissions('recurring-journals.generate')
   @ApiOperation({ summary: 'Generate journal entry from template' })
-  generate(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: AuthUser) {
+  generate(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: AuthUser,
+  ) {
     return this.recurringJournalsService.generate(id, user.userId);
   }
 

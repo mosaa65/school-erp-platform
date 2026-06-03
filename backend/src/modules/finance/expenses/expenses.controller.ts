@@ -76,7 +76,10 @@ export class ExpensesController {
   @Patch(':id/approve')
   @RequirePermissions('expenses.approve')
   @ApiOperation({ summary: 'Approve expense and post journal entry' })
-  approve(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: AuthUser) {
+  approve(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: AuthUser,
+  ) {
     return this.expensesService.approve(id, user.userId);
   }
 

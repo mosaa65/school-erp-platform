@@ -99,4 +99,3 @@ export class ParentNotificationsController {
     return this.parentNotificationsService.remove(id, user.userId);
   }
 }
-

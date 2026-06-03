@@ -1,9 +1,4 @@
-import {
-  Controller,
-  Get,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -94,8 +89,18 @@ export class FinancialReportsController {
   @ApiOperation({ summary: 'قائمة الدخل — Income Statement' })
   @ApiQuery({ name: 'fiscalYearId', required: false, type: Number })
   @ApiQuery({ name: 'branchId', required: false, type: Number })
-  @ApiQuery({ name: 'dateFrom', required: false, type: String, description: 'YYYY-MM-DD' })
-  @ApiQuery({ name: 'dateTo', required: false, type: String, description: 'YYYY-MM-DD' })
+  @ApiQuery({
+    name: 'dateFrom',
+    required: false,
+    type: String,
+    description: 'YYYY-MM-DD',
+  })
+  @ApiQuery({
+    name: 'dateTo',
+    required: false,
+    type: String,
+    description: 'YYYY-MM-DD',
+  })
   getIncomeStatement(
     @Query('fiscalYearId') fiscalYearId?: string,
     @Query('branchId') branchId?: string,
@@ -114,7 +119,12 @@ export class FinancialReportsController {
   @RequirePermissions('financial-reports.read')
   @ApiOperation({ summary: 'الميزانية العمومية — Balance Sheet' })
   @ApiQuery({ name: 'branchId', required: false, type: Number })
-  @ApiQuery({ name: 'asOfDate', required: false, type: String, description: 'YYYY-MM-DD' })
+  @ApiQuery({
+    name: 'asOfDate',
+    required: false,
+    type: String,
+    description: 'YYYY-MM-DD',
+  })
   getBalanceSheet(
     @Query('branchId') branchId?: string,
     @Query('asOfDate') asOfDate?: string,
@@ -130,8 +140,18 @@ export class FinancialReportsController {
   @ApiOperation({ summary: 'كشف حساب الطالب — Student Account Statement' })
   @ApiQuery({ name: 'enrollmentId', required: true, type: String })
   @ApiQuery({ name: 'academicYearId', required: false, type: String })
-  @ApiQuery({ name: 'dateFrom', required: false, type: String, description: 'YYYY-MM-DD' })
-  @ApiQuery({ name: 'dateTo', required: false, type: String, description: 'YYYY-MM-DD' })
+  @ApiQuery({
+    name: 'dateFrom',
+    required: false,
+    type: String,
+    description: 'YYYY-MM-DD',
+  })
+  @ApiQuery({
+    name: 'dateTo',
+    required: false,
+    type: String,
+    description: 'YYYY-MM-DD',
+  })
   getStudentAccountStatement(
     @Query('enrollmentId') enrollmentId: string,
     @Query('academicYearId') academicYearId?: string,
@@ -149,8 +169,18 @@ export class FinancialReportsController {
   @Get('vat-report')
   @RequirePermissions('financial-reports.read')
   @ApiOperation({ summary: 'التقرير الضريبي — VAT Report' })
-  @ApiQuery({ name: 'dateFrom', required: false, type: String, description: 'YYYY-MM-DD' })
-  @ApiQuery({ name: 'dateTo', required: false, type: String, description: 'YYYY-MM-DD' })
+  @ApiQuery({
+    name: 'dateFrom',
+    required: false,
+    type: String,
+    description: 'YYYY-MM-DD',
+  })
+  @ApiQuery({
+    name: 'dateTo',
+    required: false,
+    type: String,
+    description: 'YYYY-MM-DD',
+  })
   @ApiQuery({ name: 'branchId', required: false, type: Number })
   getVatReport(
     @Query('dateFrom') dateFrom?: string,
@@ -169,7 +199,12 @@ export class FinancialReportsController {
   @ApiOperation({ summary: 'أعمار الديون — Accounts Receivable Aging' })
   @ApiQuery({ name: 'branchId', required: false, type: Number })
   @ApiQuery({ name: 'academicYearId', required: false, type: String })
-  @ApiQuery({ name: 'asOfDate', required: false, type: String, description: 'YYYY-MM-DD' })
+  @ApiQuery({
+    name: 'asOfDate',
+    required: false,
+    type: String,
+    description: 'YYYY-MM-DD',
+  })
   getAccountsReceivableAging(
     @Query('branchId') branchId?: string,
     @Query('academicYearId') academicYearId?: string,
@@ -182,4 +217,3 @@ export class FinancialReportsController {
     });
   }
 }
-

@@ -18,7 +18,11 @@ function clamp(value: string, maxLength: number): string {
 }
 
 export function generateAutoCode(prefix = 'AUTO', maxLength = 40): string {
-  const normalizedPrefix = prefix.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '') || 'AUTO';
+  const normalizedPrefix =
+    prefix
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9_]/g, '') || 'AUTO';
   const value = `${normalizedPrefix}_${nowBase36()}${randomBase36(4)}`;
   return clamp(value, maxLength);
 }

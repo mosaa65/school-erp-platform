@@ -79,10 +79,14 @@ export class HrIntegrationsService {
     const totalDeductions = payload.totalDeductions ?? 0;
 
     if (totalDeductions > payload.totalSalaries) {
-      throw new BadRequestException('Total deductions cannot exceed total salaries');
+      throw new BadRequestException(
+        'Total deductions cannot exceed total salaries',
+      );
     }
 
-    const netSalaries = this.roundMoney(payload.totalSalaries - totalDeductions);
+    const netSalaries = this.roundMoney(
+      payload.totalSalaries - totalDeductions,
+    );
     const entryDate = new Date(payload.year, payload.month - 1, 1);
 
     const salaryExpenseAccountId = await this.findPostingAccountByCode(
@@ -131,7 +135,9 @@ export class HrIntegrationsService {
       });
     }
 
-    const description = payload.description?.trim() ?? `قيد رواتب ${payload.month}/${payload.year}`;
+    const description =
+      payload.description?.trim() ??
+      `قيد رواتب ${payload.month}/${payload.year}`;
 
     const entry = await this.createPostedJournalEntry({
       entryDate,
@@ -166,7 +172,10 @@ export class HrIntegrationsService {
     };
   }
 
-  async createDeductionJournal(payload: DeductionJournalDto, actorUserId: string) {
+  async createDeductionJournal(
+    payload: DeductionJournalDto,
+    actorUserId: string,
+  ) {
     const entryDate = new Date();
 
     const salaryPayableAccountId = await this.findPostingAccountByCode(
@@ -380,7 +389,10 @@ export class HrIntegrationsService {
         continue;
       }
 
-      const activeStart = this.maxDate(contract.contractStartDate, monthBounds.start);
+      const activeStart = this.maxDate(
+        contract.contractStartDate,
+        monthBounds.start,
+      );
       const activeEnd = this.minDate(
         contract.contractEndDate ?? monthBounds.end,
         monthBounds.end,
@@ -391,11 +403,15 @@ export class HrIntegrationsService {
       }
 
       const activeDays = this.calculateDaysInclusive(activeStart, activeEnd);
-      const proratedGross = this.roundMoney((salaryAmount * activeDays) / daysInMonth);
+      const proratedGross = this.roundMoney(
+        (salaryAmount * activeDays) / daysInMonth,
+      );
 
       const existing = employeeMap.get(contract.employeeId);
       if (existing) {
-        existing.grossSalary = this.roundMoney(existing.grossSalary + proratedGross);
+        existing.grossSalary = this.roundMoney(
+          existing.grossSalary + proratedGross,
+        );
         for (const dateKey of this.enumerateDateKeys(activeStart, activeEnd)) {
           existing.activeDateKeys.add(dateKey);
         }
@@ -449,7 +465,10 @@ export class HrIntegrationsService {
           continue;
         }
 
-        for (const dateKey of this.enumerateDateKeys(overlapStart, overlapEnd)) {
+        for (const dateKey of this.enumerateDateKeys(
+          overlapStart,
+          overlapEnd,
+        )) {
           accumulator.unpaidLeaveDateKeys.add(dateKey);
         }
       }
@@ -458,15 +477,19 @@ export class HrIntegrationsService {
     const employeeBreakdown = Array.from(employeeMap.values())
       .map((item) => {
         const activeDays = item.activeDateKeys.size;
-        const unpaidLeaveDays = Array.from(item.unpaidLeaveDateKeys).filter((dateKey) =>
-          item.activeDateKeys.has(dateKey),
+        const unpaidLeaveDays = Array.from(item.unpaidLeaveDateKeys).filter(
+          (dateKey) => item.activeDateKeys.has(dateKey),
         ).length;
         const dailyRate =
           activeDays > 0
             ? this.roundMoney(item.grossSalary / activeDays)
             : this.roundMoney(item.grossSalary / daysInMonth);
-        const estimatedDeductions = this.roundMoney(dailyRate * unpaidLeaveDays);
-        const estimatedNetSalary = this.roundMoney(item.grossSalary - estimatedDeductions);
+        const estimatedDeductions = this.roundMoney(
+          dailyRate * unpaidLeaveDays,
+        );
+        const estimatedNetSalary = this.roundMoney(
+          item.grossSalary - estimatedDeductions,
+        );
 
         return {
           employeeId: item.employeeId,
@@ -492,7 +515,10 @@ export class HrIntegrationsService {
       employeeBreakdown.reduce((sum, item) => sum + item.grossSalary, 0),
     );
     const totalEstimatedDeductions = this.roundMoney(
-      employeeBreakdown.reduce((sum, item) => sum + item.estimatedDeductions, 0),
+      employeeBreakdown.reduce(
+        (sum, item) => sum + item.estimatedDeductions,
+        0,
+      ),
     );
     const estimatedNetSalaries = this.roundMoney(
       totalGrossSalaries - totalEstimatedDeductions,
@@ -709,7 +735,8 @@ export class HrIntegrationsService {
       });
 
       for (const line of input.lines) {
-        const balanceChange = Number(line.creditAmount) - Number(line.debitAmount);
+        const balanceChange =
+          Number(line.creditAmount) - Number(line.debitAmount);
         await tx.chartOfAccount.update({
           where: { id: line.accountId },
           data: {
@@ -724,7 +751,10 @@ export class HrIntegrationsService {
     });
   }
 
-  private async findFiscalYearForDate(tx: Prisma.TransactionClient, date: Date) {
+  private async findFiscalYearForDate(
+    tx: Prisma.TransactionClient,
+    date: Date,
+  ) {
     return findActiveFiscalYearForDate(tx, date, 'the entry date');
   }
 
@@ -782,7 +812,9 @@ export class HrIntegrationsService {
         : null);
 
     if (!account) {
-      throw new NotFoundException(`Posting account ${accountNameEn} was not found`);
+      throw new NotFoundException(
+        `Posting account ${accountNameEn} was not found`,
+      );
     }
 
     if (account.isHeader) {
@@ -811,7 +843,9 @@ export class HrIntegrationsService {
 
   private assertBalanced(totalDebit: number, totalCredit: number) {
     if (totalDebit <= 0 || totalCredit <= 0) {
-      throw new BadRequestException('Total debit and credit must be greater than zero');
+      throw new BadRequestException(
+        'Total debit and credit must be greater than zero',
+      );
     }
 
     if (Math.abs(totalDebit - totalCredit) > 0.01) {
@@ -854,7 +888,11 @@ export class HrIntegrationsService {
     const cursor = new Date(
       Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()),
     );
-    const endUtc = Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate());
+    const endUtc = Date.UTC(
+      end.getUTCFullYear(),
+      end.getUTCMonth(),
+      end.getUTCDate(),
+    );
 
     while (cursor.getTime() <= endUtc) {
       keys.push(cursor.toISOString().slice(0, 10));

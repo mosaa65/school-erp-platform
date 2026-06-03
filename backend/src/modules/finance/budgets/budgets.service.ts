@@ -58,7 +58,10 @@ export class BudgetsService {
       throw new BadRequestException('Budget must include at least one line');
     }
 
-    const totalAmount = payload.lines.reduce((sum, l) => sum + l.budgetedAmount, 0);
+    const totalAmount = payload.lines.reduce(
+      (sum, l) => sum + l.budgetedAmount,
+      0,
+    );
 
     try {
       const budget = await this.prisma.budget.create({
@@ -167,7 +170,9 @@ export class BudgetsService {
           fiscalYearId: payload.fiscalYearId,
           branchId: payload.branchId,
           budgetType: payload.budgetType,
-          startDate: payload.startDate ? new Date(payload.startDate) : undefined,
+          startDate: payload.startDate
+            ? new Date(payload.startDate)
+            : undefined,
           endDate: payload.endDate ? new Date(payload.endDate) : undefined,
           notes: payload.notes?.trim(),
         },
@@ -281,9 +286,10 @@ export class BudgetsService {
       const actualAmount = Math.abs(actualMap.get(budgetLine.accountId) ?? 0);
       const budgetedAmount = Number(budgetLine.budgetedAmount);
       const variance = budgetedAmount - actualAmount;
-      const variancePercentage = budgetedAmount > 0
-        ? Number(((variance / budgetedAmount) * 100).toFixed(2))
-        : 0;
+      const variancePercentage =
+        budgetedAmount > 0
+          ? Number(((variance / budgetedAmount) * 100).toFixed(2))
+          : 0;
 
       return {
         accountId: budgetLine.accountId,
@@ -293,14 +299,21 @@ export class BudgetsService {
         actualAmount: Number(actualAmount.toFixed(2)),
         variance: Number(variance.toFixed(2)),
         variancePercentage,
-        utilizationPercentage: budgetedAmount > 0
-          ? Number(((actualAmount / budgetedAmount) * 100).toFixed(2))
-          : 0,
+        utilizationPercentage:
+          budgetedAmount > 0
+            ? Number(((actualAmount / budgetedAmount) * 100).toFixed(2))
+            : 0,
       };
     });
 
-    const totalBudgeted = report.reduce((s: number, r: any) => s + r.budgetedAmount, 0);
-    const totalActual = report.reduce((s: number, r: any) => s + r.actualAmount, 0);
+    const totalBudgeted = report.reduce(
+      (s: number, r: any) => s + r.budgetedAmount,
+      0,
+    );
+    const totalActual = report.reduce(
+      (s: number, r: any) => s + r.actualAmount,
+      0,
+    );
 
     return {
       budgetId: budget.id,
@@ -314,21 +327,26 @@ export class BudgetsService {
         totalBudgeted: Number(totalBudgeted.toFixed(2)),
         totalActual: Number(totalActual.toFixed(2)),
         totalVariance: Number((totalBudgeted - totalActual).toFixed(2)),
-        overallUtilization: totalBudgeted > 0
-          ? Number(((totalActual / totalBudgeted) * 100).toFixed(2))
-          : 0,
+        overallUtilization:
+          totalBudgeted > 0
+            ? Number(((totalActual / totalBudgeted) * 100).toFixed(2))
+            : 0,
       },
     };
   }
 
   private normalizeRequiredText(value: string, fieldName: string): string {
     const normalized = value.trim();
-    if (!normalized) throw new BadRequestException(`${fieldName} cannot be empty`);
+    if (!normalized)
+      throw new BadRequestException(`${fieldName} cannot be empty`);
     return normalized;
   }
 
   private throwKnownDatabaseErrors(error: unknown): never {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
       throw new ConflictException('Budget already exists');
     }
     throw error;

@@ -135,13 +135,15 @@ export class LookupGradeDescriptionsService {
   }
 
   async findOne(id: number) {
-    const gradeDescription = await this.prisma.lookupGradeDescription.findFirst({
-      where: {
-        id,
-        deletedAt: null,
+    const gradeDescription = await this.prisma.lookupGradeDescription.findFirst(
+      {
+        where: {
+          id,
+          deletedAt: null,
+        },
+        include: lookupGradeDescriptionInclude,
       },
-      include: lookupGradeDescriptionInclude,
-    });
+    );
 
     if (!gradeDescription) {
       throw new NotFoundException('Grade description not found');
@@ -232,17 +234,19 @@ export class LookupGradeDescriptionsService {
   }
 
   private async ensureLookupItemExists(id: number) {
-    const gradeDescription = await this.prisma.lookupGradeDescription.findFirst({
-      where: {
-        id,
-        deletedAt: null,
+    const gradeDescription = await this.prisma.lookupGradeDescription.findFirst(
+      {
+        where: {
+          id,
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          minPercentage: true,
+          maxPercentage: true,
+        },
       },
-      select: {
-        id: true,
-        minPercentage: true,
-        maxPercentage: true,
-      },
-    });
+    );
 
     if (!gradeDescription) {
       throw new NotFoundException('Grade description not found');
@@ -299,4 +303,3 @@ export class LookupGradeDescriptionsService {
     return 'Unknown error';
   }
 }
-

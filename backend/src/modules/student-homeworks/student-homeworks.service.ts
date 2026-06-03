@@ -571,15 +571,11 @@ export class StudentHomeworksService {
     homework: HomeworkContext,
   ) {
     if (enrollment.sectionId !== homework.sectionId) {
-      throw new BadRequestException(
-        'شعبة القيد لا تطابق شعبة الواجب المحددة',
-      );
+      throw new BadRequestException('شعبة القيد لا تطابق شعبة الواجب المحددة');
     }
 
     if (enrollment.academicYearId !== homework.academicYearId) {
-      throw new BadRequestException(
-        'السنة الدراسية للقيد لا تطابق سنة الواجب',
-      );
+      throw new BadRequestException('السنة الدراسية للقيد لا تطابق سنة الواجب');
     }
   }
 

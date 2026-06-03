@@ -404,4 +404,3 @@ export class GradingOutcomeRulesService {
     return 'خطأ غير معروف';
   }
 }
-

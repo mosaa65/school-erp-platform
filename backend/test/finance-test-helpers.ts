@@ -637,7 +637,10 @@ export async function deleteJournalEntriesForAccounts(
   context: FinanceE2eContext,
   accountIds: number[],
 ) {
-  const journalEntryIds = await findJournalEntryIdsByAccounts(context, accountIds);
+  const journalEntryIds = await findJournalEntryIdsByAccounts(
+    context,
+    accountIds,
+  );
 
   if (journalEntryIds.length === 0) {
     return;

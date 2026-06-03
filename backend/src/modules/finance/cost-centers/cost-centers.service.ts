@@ -177,12 +177,16 @@ export class CostCentersService {
 
   private normalizeRequiredText(value: string, fieldName: string): string {
     const normalized = value.trim();
-    if (!normalized) throw new BadRequestException(`${fieldName} cannot be empty`);
+    if (!normalized)
+      throw new BadRequestException(`${fieldName} cannot be empty`);
     return normalized;
   }
 
   private throwKnownDatabaseErrors(error: unknown): never {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
       throw new ConflictException('Cost center already exists');
     }
     throw error;

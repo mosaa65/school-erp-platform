@@ -31,7 +31,9 @@ import { PaymentGatewaysService } from './payment-gateways.service';
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('finance/payment-gateways')
 export class PaymentGatewaysController {
-  constructor(private readonly paymentGatewaysService: PaymentGatewaysService) {}
+  constructor(
+    private readonly paymentGatewaysService: PaymentGatewaysService,
+  ) {}
 
   @Post()
   @RequirePermissions('payment-gateways.create')

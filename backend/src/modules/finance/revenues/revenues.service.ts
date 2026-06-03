@@ -120,14 +120,15 @@ export class RevenuesService {
           },
         });
 
-        const entryNumber = await this.documentSequencesService.reserveNextNumber(
-          DocumentType.JOURNAL_ENTRY,
-          {
-            tx,
-            fiscalYearId: fiscalYear.id,
-            date: revenueDate,
-          },
-        );
+        const entryNumber =
+          await this.documentSequencesService.reserveNextNumber(
+            DocumentType.JOURNAL_ENTRY,
+            {
+              tx,
+              fiscalYearId: fiscalYear.id,
+              date: revenueDate,
+            },
+          );
 
         const now = new Date();
         const description =
@@ -355,7 +356,9 @@ export class RevenuesService {
     const existing = await this.ensureRevenueExists(id);
 
     if (existing.journalEntryId) {
-      throw new BadRequestException('Cannot delete revenue linked to a journal entry');
+      throw new BadRequestException(
+        'Cannot delete revenue linked to a journal entry',
+      );
     }
 
     await this.prisma.revenue.delete({
@@ -388,10 +391,7 @@ export class RevenuesService {
     return revenue;
   }
 
-  private async ensureFundExists(
-    tx: Prisma.TransactionClient,
-    fundId: number,
-  ) {
+  private async ensureFundExists(tx: Prisma.TransactionClient, fundId: number) {
     const fund = await tx.financialFund.findFirst({
       where: { id: fundId, isActive: true },
       select: {
@@ -500,7 +500,9 @@ export class RevenuesService {
         : null);
 
     if (!account) {
-      throw new NotFoundException(`Posting account ${accountNameEn} was not found`);
+      throw new NotFoundException(
+        `Posting account ${accountNameEn} was not found`,
+      );
     }
 
     if (account.isHeader) {

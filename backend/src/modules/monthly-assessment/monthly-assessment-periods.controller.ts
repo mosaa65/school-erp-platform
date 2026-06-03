@@ -41,7 +41,10 @@ export class MonthlyAssessmentPeriodsController {
   @Post()
   @RequirePermissions('assessment-periods.create')
   @ApiOperation({ summary: 'Create monthly assessment period' })
-  create(@Body() payload: CreateAssessmentPeriodDto, @CurrentUser() user: AuthUser) {
+  create(
+    @Body() payload: CreateAssessmentPeriodDto,
+    @CurrentUser() user: AuthUser,
+  ) {
     return this.monthlyAssessmentPeriodsService.create(payload, user.userId);
   }
 
@@ -88,7 +91,11 @@ export class MonthlyAssessmentPeriodsController {
     @Body() payload: UpdateAssessmentPeriodDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.monthlyAssessmentPeriodsService.update(id, payload, user.userId);
+    return this.monthlyAssessmentPeriodsService.update(
+      id,
+      payload,
+      user.userId,
+    );
   }
 
   @Post(':id/lock')

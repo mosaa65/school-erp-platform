@@ -67,7 +67,9 @@ export class EmployeeLeaveBalancesService {
 
   async create(payload: CreateEmployeeLeaveBalanceDto, actorUserId: string) {
     try {
-      await this.employeesService.ensureEmployeeExistsAndActive(payload.employeeId);
+      await this.employeesService.ensureEmployeeExistsAndActive(
+        payload.employeeId,
+      );
       this.validateDayValues(
         payload.allocatedDays,
         payload.carriedForwardDays,
@@ -214,7 +216,9 @@ export class EmployeeLeaveBalancesService {
     }
 
     if (payload.employeeId) {
-      await this.employeesService.ensureEmployeeExistsAndActive(payload.employeeId);
+      await this.employeesService.ensureEmployeeExistsAndActive(
+        payload.employeeId,
+      );
     }
 
     const employees = await this.prisma.employee.findMany({
@@ -236,17 +240,18 @@ export class EmployeeLeaveBalancesService {
 
     for (const employee of employees) {
       for (const leaveType of targetLeaveTypes) {
-        const existingBalance = await this.prisma.employeeLeaveBalance.findFirst({
-          where: {
-            deletedAt: null,
-            employeeId: employee.id,
-            leaveType,
-            balanceYear: payload.balanceYear,
-          },
-          select: {
-            id: true,
-          },
-        });
+        const existingBalance =
+          await this.prisma.employeeLeaveBalance.findFirst({
+            where: {
+              deletedAt: null,
+              employeeId: employee.id,
+              leaveType,
+              balanceYear: payload.balanceYear,
+            },
+            select: {
+              id: true,
+            },
+          });
 
         if (existingBalance) {
           skippedExistingCount += 1;
@@ -310,13 +315,16 @@ export class EmployeeLeaveBalancesService {
     try {
       const existing = await this.ensureEmployeeLeaveBalanceExists(id);
       const resolvedEmployeeId = payload.employeeId ?? existing.employeeId;
-      const resolvedAllocatedDays = payload.allocatedDays ?? existing.allocatedDays;
+      const resolvedAllocatedDays =
+        payload.allocatedDays ?? existing.allocatedDays;
       const resolvedCarriedForwardDays =
         payload.carriedForwardDays ?? existing.carriedForwardDays;
       const resolvedManualAdjustmentDays =
         payload.manualAdjustmentDays ?? existing.manualAdjustmentDays;
 
-      await this.employeesService.ensureEmployeeExistsAndActive(resolvedEmployeeId);
+      await this.employeesService.ensureEmployeeExistsAndActive(
+        resolvedEmployeeId,
+      );
       this.validateDayValues(
         resolvedAllocatedDays,
         resolvedCarriedForwardDays,
@@ -523,8 +531,14 @@ export class EmployeeLeaveBalancesService {
     rangeStart: Date,
     rangeEnd: Date,
   ) {
-    const start = Math.max(this.toUtcDateOnly(startDate), this.toUtcDateOnly(rangeStart));
-    const end = Math.min(this.toUtcDateOnly(endDate), this.toUtcDateOnly(rangeEnd));
+    const start = Math.max(
+      this.toUtcDateOnly(startDate),
+      this.toUtcDateOnly(rangeStart),
+    );
+    const end = Math.min(
+      this.toUtcDateOnly(endDate),
+      this.toUtcDateOnly(rangeEnd),
+    );
 
     if (end < start) {
       return 0;
@@ -541,7 +555,11 @@ export class EmployeeLeaveBalancesService {
   }
 
   private toUtcDateOnly(value: Date) {
-    return Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate());
+    return Date.UTC(
+      value.getUTCFullYear(),
+      value.getUTCMonth(),
+      value.getUTCDate(),
+    );
   }
 
   private validateDayValues(

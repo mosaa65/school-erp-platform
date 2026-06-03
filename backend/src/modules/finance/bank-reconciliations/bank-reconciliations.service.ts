@@ -135,12 +135,13 @@ export class BankReconciliationsService {
     const where: Prisma.BankReconciliationWhereInput = {
       bankAccountId: query.bankAccountId,
       status: query.status,
-      statementDate: query.dateFrom || query.dateTo
-        ? {
-            gte: query.dateFrom ? new Date(query.dateFrom) : undefined,
-            lte: query.dateTo ? new Date(query.dateTo) : undefined,
-          }
-        : undefined,
+      statementDate:
+        query.dateFrom || query.dateTo
+          ? {
+              gte: query.dateFrom ? new Date(query.dateFrom) : undefined,
+              lte: query.dateTo ? new Date(query.dateTo) : undefined,
+            }
+          : undefined,
     };
 
     const [total, items] = await this.prisma.$transaction([
@@ -267,17 +268,22 @@ export class BankReconciliationsService {
     payload: CreateReconciliationItemDto,
     actorUserId: string,
   ) {
-    const reconciliationKey = this.parseRequiredBigInt(reconciliationId, 'reconciliationId');
-    const reconciliation = await this.ensureBankReconciliationExists(
-      reconciliationKey,
+    const reconciliationKey = this.parseRequiredBigInt(
+      reconciliationId,
+      'reconciliationId',
     );
+    const reconciliation =
+      await this.ensureBankReconciliationExists(reconciliationKey);
 
     if (reconciliation.status === BankReconciliationStatus.RECONCILED) {
       throw new BadRequestException('Reconciliation is already closed');
     }
 
     const transactionIdRaw = payload.transactionId?.trim();
-    const transactionId = this.parseOptionalBigInt(transactionIdRaw, 'transactionId');
+    const transactionId = this.parseOptionalBigInt(
+      transactionIdRaw,
+      'transactionId',
+    );
     const journalEntryId = payload.journalEntryId?.trim();
     const bankReference = payload.bankReference?.trim();
 
@@ -295,7 +301,10 @@ export class BankReconciliationsService {
 
     if (journalEntryId) {
       await this.ensureJournalEntryExists(journalEntryId);
-      await this.ensureJournalEntryNotMatched(reconciliationKey, journalEntryId);
+      await this.ensureJournalEntryNotMatched(
+        reconciliationKey,
+        journalEntryId,
+      );
     }
 
     const matchedAt = payload.matchedAt
@@ -317,17 +326,17 @@ export class BankReconciliationsService {
       include: reconciliationItemInclude,
     });
 
-      await this.auditLogsService.record({
-        actorUserId,
-        action: 'RECONCILIATION_ITEM_CREATE',
-        resource: 'bank-reconciliation-items',
-        resourceId: String(item.id),
-        details: {
-          reconciliationId: reconciliationKey.toString(),
-          itemType: item.itemType,
-          amount: item.amount,
-        },
-      });
+    await this.auditLogsService.record({
+      actorUserId,
+      action: 'RECONCILIATION_ITEM_CREATE',
+      resource: 'bank-reconciliation-items',
+      resourceId: String(item.id),
+      details: {
+        reconciliationId: reconciliationKey.toString(),
+        itemType: item.itemType,
+        amount: item.amount,
+      },
+    });
 
     return item;
   }
@@ -428,12 +437,13 @@ export class BankReconciliationsService {
       }
     });
 
-    const updatedReconciliation = await this.prisma.bankReconciliation.findFirst({
-      where: {
-        id: reconciliationId,
-      },
-      include: bankReconciliationDetailInclude,
-    });
+    const updatedReconciliation =
+      await this.prisma.bankReconciliation.findFirst({
+        where: {
+          id: reconciliationId,
+        },
+        include: bankReconciliationDetailInclude,
+      });
 
     await this.auditLogsService.record({
       actorUserId,
@@ -543,7 +553,9 @@ export class BankReconciliationsService {
     });
 
     if (existing) {
-      throw new ConflictException('Transaction already matched in this reconciliation');
+      throw new ConflictException(
+        'Transaction already matched in this reconciliation',
+      );
     }
   }
 
@@ -560,7 +572,9 @@ export class BankReconciliationsService {
     });
 
     if (existing) {
-      throw new ConflictException('Journal entry already matched in this reconciliation');
+      throw new ConflictException(
+        'Journal entry already matched in this reconciliation',
+      );
     }
   }
 

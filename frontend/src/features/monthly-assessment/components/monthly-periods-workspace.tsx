@@ -310,7 +310,10 @@ export function MonthlyPeriodsWorkspace({ mode }: MonthlyPeriodsWorkspaceProps) 
         })
       ).data,
   });
-  const monthlyPeriods = allMonthlyPeriodsQuery.data ?? [];
+  const monthlyPeriods = React.useMemo(
+    () => allMonthlyPeriodsQuery.data ?? [],
+    [allMonthlyPeriodsQuery.data],
+  );
   const filteredPeriodsForFilter = React.useMemo(() => {
     if (isPeriodsMode) {
       return monthlyPeriods;

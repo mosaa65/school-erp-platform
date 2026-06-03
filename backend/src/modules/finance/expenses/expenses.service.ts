@@ -190,7 +190,9 @@ export class ExpensesService {
           fundId: payload.fundId,
           categoryId: payload.categoryId,
           amount: payload.amount,
-          expenseDate: payload.expenseDate ? new Date(payload.expenseDate) : undefined,
+          expenseDate: payload.expenseDate
+            ? new Date(payload.expenseDate)
+            : undefined,
           vendorName: payload.vendorName?.trim(),
           invoiceNumber: payload.invoiceNumber?.trim(),
           description: payload.description?.trim(),
@@ -412,10 +414,7 @@ export class ExpensesService {
     return expense;
   }
 
-  private async ensureFundExists(
-    tx: Prisma.TransactionClient,
-    fundId: number,
-  ) {
+  private async ensureFundExists(tx: Prisma.TransactionClient, fundId: number) {
     const fund = await tx.financialFund.findFirst({
       where: { id: fundId, isActive: true },
       select: {
@@ -524,7 +523,9 @@ export class ExpensesService {
         : null);
 
     if (!account) {
-      throw new NotFoundException(`Posting account ${accountNameEn} was not found`);
+      throw new NotFoundException(
+        `Posting account ${accountNameEn} was not found`,
+      );
     }
 
     if (account.isHeader) {

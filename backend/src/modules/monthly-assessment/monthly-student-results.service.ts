@@ -88,11 +88,15 @@ export class MonthlyStudentResultsService {
     await this.ensureSubject(payload.subjectId);
 
     if (period.isLocked) {
-      throw new BadRequestException('Cannot create results inside a locked monthly period');
+      throw new BadRequestException(
+        'Cannot create results inside a locked monthly period',
+      );
     }
 
     if (enrollment.academicYearId !== period.academicYearId) {
-      throw new BadRequestException('Student enrollment does not belong to the same academic year');
+      throw new BadRequestException(
+        'Student enrollment does not belong to the same academic year',
+      );
     }
 
     const id = randomUUID();
@@ -402,7 +406,11 @@ export class MonthlyStudentResultsService {
     const whereSql = Prisma.join(where, ' AND ');
 
     const targets = await this.prisma.$queryRaw<
-      Array<{ id: string; total: Prisma.Decimal | number | string; componentCount: bigint | number }>
+      Array<{
+        id: string;
+        total: Prisma.Decimal | number | string;
+        componentCount: bigint | number;
+      }>
     >(Prisma.sql`
       SELECT
         r.id,
@@ -544,7 +552,9 @@ export class MonthlyStudentResultsService {
     actorUserId: string,
   ) {
     await this.getMonthlyPeriod(payload.assessmentPeriodId);
-    const scope = await this.resolveMonthlyDateScope(payload.assessmentPeriodId);
+    const scope = await this.resolveMonthlyDateScope(
+      payload.assessmentPeriodId,
+    );
     const autoComponents = await this.getAutomaticMonthlyComponents(
       payload.assessmentPeriodId,
     );
@@ -848,7 +858,8 @@ export class MonthlyStudentResultsService {
 
     return {
       attendanceComponents: rows.filter(
-        (item) => item.entryMode === AssessmentComponentEntryMode.AUTO_ATTENDANCE,
+        (item) =>
+          item.entryMode === AssessmentComponentEntryMode.AUTO_ATTENDANCE,
       ),
       homeworkComponents: rows.filter(
         (item) => item.entryMode === AssessmentComponentEntryMode.AUTO_HOMEWORK,
@@ -862,9 +873,18 @@ export class MonthlyStudentResultsService {
   private async syncAutomaticComponentsForResult(
     resultId: string,
     params: {
-      attendanceComponents: Array<{ id: string; maxScore: Prisma.Decimal | number | string }>;
-      homeworkComponents: Array<{ id: string; maxScore: Prisma.Decimal | number | string }>;
-      examComponents: Array<{ id: string; maxScore: Prisma.Decimal | number | string }>;
+      attendanceComponents: Array<{
+        id: string;
+        maxScore: Prisma.Decimal | number | string;
+      }>;
+      homeworkComponents: Array<{
+        id: string;
+        maxScore: Prisma.Decimal | number | string;
+      }>;
+      examComponents: Array<{
+        id: string;
+        maxScore: Prisma.Decimal | number | string;
+      }>;
       scope: { startDate: Date; endDate: Date };
     },
     actorUserId: string,
@@ -987,7 +1007,9 @@ export class MonthlyStudentResultsService {
 
         return (
           sum +
-          (row.isCompleted ? this.decimalToNumber(row.homework.maxScore) ?? 0 : 0)
+          (row.isCompleted
+            ? (this.decimalToNumber(row.homework.maxScore) ?? 0)
+            : 0)
         );
       }, 0);
 
@@ -1049,11 +1071,12 @@ export class MonthlyStudentResultsService {
 
       const examEarned = examRows.reduce(
         (sum, row) =>
-          sum + (row.isPresent ? this.decimalToNumber(row.score) ?? 0 : 0),
+          sum + (row.isPresent ? (this.decimalToNumber(row.score) ?? 0) : 0),
         0,
       );
       const examBase = examRows.reduce(
-        (sum, row) => sum + (this.decimalToNumber(row.examAssessment.maxScore) ?? 0),
+        (sum, row) =>
+          sum + (this.decimalToNumber(row.examAssessment.maxScore) ?? 0),
         0,
       );
 
@@ -1149,7 +1172,9 @@ export class MonthlyStudentResultsService {
     `;
   }
 
-  private decimalToNumber(value: Prisma.Decimal | number | string | null | undefined) {
+  private decimalToNumber(
+    value: Prisma.Decimal | number | string | null | undefined,
+  ) {
     if (value === null || value === undefined) {
       return null;
     }

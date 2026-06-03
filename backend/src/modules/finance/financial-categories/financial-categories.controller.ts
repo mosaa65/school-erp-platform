@@ -31,7 +31,9 @@ import { FinancialCategoriesService } from './financial-categories.service';
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('finance/financial-categories')
 export class FinancialCategoriesController {
-  constructor(private readonly financialCategoriesService: FinancialCategoriesService) {}
+  constructor(
+    private readonly financialCategoriesService: FinancialCategoriesService,
+  ) {}
 
   @Post()
   @RequirePermissions('financial-categories.create')

@@ -11,9 +11,10 @@ import { StructuredLogger } from './common/logger/structured-logger.service';
 import { requestContextMiddleware } from './common/request-context/request-context';
 
 // Ensure BigInt values serialize safely in JSON responses.
-(BigInt.prototype as unknown as { toJSON?: () => string }).toJSON = function () {
-  return this.toString();
-};
+(BigInt.prototype as unknown as { toJSON?: () => string }).toJSON =
+  function () {
+    return this.toString();
+  };
 
 const AUTO_CODE_PATH_RULES: Array<{
   prefixes: string[];
@@ -65,7 +66,9 @@ function buildAutoCode(): string {
 }
 
 function buildRoleCode(): string {
-  return `role_${randomCodePart().toLowerCase()}`.replace(/[^a-z0-9_.:-]/g, '').slice(0, 120);
+  return `role_${randomCodePart().toLowerCase()}`
+    .replace(/[^a-z0-9_.:-]/g, '')
+    .slice(0, 120);
 }
 
 function resolveAutoCodeField(pathname: string) {

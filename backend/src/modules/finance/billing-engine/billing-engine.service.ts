@@ -4,7 +4,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
-  AuditStatus,
   CreditDebitNoteReason,
   CreditDebitNoteType,
   DiscountCalculationMethod,
@@ -192,16 +191,24 @@ export class BillingEngineService {
         );
 
         // حساب الخصم
-        const siblingDiscount = siblingDiscountsMap.get(enrollment.studentId) ?? 0;
-        const discountAmount = Number((subtotal * siblingDiscount / 100).toFixed(2));
+        const siblingDiscount =
+          siblingDiscountsMap.get(enrollment.studentId) ?? 0;
+        const discountAmount = Number(
+          ((subtotal * siblingDiscount) / 100).toFixed(2),
+        );
 
         // حساب الضريبة
         const vatTotal = applicableFees.reduce((sum, fs) => {
-          const lineSubtotal = Number(fs.amount) - (Number(fs.amount) * siblingDiscount / 100);
-          return sum + Number((lineSubtotal * Number(fs.vatRate) / 100).toFixed(2));
+          const lineSubtotal =
+            Number(fs.amount) - (Number(fs.amount) * siblingDiscount) / 100;
+          return (
+            sum + Number(((lineSubtotal * Number(fs.vatRate)) / 100).toFixed(2))
+          );
         }, 0);
 
-        const totalAmount = Number((subtotal - discountAmount + vatTotal).toFixed(2));
+        const totalAmount = Number(
+          (subtotal - discountAmount + vatTotal).toFixed(2),
+        );
 
         const dueDate = payload.dueDate
           ? new Date(payload.dueDate)
@@ -214,13 +221,16 @@ export class BillingEngineService {
           );
 
         // إنشاء الأقساط
-        const installments: Prisma.InvoiceInstallmentCreateManyInvoiceInput[] = [];
+        const installments: Prisma.InvoiceInstallmentCreateManyInvoiceInput[] =
+          [];
         if (installmentCount > 1) {
           const installmentAmount = Number(
             (totalAmount / installmentCount).toFixed(2),
           );
           const remainder = Number(
-            (totalAmount - installmentAmount * (installmentCount - 1)).toFixed(2),
+            (totalAmount - installmentAmount * (installmentCount - 1)).toFixed(
+              2,
+            ),
           );
 
           for (let i = 1; i <= installmentCount; i++) {
@@ -261,9 +271,13 @@ export class BillingEngineService {
             createdByUserId: actorUserId,
             lines: {
               create: applicableFees.map((fs) => {
-                const lineDiscount = Number((Number(fs.amount) * siblingDiscount / 100).toFixed(2));
+                const lineDiscount = Number(
+                  ((Number(fs.amount) * siblingDiscount) / 100).toFixed(2),
+                );
                 const lineSubtotal = Number(fs.amount) - lineDiscount;
-                const lineVat = Number((lineSubtotal * Number(fs.vatRate) / 100).toFixed(2));
+                const lineVat = Number(
+                  ((lineSubtotal * Number(fs.vatRate)) / 100).toFixed(2),
+                );
                 return {
                   feeStructureId: fs.id,
                   descriptionAr: fs.nameAr,
@@ -434,16 +448,11 @@ export class BillingEngineService {
             DiscountCalculationMethod.PERCENTAGE
           ) {
             discountAmount = Number(
-              (subtotal * Number(applicableRule.value) / 100).toFixed(2),
+              ((subtotal * Number(applicableRule.value)) / 100).toFixed(2),
             );
           } else {
             discountAmount = Number(Number(applicableRule.value).toFixed(2));
           }
-
-          // تحديث الفاتورة
-          const newTotal = Number(
-            (subtotal - discountAmount + Number(invoice.totalAmount) - subtotal + Number(invoice.discountAmount)).toFixed(2),
-          );
 
           await this.prisma.studentInvoice.update({
             where: { id: invoice.id },
@@ -569,10 +578,7 @@ export class BillingEngineService {
       (sum, inv) => sum + Number(inv.totalAmount),
       0,
     );
-    const totalPaid = payments.reduce(
-      (sum, p) => sum + Number(p.amount),
-      0,
-    );
+    const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
     const totalCredits = creditDebitNotes
       .filter((n) => n.noteType === 'CREDIT')
       .reduce((sum, n) => sum + Number(n.totalAmount), 0);
@@ -708,19 +714,13 @@ export class BillingEngineService {
       const totalBilled = sg.student.enrollments.reduce(
         (sum, e) =>
           sum +
-          e.studentInvoices.reduce(
-            (s, inv) => s + Number(inv.totalAmount),
-            0,
-          ),
+          e.studentInvoices.reduce((s, inv) => s + Number(inv.totalAmount), 0),
         0,
       );
       const totalPaid = sg.student.enrollments.reduce(
         (sum, e) =>
           sum +
-          e.studentInvoices.reduce(
-            (s, inv) => s + Number(inv.paidAmount),
-            0,
-          ),
+          e.studentInvoices.reduce((s, inv) => s + Number(inv.paidAmount), 0),
         0,
       );
       const balance = Number((totalBilled - totalPaid).toFixed(2));
@@ -737,8 +737,7 @@ export class BillingEngineService {
         hasOverdue: sg.student.enrollments.some((e) =>
           e.studentInvoices.some(
             (inv) =>
-              Number(inv.balanceDue) > 0 &&
-              inv.status !== InvoiceStatus.PAID,
+              Number(inv.balanceDue) > 0 && inv.status !== InvoiceStatus.PAID,
           ),
         ),
       };
@@ -748,10 +747,7 @@ export class BillingEngineService {
       (sum, c) => sum + c.totalBilled,
       0,
     );
-    const familyTotalPaid = children.reduce(
-      (sum, c) => sum + c.totalPaid,
-      0,
-    );
+    const familyTotalPaid = children.reduce((sum, c) => sum + c.totalPaid, 0);
     const familyBalance = Number(
       (familyTotalBilled - familyTotalPaid).toFixed(2),
     );
@@ -791,7 +787,9 @@ export class BillingEngineService {
         status: true,
         isActive: true,
         student: { select: { id: true, fullName: true } },
-        academicYear: { select: { id: true, name: true, startDate: true, endDate: true } },
+        academicYear: {
+          select: { id: true, name: true, startDate: true, endDate: true },
+        },
       },
     });
 
@@ -805,7 +803,10 @@ export class BillingEngineService {
 
     const term = payload.academicTermId
       ? await this.prisma.academicTerm.findFirst({
-          where: { id: payload.academicTermId, academicYearId: enrollment.academicYearId },
+          where: {
+            id: payload.academicTermId,
+            academicYearId: enrollment.academicYearId,
+          },
           select: { id: true, name: true, startDate: true, endDate: true },
         })
       : await this.prisma.academicTerm.findFirst({
@@ -894,7 +895,10 @@ export class BillingEngineService {
         actorUserId,
       );
 
-      await this.creditDebitNotesService.approve(note.id.toString(), actorUserId);
+      await this.creditDebitNotesService.approve(
+        note.id.toString(),
+        actorUserId,
+      );
       const applied = await this.creditDebitNotesService.apply(
         note.id.toString(),
         actorUserId,
@@ -907,7 +911,13 @@ export class BillingEngineService {
         where: {
           invoiceId: { in: invoices.map((inv) => inv.id) },
           dueDate: { gt: withdrawalDate },
-          status: { in: [InstallmentStatus.PENDING, InstallmentStatus.PARTIAL, InstallmentStatus.OVERDUE] },
+          status: {
+            in: [
+              InstallmentStatus.PENDING,
+              InstallmentStatus.PARTIAL,
+              InstallmentStatus.OVERDUE,
+            ],
+          },
         },
         data: {
           status: InstallmentStatus.CANCELLED,
@@ -946,7 +956,12 @@ export class BillingEngineService {
       enrollmentId: enrollment.id,
       studentName: enrollment.student.fullName,
       term: term
-        ? { id: term.id, name: term.name, startDate: term.startDate, endDate: term.endDate }
+        ? {
+            id: term.id,
+            name: term.name,
+            startDate: term.startDate,
+            endDate: term.endDate,
+          }
         : null,
       period: { startDate: periodStart, endDate: periodEnd },
       totals: {
@@ -979,10 +994,7 @@ export class BillingEngineService {
       where: {
         discountType: DiscountType.SIBLING,
         isActive: true,
-        OR: [
-          { academicYearId },
-          { academicYearId: null },
-        ],
+        OR: [{ academicYearId }, { academicYearId: null }],
       },
       orderBy: { siblingOrderFrom: 'asc' },
     });

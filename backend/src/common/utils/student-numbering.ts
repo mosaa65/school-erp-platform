@@ -4,7 +4,9 @@ export function formatStudentAdmissionNo(sequence: number) {
   return `${STUDENT_ADMISSION_PREFIX}${sequence.toString().padStart(6, '0')}`;
 }
 
-export function parseStudentAdmissionNoSequence(value: string | null | undefined) {
+export function parseStudentAdmissionNoSequence(
+  value: string | null | undefined,
+) {
   if (!value || !value.startsWith(STUDENT_ADMISSION_PREFIX)) {
     return null;
   }
@@ -17,10 +19,7 @@ export function parseStudentAdmissionNoSequence(value: string | null | undefined
   return Number.parseInt(rawSequence, 10);
 }
 
-export function formatYearlyEnrollmentNo(
-  yearPrefix: string,
-  sequence: number,
-) {
+export function formatYearlyEnrollmentNo(yearPrefix: string, sequence: number) {
   return `${yearPrefix}-${sequence.toString().padStart(5, '0')}`;
 }
 

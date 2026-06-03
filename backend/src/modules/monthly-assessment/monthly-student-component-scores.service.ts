@@ -1,8 +1,5 @@
 import { randomUUID } from 'crypto';
-import {
-  AssessmentComponentEntryMode,
-  Prisma,
-} from '@prisma/client';
+import { AssessmentComponentEntryMode, Prisma } from '@prisma/client';
 import {
   BadRequestException,
   Injectable,
@@ -268,7 +265,10 @@ export class MonthlyStudentComponentScoresService {
         AND deleted_at IS NULL
     `;
 
-    await this.recalculateResultTotal(existing.studentPeriodResultId, actorUserId);
+    await this.recalculateResultTotal(
+      existing.studentPeriodResultId,
+      actorUserId,
+    );
     return this.findOne(id);
   }
 
@@ -285,7 +285,10 @@ export class MonthlyStudentComponentScoresService {
         AND deleted_at IS NULL
     `;
 
-    await this.recalculateResultTotal(existing.studentPeriodResultId, actorUserId);
+    await this.recalculateResultTotal(
+      existing.studentPeriodResultId,
+      actorUserId,
+    );
     return { success: true };
   }
 
@@ -310,7 +313,9 @@ export class MonthlyStudentComponentScoresService {
     }
 
     if (query.assessmentPeriodId) {
-      where.push(Prisma.sql`r.monthly_assessment_period_id = ${query.assessmentPeriodId}`);
+      where.push(
+        Prisma.sql`r.monthly_assessment_period_id = ${query.assessmentPeriodId}`,
+      );
     }
 
     if (query.subjectId) {
@@ -345,10 +350,7 @@ export class MonthlyStudentComponentScoresService {
     return where;
   }
 
-  private async ensureEditableContext(
-    resultId: string,
-    componentId: string,
-  ) {
+  private async ensureEditableContext(resultId: string, componentId: string) {
     const rows = await this.prisma.$queryRaw<
       Array<{
         resultId: string;
@@ -381,23 +383,36 @@ export class MonthlyStudentComponentScoresService {
       throw new BadRequestException('Monthly result or component not found');
     }
 
-    if (context.componentAssessmentPeriodId !== context.resultAssessmentPeriodId) {
-      throw new BadRequestException('Component does not belong to the same monthly period');
+    if (
+      context.componentAssessmentPeriodId !== context.resultAssessmentPeriodId
+    ) {
+      throw new BadRequestException(
+        'Component does not belong to the same monthly period',
+      );
     }
 
     if (context.resultIsLocked || context.periodIsLocked) {
-      throw new BadRequestException('Cannot modify scores inside a locked monthly result');
+      throw new BadRequestException(
+        'Cannot modify scores inside a locked monthly result',
+      );
     }
 
-    if (context.componentEntryMode === AssessmentComponentEntryMode.AGGREGATED_PERIODS) {
-      throw new BadRequestException('Aggregated monthly components are read-only');
+    if (
+      context.componentEntryMode ===
+      AssessmentComponentEntryMode.AGGREGATED_PERIODS
+    ) {
+      throw new BadRequestException(
+        'Aggregated monthly components are read-only',
+      );
     }
 
     return context;
   }
 
   private async recalculateResultTotal(resultId: string, actorUserId: string) {
-    const rows = await this.prisma.$queryRaw<Array<{ total: Prisma.Decimal | number | string }>>(Prisma.sql`
+    const rows = await this.prisma.$queryRaw<
+      Array<{ total: Prisma.Decimal | number | string }>
+    >(Prisma.sql`
       SELECT COALESCE(SUM(final_score), 0) AS total
       FROM monthly_student_component_scores
       WHERE monthly_student_result_id = ${resultId}

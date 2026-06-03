@@ -74,7 +74,11 @@ export class SectionClassroomAssignmentsController {
     @Body() payload: UpdateSectionClassroomAssignmentDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.sectionClassroomAssignmentsService.update(id, payload, user.userId);
+    return this.sectionClassroomAssignmentsService.update(
+      id,
+      payload,
+      user.userId,
+    );
   }
 
   @Delete(':id')

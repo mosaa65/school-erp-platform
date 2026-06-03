@@ -75,7 +75,8 @@ export class UserNotificationsService {
           userId: normalizedInput.userId,
           title: normalizedInput.title,
           message: normalizedInput.message,
-          notificationType: normalizedInput.notificationType ?? UserNotificationType.INFO,
+          notificationType:
+            normalizedInput.notificationType ?? UserNotificationType.INFO,
           resource: normalizedInput.resource,
           resourceId: normalizedInput.resourceId,
           actionUrl: normalizedInput.actionUrl,
@@ -106,7 +107,8 @@ export class UserNotificationsService {
         status: AuditStatus.FAILURE,
         details: {
           userId: normalizedInput.userId,
-          notificationType: normalizedInput.notificationType ?? UserNotificationType.INFO,
+          notificationType:
+            normalizedInput.notificationType ?? UserNotificationType.INFO,
           reason: this.extractErrorMessage(error),
         },
       });
@@ -190,8 +192,12 @@ export class UserNotificationsService {
     return { unreadCount };
   }
 
-  async getPreferences(actorUserId: string): Promise<UserNotificationPreferencesView> {
-    const preferences = await (this.prisma as any).userNotificationPreference.findUnique({
+  async getPreferences(
+    actorUserId: string,
+  ): Promise<UserNotificationPreferencesView> {
+    const preferences = await (
+      this.prisma as any
+    ).userNotificationPreference.findUnique({
       where: {
         userId: actorUserId,
       },
@@ -205,7 +211,9 @@ export class UserNotificationsService {
     payload: UpdateUserNotificationPreferencesDto,
     actorUserId: string,
   ): Promise<UserNotificationPreferencesView> {
-    const updated = await (this.prisma as any).userNotificationPreference.upsert({
+    const updated = await (
+      this.prisma as any
+    ).userNotificationPreference.upsert({
       where: {
         userId: actorUserId,
       },
@@ -392,7 +400,9 @@ export class UserNotificationsService {
   }
 
   private async shouldSendNotification(input: CreateUserNotificationInput) {
-    const preferences = await (this.prisma as any).userNotificationPreference.findUnique({
+    const preferences = await (
+      this.prisma as any
+    ).userNotificationPreference.findUnique({
       where: {
         userId: input.userId,
       },
@@ -428,18 +438,16 @@ export class UserNotificationsService {
 
   private toPreferencesView(
     userId: string,
-    preferences:
-      | {
-          userId: string;
-          inAppEnabled: boolean;
-          actionRequiredOnly: boolean;
-          leaveNotificationsEnabled: boolean;
-          contractNotificationsEnabled: boolean;
-          documentNotificationsEnabled: boolean;
-          lifecycleNotificationsEnabled: boolean;
-          updatedAt: Date;
-        }
-      | null,
+    preferences: {
+      userId: string;
+      inAppEnabled: boolean;
+      actionRequiredOnly: boolean;
+      leaveNotificationsEnabled: boolean;
+      contractNotificationsEnabled: boolean;
+      documentNotificationsEnabled: boolean;
+      lifecycleNotificationsEnabled: boolean;
+      updatedAt: Date;
+    } | null,
   ): UserNotificationPreferencesView {
     if (preferences) {
       return {

@@ -301,7 +301,8 @@ export class StudentPeriodComponentScoresService {
 
     this.ensureEditable(context);
 
-    const rawScore = payload.rawScore ?? this.decimalToNumber(existing.rawScore);
+    const rawScore =
+      payload.rawScore ?? this.decimalToNumber(existing.rawScore);
     const finalScore =
       payload.finalScore ?? this.decimalToNumber(existing.finalScore);
 
@@ -324,7 +325,10 @@ export class StudentPeriodComponentScoresService {
       include: studentPeriodComponentScoreInclude,
     });
 
-    await this.recalculateResultTotal(existing.studentPeriodResultId, actorUserId);
+    await this.recalculateResultTotal(
+      existing.studentPeriodResultId,
+      actorUserId,
+    );
 
     await this.auditLogsService.record({
       actorUserId,
@@ -355,7 +359,10 @@ export class StudentPeriodComponentScoresService {
       },
     });
 
-    await this.recalculateResultTotal(existing.studentPeriodResultId, actorUserId);
+    await this.recalculateResultTotal(
+      existing.studentPeriodResultId,
+      actorUserId,
+    );
 
     await this.auditLogsService.record({
       actorUserId,

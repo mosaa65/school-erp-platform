@@ -26,7 +26,8 @@ export class AcademicYearsService {
 
   async create(payload: CreateAcademicYearDto, actorUserId: string) {
     const code =
-      payload.code?.trim().toLowerCase() || generateAutoCode('AY').toLowerCase();
+      payload.code?.trim().toLowerCase() ||
+      generateAutoCode('AY').toLowerCase();
     const name = payload.name.trim();
     const startDate = new Date(payload.startDate);
     const endDate = new Date(payload.endDate);

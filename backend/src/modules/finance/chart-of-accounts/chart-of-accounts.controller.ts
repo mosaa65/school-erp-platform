@@ -31,7 +31,9 @@ import { ChartOfAccountsService } from './chart-of-accounts.service';
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('finance/chart-of-accounts')
 export class ChartOfAccountsController {
-  constructor(private readonly chartOfAccountsService: ChartOfAccountsService) {}
+  constructor(
+    private readonly chartOfAccountsService: ChartOfAccountsService,
+  ) {}
 
   @Post()
   @RequirePermissions('chart-of-accounts.create')

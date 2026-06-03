@@ -38,7 +38,10 @@ export class MonthlyAssessmentComponentsController {
   @Post()
   @RequirePermissions('assessment-period-components.create')
   @ApiOperation({ summary: 'Create monthly assessment component' })
-  create(@Body() payload: CreateAssessmentPeriodComponentDto, @CurrentUser() user: AuthUser) {
+  create(
+    @Body() payload: CreateAssessmentPeriodComponentDto,
+    @CurrentUser() user: AuthUser,
+  ) {
     return this.monthlyAssessmentComponentsService.create(payload, user.userId);
   }
 
@@ -49,7 +52,11 @@ export class MonthlyAssessmentComponentsController {
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'search', required: false, type: String })
   @ApiQuery({ name: 'assessmentPeriodId', required: false, type: String })
-  @ApiQuery({ name: 'entryMode', required: false, enum: AssessmentComponentEntryMode })
+  @ApiQuery({
+    name: 'entryMode',
+    required: false,
+    enum: AssessmentComponentEntryMode,
+  })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
   findAll(@Query() query: ListAssessmentPeriodComponentsDto) {
     return this.monthlyAssessmentComponentsService.findAll(query);
@@ -70,7 +77,11 @@ export class MonthlyAssessmentComponentsController {
     @Body() payload: UpdateAssessmentPeriodComponentDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.monthlyAssessmentComponentsService.update(id, payload, user.userId);
+    return this.monthlyAssessmentComponentsService.update(
+      id,
+      payload,
+      user.userId,
+    );
   }
 
   @Delete(':id')

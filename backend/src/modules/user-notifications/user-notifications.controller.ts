@@ -39,7 +39,11 @@ export class UserNotificationsController {
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'search', required: false, type: String })
-  @ApiQuery({ name: 'notificationType', required: false, enum: UserNotificationType })
+  @ApiQuery({
+    name: 'notificationType',
+    required: false,
+    enum: UserNotificationType,
+  })
   @ApiQuery({ name: 'isRead', required: false, type: Boolean })
   findMine(
     @Query() query: ListUserNotificationsDto,

@@ -1,8 +1,5 @@
 import { randomUUID } from 'crypto';
-import {
-  AssessmentComponentEntryMode,
-  Prisma,
-} from '@prisma/client';
+import { AssessmentComponentEntryMode, Prisma } from '@prisma/client';
 import {
   BadRequestException,
   Injectable,
@@ -196,7 +193,9 @@ export class MonthlyAssessmentComponentsService {
     actorUserId: string,
   ) {
     const current = await this.findOne(id);
-    const code = payload.code ? this.buildCode(payload.code, payload.name ?? current.name) : null;
+    const code = payload.code
+      ? this.buildCode(payload.code, payload.name ?? current.name)
+      : null;
 
     await this.prisma.$executeRaw`
       UPDATE monthly_assessment_components
@@ -234,7 +233,9 @@ export class MonthlyAssessmentComponentsService {
   }
 
   private async ensureMonthlyPeriod(id: string) {
-    const rows = await this.prisma.$queryRaw<Array<{ id: string; isLocked: boolean }>>(Prisma.sql`
+    const rows = await this.prisma.$queryRaw<
+      Array<{ id: string; isLocked: boolean }>
+    >(Prisma.sql`
       SELECT id, is_locked AS isLocked
       FROM monthly_assessment_periods
       WHERE id = ${id}
@@ -246,7 +247,9 @@ export class MonthlyAssessmentComponentsService {
       throw new BadRequestException('Monthly assessment period not found');
     }
     if (period.isLocked) {
-      throw new BadRequestException('Cannot modify components of a locked monthly period');
+      throw new BadRequestException(
+        'Cannot modify components of a locked monthly period',
+      );
     }
   }
 

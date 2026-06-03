@@ -28,7 +28,9 @@ export class RollbackAuditLogDto {
     description:
       'Required when mode=TARGET. Must exist in the last 10 timeline changes.',
   })
-  @ValidateIf((value: RollbackAuditLogDto) => value.mode === AuditRollbackMode.TARGET)
+  @ValidateIf(
+    (value: RollbackAuditLogDto) => value.mode === AuditRollbackMode.TARGET,
+  )
   @IsString()
   @MaxLength(191)
   targetAuditLogId?: string;

@@ -34,7 +34,10 @@ export class TransportIntegrationsController {
     @Body() payload: GenerateTransportInvoicesDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.transportIntegrationsService.generateInvoices(payload, user.userId);
+    return this.transportIntegrationsService.generateInvoices(
+      payload,
+      user.userId,
+    );
   }
 
   @Post('subscription-fee')
@@ -44,7 +47,10 @@ export class TransportIntegrationsController {
     @Body() payload: TransportSubscriptionFeeDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.transportIntegrationsService.addSubscriptionFee(payload, user.userId);
+    return this.transportIntegrationsService.addSubscriptionFee(
+      payload,
+      user.userId,
+    );
   }
 
   @Post('maintenance-expense')

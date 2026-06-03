@@ -219,12 +219,12 @@ export class AssessmentPeriodsService {
       category: payload.category ?? existing.category,
       academicTermId:
         payload.academicTermId !== undefined
-          ? payload.academicTermId ?? undefined
-          : existing.academicTermId ?? undefined,
+          ? (payload.academicTermId ?? undefined)
+          : (existing.academicTermId ?? undefined),
       academicMonthId:
         payload.academicMonthId !== undefined
-          ? payload.academicMonthId ?? undefined
-          : existing.academicMonthId ?? undefined,
+          ? (payload.academicMonthId ?? undefined)
+          : (existing.academicMonthId ?? undefined),
       name: payload.name ?? existing.name,
       sequence: payload.sequence ?? existing.sequence,
       maxScore:

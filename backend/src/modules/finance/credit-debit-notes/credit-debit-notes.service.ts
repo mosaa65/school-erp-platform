@@ -167,7 +167,11 @@ export class CreditDebitNotesService {
     return note;
   }
 
-  async update(id: string, payload: UpdateCreditDebitNoteDto, actorUserId: string) {
+  async update(
+    id: string,
+    payload: UpdateCreditDebitNoteDto,
+    actorUserId: string,
+  ) {
     const note = await this.findOne(id);
     if (note.status !== CreditDebitNoteStatus.DRAFT) {
       throw new BadRequestException('Only DRAFT notes can be updated');
@@ -528,7 +532,10 @@ export class CreditDebitNotesService {
   }
 
   private throwKnownDatabaseErrors(error: unknown): never {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
       throw new ConflictException('Credit/Debit note already exists');
     }
     throw error;
@@ -606,7 +613,9 @@ export class CreditDebitNotesService {
         : null);
 
     if (!account) {
-      throw new NotFoundException(`Posting account ${accountNameEn} was not found`);
+      throw new NotFoundException(
+        `Posting account ${accountNameEn} was not found`,
+      );
     }
 
     if (account.isHeader) {
@@ -635,7 +644,9 @@ export class CreditDebitNotesService {
 
   private assertBalanced(totalDebit: number, totalCredit: number) {
     if (totalDebit <= 0 || totalCredit <= 0) {
-      throw new BadRequestException('Total debit and credit must be greater than zero');
+      throw new BadRequestException(
+        'Total debit and credit must be greater than zero',
+      );
     }
 
     if (Math.abs(totalDebit - totalCredit) > 0.01) {

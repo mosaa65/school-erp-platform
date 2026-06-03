@@ -196,8 +196,7 @@ export class StudentsService {
             birthDate: payload.birthDate,
             bloodTypeId:
               payload.bloodTypeId === null ? null : payload.bloodTypeId,
-            localityId:
-              payload.localityId === null ? null : payload.localityId,
+            localityId: payload.localityId === null ? null : payload.localityId,
             healthStatus: healthStatus.healthStatus,
             healthStatusId: healthStatus.healthStatusId,
             healthNotes: payload.healthNotes,
@@ -362,11 +361,7 @@ export class StudentsService {
         ),
       );
       const isAllowed = student.enrollments.some((enrollment) =>
-        this.enrollmentHasScope(
-          enrollment,
-          sectionGrantSet,
-          gradeGrantSet,
-        ),
+        this.enrollmentHasScope(enrollment, sectionGrantSet, gradeGrantSet),
       );
 
       if (!isAllowed) {
@@ -520,9 +515,7 @@ export class StudentsService {
     }
 
     const gradeLevelId =
-      enrollment.gradeLevel?.id ??
-      enrollment.section?.gradeLevel?.id ??
-      null;
+      enrollment.gradeLevel?.id ?? enrollment.section?.gradeLevel?.id ?? null;
 
     if (!gradeLevelId) {
       return false;
@@ -1027,4 +1020,3 @@ export class StudentsService {
     return 'Unknown error';
   }
 }
-

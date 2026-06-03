@@ -10,10 +10,7 @@ import {
   Min,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  EmployeeLeaveRequestStatus,
-  EmployeeLeaveType,
-} from '@prisma/client';
+import { EmployeeLeaveRequestStatus, EmployeeLeaveType } from '@prisma/client';
 
 export class ListEmployeeLeavesDto {
   @ApiPropertyOptional({ example: 1 })

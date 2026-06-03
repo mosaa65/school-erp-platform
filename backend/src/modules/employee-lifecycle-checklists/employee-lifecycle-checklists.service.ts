@@ -126,7 +126,9 @@ export class EmployeeLifecycleChecklistsService {
     actorUserId: string,
   ) {
     try {
-      await this.employeesService.ensureEmployeeExistsAndActive(payload.employeeId);
+      await this.employeesService.ensureEmployeeExistsAndActive(
+        payload.employeeId,
+      );
 
       if (payload.assignedToEmployeeId) {
         await this.employeesService.ensureEmployeeExistsAndActive(
@@ -134,8 +136,8 @@ export class EmployeeLifecycleChecklistsService {
         );
       }
 
-      const lifecycleItem =
-        await this.prisma.employeeLifecycleChecklist.create({
+      const lifecycleItem = await this.prisma.employeeLifecycleChecklist.create(
+        {
           data: {
             employeeId: payload.employeeId,
             checklistType: payload.checklistType,
@@ -150,7 +152,8 @@ export class EmployeeLifecycleChecklistsService {
             updatedById: actorUserId,
           },
           include: employeeLifecycleChecklistInclude,
-        });
+        },
+      );
 
       await this.auditLogsService.record({
         actorUserId,
@@ -193,7 +196,9 @@ export class EmployeeLifecycleChecklistsService {
     const dayEnd = this.addDays(dayStart, 1);
 
     try {
-      await this.employeesService.ensureEmployeeExistsAndActive(payload.employeeId);
+      await this.employeesService.ensureEmployeeExistsAndActive(
+        payload.employeeId,
+      );
 
       if (payload.assignedToEmployeeId) {
         await this.employeesService.ensureEmployeeExistsAndActive(
@@ -201,23 +206,24 @@ export class EmployeeLifecycleChecklistsService {
         );
       }
 
-      const existingItems = await this.prisma.employeeLifecycleChecklist.findMany({
-        where: {
-          deletedAt: null,
-          employeeId: payload.employeeId,
-          checklistType: payload.checklistType,
-          title: {
-            in: templates.map((template) => template.title),
+      const existingItems =
+        await this.prisma.employeeLifecycleChecklist.findMany({
+          where: {
+            deletedAt: null,
+            employeeId: payload.employeeId,
+            checklistType: payload.checklistType,
+            title: {
+              in: templates.map((template) => template.title),
+            },
+            createdAt: {
+              gte: dayStart,
+              lt: dayEnd,
+            },
           },
-          createdAt: {
-            gte: dayStart,
-            lt: dayEnd,
+          select: {
+            title: true,
           },
-        },
-        select: {
-          title: true,
-        },
-      });
+        });
 
       const existingTitles = new Set(existingItems.map((item) => item.title));
       const createdItems: EmployeeLifecycleChecklistWithRelations[] = [];
@@ -328,29 +334,34 @@ export class EmployeeLifecycleChecklistsService {
         continue;
       }
 
-      const recipients = await this.resolveDueAlertRecipientIds(item, actorUserId);
+      const recipients = await this.resolveDueAlertRecipientIds(
+        item,
+        actorUserId,
+      );
       if (recipients.length === 0) {
         continue;
       }
 
-      const existingNotifications = await this.prisma.userNotification.findMany({
-        where: {
-          deletedAt: null,
-          userId: {
-            in: recipients,
+      const existingNotifications = await this.prisma.userNotification.findMany(
+        {
+          where: {
+            deletedAt: null,
+            userId: {
+              in: recipients,
+            },
+            title: LIFECYCLE_DUE_ALERT_TITLE,
+            resource: 'employee-lifecycle-checklists',
+            resourceId: item.id,
+            createdAt: {
+              gte: dayStart,
+              lt: dayEnd,
+            },
           },
-          title: LIFECYCLE_DUE_ALERT_TITLE,
-          resource: 'employee-lifecycle-checklists',
-          resourceId: item.id,
-          createdAt: {
-            gte: dayStart,
-            lt: dayEnd,
+          select: {
+            userId: true,
           },
         },
-        select: {
-          userId: true,
-        },
-      });
+      );
 
       const existingUserIds = new Set(
         existingNotifications.map((notification) => notification.userId),
@@ -363,7 +374,10 @@ export class EmployeeLifecycleChecklistsService {
         continue;
       }
 
-      const remainingDays = this.calculateRemainingDays(item.dueDate, rangeStart);
+      const remainingDays = this.calculateRemainingDays(
+        item.dueDate,
+        rangeStart,
+      );
       const dueState =
         remainingDays < 0
           ? `متأخرة منذ ${Math.abs(remainingDays)} يوم`
@@ -471,16 +485,19 @@ export class EmployeeLifecycleChecklistsService {
   }
 
   async findOne(id: string) {
-    const lifecycleItem = await this.prisma.employeeLifecycleChecklist.findFirst({
-      where: {
-        id,
-        deletedAt: null,
-      },
-      include: employeeLifecycleChecklistInclude,
-    });
+    const lifecycleItem =
+      await this.prisma.employeeLifecycleChecklist.findFirst({
+        where: {
+          id,
+          deletedAt: null,
+        },
+        include: employeeLifecycleChecklistInclude,
+      });
 
     if (!lifecycleItem) {
-      throw new NotFoundException('Employee lifecycle checklist item not found');
+      throw new NotFoundException(
+        'Employee lifecycle checklist item not found',
+      );
     }
 
     return lifecycleItem;
@@ -498,7 +515,9 @@ export class EmployeeLifecycleChecklistsService {
         ? existing.assignedToEmployeeId
         : payload.assignedToEmployeeId;
 
-    await this.employeesService.ensureEmployeeExistsAndActive(resolvedEmployeeId);
+    await this.employeesService.ensureEmployeeExistsAndActive(
+      resolvedEmployeeId,
+    );
     if (resolvedAssignedToEmployeeId) {
       await this.employeesService.ensureEmployeeExistsAndActive(
         resolvedAssignedToEmployeeId,
@@ -616,7 +635,7 @@ export class EmployeeLifecycleChecklistsService {
         status: targetStatus,
         completedAt:
           targetStatus === EmployeeLifecycleChecklistStatus.COMPLETED
-            ? existing.completedAt ?? new Date()
+            ? (existing.completedAt ?? new Date())
             : null,
         updatedById: actorUserId,
       },
@@ -824,10 +843,7 @@ export class EmployeeLifecycleChecklistsService {
     });
 
     return Array.from(
-      new Set([
-        ...watcherIds,
-        ...employeeLinkedUsers.map((user) => user.id),
-      ]),
+      new Set([...watcherIds, ...employeeLinkedUsers.map((user) => user.id)]),
     );
   }
 
@@ -912,14 +928,18 @@ export class EmployeeLifecycleChecklistsService {
       });
 
     if (!lifecycleItem) {
-      throw new NotFoundException('Employee lifecycle checklist item not found');
+      throw new NotFoundException(
+        'Employee lifecycle checklist item not found',
+      );
     }
 
     return lifecycleItem;
   }
 
   private calculateRemainingDays(dueDate: Date, fromDate: Date) {
-    return Math.floor((dueDate.getTime() - fromDate.getTime()) / (24 * 60 * 60 * 1000));
+    return Math.floor(
+      (dueDate.getTime() - fromDate.getTime()) / (24 * 60 * 60 * 1000),
+    );
   }
 
   private toUtcDateOnly(value: Date) {

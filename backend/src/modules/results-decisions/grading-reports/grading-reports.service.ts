@@ -170,8 +170,7 @@ export class GradingReportsService {
       }),
     ]);
 
-    const semesterPeriodUnlocked =
-      semesterPeriodTotal - semesterPeriodLocked;
+    const semesterPeriodUnlocked = semesterPeriodTotal - semesterPeriodLocked;
     const yearFinalPeriodUnlocked =
       yearFinalPeriodTotal - yearFinalPeriodLocked;
     const annualResultUnlocked = annualResultTotal - annualResultLocked;
@@ -192,10 +191,7 @@ export class GradingReportsService {
         inactive: semesterPeriodTotal - semesterPeriodActive,
         locked: semesterPeriodLocked,
         unlocked: semesterPeriodUnlocked,
-        lockRate: this.percentage(
-          semesterPeriodLocked,
-          semesterPeriodTotal,
-        ),
+        lockRate: this.percentage(semesterPeriodLocked, semesterPeriodTotal),
         byStatus: this.mapWorkflowStatusCounts(semesterPeriodStatusRows),
       },
       yearFinalPeriods: {
@@ -204,10 +200,7 @@ export class GradingReportsService {
         inactive: yearFinalPeriodTotal - yearFinalPeriodActive,
         locked: yearFinalPeriodLocked,
         unlocked: yearFinalPeriodUnlocked,
-        lockRate: this.percentage(
-          yearFinalPeriodLocked,
-          yearFinalPeriodTotal,
-        ),
+        lockRate: this.percentage(yearFinalPeriodLocked, yearFinalPeriodTotal),
         byStatus: this.mapWorkflowStatusCounts(yearFinalPeriodStatusRows),
       },
       annualResults: {
@@ -709,4 +702,3 @@ export class GradingReportsService {
     return Number(value);
   }
 }
-

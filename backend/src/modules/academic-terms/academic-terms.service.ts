@@ -21,7 +21,8 @@ export class AcademicTermsService {
 
   async create(payload: CreateAcademicTermDto, actorUserId: string) {
     const code =
-      payload.code?.trim().toLowerCase() || generateAutoCode('AT').toLowerCase();
+      payload.code?.trim().toLowerCase() ||
+      generateAutoCode('AT').toLowerCase();
     const name = payload.name.trim();
     const startDate = new Date(payload.startDate);
     const endDate = new Date(payload.endDate);

@@ -55,32 +55,33 @@ export const monthlyAssessmentPeriodInclude: Prisma.AssessmentPeriodInclude = {
   },
 };
 
-export const monthlyAssessmentComponentInclude: Prisma.AssessmentPeriodComponentInclude = {
-  assessmentPeriod: {
-    select: {
-      id: true,
-      name: true,
-      category: true,
-      academicYearId: true,
-      academicTermId: true,
-      academicMonthId: true,
-      status: true,
-      isActive: true,
+export const monthlyAssessmentComponentInclude: Prisma.AssessmentPeriodComponentInclude =
+  {
+    assessmentPeriod: {
+      select: {
+        id: true,
+        name: true,
+        category: true,
+        academicYearId: true,
+        academicTermId: true,
+        academicMonthId: true,
+        status: true,
+        isActive: true,
+      },
     },
-  },
-  createdBy: {
-    select: {
-      id: true,
-      email: true,
+    createdBy: {
+      select: {
+        id: true,
+        email: true,
+      },
     },
-  },
-  updatedBy: {
-    select: {
-      id: true,
-      email: true,
+    updatedBy: {
+      select: {
+        id: true,
+        email: true,
+      },
     },
-  },
-};
+  };
 
 export const monthlyStudentResultInclude: Prisma.StudentPeriodResultInclude = {
   _count: {
@@ -193,67 +194,68 @@ export const monthlyStudentResultInclude: Prisma.StudentPeriodResultInclude = {
   },
 };
 
-export const monthlyStudentComponentScoreInclude: Prisma.StudentPeriodComponentScoreInclude = {
-  studentPeriodResult: {
-    select: {
-      id: true,
-      assessmentPeriodId: true,
-      studentEnrollmentId: true,
-      subjectId: true,
-      isLocked: true,
-      assessmentPeriod: {
-        select: {
-          id: true,
-          name: true,
-          category: true,
-          status: true,
-          isLocked: true,
-          maxScore: true,
+export const monthlyStudentComponentScoreInclude: Prisma.StudentPeriodComponentScoreInclude =
+  {
+    studentPeriodResult: {
+      select: {
+        id: true,
+        assessmentPeriodId: true,
+        studentEnrollmentId: true,
+        subjectId: true,
+        isLocked: true,
+        assessmentPeriod: {
+          select: {
+            id: true,
+            name: true,
+            category: true,
+            status: true,
+            isLocked: true,
+            maxScore: true,
+          },
         },
-      },
-      studentEnrollment: {
-        select: {
-          id: true,
-          sectionId: true,
-          student: {
-            select: {
-              id: true,
-              admissionNo: true,
-              fullName: true,
+        studentEnrollment: {
+          select: {
+            id: true,
+            sectionId: true,
+            student: {
+              select: {
+                id: true,
+                admissionNo: true,
+                fullName: true,
+              },
             },
           },
         },
-      },
-      subject: {
-        select: {
-          id: true,
-          code: true,
-          name: true,
+        subject: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+          },
         },
       },
     },
-  },
-  assessmentPeriodComponent: {
-    select: {
-      id: true,
-      assessmentPeriodId: true,
-      code: true,
-      name: true,
-      entryMode: true,
-      maxScore: true,
-      sortOrder: true,
+    assessmentPeriodComponent: {
+      select: {
+        id: true,
+        assessmentPeriodId: true,
+        code: true,
+        name: true,
+        entryMode: true,
+        maxScore: true,
+        sortOrder: true,
+      },
     },
-  },
-  createdBy: {
-    select: {
-      id: true,
-      email: true,
+    createdBy: {
+      select: {
+        id: true,
+        email: true,
+      },
     },
-  },
-  updatedBy: {
-    select: {
-      id: true,
-      email: true,
+    updatedBy: {
+      select: {
+        id: true,
+        email: true,
+      },
     },
-  },
-};
+  };

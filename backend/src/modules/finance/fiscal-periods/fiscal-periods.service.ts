@@ -70,7 +70,8 @@ export class FiscalPeriodsService {
     const closedAt = status === FiscalPeriodStatus.CLOSED ? new Date() : null;
     const closedByUserId =
       status === FiscalPeriodStatus.CLOSED ? actorUserId : null;
-    const reopenedAt = status === FiscalPeriodStatus.REOPENED ? new Date() : null;
+    const reopenedAt =
+      status === FiscalPeriodStatus.REOPENED ? new Date() : null;
     const reopenedByUserId =
       status === FiscalPeriodStatus.REOPENED ? actorUserId : null;
 
@@ -137,12 +138,13 @@ export class FiscalPeriodsService {
       fiscalYearId: query.fiscalYearId,
       periodType: query.periodType,
       status: query.status,
-      startDate: query.dateFrom || query.dateTo
-        ? {
-            gte: query.dateFrom ? new Date(query.dateFrom) : undefined,
-            lte: query.dateTo ? new Date(query.dateTo) : undefined,
-          }
-        : undefined,
+      startDate:
+        query.dateFrom || query.dateTo
+          ? {
+              gte: query.dateFrom ? new Date(query.dateFrom) : undefined,
+              lte: query.dateTo ? new Date(query.dateTo) : undefined,
+            }
+          : undefined,
     };
 
     const [total, items] = await this.prisma.$transaction([
@@ -183,7 +185,11 @@ export class FiscalPeriodsService {
     return period;
   }
 
-  async update(id: number, payload: UpdateFiscalPeriodDto, actorUserId: string) {
+  async update(
+    id: number,
+    payload: UpdateFiscalPeriodDto,
+    actorUserId: string,
+  ) {
     const existing = await this.ensureFiscalPeriodExists(id);
 
     const fiscalYearId = payload.fiscalYearId ?? existing.fiscalYearId;
@@ -203,7 +209,8 @@ export class FiscalPeriodsService {
       throw new BadRequestException('startDate must be before endDate');
     }
 
-    const targetYear = fiscalYear ?? (await this.ensureFiscalYearExists(fiscalYearId));
+    const targetYear =
+      fiscalYear ?? (await this.ensureFiscalYearExists(fiscalYearId));
     this.assertWithinFiscalYear(startDate, endDate, targetYear);
 
     const nameAr =
@@ -360,7 +367,9 @@ export class FiscalPeriodsService {
     fiscalYear: { startDate: Date; endDate: Date },
   ) {
     if (startDate < fiscalYear.startDate || endDate > fiscalYear.endDate) {
-      throw new BadRequestException('Period dates must fall within fiscal year');
+      throw new BadRequestException(
+        'Period dates must fall within fiscal year',
+      );
     }
   }
 

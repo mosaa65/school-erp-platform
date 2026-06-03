@@ -269,7 +269,8 @@ export class MonthlyAssessmentPeriodsService {
     const current = await this.findOne(id);
     const nextAcademicYearId = payload.academicYearId ?? current.academicYearId;
     const nextAcademicTermId = payload.academicTermId ?? current.academicTermId;
-    const nextAcademicMonthId = payload.academicMonthId ?? current.academicMonthId;
+    const nextAcademicMonthId =
+      payload.academicMonthId ?? current.academicMonthId;
 
     if (payload.category) {
       this.ensureMonthlyCategory(payload.category);
@@ -401,7 +402,9 @@ export class MonthlyAssessmentPeriodsService {
 
   private ensureMonthlyCategory(category: string) {
     if (category !== 'MONTHLY') {
-      throw new BadRequestException('Monthly endpoint only accepts MONTHLY category');
+      throw new BadRequestException(
+        'Monthly endpoint only accepts MONTHLY category',
+      );
     }
   }
 

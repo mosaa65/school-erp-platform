@@ -78,10 +78,7 @@ export class TaxConfigurationsController {
   @Delete(':id')
   @RequirePermissions('tax-configurations.delete')
   @ApiOperation({ summary: 'Soft delete tax configuration' })
-  remove(
-    @Param('id', ParseIntPipe) id: number,
-    @CurrentUser() user: AuthUser,
-  ) {
+  remove(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: AuthUser) {
     return this.taxConfigurationsService.remove(id, user.userId);
   }
 }

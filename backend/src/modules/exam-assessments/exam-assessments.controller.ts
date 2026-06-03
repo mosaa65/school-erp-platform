@@ -95,4 +95,3 @@ export class ExamAssessmentsController {
     return this.examAssessmentsService.remove(id, user.userId);
   }
 }
-

@@ -35,7 +35,8 @@ function normalizePath(req: Request): string {
 }
 
 function buildRequestContext(req: Request): RequestContextSnapshot {
-  const requestId = readHeaderValue(req.headers['x-request-id']) ?? randomUUID();
+  const requestId =
+    readHeaderValue(req.headers['x-request-id']) ?? randomUUID();
   const correlationId =
     readHeaderValue(req.headers['x-correlation-id']) ?? randomUUID();
   const userAgent = readHeaderValue(req.headers['user-agent']);

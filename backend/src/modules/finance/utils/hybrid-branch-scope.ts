@@ -16,9 +16,7 @@ export function buildHybridBranchClause(
 export function combineWhereClauses<T extends BranchScopedWhere>(
   ...clauses: Array<T | undefined>
 ): T | { AND: T[] } {
-  const defined = clauses.filter(
-    (clause): clause is T => clause !== undefined,
-  );
+  const defined = clauses.filter((clause): clause is T => clause !== undefined);
 
   if (defined.length === 0) {
     return {} as T;

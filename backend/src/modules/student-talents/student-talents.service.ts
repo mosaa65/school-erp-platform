@@ -293,4 +293,3 @@ export class StudentTalentsService {
     return 'Unknown error';
   }
 }
-

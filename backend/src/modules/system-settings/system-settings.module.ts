@@ -11,4 +11,3 @@ import { SystemSettingsService } from './system-settings.service';
   exports: [SystemSettingsService],
 })
 export class SystemSettingsModule {}
-

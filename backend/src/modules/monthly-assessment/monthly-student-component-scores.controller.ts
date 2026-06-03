@@ -54,7 +54,11 @@ export class MonthlyStudentComponentScoresController {
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'search', required: false, type: String })
   @ApiQuery({ name: 'studentPeriodResultId', required: false, type: String })
-  @ApiQuery({ name: 'assessmentPeriodComponentId', required: false, type: String })
+  @ApiQuery({
+    name: 'assessmentPeriodComponentId',
+    required: false,
+    type: String,
+  })
   @ApiQuery({ name: 'assessmentPeriodId', required: false, type: String })
   @ApiQuery({ name: 'subjectId', required: false, type: String })
   @ApiQuery({ name: 'studentEnrollmentId', required: false, type: String })

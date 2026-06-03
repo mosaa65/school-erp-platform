@@ -54,4 +54,3 @@ export class CreateStudentProblemDto {
   @IsBoolean()
   isActive?: boolean;
 }
-

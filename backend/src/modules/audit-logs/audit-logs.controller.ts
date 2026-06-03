@@ -66,17 +66,16 @@ export class AuditLogsController {
 
   @Get(':id/timeline')
   @RequirePermissions('audit-logs.read')
-  @ApiOperation({ summary: 'Get last audit timeline changes for current entity' })
+  @ApiOperation({
+    summary: 'Get last audit timeline changes for current entity',
+  })
   @ApiQuery({
     name: 'limit',
     required: false,
     type: Number,
     description: 'Maximum 10 changes',
   })
-  findTimeline(
-    @Param('id') id: string,
-    @Query('limit') limit?: string,
-  ) {
+  findTimeline(@Param('id') id: string, @Query('limit') limit?: string) {
     const parsedLimit = limit ? Number.parseInt(limit, 10) : undefined;
     return this.auditLogsService.findTimelineByAuditLogId(id, parsedLimit);
   }

@@ -418,4 +418,3 @@ export class ExamPeriodsService {
     return 'خطأ غير معروف';
   }
 }
-

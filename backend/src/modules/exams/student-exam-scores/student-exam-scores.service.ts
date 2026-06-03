@@ -649,4 +649,3 @@ export class StudentExamScoresService {
     return 'خطأ غير معروف';
   }
 }
-

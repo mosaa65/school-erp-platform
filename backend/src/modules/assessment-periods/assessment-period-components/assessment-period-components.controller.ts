@@ -52,7 +52,11 @@ export class AssessmentPeriodComponentsController {
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'search', required: false, type: String })
   @ApiQuery({ name: 'assessmentPeriodId', required: false, type: String })
-  @ApiQuery({ name: 'entryMode', required: false, enum: AssessmentComponentEntryMode })
+  @ApiQuery({
+    name: 'entryMode',
+    required: false,
+    enum: AssessmentComponentEntryMode,
+  })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
   findAll(@Query() query: ListAssessmentPeriodComponentsDto) {
     return this.assessmentPeriodComponentsService.findAll(query);
@@ -73,7 +77,11 @@ export class AssessmentPeriodComponentsController {
     @Body() payload: UpdateAssessmentPeriodComponentDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.assessmentPeriodComponentsService.update(id, payload, user.userId);
+    return this.assessmentPeriodComponentsService.update(
+      id,
+      payload,
+      user.userId,
+    );
   }
 
   @Delete(':id')

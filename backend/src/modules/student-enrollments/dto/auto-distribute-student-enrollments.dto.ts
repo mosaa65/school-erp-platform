@@ -21,7 +21,8 @@ export class AutoDistributeStudentEnrollmentsDto {
 
   @ApiPropertyOptional({
     example: ['cmsecA', 'cmsecB'],
-    description: 'If omitted, all active sections in the selected grade are used.',
+    description:
+      'If omitted, all active sections in the selected grade are used.',
   })
   @IsOptional()
   @IsArray()

@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   AuditStatus,
   FileAttachment,
@@ -62,8 +66,12 @@ export class EmployeeDocumentsService {
 
   async create(payload: CreateEmployeeDocumentDto, actorUserId: string) {
     try {
-      await this.employeesService.ensureEmployeeExistsAndActive(payload.employeeId);
-      const normalizedCategory = this.normalizeDocumentCategory(payload.fileCategory);
+      await this.employeesService.ensureEmployeeExistsAndActive(
+        payload.employeeId,
+      );
+      const normalizedCategory = this.normalizeDocumentCategory(
+        payload.fileCategory,
+      );
       this.validateExpiryRequirement(normalizedCategory, payload.expiresAt);
 
       const employeeDocument = await this.prisma.fileAttachment.create({
@@ -179,7 +187,9 @@ export class EmployeeDocumentsService {
         })
       : [];
 
-    const employeeMap = new Map(employees.map((employee) => [employee.id, employee]));
+    const employeeMap = new Map(
+      employees.map((employee) => [employee.id, employee]),
+    );
 
     return {
       data: items.map((item) => this.enrichDocument(item, employeeMap)),
@@ -219,12 +229,15 @@ export class EmployeeDocumentsService {
     const existing = await this.ensureEmployeeDocumentExists(documentId);
 
     const resolvedEmployeeId = payload.employeeId ?? existing.entityId;
-    await this.employeesService.ensureEmployeeExistsAndActive(resolvedEmployeeId);
+    await this.employeesService.ensureEmployeeExistsAndActive(
+      resolvedEmployeeId,
+    );
     const normalizedCategory =
       payload.fileCategory === undefined
         ? undefined
         : this.normalizeDocumentCategory(payload.fileCategory);
-    const resolvedCategory = normalizedCategory ?? existing.fileCategory ?? undefined;
+    const resolvedCategory =
+      normalizedCategory ?? existing.fileCategory ?? undefined;
     const resolvedExpiry =
       payload.expiresAt === undefined
         ? existing.expiresAt?.toISOString()
@@ -335,7 +348,9 @@ export class EmployeeDocumentsService {
           },
         })
       : [];
-    const employeeMap = new Map(employees.map((employee) => [employee.id, employee]));
+    const employeeMap = new Map(
+      employees.map((employee) => [employee.id, employee]),
+    );
 
     const managers = await this.findDocumentManagers(actorUserId, now);
     let generatedCount = 0;
@@ -430,7 +445,9 @@ export class EmployeeDocumentsService {
     };
   }
 
-  private async ensureEmployeeDocumentExists(id: bigint): Promise<FileAttachment> {
+  private async ensureEmployeeDocumentExists(
+    id: bigint,
+  ): Promise<FileAttachment> {
     const employeeDocument = await this.prisma.fileAttachment.findFirst({
       where: {
         id,
@@ -610,10 +627,7 @@ export class EmployeeDocumentsService {
     });
 
     return Array.from(
-      new Set([
-        ...managerIds,
-        ...(employeeUser ? [employeeUser.id] : []),
-      ]),
+      new Set([...managerIds, ...(employeeUser ? [employeeUser.id] : [])]),
     );
   }
 
@@ -630,7 +644,9 @@ export class EmployeeDocumentsService {
       ),
     );
 
-    return Math.floor((endOfExpiryDay.getTime() - startOfToday.getTime()) / millisecondsInDay);
+    return Math.floor(
+      (endOfExpiryDay.getTime() - startOfToday.getTime()) / millisecondsInDay,
+    );
   }
 
   private formatDateForNotification(value: Date) {

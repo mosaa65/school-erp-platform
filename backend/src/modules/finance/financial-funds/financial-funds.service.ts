@@ -74,11 +74,7 @@ export class FinancialFundsService {
       isActive: query.isActive,
       fundType: query.fundType,
       coaAccountId: query.coaAccountId,
-      OR: query.search
-        ? [
-            { nameAr: { contains: query.search } },
-          ]
-        : undefined,
+      OR: query.search ? [{ nameAr: { contains: query.search } }] : undefined,
     };
 
     const [total, items] = await this.prisma.$transaction([
@@ -116,7 +112,11 @@ export class FinancialFundsService {
     return fund;
   }
 
-  async update(id: number, payload: UpdateFinancialFundDto, actorUserId: string) {
+  async update(
+    id: number,
+    payload: UpdateFinancialFundDto,
+    actorUserId: string,
+  ) {
     await this.ensureExists(id);
 
     const nameAr =

@@ -215,7 +215,8 @@ export class DataScopeService {
       });
     }
 
-    const sectionToGradeLevel = await this.buildSectionGradeLevelMap(sectionIds);
+    const sectionToGradeLevel =
+      await this.buildSectionGradeLevelMap(sectionIds);
     const gradeDedup = this.buildGradeYearGrantMap(
       sectionSupervisions,
       sectionToGradeLevel,
@@ -286,7 +287,8 @@ export class DataScopeService {
       });
     }
 
-    const sectionToGradeLevel = await this.buildSectionGradeLevelMap(sectionIds);
+    const sectionToGradeLevel =
+      await this.buildSectionGradeLevelMap(sectionIds);
     const gradeDedup = this.buildGradeYearGrantMap(
       sectionSupervisions,
       sectionToGradeLevel,

@@ -50,7 +50,10 @@ export class RecurringJournalsService {
   ) {}
 
   async create(payload: CreateRecurringJournalDto, actorUserId: string) {
-    const templateName = this.normalizeRequiredText(payload.templateName, 'templateName');
+    const templateName = this.normalizeRequiredText(
+      payload.templateName,
+      'templateName',
+    );
 
     if (!payload.lines || payload.lines.length === 0) {
       throw new BadRequestException('Template must include at least one line');
@@ -100,7 +103,10 @@ export class RecurringJournalsService {
         action: 'RECURRING_JOURNAL_CREATE',
         resource: 'recurring-journals',
         resourceId: String(template.id),
-        details: { templateName: template.templateName, frequency: template.frequency },
+        details: {
+          templateName: template.templateName,
+          frequency: template.frequency,
+        },
       });
 
       return template;
@@ -153,11 +159,16 @@ export class RecurringJournalsService {
       where: { id },
       include: templateInclude,
     });
-    if (!template) throw new NotFoundException('Recurring journal template not found');
+    if (!template)
+      throw new NotFoundException('Recurring journal template not found');
     return template;
   }
 
-  async update(id: number, payload: UpdateRecurringJournalDto, actorUserId: string) {
+  async update(
+    id: number,
+    payload: UpdateRecurringJournalDto,
+    actorUserId: string,
+  ) {
     await this.ensureExists(id);
 
     try {
@@ -167,7 +178,9 @@ export class RecurringJournalsService {
           templateName: payload.templateName?.trim(),
           description: payload.description?.trim(),
           frequency: payload.frequency,
-          startDate: payload.startDate ? new Date(payload.startDate) : undefined,
+          startDate: payload.startDate
+            ? new Date(payload.startDate)
+            : undefined,
           endDate: payload.endDate ? new Date(payload.endDate) : undefined,
           branchId: payload.branchId,
           currencyId: payload.currencyId,
@@ -316,7 +329,10 @@ export class RecurringJournalsService {
     return { success: true, id };
   }
 
-  private async findFiscalYearForDate(tx: Prisma.TransactionClient, date: Date) {
+  private async findFiscalYearForDate(
+    tx: Prisma.TransactionClient,
+    date: Date,
+  ) {
     return findActiveFiscalYearForDate(tx, date, 'the entry date');
   }
 
@@ -333,7 +349,10 @@ export class RecurringJournalsService {
     );
   }
 
-  private calculateNextRunDate(currentDate: Date, frequency: RecurringFrequency): Date {
+  private calculateNextRunDate(
+    currentDate: Date,
+    frequency: RecurringFrequency,
+  ): Date {
     const next = new Date(currentDate);
     switch (frequency) {
       case RecurringFrequency.DAILY:
@@ -365,17 +384,22 @@ export class RecurringJournalsService {
       where: { id },
       select: { id: true },
     });
-    if (!item) throw new NotFoundException('Recurring journal template not found');
+    if (!item)
+      throw new NotFoundException('Recurring journal template not found');
   }
 
   private normalizeRequiredText(value: string, fieldName: string): string {
     const normalized = value.trim();
-    if (!normalized) throw new BadRequestException(`${fieldName} cannot be empty`);
+    if (!normalized)
+      throw new BadRequestException(`${fieldName} cannot be empty`);
     return normalized;
   }
 
   private throwKnownDatabaseErrors(error: unknown): never {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
       throw new ConflictException('Recurring journal template already exists');
     }
     throw error;

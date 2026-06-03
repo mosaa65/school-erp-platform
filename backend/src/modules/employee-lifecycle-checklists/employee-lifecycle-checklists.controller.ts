@@ -63,7 +63,9 @@ export class EmployeeLifecycleChecklistsController {
 
   @Post('generate-due-alerts')
   @RequirePermissions('employee-lifecycle-checklists.notify-due')
-  @ApiOperation({ summary: 'Generate due and overdue lifecycle checklist alerts' })
+  @ApiOperation({
+    summary: 'Generate due and overdue lifecycle checklist alerts',
+  })
   generateDueAlerts(
     @Body() payload: GenerateEmployeeLifecycleChecklistDueAlertsDto,
     @CurrentUser() user: AuthUser,

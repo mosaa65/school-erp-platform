@@ -30,12 +30,17 @@ import { CreditDebitNotesService } from './credit-debit-notes.service';
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('finance/credit-debit-notes')
 export class CreditDebitNotesController {
-  constructor(private readonly creditDebitNotesService: CreditDebitNotesService) {}
+  constructor(
+    private readonly creditDebitNotesService: CreditDebitNotesService,
+  ) {}
 
   @Post()
   @RequirePermissions('credit-debit-notes.create')
   @ApiOperation({ summary: 'Create credit/debit note' })
-  create(@Body() payload: CreateCreditDebitNoteDto, @CurrentUser() user: AuthUser) {
+  create(
+    @Body() payload: CreateCreditDebitNoteDto,
+    @CurrentUser() user: AuthUser,
+  ) {
     return this.creditDebitNotesService.create(payload, user.userId);
   }
 
@@ -79,7 +84,9 @@ export class CreditDebitNotesController {
 
   @Patch(':id/apply')
   @RequirePermissions('credit-debit-notes.apply')
-  @ApiOperation({ summary: 'Apply credit/debit note — APPROVED → APPLIED (adjusts invoice)' })
+  @ApiOperation({
+    summary: 'Apply credit/debit note — APPROVED → APPLIED (adjusts invoice)',
+  })
   apply(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.creditDebitNotesService.apply(id, user.userId);
   }

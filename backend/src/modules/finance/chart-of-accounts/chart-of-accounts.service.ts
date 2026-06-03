@@ -4,7 +4,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AccountType, AuditStatus, NormalBalance, Prisma } from '@prisma/client';
+import {
+  AccountType,
+  AuditStatus,
+  NormalBalance,
+  Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditLogsService } from '../../audit-logs/audit-logs.service';
 import {
@@ -176,22 +181,23 @@ export class ChartOfAccountsService {
     const branchWhere = buildHybridBranchClause(query.branchId) as
       | Prisma.ChartOfAccountWhereInput
       | undefined;
-    const searchWhere: Prisma.ChartOfAccountWhereInput | undefined = query.search
-      ? {
-          OR: [
-            {
-              nameAr: {
-                contains: query.search,
+    const searchWhere: Prisma.ChartOfAccountWhereInput | undefined =
+      query.search
+        ? {
+            OR: [
+              {
+                nameAr: {
+                  contains: query.search,
+                },
               },
-            },
-            {
-              nameEn: {
-                contains: query.search,
+              {
+                nameEn: {
+                  contains: query.search,
+                },
               },
-            },
-          ],
-        }
-      : undefined;
+            ],
+          }
+        : undefined;
     const where = combineWhereClauses<Prisma.ChartOfAccountWhereInput>(
       baseWhere,
       branchWhere,
@@ -241,12 +247,13 @@ export class ChartOfAccountsService {
     payload: UpdateChartOfAccountDto,
     actorUserId: string,
   ) {
-    const beforeSnapshot = await this.getChartOfAccountRollbackSnapshotOrThrow(
-      id,
-    );
+    const beforeSnapshot =
+      await this.getChartOfAccountRollbackSnapshotOrThrow(id);
 
     if (payload.parentId && payload.parentId === id) {
-      throw new BadRequestException('Parent account cannot be the same account');
+      throw new BadRequestException(
+        'Parent account cannot be the same account',
+      );
     }
 
     const parent = payload.parentId
@@ -254,7 +261,11 @@ export class ChartOfAccountsService {
       : null;
 
     const hierarchyLevel =
-      payload.parentId === undefined ? undefined : parent ? parent.hierarchyLevel + 1 : 1;
+      payload.parentId === undefined
+        ? undefined
+        : parent
+          ? parent.hierarchyLevel + 1
+          : 1;
 
     const nameAr =
       payload.nameAr === undefined
@@ -305,7 +316,8 @@ export class ChartOfAccountsService {
           before: beforeSnapshot,
           after: afterSnapshot,
           changedFields,
-          additionalDetails: this.extractChartOfAccountRequestedChanges(payload),
+          additionalDetails:
+            this.extractChartOfAccountRequestedChanges(payload),
         }),
       });
 
@@ -316,9 +328,8 @@ export class ChartOfAccountsService {
   }
 
   async remove(id: number, actorUserId: string) {
-    const beforeSnapshot = await this.getChartOfAccountRollbackSnapshotOrThrow(
-      id,
-    );
+    const beforeSnapshot =
+      await this.getChartOfAccountRollbackSnapshotOrThrow(id);
 
     const removed = await this.prisma.chartOfAccount.update({
       where: { id },

@@ -543,14 +543,13 @@ export function AppShell({ children }: AppShellProps) {
     [activeThemeGroupId, appearance.preset, appearance.resolvedSurfaceMode],
   );
   const unreadNotificationsCount = unreadNotificationsQuery.data?.unreadCount ?? 0;
-  const appShellStyle = React.useMemo<React.CSSProperties>(
+  const appShellStyle = React.useMemo<React.CSSProperties & Record<`--${string}`, string>>(
     () => ({
       ...(appearance.preset === "custom" ? {} : activeGroupTheme.accentVars),
-      ["--app-mobile-sidebar-offset" as string]:
-        !isHubMode && isSidebarOpen ? "20rem" : "0px",
-      ["--app-desktop-sidebar-offset" as string]:
+      "--app-mobile-sidebar-offset": !isHubMode && isSidebarOpen ? "20rem" : "0px",
+      "--app-desktop-sidebar-offset":
         !isHubMode && !isDesktopSidebarHidden ? (isRailMode ? "104px" : "300px") : "0px",
-      ["--app-footer-dock-offset" as string]: "5.9rem",
+      "--app-footer-dock-offset": "5.9rem",
     }),
     [activeGroupTheme.accentVars, appearance.preset, isDesktopSidebarHidden, isHubMode, isRailMode, isSidebarOpen],
   );
@@ -567,15 +566,15 @@ export function AppShell({ children }: AppShellProps) {
 
     root.style.setProperty(
       "--app-mobile-sidebar-offset",
-      appShellStyle["--app-mobile-sidebar-offset" as string] as string ?? "0px",
+      appShellStyle["--app-mobile-sidebar-offset"] ?? "0px",
     );
     root.style.setProperty(
       "--app-desktop-sidebar-offset",
-      appShellStyle["--app-desktop-sidebar-offset" as string] as string ?? "0px",
+      appShellStyle["--app-desktop-sidebar-offset"] ?? "0px",
     );
     root.style.setProperty(
       "--app-footer-dock-offset",
-      appShellStyle["--app-footer-dock-offset" as string] as string ?? "0px",
+      appShellStyle["--app-footer-dock-offset"] ?? "0px",
     );
 
     return () => {

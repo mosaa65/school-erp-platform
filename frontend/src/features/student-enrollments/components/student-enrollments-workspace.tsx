@@ -713,6 +713,11 @@ export function StudentEnrollmentsWorkspace() {
     [enrollmentStatusOptions],
   );
   const pagination = enrollmentsQuery.data?.pagination;
+  const hasMoreEnrollments = Boolean(pagination && pagination.page < pagination.totalPages);
+  const isFetchingMoreEnrollments = enrollmentsQuery.isFetching && !enrollmentsQuery.isPending;
+  const loadMoreEnrollments = React.useCallback(() => {
+    setPage((prev) => (pagination ? Math.min(prev + 1, pagination.totalPages) : prev));
+  }, [pagination]);
   const selectedEnrollment = React.useMemo(
     () => enrollments.find((enrollment) => enrollment.id === selectedEnrollmentId) ?? null,
     [enrollments, selectedEnrollmentId],
@@ -1841,13 +1846,13 @@ export function StudentEnrollmentsWorkspace() {
                 loaded={enrollments.length}
                 isInitialLoading={enrollmentsQuery.isPending}
                 isFetching={enrollmentsQuery.isFetching}
-                isFetchingMore={enrollmentsQuery.isFetchingNextPage}
-                hasMore={enrollmentsQuery.hasNextPage}
+                isFetchingMore={isFetchingMoreEnrollments}
+                hasMore={hasMoreEnrollments}
                 error={enrollmentsQuery.error}
                 emptyTitle="لا توجد سجلات مطابقة."
                 emptyDescription="جرّب تغيير الفلاتر أو إنشاء قيد جديد."
                 onRefresh={() => void handleRefresh()}
-                onLoadMore={() => void enrollmentsQuery.fetchNextPage()}
+                onLoadMore={loadMoreEnrollments}
               >
               {groupedEnrollments.map((group) => (
                 <div key={group.key} className="space-y-3">

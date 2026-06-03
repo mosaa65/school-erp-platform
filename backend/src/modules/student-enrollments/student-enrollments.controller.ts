@@ -102,7 +102,9 @@ export class StudentEnrollmentsController {
 
   @Post('distribution/auto-assign')
   @RequirePermissions('student-enrollments.update')
-  @ApiOperation({ summary: 'Automatically distribute pending student enrollments to sections' })
+  @ApiOperation({
+    summary: 'Automatically distribute pending student enrollments to sections',
+  })
   autoDistribute(
     @Body() payload: AutoDistributeStudentEnrollmentsDto,
     @CurrentUser() user: AuthUser,
@@ -112,17 +114,25 @@ export class StudentEnrollmentsController {
 
   @Post('distribution/manual-assign')
   @RequirePermissions('student-enrollments.update')
-  @ApiOperation({ summary: 'Assign or transfer student enrollments to sections manually' })
+  @ApiOperation({
+    summary: 'Assign or transfer student enrollments to sections manually',
+  })
   manualDistribute(
     @Body() payload: ManualDistributeStudentEnrollmentsDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.studentEnrollmentsService.manualDistribute(payload, user.userId);
+    return this.studentEnrollmentsService.manualDistribute(
+      payload,
+      user.userId,
+    );
   }
 
   @Post('distribution/transfer-section')
   @RequirePermissions('student-enrollments.update')
-  @ApiOperation({ summary: 'Transfer a full section or a selected enrollment set to another section' })
+  @ApiOperation({
+    summary:
+      'Transfer a full section or a selected enrollment set to another section',
+  })
   transferSection(
     @Body() payload: TransferStudentEnrollmentsDto,
     @CurrentUser() user: AuthUser,
@@ -135,7 +145,9 @@ export class StudentEnrollmentsController {
 
   @Post('distribution/return-to-pending')
   @RequirePermissions('student-enrollments.update')
-  @ApiOperation({ summary: 'Return one or more enrollments to pending distribution' })
+  @ApiOperation({
+    summary: 'Return one or more enrollments to pending distribution',
+  })
   returnToPending(
     @Body() payload: ReturnStudentEnrollmentsToPendingDto,
     @CurrentUser() user: AuthUser,

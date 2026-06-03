@@ -50,7 +50,9 @@ export class TransportIntegrationsService {
       const from = new Date(`${query.dateFrom}T00:00:00.000Z`);
       const to = new Date(`${query.dateTo}T23:59:59.999Z`);
       if (from > to) {
-        throw new BadRequestException('dateFrom must be less than or equal to dateTo');
+        throw new BadRequestException(
+          'dateFrom must be less than or equal to dateTo',
+        );
       }
     }
 
@@ -108,13 +110,22 @@ export class TransportIntegrationsService {
       invoiceCount: invoices.length,
       transactionCount: paymentTransactions.length,
       totalRevenue: this.roundMoney(
-        invoices.reduce((total, invoice) => total + Number(invoice.totalAmount), 0),
+        invoices.reduce(
+          (total, invoice) => total + Number(invoice.totalAmount),
+          0,
+        ),
       ),
       collectedRevenue: this.roundMoney(
-        paymentTransactions.reduce((total, transaction) => total + Number(transaction.amount), 0),
+        paymentTransactions.reduce(
+          (total, transaction) => total + Number(transaction.amount),
+          0,
+        ),
       ),
       outstandingRevenue: this.roundMoney(
-        invoices.reduce((total, invoice) => total + Number(invoice.balanceDue), 0),
+        invoices.reduce(
+          (total, invoice) => total + Number(invoice.balanceDue),
+          0,
+        ),
       ),
     };
 
@@ -128,7 +139,10 @@ export class TransportIntegrationsService {
     };
   }
 
-  async generateInvoices(payload: GenerateTransportInvoicesDto, actorUserId: string) {
+  async generateInvoices(
+    payload: GenerateTransportInvoicesDto,
+    actorUserId: string,
+  ) {
     const invoiceDate = payload.invoiceDate
       ? new Date(payload.invoiceDate)
       : new Date();
@@ -143,7 +157,11 @@ export class TransportIntegrationsService {
       AccountType.REVENUE,
     );
 
-    const results: Array<{ enrollmentId: string; invoiceNumber: string; totalAmount: number }> = [];
+    const results: Array<{
+      enrollmentId: string;
+      invoiceNumber: string;
+      totalAmount: number;
+    }> = [];
     const errors: Array<{ enrollmentId: string; error: string }> = [];
 
     for (const enrollmentId of payload.enrollmentIds) {
@@ -166,10 +184,11 @@ export class TransportIntegrationsService {
         const vatAmount = this.roundMoney((subtotal * vatRate) / 100);
         const totalAmount = this.roundMoney(subtotal + vatAmount);
 
-        const invoiceNumber = await this.documentSequencesService.reserveNextNumber(
-          DocumentType.INVOICE,
-          { date: invoiceDate },
-        );
+        const invoiceNumber =
+          await this.documentSequencesService.reserveNextNumber(
+            DocumentType.INVOICE,
+            { date: invoiceDate },
+          );
 
         await this.prisma.studentInvoice.create({
           data: {
@@ -264,7 +283,9 @@ export class TransportIntegrationsService {
       invoice.status === InvoiceStatus.CANCELLED ||
       invoice.status === InvoiceStatus.CREDITED
     ) {
-      throw new BadRequestException('Cannot add fee to cancelled/credited invoice');
+      throw new BadRequestException(
+        'Cannot add fee to cancelled/credited invoice',
+      );
     }
 
     const vatRate = payload.vatRate ?? 0;
@@ -313,7 +334,8 @@ export class TransportIntegrationsService {
       });
 
       if (invoice.installments.length > 0) {
-        const lastInstallment = invoice.installments[invoice.installments.length - 1];
+        const lastInstallment =
+          invoice.installments[invoice.installments.length - 1];
         await tx.invoiceInstallment.update({
           where: { id: lastInstallment.id },
           data: {
@@ -416,7 +438,10 @@ export class TransportIntegrationsService {
       };
     }
 
-    if (paymentMethod === PaymentMethod.CARD || paymentMethod === PaymentMethod.MOBILE_WALLET) {
+    if (
+      paymentMethod === PaymentMethod.CARD ||
+      paymentMethod === PaymentMethod.MOBILE_WALLET
+    ) {
       return {
         nameEn: DEFAULT_GATEWAY_ACCOUNT_NAME_EN,
         nameAr: DEFAULT_GATEWAY_ACCOUNT_NAME_AR,
@@ -506,7 +531,8 @@ export class TransportIntegrationsService {
       });
 
       for (const line of input.lines) {
-        const balanceChange = Number(line.creditAmount) - Number(line.debitAmount);
+        const balanceChange =
+          Number(line.creditAmount) - Number(line.debitAmount);
         await tx.chartOfAccount.update({
           where: { id: line.accountId },
           data: {
@@ -521,7 +547,10 @@ export class TransportIntegrationsService {
     });
   }
 
-  private async findFiscalYearForDate(tx: Prisma.TransactionClient, date: Date) {
+  private async findFiscalYearForDate(
+    tx: Prisma.TransactionClient,
+    date: Date,
+  ) {
     return findActiveFiscalYearForDate(tx, date, 'the entry date');
   }
 
@@ -580,7 +609,9 @@ export class TransportIntegrationsService {
         : null);
 
     if (!account) {
-      throw new NotFoundException(`Posting account ${accountNameEn} was not found`);
+      throw new NotFoundException(
+        `Posting account ${accountNameEn} was not found`,
+      );
     }
 
     if (account.isHeader) {
@@ -611,7 +642,9 @@ export class TransportIntegrationsService {
 
   private assertBalanced(totalDebit: number, totalCredit: number) {
     if (totalDebit <= 0 || totalCredit <= 0) {
-      throw new BadRequestException('Total debit and credit must be greater than zero');
+      throw new BadRequestException(
+        'Total debit and credit must be greater than zero',
+      );
     }
 
     if (Math.abs(totalDebit - totalCredit) > 0.01) {

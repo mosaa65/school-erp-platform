@@ -608,32 +608,33 @@ export class AnnualResultsService {
       (enrollment: { id: string }) => enrollment.id,
     );
 
-    const yearFinalPeriodResults = await this.prisma.studentPeriodResult.findMany({
-      where: {
-        academicYearId: payload.academicYearId,
-        sectionId: payload.sectionId,
-        studentEnrollmentId: {
-          in: enrollmentIds,
-        },
-        deletedAt: null,
-        isActive: true,
-        assessmentPeriod: {
-          category: AssessmentPeriodCategory.YEAR_FINAL,
+    const yearFinalPeriodResults =
+      await this.prisma.studentPeriodResult.findMany({
+        where: {
+          academicYearId: payload.academicYearId,
+          sectionId: payload.sectionId,
+          studentEnrollmentId: {
+            in: enrollmentIds,
+          },
           deletedAt: null,
           isActive: true,
-        },
-      },
-      select: {
-        studentEnrollmentId: true,
-        subjectId: true,
-        totalScore: true,
-        assessmentPeriod: {
-          select: {
-            maxScore: true,
+          assessmentPeriod: {
+            category: AssessmentPeriodCategory.YEAR_FINAL,
+            deletedAt: null,
+            isActive: true,
           },
         },
-      },
-    });
+        select: {
+          studentEnrollmentId: true,
+          subjectId: true,
+          totalScore: true,
+          assessmentPeriod: {
+            select: {
+              maxScore: true,
+            },
+          },
+        },
+      });
 
     const useFlexibleFinalPeriods = yearFinalPeriodResults.length > 0;
 
@@ -643,36 +644,37 @@ export class AnnualResultsService {
     );
 
     const aggregateMap = new Map<string, SubjectAnnualAggregate>();
-    const semesterPeriodResults = await this.prisma.studentPeriodResult.findMany({
-      where: {
-        academicYearId: payload.academicYearId,
-        sectionId: payload.sectionId,
-        studentEnrollmentId: {
-          in: enrollmentIds,
-        },
-        deletedAt: null,
-        isActive: true,
-        assessmentPeriod: {
-          category: AssessmentPeriodCategory.SEMESTER,
+    const semesterPeriodResults =
+      await this.prisma.studentPeriodResult.findMany({
+        where: {
+          academicYearId: payload.academicYearId,
+          sectionId: payload.sectionId,
+          studentEnrollmentId: {
+            in: enrollmentIds,
+          },
           deletedAt: null,
           isActive: true,
+          assessmentPeriod: {
+            category: AssessmentPeriodCategory.SEMESTER,
+            deletedAt: null,
+            isActive: true,
+          },
         },
-      },
-      select: {
-        studentEnrollmentId: true,
-        subjectId: true,
-        totalScore: true,
-        assessmentPeriod: {
-          select: {
-            academicTerm: {
-              select: {
-                sequence: true,
+        select: {
+          studentEnrollmentId: true,
+          subjectId: true,
+          totalScore: true,
+          assessmentPeriod: {
+            select: {
+              academicTerm: {
+                select: {
+                  sequence: true,
+                },
               },
             },
           },
         },
-      },
-    });
+      });
 
     for (const row of semesterPeriodResults) {
       const key = `${row.studentEnrollmentId}::${row.subjectId}`;
@@ -1111,9 +1113,7 @@ export class AnnualResultsService {
       !annualResult.studentEnrollment.sectionId ||
       !annualResult.studentEnrollment.section
     ) {
-      throw new BadRequestException(
-        'النتيجة السنوية غير مرتبطة بشعبة صالحة',
-      );
+      throw new BadRequestException('النتيجة السنوية غير مرتبطة بشعبة صالحة');
     }
 
     return {
@@ -1368,9 +1368,7 @@ export class AnnualResultsService {
   ) {
     const baseMeta = await this.buildPolicyMetaMap(
       academicYearId,
-      (
-        await this.ensureSectionContext(sectionId, academicYearId)
-      ).gradeLevelId,
+      (await this.ensureSectionContext(sectionId, academicYearId)).gradeLevelId,
       subjectIds,
     );
 

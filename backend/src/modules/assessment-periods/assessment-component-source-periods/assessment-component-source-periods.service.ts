@@ -64,7 +64,9 @@ export class AssessmentComponentSourcePeriodsService {
       payload.assessmentPeriodComponentId,
     );
 
-    if (component.entryMode !== AssessmentComponentEntryMode.AGGREGATED_PERIODS) {
+    if (
+      component.entryMode !== AssessmentComponentEntryMode.AGGREGATED_PERIODS
+    ) {
       throw new BadRequestException(
         'Component entryMode must be AGGREGATED_PERIODS',
       );
@@ -74,7 +76,9 @@ export class AssessmentComponentSourcePeriodsService {
       payload.sourcePeriodId,
     );
 
-    if (sourcePeriod.academicYearId !== component.assessmentPeriod.academicYearId) {
+    if (
+      sourcePeriod.academicYearId !== component.assessmentPeriod.academicYearId
+    ) {
       throw new BadRequestException('Source period academic year mismatch');
     }
 
@@ -163,7 +167,9 @@ export class AssessmentComponentSourcePeriodsService {
     });
 
     if (!record) {
-      throw new NotFoundException('Assessment component source period not found');
+      throw new NotFoundException(
+        'Assessment component source period not found',
+      );
     }
 
     return record;
@@ -268,7 +274,9 @@ export class AssessmentComponentSourcePeriodsService {
     });
 
     if (!record) {
-      throw new NotFoundException('Assessment component source period not found');
+      throw new NotFoundException(
+        'Assessment component source period not found',
+      );
     }
   }
 

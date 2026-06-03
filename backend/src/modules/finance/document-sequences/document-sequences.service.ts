@@ -1,9 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  DocumentType,
-  Prisma,
-  type DocumentSequence,
-} from '@prisma/client';
+import { DocumentType, Prisma, type DocumentSequence } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 
 type PrismaExecutor = PrismaService | Prisma.TransactionClient;
@@ -39,7 +35,8 @@ export class DocumentSequencesService {
     const client = options.tx ?? this.prisma;
     const referenceDate = options.date ?? new Date();
     const targetFiscalYearId =
-      options.fiscalYearId ?? (await this.resolveFiscalYearId(client, referenceDate));
+      options.fiscalYearId ??
+      (await this.resolveFiscalYearId(client, referenceDate));
     const targetBranchId = options.branchId ?? null;
 
     const sequence =

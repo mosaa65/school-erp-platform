@@ -171,32 +171,38 @@ describe('Finance Payment Webhooks (e2e)', () => {
     );
     expect(successBody.journalEntryId).toBeTruthy();
 
-    const [transactionAfterSuccess, webhookEvent, afterSettlement, afterRevenue] =
-      await Promise.all([
-        context.prisma.paymentTransaction.findUniqueOrThrow({
-          where: { id: paymentFixture.transaction.id },
-          select: {
-            status: true,
-            journalEntryId: true,
-            gatewayTransactionId: true,
-          },
-        }),
-        context.prisma.paymentWebhookEvent.findFirstOrThrow({
-          where: {
-            idempotencyKey: payload.idempotencyKey,
-          },
-          select: {
-            status: true,
-          },
-        }),
-        readAccountBalance(context, paymentFixture.gateway.settlementAccountId!),
-        readAccountBalance(context, paymentFixture.revenueAccountId),
-      ]);
+    const [
+      transactionAfterSuccess,
+      webhookEvent,
+      afterSettlement,
+      afterRevenue,
+    ] = await Promise.all([
+      context.prisma.paymentTransaction.findUniqueOrThrow({
+        where: { id: paymentFixture.transaction.id },
+        select: {
+          status: true,
+          journalEntryId: true,
+          gatewayTransactionId: true,
+        },
+      }),
+      context.prisma.paymentWebhookEvent.findFirstOrThrow({
+        where: {
+          idempotencyKey: payload.idempotencyKey,
+        },
+        select: {
+          status: true,
+        },
+      }),
+      readAccountBalance(context, paymentFixture.gateway.settlementAccountId!),
+      readAccountBalance(context, paymentFixture.revenueAccountId),
+    ]);
 
     expect(transactionAfterSuccess.status).toBe(
       PaymentTransactionStatus.COMPLETED,
     );
-    expect(transactionAfterSuccess.journalEntryId).toBe(successBody.journalEntryId);
+    expect(transactionAfterSuccess.journalEntryId).toBe(
+      successBody.journalEntryId,
+    );
     expect(transactionAfterSuccess.gatewayTransactionId).toBe(
       payload.gatewayTransactionId,
     );
@@ -268,11 +274,15 @@ describe('Finance Payment Webhooks (e2e)', () => {
       }),
     ]);
 
-    expect(transactionAfterFailure.status).toBe(PaymentTransactionStatus.FAILED);
+    expect(transactionAfterFailure.status).toBe(
+      PaymentTransactionStatus.FAILED,
+    );
     expect(transactionAfterFailure.gatewayTransactionId).toBe(
       payload.gatewayTransactionId,
     );
-    expect(transactionAfterFailure.notes).toContain('Webhook: Insufficient funds');
+    expect(transactionAfterFailure.notes).toContain(
+      'Webhook: Insufficient funds',
+    );
     expect(eventAfterFailure.status).toBe('PROCESSED');
   });
 
@@ -307,14 +317,13 @@ describe('Finance Payment Webhooks (e2e)', () => {
       .send(successPayload)
       .expect(201);
 
-    const transactionAfterSuccess = await context.prisma.paymentTransaction.findUniqueOrThrow(
-      {
+    const transactionAfterSuccess =
+      await context.prisma.paymentTransaction.findUniqueOrThrow({
         where: { id: paymentFixture.transaction.id },
         select: {
           journalEntryId: true,
         },
-      },
-    );
+      });
 
     const originalJournalEntryId = transactionAfterSuccess.journalEntryId;
     expect(originalJournalEntryId).toBeTruthy();
@@ -324,7 +333,9 @@ describe('Finance Payment Webhooks (e2e)', () => {
       amount: paymentFixture.amount,
       providerCode: paymentFixture.gateway.providerCode,
       gatewayTransactionId: successPayload.gatewayTransactionId,
-      refundedAt: new Date(paymentFixture.paidAt.getTime() + 60_000).toISOString(),
+      refundedAt: new Date(
+        paymentFixture.paidAt.getTime() + 60_000,
+      ).toISOString(),
       reason: 'Guardian refund request',
       eventId: `evt-refund-${fixture?.suffix ?? 'x'}`,
       idempotencyKey: `idem-refund-${fixture?.suffix ?? 'x'}`,
@@ -399,13 +410,16 @@ describe('Finance Payment Webhooks (e2e)', () => {
   async function createPendingPaymentFixture(activeContext: FinanceE2eContext) {
     fixture = await createFinanceJournalFixture(activeContext);
 
-    const revenueAccount = await ensureFinancePostingAccountByCode(activeContext, {
-      accountCode: '4001',
-      nameAr: 'إيراد الرسوم الافتراضي',
-      nameEn: 'Default Tuition Revenue',
-      accountType: AccountType.REVENUE,
-      normalBalance: NormalBalance.CREDIT,
-    });
+    const revenueAccount = await ensureFinancePostingAccountByCode(
+      activeContext,
+      {
+        accountCode: '4001',
+        nameAr: 'إيراد الرسوم الافتراضي',
+        nameEn: 'Default Tuition Revenue',
+        accountType: AccountType.REVENUE,
+        normalBalance: NormalBalance.CREDIT,
+      },
+    );
 
     if (revenueAccount.created) {
       createdAccountIds.push(revenueAccount.id);

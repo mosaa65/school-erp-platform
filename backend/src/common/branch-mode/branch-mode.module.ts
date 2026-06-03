@@ -16,4 +16,3 @@ import { BranchModeService } from './branch-mode.service';
   exports: [BranchModeService],
 })
 export class BranchModeModule {}
-

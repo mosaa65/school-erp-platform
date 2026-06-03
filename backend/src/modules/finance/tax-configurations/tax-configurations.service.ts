@@ -34,7 +34,10 @@ export class TaxConfigurationsService {
   ) {}
 
   async create(payload: CreateTaxConfigurationDto, actorUserId: string) {
-    const taxNameAr = this.normalizeRequiredText(payload.taxNameAr, 'taxNameAr');
+    const taxNameAr = this.normalizeRequiredText(
+      payload.taxNameAr,
+      'taxNameAr',
+    );
 
     this.assertRate(payload.rate);
 
@@ -49,7 +52,9 @@ export class TaxConfigurationsService {
           outputGlAccountId: payload.outputGlAccountId,
           inputGlAccountId: payload.inputGlAccountId,
           effectiveFrom: new Date(payload.effectiveFrom),
-          effectiveTo: payload.effectiveTo ? new Date(payload.effectiveTo) : undefined,
+          effectiveTo: payload.effectiveTo
+            ? new Date(payload.effectiveTo)
+            : undefined,
           isActive: payload.isActive ?? true,
         } as Prisma.TaxCodeUncheckedCreateInput,
         include: taxCodeInclude,
@@ -164,8 +169,12 @@ export class TaxConfigurationsService {
           isInclusive: payload.isInclusive,
           outputGlAccountId: payload.outputGlAccountId,
           inputGlAccountId: payload.inputGlAccountId,
-          effectiveFrom: payload.effectiveFrom ? new Date(payload.effectiveFrom) : undefined,
-          effectiveTo: payload.effectiveTo ? new Date(payload.effectiveTo) : undefined,
+          effectiveFrom: payload.effectiveFrom
+            ? new Date(payload.effectiveFrom)
+            : undefined,
+          effectiveTo: payload.effectiveTo
+            ? new Date(payload.effectiveTo)
+            : undefined,
           isActive: payload.isActive,
         },
         include: taxCodeInclude,

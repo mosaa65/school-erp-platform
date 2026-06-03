@@ -49,10 +49,16 @@ export class AssessmentComponentSourcePeriodsController {
 
   @Get()
   @RequirePermissions('assessment-component-source-periods.read')
-  @ApiOperation({ summary: 'Get paginated assessment component source periods' })
+  @ApiOperation({
+    summary: 'Get paginated assessment component source periods',
+  })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'assessmentPeriodComponentId', required: false, type: String })
+  @ApiQuery({
+    name: 'assessmentPeriodComponentId',
+    required: false,
+    type: String,
+  })
   @ApiQuery({ name: 'sourcePeriodId', required: false, type: String })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
   findAll(@Query() query: ListAssessmentComponentSourcePeriodsDto) {

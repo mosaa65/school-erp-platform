@@ -41,7 +41,10 @@ export class MonthlyStudentResultsController {
   @Post()
   @RequirePermissions('student-period-results.create')
   @ApiOperation({ summary: 'Create monthly student result' })
-  create(@Body() payload: CreateStudentPeriodResultDto, @CurrentUser() user: AuthUser) {
+  create(
+    @Body() payload: CreateStudentPeriodResultDto,
+    @CurrentUser() user: AuthUser,
+  ) {
     return this.monthlyStudentResultsService.create(payload, user.userId);
   }
 
@@ -57,7 +60,9 @@ export class MonthlyStudentResultsController {
 
   @Post('ensure-bulk')
   @RequirePermissions('student-period-results.create')
-  @ApiOperation({ summary: 'Ensure monthly student results exist for section/subject scope' })
+  @ApiOperation({
+    summary: 'Ensure monthly student results exist for section/subject scope',
+  })
   ensureBulk(
     @Body() payload: EnsureMonthlyStudentResultsDto,
     @CurrentUser() user: AuthUser,
@@ -67,7 +72,9 @@ export class MonthlyStudentResultsController {
 
   @Post('sync-auto-components')
   @RequirePermissions('student-period-results.calculate')
-  @ApiOperation({ summary: 'Sync automatic monthly components from source systems' })
+  @ApiOperation({
+    summary: 'Sync automatic monthly components from source systems',
+  })
   syncAutoComponents(
     @Body() payload: SyncMonthlyStudentResultsDto,
     @CurrentUser() user: AuthUser,

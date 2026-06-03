@@ -40,7 +40,8 @@ export class ListAuditLogsDto {
 
   @ApiPropertyOptional({
     example: 'UPDATE',
-    description: 'Normalized action type (supports suffix match, e.g. USER_UPDATE)',
+    description:
+      'Normalized action type (supports suffix match, e.g. USER_UPDATE)',
   })
   @IsOptional()
   @IsString()

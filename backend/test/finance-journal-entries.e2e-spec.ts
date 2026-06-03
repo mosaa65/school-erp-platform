@@ -214,6 +214,6 @@ describe('Finance Journal Entries (e2e)', () => {
       ? errorBody.error.message.join(' | ')
       : errorBody.error.message;
 
-    expect(message).toContain("Only APPROVED entries can be posted");
+    expect(message).toContain('Only APPROVED entries can be posted');
   });
 });

@@ -7,7 +7,10 @@ import { ProcurementIntegrationsService } from './procurement-integrations.servi
 
 @Module({
   imports: [AuditLogsModule, DocumentSequencesModule],
-  controllers: [ProcurementIntegrationsController, InventoryIntegrationsController],
+  controllers: [
+    ProcurementIntegrationsController,
+    InventoryIntegrationsController,
+  ],
   providers: [ProcurementIntegrationsService],
 })
 export class ProcurementIntegrationsModule {}

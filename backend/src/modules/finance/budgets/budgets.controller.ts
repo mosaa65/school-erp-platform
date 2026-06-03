@@ -75,7 +75,10 @@ export class BudgetsController {
   @Patch(':id/approve')
   @RequirePermissions('budgets.approve')
   @ApiOperation({ summary: 'Approve budget — DRAFT → APPROVED' })
-  approve(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: AuthUser) {
+  approve(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: AuthUser,
+  ) {
     return this.budgetsService.approve(id, user.userId);
   }
 

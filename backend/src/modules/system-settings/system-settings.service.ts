@@ -198,7 +198,9 @@ export class SystemSettingsService {
       });
 
       // مسح الـ Cache إذا كان الإعداد المُعدَّل يخص الفروع
-      if ((BRANCH_SETTING_KEYS as readonly string[]).includes(item.settingKey)) {
+      if (
+        (BRANCH_SETTING_KEYS as readonly string[]).includes(item.settingKey)
+      ) {
         this.branchModeService.invalidateCache();
       }
 

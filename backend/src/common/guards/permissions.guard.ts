@@ -26,7 +26,8 @@ export class PermissionsGuard implements CanActivate {
       [context.getHandler(), context.getClass()],
     );
 
-    const hasRequiredAll = !!requiredPermissions && requiredPermissions.length > 0;
+    const hasRequiredAll =
+      !!requiredPermissions && requiredPermissions.length > 0;
     const hasRequiredAny =
       !!requiredAnyPermissions && requiredAnyPermissions.length > 0;
 

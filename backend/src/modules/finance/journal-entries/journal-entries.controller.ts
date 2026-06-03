@@ -93,14 +93,19 @@ export class JournalEntriesController {
 
   @Patch(':id/post')
   @RequirePermissions('journal-entries.update')
-  @ApiOperation({ summary: 'Post an APPROVED journal entry → POSTED (updates account balances)' })
+  @ApiOperation({
+    summary:
+      'Post an APPROVED journal entry → POSTED (updates account balances)',
+  })
   postEntry(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.journalEntriesService.post(id, user.userId);
   }
 
   @Post(':id/reverse')
   @RequirePermissions('journal-entries.update')
-  @ApiOperation({ summary: 'Reverse a POSTED journal entry (creates a mirror reversal entry)' })
+  @ApiOperation({
+    summary: 'Reverse a POSTED journal entry (creates a mirror reversal entry)',
+  })
   reverse(
     @Param('id') id: string,
     @Body('reason') reason: string,
@@ -109,4 +114,3 @@ export class JournalEntriesController {
     return this.journalEntriesService.reverse(id, reason, user.userId);
   }
 }
-

@@ -144,7 +144,10 @@ export class PaymentWebhooksService {
 
     const transaction = await this.findTransaction(payload.transactionId);
     this.assertAmountMatches(payload.amount, transaction.amount);
-    this.assertGatewayTransactionId(transaction.gatewayTransactionId, payload.gatewayTransactionId);
+    this.assertGatewayTransactionId(
+      transaction.gatewayTransactionId,
+      payload.gatewayTransactionId,
+    );
 
     const event = await this.createEvent({
       context,
@@ -209,7 +212,10 @@ export class PaymentWebhooksService {
     this.verifyIp(context.ipAddress);
 
     const transaction = await this.findTransaction(payload.transactionId);
-    this.assertGatewayTransactionId(transaction.gatewayTransactionId, payload.gatewayTransactionId);
+    this.assertGatewayTransactionId(
+      transaction.gatewayTransactionId,
+      payload.gatewayTransactionId,
+    );
 
     const event = await this.createEvent({
       context,
@@ -277,11 +283,18 @@ export class PaymentWebhooksService {
 
     const transaction = await this.findTransaction(payload.transactionId);
     this.assertAmountMatches(payload.amount, transaction.amount);
-    this.assertGatewayTransactionId(transaction.gatewayTransactionId, payload.gatewayTransactionId);
+    this.assertGatewayTransactionId(
+      transaction.gatewayTransactionId,
+      payload.gatewayTransactionId,
+    );
 
-    if (transaction.status !== PaymentTransactionStatus.COMPLETED &&
-        transaction.status !== PaymentTransactionStatus.REFUNDED) {
-      throw new BadRequestException('Refund can only be applied to completed payments');
+    if (
+      transaction.status !== PaymentTransactionStatus.COMPLETED &&
+      transaction.status !== PaymentTransactionStatus.REFUNDED
+    ) {
+      throw new BadRequestException(
+        'Refund can only be applied to completed payments',
+      );
     }
 
     const event = await this.createEvent({
@@ -304,7 +317,9 @@ export class PaymentWebhooksService {
       const actorUserId = this.resolveActorUserId(transaction.createdByUserId);
       const result = await this.applyPaymentRefund({
         transactionId: transaction.id,
-        refundedAt: payload.refundedAt ? new Date(payload.refundedAt) : new Date(),
+        refundedAt: payload.refundedAt
+          ? new Date(payload.refundedAt)
+          : new Date(),
         payload,
         actorUserId,
         existingNotes: transaction.notes,
@@ -345,7 +360,9 @@ export class PaymentWebhooksService {
       return createdByUserId;
     }
 
-    const systemUserId = this.configService.get<string>('FINANCE_SYSTEM_USER_ID');
+    const systemUserId = this.configService.get<string>(
+      'FINANCE_SYSTEM_USER_ID',
+    );
 
     if (!systemUserId) {
       throw new BadRequestException('FINANCE_SYSTEM_USER_ID is not configured');
@@ -365,7 +382,10 @@ export class PaymentWebhooksService {
         where: {
           id: input.transactionId,
           status: {
-            in: [PaymentTransactionStatus.PENDING, PaymentTransactionStatus.FAILED],
+            in: [
+              PaymentTransactionStatus.PENDING,
+              PaymentTransactionStatus.FAILED,
+            ],
           },
         },
         data: {
@@ -390,11 +410,19 @@ export class PaymentWebhooksService {
         };
       }
 
-      const transaction = await this.loadTransactionForPosting(tx, input.transactionId);
+      const transaction = await this.loadTransactionForPosting(
+        tx,
+        input.transactionId,
+      );
       const invoice = this.resolveInvoiceFromTransaction(transaction);
 
       if (invoice) {
-        await this.applyPaymentToInvoice(tx, invoice, transaction, input.paidAt);
+        await this.applyPaymentToInvoice(
+          tx,
+          invoice,
+          transaction,
+          input.paidAt,
+        );
       }
 
       let journalEntryId = transaction.journalEntryId ?? null;
@@ -438,7 +466,10 @@ export class PaymentWebhooksService {
         data: {
           status: PaymentTransactionStatus.REFUNDED,
           gatewayTransactionId: input.payload.gatewayTransactionId?.trim(),
-          notes: this.appendNote(input.existingNotes ?? null, input.payload.reason),
+          notes: this.appendNote(
+            input.existingNotes ?? null,
+            input.payload.reason,
+          ),
         },
       });
 
@@ -454,7 +485,10 @@ export class PaymentWebhooksService {
         };
       }
 
-      const transaction = await this.loadTransactionForPosting(tx, input.transactionId);
+      const transaction = await this.loadTransactionForPosting(
+        tx,
+        input.transactionId,
+      );
       const invoice = this.resolveInvoiceFromTransaction(transaction);
 
       if (invoice) {
@@ -647,10 +681,7 @@ export class PaymentWebhooksService {
         throw new NotFoundException('Invoice installment not found');
       }
 
-      const update = this.buildInstallmentRefundUpdate(
-        installment,
-        amount,
-      );
+      const update = this.buildInstallmentRefundUpdate(installment, amount);
 
       await tx.invoiceInstallment.update({
         where: { id: installment.id },
@@ -757,7 +788,14 @@ export class PaymentWebhooksService {
       (a, b) => a.installmentNumber - b.installmentNumber,
     );
     let remaining = this.roundMoney(amount);
-    const updates: Array<{ id: bigint; data: { paidAmount: number; status: InstallmentStatus; paymentDate: Date } }> = [];
+    const updates: Array<{
+      id: bigint;
+      data: {
+        paidAmount: number;
+        status: InstallmentStatus;
+        paymentDate: Date;
+      };
+    }> = [];
 
     for (const installment of sorted) {
       if (remaining <= 0) {
@@ -810,7 +848,14 @@ export class PaymentWebhooksService {
       (a, b) => b.installmentNumber - a.installmentNumber,
     );
     let remaining = this.roundMoney(amount);
-    const updates: Array<{ id: bigint; data: { paidAmount: number; status: InstallmentStatus; paymentDate: Date | null } }> = [];
+    const updates: Array<{
+      id: bigint;
+      data: {
+        paidAmount: number;
+        status: InstallmentStatus;
+        paymentDate: Date | null;
+      };
+    }> = [];
 
     for (const installment of sorted) {
       if (remaining <= 0) {
@@ -910,7 +955,8 @@ export class PaymentWebhooksService {
         status: JournalEntryStatus.POSTED,
         totalDebit,
         totalCredit,
-        currencyId: transaction.currencyId ?? invoice?.currencyId ?? baseCurrency?.id,
+        currencyId:
+          transaction.currencyId ?? invoice?.currencyId ?? baseCurrency?.id,
         exchangeRate: 1,
         createdById: actorUserId,
         updatedById: actorUserId,
@@ -962,7 +1008,11 @@ export class PaymentWebhooksService {
     transaction: PaymentTransactionForPosting,
     invoice: InvoiceForPosting | null,
     paymentAmount: number,
-  ): Promise<{ lines: PostingLineInput[]; totalDebit: number; totalCredit: number }> {
+  ): Promise<{
+    lines: PostingLineInput[];
+    totalDebit: number;
+    totalCredit: number;
+  }> {
     const studentId = transaction.enrollment?.studentId ?? null;
     const branchId = invoice?.branchId ?? null;
     const description = invoice
@@ -1032,7 +1082,9 @@ export class PaymentWebhooksService {
 
         if (isLast) {
           base = this.roundMoney(totals.base * ratio - allocatedBase);
-          discount = this.roundMoney(totals.discount * ratio - allocatedDiscount);
+          discount = this.roundMoney(
+            totals.discount * ratio - allocatedDiscount,
+          );
           vat = this.roundMoney(totals.vat * ratio - allocatedVat);
         } else {
           allocatedBase = this.roundMoney(allocatedBase + base);
@@ -1094,9 +1146,9 @@ export class PaymentWebhooksService {
 
     const diff = this.roundMoney(totalDebit - totalCredit);
     if (Math.abs(diff) > 0.01) {
-      const lastCreditLine = [...lines].reverse().find(
-        (line) => line.creditAmount > 0,
-      );
+      const lastCreditLine = [...lines]
+        .reverse()
+        .find((line) => line.creditAmount > 0);
 
       if (!lastCreditLine) {
         throw new BadRequestException('Journal entry is not balanced');
@@ -1258,11 +1310,10 @@ export class PaymentWebhooksService {
       return account.id;
     }
 
-    const accountNames =
-      FEE_TYPE_REVENUE_ACCOUNT_NAMES[line.feeType] ?? {
-        nameAr: DEFAULT_REVENUE_ACCOUNT_NAME_AR,
-        nameEn: DEFAULT_REVENUE_ACCOUNT_NAME_EN,
-      };
+    const accountNames = FEE_TYPE_REVENUE_ACCOUNT_NAMES[line.feeType] ?? {
+      nameAr: DEFAULT_REVENUE_ACCOUNT_NAME_AR,
+      nameEn: DEFAULT_REVENUE_ACCOUNT_NAME_EN,
+    };
     const account = await this.findPostingAccountByName(
       tx,
       accountNames.nameEn,
@@ -1296,7 +1347,10 @@ export class PaymentWebhooksService {
     discountGlAccountId: number | null,
   ) {
     if (discountGlAccountId) {
-      const account = await this.findPostingAccountById(tx, discountGlAccountId);
+      const account = await this.findPostingAccountById(
+        tx,
+        discountGlAccountId,
+      );
       return account.id;
     }
 
@@ -1317,10 +1371,7 @@ export class PaymentWebhooksService {
       where: {
         deletedAt: null,
         isActive: true,
-        OR: [
-          { nameEn: accountNameEn },
-          { nameAr: accountNameAr },
-        ],
+        OR: [{ nameEn: accountNameEn }, { nameAr: accountNameAr }],
       },
       select: {
         id: true,
@@ -1329,7 +1380,9 @@ export class PaymentWebhooksService {
     });
 
     if (!account) {
-      throw new NotFoundException(`Posting account ${accountNameEn} was not found`);
+      throw new NotFoundException(
+        `Posting account ${accountNameEn} was not found`,
+      );
     }
 
     if (account.isHeader) {
@@ -1403,7 +1456,9 @@ export class PaymentWebhooksService {
 
   private assertBalanced(totalDebit: number, totalCredit: number) {
     if (totalDebit <= 0 || totalCredit <= 0) {
-      throw new BadRequestException('Total debit and credit must be greater than zero');
+      throw new BadRequestException(
+        'Total debit and credit must be greater than zero',
+      );
     }
 
     if (Math.abs(totalDebit - totalCredit) > 0.01) {
@@ -1449,10 +1504,11 @@ export class PaymentWebhooksService {
 
   private getSignature(req: Request) {
     return (
-      req.get('x-payment-signature') ||
-      req.get('x-webhook-signature') ||
-      req.get('x-signature')
-    ) ?? null;
+      (req.get('x-payment-signature') ||
+        req.get('x-webhook-signature') ||
+        req.get('x-signature')) ??
+      null
+    );
   }
 
   private getIdempotencyKey(
@@ -1503,8 +1559,13 @@ export class PaymentWebhooksService {
       throw new UnauthorizedException('Webhook signature is missing');
     }
 
-    const normalized = context.signature.replace(/^sha256=/i, '').trim().toLowerCase();
-    const expected = createHmac('sha256', secret).update(context.rawBody).digest('hex');
+    const normalized = context.signature
+      .replace(/^sha256=/i, '')
+      .trim()
+      .toLowerCase();
+    const expected = createHmac('sha256', secret)
+      .update(context.rawBody)
+      .digest('hex');
 
     if (!/^[0-9a-f]{64}$/.test(normalized)) {
       throw new UnauthorizedException('Webhook signature is invalid');
@@ -1595,7 +1656,9 @@ export class PaymentWebhooksService {
     const diff = Math.abs(expected - actualAmount);
 
     if (diff > 0.01) {
-      throw new BadRequestException('Payment amount does not match transaction');
+      throw new BadRequestException(
+        'Payment amount does not match transaction',
+      );
     }
   }
 

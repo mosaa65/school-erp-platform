@@ -83,7 +83,8 @@ describe('AuditLogsService timeline', () => {
       }),
     );
 
-    const timelineFindManyInput = prismaMock.auditLog.findMany.mock.calls[0]?.[0];
+    const timelineFindManyInput =
+      prismaMock.auditLog.findMany.mock.calls[0]?.[0];
     expect(timelineFindManyInput?.where?.OR).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -134,9 +135,9 @@ describe('AuditLogsService timeline', () => {
   it('throws when anchor audit log is missing', async () => {
     prismaMock.auditLog.findFirst.mockResolvedValueOnce(null);
 
-    await expect(service.findTimelineByAuditLogId('missing-id')).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(
+      service.findTimelineByAuditLogId('missing-id'),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('fails PREVIOUS rollback when no previous item exists', async () => {
@@ -429,10 +430,14 @@ describe('AuditLogsService timeline', () => {
       occurredAt: new Date('2026-04-12T12:20:00.000Z'),
     });
 
-    const result = await service.rollbackFromTimeline('audit-latest', 'actor-9', {
-      mode: AuditRollbackMode.TARGET,
-      targetAuditLogId: 'audit-old',
-    });
+    const result = await service.rollbackFromTimeline(
+      'audit-latest',
+      'actor-9',
+      {
+        mode: AuditRollbackMode.TARGET,
+        targetAuditLogId: 'audit-old',
+      },
+    );
 
     expect(prismaMock.student.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -516,9 +521,13 @@ describe('AuditLogsService timeline', () => {
       occurredAt: new Date('2026-04-12T15:20:00.000Z'),
     });
 
-    const result = await service.rollbackFromTimeline('audit-fund-delete', 'actor-9', {
-      mode: AuditRollbackMode.PREVIOUS,
-    });
+    const result = await service.rollbackFromTimeline(
+      'audit-fund-delete',
+      'actor-9',
+      {
+        mode: AuditRollbackMode.PREVIOUS,
+      },
+    );
 
     expect(prismaMock.financialFund.update).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -47,7 +47,9 @@ export class EmployeeContractsController {
 
   @Post('generate-expiry-alerts')
   @RequirePermissions('employee-contracts.notify-expiring')
-  @ApiOperation({ summary: 'Generate expiry alerts for contracts nearing end date' })
+  @ApiOperation({
+    summary: 'Generate expiry alerts for contracts nearing end date',
+  })
   generateExpiryAlerts(
     @Body() payload: GenerateEmployeeContractExpiryAlertsDto,
     @CurrentUser() user: AuthUser,
@@ -61,10 +63,7 @@ export class EmployeeContractsController {
   @Post(':id/renew-draft')
   @RequirePermissions('employee-contracts.create')
   @ApiOperation({ summary: 'Create a renewal draft from an existing contract' })
-  createRenewalDraft(
-    @Param('id') id: string,
-    @CurrentUser() user: AuthUser,
-  ) {
+  createRenewalDraft(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.employeeContractsService.createRenewalDraft(id, user.userId);
   }
 

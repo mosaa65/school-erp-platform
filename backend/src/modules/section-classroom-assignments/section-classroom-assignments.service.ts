@@ -4,7 +4,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AuditStatus, Prisma, SectionClassroomAssignment } from '@prisma/client';
+import {
+  AuditStatus,
+  Prisma,
+  SectionClassroomAssignment,
+} from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogsService } from '../audit-logs/audit-logs.service';
 import { CreateSectionClassroomAssignmentDto } from './dto/create-section-classroom-assignment.dto';
@@ -106,7 +110,9 @@ export class SectionClassroomAssignmentsService {
             effectiveFrom: payload.effectiveFrom
               ? new Date(payload.effectiveFrom)
               : null,
-            effectiveTo: payload.effectiveTo ? new Date(payload.effectiveTo) : null,
+            effectiveTo: payload.effectiveTo
+              ? new Date(payload.effectiveTo)
+              : null,
             notes,
             isPrimary: payload.isPrimary ?? false,
             isActive: payload.isActive ?? true,
@@ -165,17 +171,26 @@ export class SectionClassroomAssignmentsService {
         ? [
             {
               section: {
-                OR: [{ code: { contains: search } }, { name: { contains: search } }],
+                OR: [
+                  { code: { contains: search } },
+                  { name: { contains: search } },
+                ],
               },
             },
             {
               classroom: {
-                OR: [{ code: { contains: search } }, { name: { contains: search } }],
+                OR: [
+                  { code: { contains: search } },
+                  { name: { contains: search } },
+                ],
               },
             },
             {
               academicYear: {
-                OR: [{ code: { contains: search } }, { name: { contains: search } }],
+                OR: [
+                  { code: { contains: search } },
+                  { name: { contains: search } },
+                ],
               },
             },
           ]
@@ -235,13 +250,16 @@ export class SectionClassroomAssignmentsService {
 
     const resolvedSectionId = payload.sectionId ?? existing.sectionId;
     const resolvedClassroomId = payload.classroomId ?? existing.classroomId;
-    const resolvedAcademicYearId = payload.academicYearId ?? existing.academicYearId;
+    const resolvedAcademicYearId =
+      payload.academicYearId ?? existing.academicYearId;
     const resolvedIsPrimary =
       payload.isPrimary !== undefined ? payload.isPrimary : existing.isPrimary;
     const resolvedIsActive =
       payload.isActive !== undefined ? payload.isActive : existing.isActive;
     const resolvedNotes =
-      payload.notes === undefined ? existing.notes : this.normalizeNotes(payload.notes);
+      payload.notes === undefined
+        ? existing.notes
+        : this.normalizeNotes(payload.notes);
     const resolvedEffectiveFrom =
       payload.effectiveFrom === undefined
         ? existing.effectiveFrom
@@ -354,7 +372,9 @@ export class SectionClassroomAssignmentsService {
     };
   }
 
-  private async ensureAssignmentExists(id: string): Promise<SectionClassroomAssignment> {
+  private async ensureAssignmentExists(
+    id: string,
+  ): Promise<SectionClassroomAssignment> {
     const assignment = await this.prisma.sectionClassroomAssignment.findFirst({
       where: {
         id,
@@ -473,7 +493,9 @@ export class SectionClassroomAssignmentsService {
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === 'P2002'
     ) {
-      throw new ConflictException('Section classroom assignment already exists');
+      throw new ConflictException(
+        'Section classroom assignment already exists',
+      );
     }
 
     throw error;

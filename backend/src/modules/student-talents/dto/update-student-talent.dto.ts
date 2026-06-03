@@ -4,4 +4,3 @@ import { CreateStudentTalentDto } from './create-student-talent.dto';
 export class UpdateStudentTalentDto extends PartialType(
   CreateStudentTalentDto,
 ) {}
-

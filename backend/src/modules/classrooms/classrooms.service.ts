@@ -52,7 +52,8 @@ export class ClassroomsService {
 
   async create(payload: CreateClassroomDto, actorUserId: string) {
     const code =
-      payload.code?.trim().toLowerCase() || generateAutoCode('CLS').toLowerCase();
+      payload.code?.trim().toLowerCase() ||
+      generateAutoCode('CLS').toLowerCase();
     const name = payload.name.trim();
     const notes = this.normalizeNotes(payload.notes);
 
@@ -86,7 +87,9 @@ export class ClassroomsService {
         },
       });
 
-      const [enrichedClassroom] = await this.attachActiveAssignmentCounts([classroom]);
+      const [enrichedClassroom] = await this.attachActiveAssignmentCounts([
+        classroom,
+      ]);
       return enrichedClassroom;
     } catch (error) {
       await this.auditLogsService.record({
@@ -167,20 +170,30 @@ export class ClassroomsService {
       throw new NotFoundException('Classroom not found');
     }
 
-    const [enrichedClassroom] = await this.attachActiveAssignmentCounts([classroom]);
+    const [enrichedClassroom] = await this.attachActiveAssignmentCounts([
+      classroom,
+    ]);
     return enrichedClassroom;
   }
 
   async update(id: string, payload: UpdateClassroomDto, actorUserId: string) {
     await this.ensureClassroomExists(id);
 
-    const code = payload.code === undefined ? undefined : payload.code.trim().toLowerCase();
+    const code =
+      payload.code === undefined
+        ? undefined
+        : payload.code.trim().toLowerCase();
     const name = payload.name === undefined ? undefined : payload.name.trim();
     const notes =
-      payload.notes === undefined ? undefined : this.normalizeNotes(payload.notes);
+      payload.notes === undefined
+        ? undefined
+        : this.normalizeNotes(payload.notes);
 
     try {
-      if (payload.buildingLookupId !== undefined && payload.buildingLookupId !== null) {
+      if (
+        payload.buildingLookupId !== undefined &&
+        payload.buildingLookupId !== null
+      ) {
         await this.ensureBuildingExistsAndActive(payload.buildingLookupId);
       }
 
@@ -211,7 +224,9 @@ export class ClassroomsService {
         details: payload as Prisma.InputJsonValue,
       });
 
-      const [enrichedClassroom] = await this.attachActiveAssignmentCounts([classroom]);
+      const [enrichedClassroom] = await this.attachActiveAssignmentCounts([
+        classroom,
+      ]);
       return enrichedClassroom;
     } catch (error) {
       this.throwKnownDatabaseErrors(error);
