@@ -7,7 +7,6 @@ import {
   Eye,
   LoaderCircle,
   PencilLine,
-  RefreshCw,
   ScanSearch,
   Trash2,
   Users,
@@ -16,7 +15,6 @@ import {
   MapPin,
   Activity,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InternationalPhoneField } from "@/components/ui/international-phone-field";
@@ -30,7 +28,10 @@ import { EntitySurfaceCard } from "@/presentation/entity-surface/entity-surface-
 import { EntitySurfaceContextMenu } from "@/presentation/entity-surface/entity-surface-context-menu";
 import { EntitySurfaceGrid } from "@/presentation/entity-surface/entity-surface-grid";
 import { EntitySurfaceHeaderActionButton } from "@/presentation/entity-surface/entity-surface-header-action-button";
-import { EntitySurfaceRecords } from "@/presentation/entity-surface/entity-surface-records";
+import {
+  EntitySurfaceRecordSelectable,
+  EntitySurfaceRecords,
+} from "@/presentation/entity-surface/entity-surface-records";
 import { getEntitySurfaceDefinition } from "@/presentation/entity-surface/entity-surface-registry";
 import { EntitySurfaceRow } from "@/presentation/entity-surface/entity-surface-row";
 import type {
@@ -314,10 +315,33 @@ export function GuardiansWorkspace() {
   const updateMutation = useUpdateGuardianMutation();
   const deleteMutation = useDeleteGuardianMutation();
 
-  const guardians = React.useMemo(
+  const queryGuardians = React.useMemo(
     () => guardiansQuery.data?.data ?? [],
     [guardiansQuery.data?.data],
   );
+  const [guardians, setGuardians] = React.useState<GuardianListItem[]>([]);
+
+  React.useEffect(() => {
+    if (!guardiansQuery.data) {
+      return;
+    }
+
+    setGuardians((prev) => {
+      if (page <= 1) {
+        return queryGuardians;
+      }
+
+      const seen = new Set(prev.map((guardian) => guardian.id));
+      const next = [...prev];
+      for (const guardian of queryGuardians) {
+        if (!seen.has(guardian.id)) {
+          seen.add(guardian.id);
+          next.push(guardian);
+        }
+      }
+      return next;
+    });
+  }, [page, queryGuardians, guardiansQuery.data]);
   const genderOptions = React.useMemo(
     () => genderOptionsQuery.data ?? [],
     [genderOptionsQuery.data],
@@ -422,8 +446,12 @@ export function GuardiansWorkspace() {
   const hasMoreGuardians = Boolean(pagination && pagination.page < pagination.totalPages);
   const isFetchingMoreGuardians = guardiansQuery.isFetching && !guardiansQuery.isPending;
   const loadMoreGuardians = React.useCallback(() => {
-    setPage((prev) => (pagination ? Math.min(prev + 1, pagination.totalPages) : prev));
-  }, [pagination]);
+    if (!pagination || guardiansQuery.isFetching) {
+      return;
+    }
+
+    setPage((prev) => Math.min(prev + 1, pagination.totalPages));
+  }, [guardiansQuery.isFetching, pagination]);
   const selectedGuardian = React.useMemo(
     () => guardians.find((guardian) => guardian.id === selectedGuardianId) ?? null,
     [guardians, selectedGuardianId],
@@ -835,6 +863,36 @@ export function GuardiansWorkspace() {
     });
   };
 
+  const handleBulkDelete = async (guardianIds: string[]) => {
+    if (!canDelete || guardianIds.length === 0) {
+      return false;
+    }
+
+    const confirmed = window.confirm(`تأكيد حذف ${guardianIds.length} ولي أمر؟`);
+    if (!confirmed) {
+      return false;
+    }
+
+    for (const guardianId of guardianIds) {
+      await deleteMutation.mutateAsync(guardianId);
+    }
+
+    const deletedIds = new Set(guardianIds);
+    setGuardians((prev) => prev.filter((guardian) => !deletedIds.has(guardian.id)));
+
+    if (editingGuardianId && deletedIds.has(editingGuardianId)) {
+      resetForm();
+    }
+    if (selectedGuardianId && deletedIds.has(selectedGuardianId)) {
+      setSelectedGuardianId(null);
+    }
+    if (contextGuardianId && deletedIds.has(contextGuardianId)) {
+      setContextGuardianId(null);
+    }
+
+    setActionSuccess(`تم حذف ${guardianIds.length} ولي أمر بنجاح.`);
+  };
+
   const handleOpenGuardianDetails = React.useCallback((guardian: GuardianListItem) => {
     setContextGuardianId(null);
 
@@ -863,7 +921,7 @@ export function GuardiansWorkspace() {
             icon={<Eye className="h-3.5 w-3.5" />}
             tone="preview"
             colorMode={entitySurface.colorMode}
-            entityKey="students"
+            entityKey="guardians"
             onClick={() => handleOpenGuardianDetails(guardian)}
           />
         ) : null}
@@ -874,7 +932,7 @@ export function GuardiansWorkspace() {
             icon={<PencilLine className="h-3.5 w-3.5" />}
             tone="edit"
             colorMode={entitySurface.colorMode}
-            entityKey="students"
+            entityKey="guardians"
             disabled={updateMutation.isPending}
             onClick={() => handleStartEdit(guardian)}
           />
@@ -965,6 +1023,9 @@ export function GuardiansWorkspace() {
   const selectedGuardianQuickActions = selectedGuardian
     ? buildGuardianQuickActions(selectedGuardian).filter((action) => action.key !== "details")
     : [];
+  const selectedGuardianPreview = selectedGuardian
+    ? guardiansSurface.buildPreview?.(selectedGuardian) ?? buildGuardianSurfacePreview(selectedGuardian)
+    : null;
 
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
 
@@ -1318,16 +1379,7 @@ export function GuardiansWorkspace() {
         </CardContent>
       </Card>
 
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle>قائمة أولياء الأمور</CardTitle>
-            <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
-          </div>
-          <CardDescription>إدارة أولياء الأمور مع فلترة حسب النوع والحالة.</CardDescription>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
+      <div className="space-y-4">
           <ManagementToolbar
             searchValue={searchInput}
             onSearchChange={(event) => setSearchInput(event.target.value)}
@@ -1439,20 +1491,6 @@ export function GuardiansWorkspace() {
             </div>
           </FilterDrawer>
 
-          {guardiansQuery.isPending ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-              جارٍ تحميل البيانات...
-            </div>
-          ) : null}
-
-          {guardiansQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-              {guardiansQuery.error instanceof Error
-                ? guardiansQuery.error.message
-                : "تعذّر تحميل البيانات."}
-            </div>
-          ) : null}
-
           <EntitySurfaceRecords
             title="قائمة أولياء الأمور"
             description="إدارة أولياء الأمور مع الفلترة وحالة الحساب."
@@ -1467,6 +1505,9 @@ export function GuardiansWorkspace() {
             emptyDescription="جرّب تغيير الفلاتر أو تحديث الصفحة."
             onRefresh={() => void guardiansQuery.refetch()}
             onLoadMore={loadMoreGuardians}
+            recordIds={guardians.map((guardian) => guardian.id)}
+            selectionLabel="ولي أمر"
+            onDeleteSelected={handleBulkDelete}
           >
             <EntitySurfaceGrid
               viewMode={resolvedViewMode}
@@ -1476,7 +1517,7 @@ export function GuardiansWorkspace() {
               visualStyle={entitySurface.visualStyle}
               effectsPreset={entitySurface.effectsPreset}
               shapePreset={entitySurface.shapePreset}
-              entityKey="students"
+              entityKey="guardians"
               inlineActionsMode={entitySurface.inlineActionsMode}
             >
               {guardians.map((guardian) => {
@@ -1492,8 +1533,8 @@ export function GuardiansWorkspace() {
 
                 if (resolvedViewMode === "dense-row") {
                   return (
-                    <EntitySurfaceRow
-                      key={guardian.id}
+                    <EntitySurfaceRecordSelectable key={guardian.id} id={guardian.id}>
+                      <EntitySurfaceRow
                       title={preview.title}
                       subtitle={showGuardianCardDetails ? preview.subtitle : undefined}
                       meta={showGuardianCardDetails ? preview.meta ?? preview.description : undefined}
@@ -1506,7 +1547,7 @@ export function GuardiansWorkspace() {
                       visualStyle={entitySurface.visualStyle}
                       effectsPreset={entitySurface.effectsPreset}
                       shapePreset={entitySurface.shapePreset}
-                      entityKey="students"
+                      entityKey="guardians"
                       inlineActionsMode={entitySurface.inlineActionsMode}
                       motionPreset={entitySurface.motionPreset}
                       reducedMotion={entitySurface.reducedMotion}
@@ -1521,12 +1562,13 @@ export function GuardiansWorkspace() {
                         setContextGuardianId(guardian.id);
                       }}
                     />
+                    </EntitySurfaceRecordSelectable>
                   );
                 }
 
                 return (
-                  <EntitySurfaceCard
-                    key={guardian.id}
+                  <EntitySurfaceRecordSelectable key={guardian.id} id={guardian.id}>
+                    <EntitySurfaceCard
                     title={preview.title}
                     subtitle={showGuardianCardDetails ? preview.subtitle : undefined}
                     description={showGuardianCardDetails ? preview.description : undefined}
@@ -1541,7 +1583,7 @@ export function GuardiansWorkspace() {
                     visualStyle={entitySurface.visualStyle}
                     effectsPreset={entitySurface.effectsPreset}
                     shapePreset={entitySurface.shapePreset}
-                    entityKey="students"
+                    entityKey="guardians"
                     inlineActionsMode={entitySurface.inlineActionsMode}
                     motionPreset={entitySurface.motionPreset}
                     reducedMotion={entitySurface.reducedMotion}
@@ -1556,57 +1598,12 @@ export function GuardiansWorkspace() {
                       setContextGuardianId(guardian.id);
                     }}
                   />
+                  </EntitySurfaceRecordSelectable>
                 );
               })}
             </EntitySurfaceGrid>
             </EntitySurfaceRecords>
-
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-            <p className="text-xs text-muted-foreground">
-              الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-            </p>
-
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={!pagination || pagination.page <= 1 || guardiansQuery.isFetching}
-              >
-                السابق
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPage((prev) =>
-                    pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                  )
-                }
-                disabled={
-                  !pagination ||
-                  pagination.page >= pagination.totalPages ||
-                  guardiansQuery.isFetching
-                }
-              >
-                التالي
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => void guardiansQuery.refetch()}
-                disabled={guardiansQuery.isFetching}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${guardiansQuery.isFetching ? "animate-spin" : ""}`}
-                />
-                تحديث
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      </div>
 
       {contextGuardian ? (
         <EntitySurfaceContextMenu
@@ -1621,7 +1618,7 @@ export function GuardiansWorkspace() {
             visualStyle: entitySurface.visualStyle,
             effectsPreset: entitySurface.effectsPreset,
             shapePreset: entitySurface.shapePreset,
-            entityKey: "students",
+            entityKey: "guardians",
             inlineActionsMode: entitySurface.inlineActionsMode,
             motionPreset: entitySurface.motionPreset,
             reducedMotion: entitySurface.reducedMotion,
@@ -1629,6 +1626,7 @@ export function GuardiansWorkspace() {
             avatarMode: entitySurface.avatarMode,
           }}
           actions={contextGuardianQuickActions}
+          copyText={`${contextGuardian.fullName} ${contextGuardian.phonePrimary ?? ""}`.trim()}
           onClose={() => setContextGuardianId(null)}
         />
       ) : null}
@@ -1645,6 +1643,28 @@ export function GuardiansWorkspace() {
           visualStyle={entitySurface.visualStyle}
           effectsPreset={entitySurface.effectsPreset}
           shapePreset={entitySurface.shapePreset}
+          colorMode={entitySurface.colorMode}
+          entityKey="guardians"
+          previewCard={selectedGuardianPreview ? {
+            title: selectedGuardianPreview.title,
+            subtitle: showGuardianCardDetails ? selectedGuardianPreview.subtitle : undefined,
+            description: showGuardianCardDetails ? selectedGuardianPreview.description : undefined,
+            avatar: selectedGuardianPreview.avatar,
+            fields: showGuardianCardDetails ? selectedGuardianPreview.fields : undefined,
+            statusChips: showGuardianCardDetails ? getGuardianStatusChips(selectedGuardian) : undefined,
+            viewMode: resolvedViewMode,
+            density: entitySurface.density,
+            richness: entitySurface.richness,
+            colorMode: entitySurface.colorMode,
+            visualStyle: entitySurface.visualStyle,
+            effectsPreset: entitySurface.effectsPreset,
+            shapePreset: entitySurface.shapePreset,
+            entityKey: "guardians",
+            inlineActionsMode: entitySurface.inlineActionsMode,
+            motionPreset: entitySurface.motionPreset,
+            reducedMotion: entitySurface.reducedMotion,
+            avatarMode: entitySurface.avatarMode,
+          } : undefined}
           onClose={() => setSelectedGuardianId(null)}
         >
           <GuardianDetailsContent

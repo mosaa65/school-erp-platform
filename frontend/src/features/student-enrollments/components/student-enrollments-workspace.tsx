@@ -14,7 +14,6 @@ import {
   LoaderCircle,
   PencilLine,
   Plus,
-  RefreshCw,
   ScanSearch,
   Trash2,
   Type,
@@ -34,7 +33,10 @@ import { EntitySurfaceCard } from "@/presentation/entity-surface/entity-surface-
 import { EntitySurfaceContextMenu } from "@/presentation/entity-surface/entity-surface-context-menu";
 import { EntitySurfaceGrid } from "@/presentation/entity-surface/entity-surface-grid";
 import { EntitySurfaceHeaderActionButton } from "@/presentation/entity-surface/entity-surface-header-action-button";
-import { EntitySurfaceRecords } from "@/presentation/entity-surface/entity-surface-records";
+import {
+  EntitySurfaceRecordSelectable,
+  EntitySurfaceRecords,
+} from "@/presentation/entity-surface/entity-surface-records";
 import { getEntitySurfaceDefinition } from "@/presentation/entity-surface/entity-surface-registry";
 import { EntitySurfaceRow } from "@/presentation/entity-surface/entity-surface-row";
 import type {
@@ -42,13 +44,6 @@ import type {
   EntitySurfaceQuickAction,
   EntitySurfaceViewMode,
 } from "@/presentation/entity-surface/entity-surface-types";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { Fab } from "@/components/ui/fab";
@@ -696,10 +691,33 @@ export function StudentEnrollmentsWorkspace() {
   const updateMutation = useUpdateStudentEnrollmentMutation();
   const deleteMutation = useDeleteStudentEnrollmentMutation();
 
-  const enrollments = React.useMemo(
+  const queryEnrollments = React.useMemo(
     () => enrollmentsQuery.data?.data ?? [],
     [enrollmentsQuery.data?.data],
   );
+  const [enrollments, setEnrollments] = React.useState<StudentEnrollmentListItem[]>([]);
+
+  React.useEffect(() => {
+    if (!enrollmentsQuery.data) {
+      return;
+    }
+
+    setEnrollments((prev) => {
+      if (page <= 1) {
+        return queryEnrollments;
+      }
+
+      const seen = new Set(prev.map((enrollment) => enrollment.id));
+      const next = [...prev];
+      for (const enrollment of queryEnrollments) {
+        if (!seen.has(enrollment.id)) {
+          seen.add(enrollment.id);
+          next.push(enrollment);
+        }
+      }
+      return next;
+    });
+  }, [enrollmentsQuery.data, page, queryEnrollments]);
   const enrollmentStatusOptions = React.useMemo(() => {
     const items = enrollmentStatusesQuery.data?.data ?? [];
     const normalized = items
@@ -716,8 +734,12 @@ export function StudentEnrollmentsWorkspace() {
   const hasMoreEnrollments = Boolean(pagination && pagination.page < pagination.totalPages);
   const isFetchingMoreEnrollments = enrollmentsQuery.isFetching && !enrollmentsQuery.isPending;
   const loadMoreEnrollments = React.useCallback(() => {
-    setPage((prev) => (pagination ? Math.min(prev + 1, pagination.totalPages) : prev));
-  }, [pagination]);
+    if (!pagination || enrollmentsQuery.isFetching) {
+      return;
+    }
+
+    setPage((prev) => Math.min(prev + 1, pagination.totalPages));
+  }, [enrollmentsQuery.isFetching, pagination]);
   const selectedEnrollment = React.useMemo(
     () => enrollments.find((enrollment) => enrollment.id === selectedEnrollmentId) ?? null,
     [enrollments, selectedEnrollmentId],
@@ -1024,6 +1046,58 @@ export function StudentEnrollmentsWorkspace() {
     }
   };
 
+  const handleBulkDelete = async (enrollmentIds: string[]) => {
+    if (!canDelete) {
+      notify.warning("لا تملك الصلاحية المطلوبة: student-enrollments.delete.");
+      return false;
+    }
+
+    if (enrollmentIds.length === 0) {
+      return false;
+    }
+
+    const confirmed = window.confirm(`تأكيد حذف ${enrollmentIds.length} قيد طالب؟`);
+    if (!confirmed) {
+      return false;
+    }
+
+    try {
+      await notify.promise(
+        async () => {
+          for (const enrollmentId of enrollmentIds) {
+            await deleteMutation.mutateAsync(enrollmentId);
+          }
+        },
+        {
+          loading: `جارٍ حذف ${enrollmentIds.length} قيد...`,
+          success: `تم حذف ${enrollmentIds.length} قيد بنجاح.`,
+          error: (error) => ({
+            message: getErrorMessage(error, "تعذر حذف القيود المحددة."),
+            persistent: true,
+          }),
+        },
+      );
+
+      const deletedIds = new Set(enrollmentIds);
+      setEnrollments((prev) =>
+        prev.filter((enrollment) => !deletedIds.has(enrollment.id)),
+      );
+
+      if (editingEnrollmentId && deletedIds.has(editingEnrollmentId)) {
+        resetForm();
+      }
+      if (selectedEnrollmentId && deletedIds.has(selectedEnrollmentId)) {
+        setSelectedEnrollmentId(null);
+      }
+      if (contextEnrollmentId && deletedIds.has(contextEnrollmentId)) {
+        setContextEnrollmentId(null);
+      }
+    } catch (error) {
+      setFormError(getErrorMessage(error, "تعذر حذف القيود المحددة."));
+      return false;
+    }
+  };
+
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
   const requiresSection = formState.distributionStatus !== "PENDING_DISTRIBUTION";
   const groupedEnrollments = React.useMemo<EnrollmentGroupedItems[]>(() => {
@@ -1241,7 +1315,7 @@ export function StudentEnrollmentsWorkspace() {
             icon={<Eye className="h-3.5 w-3.5" />}
             tone="preview"
             colorMode={entitySurface.colorMode}
-            entityKey="students"
+            entityKey="student-enrollments"
             onClick={() => handleOpenEnrollmentDetails(enrollment)}
           />
         ) : null}
@@ -1252,7 +1326,7 @@ export function StudentEnrollmentsWorkspace() {
             icon={<PencilLine className="h-3.5 w-3.5" />}
             tone="edit"
             colorMode={entitySurface.colorMode}
-            entityKey="students"
+            entityKey="student-enrollments"
             disabled={updateMutation.isPending}
             onClick={() => handleStartEdit(enrollment)}
           />
@@ -1438,6 +1512,10 @@ export function StudentEnrollmentsWorkspace() {
   const selectedEnrollmentQuickActions = selectedEnrollment
     ? buildEnrollmentQuickActions(selectedEnrollment).filter((action) => action.key !== "details")
     : [];
+  const selectedEnrollmentPreview = selectedEnrollment
+    ? enrollmentsSurface.buildPreview?.(selectedEnrollment) ??
+      buildStudentEnrollmentSurfacePreview(selectedEnrollment)
+    : null;
   const inlineMessageProps = {
     colorMode: preferences.colorMode,
     variant: preferences.variant,
@@ -1773,18 +1851,7 @@ export function StudentEnrollmentsWorkspace() {
           </div>
         </FilterDrawer>
 
-        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-          <CardHeader className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>قيود الطلاب</CardTitle>
-              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
-            </div>
-            <CardDescription>
-              إدارة القيود الدراسية للطلاب حسب السنة والصف والشعبة والحالة.
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent className="space-y-3">
+        <div className="space-y-3">
           {formError && !isFormOpen ? (
             <SystemMessageInline
               tone="warning"
@@ -1794,54 +1861,9 @@ export function StudentEnrollmentsWorkspace() {
             />
           ) : null}
 
-          {enrollmentsQuery.isPending ? (
-            <SystemMessageInline
-              tone="loading"
-              message="جارٍ تحميل بيانات قيود الطلاب..."
-              densityPreset={preferences.densityPreset}
-              {...inlineMessageProps}
-            />
-          ) : null}
-
-          {enrollmentsQuery.error ? (
-            <SystemMessageInline
-              tone="error"
-              message={getErrorMessage(enrollmentsQuery.error, "تعذّر تحميل البيانات.")}
-              densityPreset={preferences.densityPreset}
-              action={{ label: "إعادة المحاولة", dismissOnClick: false }}
-              onAction={() => void handleRefresh()}
-              {...inlineMessageProps}
-            />
-          ) : null}
-
-          {!enrollmentsQuery.isPending && !enrollmentsQuery.error && enrollments.length === 0 ? (
-            <SystemMessageInline
-              tone="neutral"
-              message={emptyStateMessage}
-              densityPreset={preferences.densityPreset}
-              action={
-                hasActiveFilters
-                  ? { label: "مسح الفلاتر", dismissOnClick: false }
-                  : canCreate
-                    ? { label: "إنشاء قيد", dismissOnClick: false }
-                    : undefined
-              }
-              onAction={
-                hasActiveFilters
-                  ? clearFilters
-                  : canCreate
-                    ? handleStartCreate
-                    : undefined
-              }
-              {...inlineMessageProps}
-            />
-          ) : null}
-
-          {enrollments.length > 0 ? (
-            <>
-              <EntitySurfaceRecords
+          <EntitySurfaceRecords
                 title="قيود الطلاب"
-                description="إدارة قيود الطلاب مع عرض مجموعات وفلترة ذكية."
+                description="إدارة القيود الدراسية للطلاب حسب السنة والصف والشعبة والحالة."
                 total={pagination?.total ?? 0}
                 loaded={enrollments.length}
                 isInitialLoading={enrollmentsQuery.isPending}
@@ -1849,10 +1871,13 @@ export function StudentEnrollmentsWorkspace() {
                 isFetchingMore={isFetchingMoreEnrollments}
                 hasMore={hasMoreEnrollments}
                 error={enrollmentsQuery.error}
-                emptyTitle="لا توجد سجلات مطابقة."
+                emptyTitle={emptyStateMessage}
                 emptyDescription="جرّب تغيير الفلاتر أو إنشاء قيد جديد."
                 onRefresh={() => void handleRefresh()}
                 onLoadMore={loadMoreEnrollments}
+                recordIds={enrollments.map((enrollment) => enrollment.id)}
+                selectionLabel="قيد"
+                onDeleteSelected={handleBulkDelete}
               >
               {groupedEnrollments.map((group) => (
                 <div key={group.key} className="space-y-3">
@@ -1873,7 +1898,7 @@ export function StudentEnrollmentsWorkspace() {
                 visualStyle={entitySurface.visualStyle}
                 effectsPreset={entitySurface.effectsPreset}
                 shapePreset={entitySurface.shapePreset}
-                entityKey="students"
+                entityKey="student-enrollments"
                 inlineActionsMode={entitySurface.inlineActionsMode}
               >
                 {group.items.map((enrollment) => {
@@ -1890,8 +1915,8 @@ export function StudentEnrollmentsWorkspace() {
 
                   if (resolvedViewMode === "dense-row") {
                     return (
-                      <EntitySurfaceRow
-                        key={enrollment.id}
+                      <EntitySurfaceRecordSelectable key={enrollment.id} id={enrollment.id}>
+                        <EntitySurfaceRow
                         title={preview.title}
                         subtitle={showEnrollmentCardDetails ? preview.subtitle : undefined}
                         meta={showEnrollmentCardDetails ? preview.meta ?? preview.description : undefined}
@@ -1904,7 +1929,7 @@ export function StudentEnrollmentsWorkspace() {
                         visualStyle={entitySurface.visualStyle}
                         effectsPreset={entitySurface.effectsPreset}
                         shapePreset={entitySurface.shapePreset}
-                        entityKey="students"
+                        entityKey="student-enrollments"
                         inlineActionsMode={entitySurface.inlineActionsMode}
                         motionPreset={entitySurface.motionPreset}
                         reducedMotion={entitySurface.reducedMotion}
@@ -1919,12 +1944,13 @@ export function StudentEnrollmentsWorkspace() {
                           setContextEnrollmentId(enrollment.id);
                         }}
                       />
+                      </EntitySurfaceRecordSelectable>
                     );
                   }
 
                   return (
-                  <EntitySurfaceCard
-                    key={enrollment.id}
+                    <EntitySurfaceRecordSelectable key={enrollment.id} id={enrollment.id}>
+                      <EntitySurfaceCard
                     title={preview.title}
                     subtitle={showEnrollmentCardDetails ? preview.subtitle : undefined}
                     description={showEnrollmentCardDetails ? preview.description : undefined}
@@ -1939,7 +1965,7 @@ export function StudentEnrollmentsWorkspace() {
                       visualStyle={entitySurface.visualStyle}
                       effectsPreset={entitySurface.effectsPreset}
                       shapePreset={entitySurface.shapePreset}
-                      entityKey="students"
+                      entityKey="student-enrollments"
                       inlineActionsMode={entitySurface.inlineActionsMode}
                       motionPreset={entitySurface.motionPreset}
                       reducedMotion={entitySurface.reducedMotion}
@@ -1954,61 +1980,14 @@ export function StudentEnrollmentsWorkspace() {
                         setContextEnrollmentId(enrollment.id);
                       }}
                     />
+                    </EntitySurfaceRecordSelectable>
                   );
                 })}
               </EntitySurfaceGrid>
             </div>
           ))}
             </EntitySurfaceRecords>
-
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-            <p className="text-xs text-muted-foreground">
-              الصفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-            </p>
-
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={!pagination || pagination.page <= 1 || enrollmentsQuery.isFetching}
-              >
-                السابق
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setPage((prev) =>
-                    pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                  )
-                }
-                disabled={
-                  !pagination ||
-                  pagination.page >= pagination.totalPages ||
-                  enrollmentsQuery.isFetching
-                }
-              >
-                التالي
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => void handleRefresh()}
-                disabled={enrollmentsQuery.isFetching}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${enrollmentsQuery.isFetching ? "animate-spin" : ""}`}
-                />
-                تحديث
-              </Button>
-            </div>
-          </div>
-            </>
-        ) : null}
-        </CardContent>
-        </Card>
+        </div>
       </div>
 
       {contextEnrollment ? (
@@ -2024,7 +2003,7 @@ export function StudentEnrollmentsWorkspace() {
             visualStyle: entitySurface.visualStyle,
             effectsPreset: entitySurface.effectsPreset,
             shapePreset: entitySurface.shapePreset,
-            entityKey: "students",
+            entityKey: "student-enrollments",
             inlineActionsMode: entitySurface.inlineActionsMode,
             motionPreset: entitySurface.motionPreset,
             reducedMotion: entitySurface.reducedMotion,
@@ -2032,6 +2011,7 @@ export function StudentEnrollmentsWorkspace() {
             avatarMode: entitySurface.avatarMode,
           }}
           actions={contextEnrollmentQuickActions}
+          copyText={`${contextEnrollment.student.fullName} ${contextEnrollment.yearlyEnrollmentNo ?? ""}`.trim()}
           onClose={() => setContextEnrollmentId(null)}
         />
       ) : null}
@@ -2048,6 +2028,30 @@ export function StudentEnrollmentsWorkspace() {
           visualStyle={entitySurface.visualStyle}
           effectsPreset={entitySurface.effectsPreset}
           shapePreset={entitySurface.shapePreset}
+          colorMode={entitySurface.colorMode}
+          entityKey="student-enrollments"
+          previewCard={selectedEnrollmentPreview ? {
+            title: selectedEnrollmentPreview.title,
+            subtitle: showEnrollmentCardDetails ? selectedEnrollmentPreview.subtitle : undefined,
+            description: showEnrollmentCardDetails ? selectedEnrollmentPreview.description : undefined,
+            avatar: selectedEnrollmentPreview.avatar,
+            fields: showEnrollmentCardDetails ? selectedEnrollmentPreview.fields : undefined,
+            statusChips: showEnrollmentCardDetails
+              ? getStudentEnrollmentStatusChips(selectedEnrollment)
+              : undefined,
+            viewMode: resolvedViewMode,
+            density: entitySurface.density,
+            richness: entitySurface.richness,
+            colorMode: entitySurface.colorMode,
+            visualStyle: entitySurface.visualStyle,
+            effectsPreset: entitySurface.effectsPreset,
+            shapePreset: entitySurface.shapePreset,
+            entityKey: "student-enrollments",
+            inlineActionsMode: entitySurface.inlineActionsMode,
+            motionPreset: entitySurface.motionPreset,
+            reducedMotion: entitySurface.reducedMotion,
+            avatarMode: entitySurface.avatarMode,
+          } : undefined}
           onClose={() => setSelectedEnrollmentId(null)}
         >
           <StudentEnrollmentDetailsContent

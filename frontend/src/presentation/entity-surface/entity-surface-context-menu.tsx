@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
+import { Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EntitySurfaceCard } from "@/presentation/entity-surface/entity-surface-card";
 import { EntitySurfaceQuickActions } from "@/presentation/entity-surface/entity-surface-quick-actions";
@@ -12,19 +13,67 @@ type EntitySurfaceContextMenuProps = {
   open: boolean;
   card: Omit<EntitySurfaceCardProps, "onClick" | "onLongPress">;
   actions?: EntitySurfaceQuickAction[];
+  copyText?: string;
   onClose: () => void;
   className?: string;
 };
+
+function getPlainTextFromNode(node: React.ReactNode): string {
+  if (typeof node === "string" || typeof node === "number") {
+    return String(node);
+  }
+
+  if (Array.isArray(node)) {
+    return node.map(getPlainTextFromNode).filter(Boolean).join(" ");
+  }
+
+  if (React.isValidElement<{ children?: React.ReactNode }>(node)) {
+    return getPlainTextFromNode(node.props.children);
+  }
+
+  return "";
+}
+
+async function copyToClipboard(text: string) {
+  try {
+    if (window.navigator.clipboard?.writeText) {
+      await window.navigator.clipboard.writeText(text);
+      return;
+    }
+  } catch {
+    // Fall back to the hidden textarea method below.
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand("copy");
+  document.body.removeChild(textarea);
+}
 
 export function EntitySurfaceContextMenu({
   open,
   card,
   actions,
+  copyText,
   onClose,
   className,
 }: EntitySurfaceContextMenuProps) {
   const [mounted, setMounted] = React.useState(false);
   const [sidebarOffset, setSidebarOffset] = React.useState("0px");
+  const [copySucceeded, setCopySucceeded] = React.useState(false);
+  const resolvedCopyText = React.useMemo(
+    () => (copyText ?? getPlainTextFromNode(card.title)).trim(),
+    [card.title, copyText],
+  );
+
+  React.useEffect(() => {
+    setCopySucceeded(false);
+  }, [open, resolvedCopyText]);
 
   React.useEffect(() => {
     const frame = window.requestAnimationFrame(() => setMounted(true));
@@ -48,14 +97,39 @@ export function EntitySurfaceContextMenu({
     };
   }, []);
 
+  const resolvedActions = React.useMemo<EntitySurfaceQuickAction[]>(() => {
+    const baseActions = actions ? [...actions] : [];
+
+    if (!resolvedCopyText) {
+      return baseActions;
+    }
+
+    return [
+      {
+        key: "copy-record",
+        label: copySucceeded ? "تم النسخ" : "نسخ",
+        icon: <Copy className="h-3.5 w-3.5" />,
+        tone: "ghost",
+        onClick: () => {
+          void copyToClipboard(resolvedCopyText).then(() => {
+            setCopySucceeded(true);
+            window.setTimeout(() => setCopySucceeded(false), 1400);
+          }).catch(() => undefined);
+        },
+      },
+      ...baseActions,
+    ];
+  }, [actions, copySucceeded, resolvedCopyText]);
+
   if (!open) {
     return null;
   }
 
   const menu = (
     <div
-      className={cn("fixed inset-0 left-0 z-[110]", className)}
+      className={cn("fixed inset-0 left-0 z-[110] select-none", className)}
       style={{ right: sidebarOffset }}
+      onContextMenu={(event) => event.preventDefault()}
     >
       <div className="absolute inset-0 bg-black/24 backdrop-blur-sm" onClick={onClose} />
 
@@ -75,7 +149,7 @@ export function EntitySurfaceContextMenu({
             />
           </div>
 
-          {actions && actions.length > 0 ? (
+          {resolvedActions.length > 0 ? (
             <div
               className={cn(
                 "w-full max-w-[clamp(12rem,16vw,16rem)] mx-auto transition-all duration-300 ease-out",
@@ -83,9 +157,9 @@ export function EntitySurfaceContextMenu({
               )}
             >
               <EntitySurfaceQuickActions
-                actions={actions}
+                actions={resolvedActions}
                 orientation="vertical"
-                buttonClassName="px-3"
+                buttonClassName="select-none px-3"
               />
             </div>
           ) : null}

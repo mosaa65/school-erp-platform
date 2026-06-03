@@ -38,7 +38,10 @@ import { EntitySurfaceContextMenu } from "@/presentation/entity-surface/entity-s
 import { EntitySurfaceGrid } from "@/presentation/entity-surface/entity-surface-grid";
 import { EntitySurfaceHeaderActionButton } from "@/presentation/entity-surface/entity-surface-header-action-button";
 import { getEntitySurfaceDefinition } from "@/presentation/entity-surface/entity-surface-registry";
-import { EntitySurfaceRecords } from "@/presentation/entity-surface/entity-surface-records";
+import {
+  EntitySurfaceRecordSelectable,
+  EntitySurfaceRecords,
+} from "@/presentation/entity-surface/entity-surface-records";
 import { EntitySurfaceRow } from "@/presentation/entity-surface/entity-surface-row";
 import type {
   EntitySurfaceQuickAction,
@@ -487,6 +490,8 @@ export function SubjectsWorkspace() {
           emptyTitle="لا توجد مواد مطابقة."
           onRefresh={() => void subjectsQuery.refetch()}
           onLoadMore={() => void subjectsQuery.fetchNextPage()}
+          recordIds={subjects.map((subject) => subject.id)}
+          selectionLabel="مادة"
         >
           {subjects.length > 0 ? (
             <EntitySurfaceGrid
@@ -510,8 +515,8 @@ export function SubjectsWorkspace() {
 
                 if (resolvedViewMode === "dense-row") {
                     return (
-                      <EntitySurfaceRow
-                        key={subject.id}
+                      <EntitySurfaceRecordSelectable key={subject.id} id={subject.id}>
+                        <EntitySurfaceRow
                         title={preview.title}
                         avatar={preview.avatar}
                         headerActions={headerActions}
@@ -535,12 +540,13 @@ export function SubjectsWorkspace() {
                         setContextSubjectId(subject.id);
                       }}
                     />
+                      </EntitySurfaceRecordSelectable>
                   );
                 }
 
                 return (
-                  <EntitySurfaceCard
-                    key={subject.id}
+                  <EntitySurfaceRecordSelectable key={subject.id} id={subject.id}>
+                    <EntitySurfaceCard
                     title={preview.title}
                     avatar={preview.avatar}
                     headerActions={headerActions}
@@ -565,6 +571,7 @@ export function SubjectsWorkspace() {
                       setContextSubjectId(subject.id);
                     }}
                   />
+                  </EntitySurfaceRecordSelectable>
                 );
               })}
             </EntitySurfaceGrid>
@@ -593,6 +600,7 @@ export function SubjectsWorkspace() {
             avatarMode: entitySurface.avatarMode,
           }}
           actions={contextSubjectQuickActions}
+          copyText={`${contextSubject.name} ${contextSubject.code ?? ""}`.trim()}
           onClose={() => setContextSubjectId(null)}
         />
       ) : null}

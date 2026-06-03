@@ -11,7 +11,6 @@ import {
   LoaderCircle,
   PencilLine,
   Plus,
-  RefreshCw,
   ScanSearch,
   Trash2,
   Users,
@@ -22,20 +21,12 @@ import {
   Heart,
   Activity,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ManagementToolbar } from "@/components/ui/management-toolbar";
 import { SelectField } from "@/components/ui/select-field";
 import { BottomSheetForm } from "@/components/ui/bottom-sheet-form";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
 import { Fab } from "@/components/ui/fab";
 import { EntityDetailsShell } from "@/presentation/entity-surface/entity-details-shell";
@@ -43,7 +34,10 @@ import { EntitySurfaceCard } from "@/presentation/entity-surface/entity-surface-
 import { EntitySurfaceContextMenu } from "@/presentation/entity-surface/entity-surface-context-menu";
 import { EntitySurfaceGrid } from "@/presentation/entity-surface/entity-surface-grid";
 import { EntitySurfaceHeaderActionButton } from "@/presentation/entity-surface/entity-surface-header-action-button";
-import { EntitySurfaceRecords } from "@/presentation/entity-surface/entity-surface-records";
+import {
+  EntitySurfaceRecordSelectable,
+  EntitySurfaceRecords,
+} from "@/presentation/entity-surface/entity-surface-records";
 import { getEntitySurfaceDefinition } from "@/presentation/entity-surface/entity-surface-registry";
 import { EntitySurfaceRow } from "@/presentation/entity-surface/entity-surface-row";
 import type {
@@ -311,7 +305,33 @@ export function StudentsWorkspace() {
     [entitySurface.defaultViewMode, studentsSurface.allowedViewModes, studentsSurface.defaultViewMode],
   );
 
-  const students = React.useMemo(() => studentsQuery.data?.data ?? [], [studentsQuery.data?.data]);
+  const queryStudents = React.useMemo(
+    () => studentsQuery.data?.data ?? [],
+    [studentsQuery.data?.data],
+  );
+  const [students, setStudents] = React.useState<StudentListItem[]>([]);
+
+  React.useEffect(() => {
+    if (!studentsQuery.data) {
+      return;
+    }
+
+    setStudents((prev) => {
+      if (page <= 1) {
+        return queryStudents;
+      }
+
+      const seen = new Set(prev.map((student) => student.id));
+      const next = [...prev];
+      for (const student of queryStudents) {
+        if (!seen.has(student.id)) {
+          seen.add(student.id);
+          next.push(student);
+        }
+      }
+      return next;
+    });
+  }, [page, queryStudents, studentsQuery.data]);
   const genderOptions = React.useMemo(
     () => genderOptionsQuery.data ?? [],
     [genderOptionsQuery.data],
@@ -430,8 +450,12 @@ export function StudentsWorkspace() {
   const hasMoreStudents = Boolean(pagination && pagination.page < pagination.totalPages);
   const isFetchingMoreStudents = studentsQuery.isFetching && !studentsQuery.isPending;
   const loadMoreStudents = React.useCallback(() => {
-    setPage((prev) => (pagination ? Math.min(prev + 1, pagination.totalPages) : prev));
-  }, [pagination]);
+    if (!pagination || studentsQuery.isFetching) {
+      return;
+    }
+
+    setPage((prev) => Math.min(prev + 1, pagination.totalPages));
+  }, [pagination, studentsQuery.isFetching]);
   const isEditing = editingStudentId !== null;
   const selectedStudent = React.useMemo(
     () => students.find((student) => student.id === selectedStudentId) ?? null,
@@ -868,6 +892,36 @@ export function StudentsWorkspace() {
     });
   };
 
+  const handleBulkDelete = async (studentIds: string[]) => {
+    if (!canDelete || studentIds.length === 0) {
+      return false;
+    }
+
+    const confirmed = window.confirm(`تأكيد حذف ${studentIds.length} طالب؟`);
+    if (!confirmed) {
+      return false;
+    }
+
+    for (const studentId of studentIds) {
+      await deleteMutation.mutateAsync(studentId);
+    }
+
+    const deletedIds = new Set(studentIds);
+    setStudents((prev) => prev.filter((student) => !deletedIds.has(student.id)));
+
+    if (editingStudentId && deletedIds.has(editingStudentId)) {
+      resetForm();
+    }
+    if (selectedStudentId && deletedIds.has(selectedStudentId)) {
+      setSelectedStudentId(null);
+    }
+    if (contextStudentId && deletedIds.has(contextStudentId)) {
+      setContextStudentId(null);
+    }
+
+    setActionSuccess(`تم حذف ${studentIds.length} طالب بنجاح.`);
+  };
+
   const isFormSubmitting = createMutation.isPending || updateMutation.isPending;
   const handleOpenStudentDetails = React.useCallback(
     (student: StudentListItem) => {
@@ -1025,6 +1079,9 @@ export function StudentsWorkspace() {
   const selectedStudentQuickActions = selectedStudent
     ? buildStudentQuickActions(selectedStudent).filter((action) => action.key !== "details")
     : [];
+  const selectedStudentPreview = selectedStudent
+    ? studentsSurface.buildPreview?.(selectedStudent) ?? buildStudentSurfacePreview(selectedStudent)
+    : null;
   const contextStudentQuickActions = contextStudent ? buildStudentQuickActions(contextStudent) : [];
 
   return (
@@ -1163,31 +1220,24 @@ export function StudentsWorkspace() {
           </div>
         </FilterDrawer>
 
-        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
-          <CardHeader className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <CardTitle>قائمة الطلاب</CardTitle>
-              <Badge variant="secondary">الإجمالي: {pagination?.total ?? 0}</Badge>
-            </div>
-            <CardDescription>إدارة الطلاب مع الفلترة حسب النوع الاجتماعي وحالة اليتم.</CardDescription>
-          </CardHeader>
-
-          <CardContent className="space-y-3">
-            <EntitySurfaceRecords
-              title="قائمة الطلاب"
-              description="إدارة الطلاب مع الفلترة حسب النوع الاجتماعي وحالة اليتم."
-              total={pagination?.total ?? 0}
-              loaded={students.length}
-              isInitialLoading={studentsQuery.isPending}
-              isFetching={studentsQuery.isFetching}
-              isFetchingMore={isFetchingMoreStudents}
-              hasMore={hasMoreStudents}
-              error={studentsQuery.error}
-              emptyTitle="لا توجد سجلات مطابقة."
-              emptyDescription="جرّب تغيير الفلاتر أو تحديث الصفحة."
-              onRefresh={() => void studentsQuery.refetch()}
-              onLoadMore={loadMoreStudents}
-            >
+        <EntitySurfaceRecords
+          title="قائمة الطلاب"
+          description="إدارة الطلاب مع الفلترة حسب النوع الاجتماعي وحالة اليتم."
+          total={pagination?.total ?? 0}
+          loaded={students.length}
+          isInitialLoading={studentsQuery.isPending}
+          isFetching={studentsQuery.isFetching}
+          isFetchingMore={isFetchingMoreStudents}
+          hasMore={hasMoreStudents}
+          error={studentsQuery.error}
+          emptyTitle="لا توجد سجلات مطابقة."
+          emptyDescription="جرّب تغيير الفلاتر أو تحديث الصفحة."
+          onRefresh={() => void studentsQuery.refetch()}
+          onLoadMore={loadMoreStudents}
+          recordIds={students.map((student) => student.id)}
+          selectionLabel="طالب"
+          onDeleteSelected={handleBulkDelete}
+        >
               <EntitySurfaceGrid
                 viewMode={resolvedViewMode}
                 density={entitySurface.density}
@@ -1212,8 +1262,8 @@ export function StudentsWorkspace() {
 
                   if (resolvedViewMode === "dense-row") {
                     return (
-                      <EntitySurfaceRow
-                        key={student.id}
+                      <EntitySurfaceRecordSelectable key={student.id} id={student.id}>
+                        <EntitySurfaceRow
                         title={preview.title}
                         subtitle={showStudentCardDetails ? preview.subtitle : undefined}
                         meta={showStudentCardDetails ? preview.meta ?? preview.description : undefined}
@@ -1241,12 +1291,13 @@ export function StudentsWorkspace() {
                           setContextStudentId(student.id);
                         }}
                       />
+                      </EntitySurfaceRecordSelectable>
                     );
                   }
 
                   return (
-                    <EntitySurfaceCard
-                      key={student.id}
+                    <EntitySurfaceRecordSelectable key={student.id} id={student.id}>
+                      <EntitySurfaceCard
                       title={preview.title}
                       subtitle={showStudentCardDetails ? preview.subtitle : undefined}
                       description={showStudentCardDetails ? preview.description : undefined}
@@ -1276,56 +1327,11 @@ export function StudentsWorkspace() {
                         setContextStudentId(student.id);
                       }}
                     />
+                    </EntitySurfaceRecordSelectable>
                   );
                 })}
               </EntitySurfaceGrid>
-            </EntitySurfaceRecords>
-
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-              <p className="text-xs text-muted-foreground">
-                صفحة {pagination?.page ?? 1} من {pagination?.totalPages ?? 1}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={!pagination || pagination.page <= 1 || studentsQuery.isFetching}
-                >
-                  السابق
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setPage((prev) =>
-                      pagination ? Math.min(prev + 1, pagination.totalPages) : prev,
-                    )
-                  }
-                  disabled={
-                    !pagination ||
-                    pagination.page >= pagination.totalPages ||
-                    studentsQuery.isFetching
-                  }
-                >
-                  التالي
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => void studentsQuery.refetch()}
-                  disabled={studentsQuery.isFetching}
-                >
-                  <RefreshCw
-                    className={`h-4 w-4 ${studentsQuery.isFetching ? "animate-spin" : ""}`}
-                  />
-                  تحديث
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        </EntitySurfaceRecords>
       </div>
 
       {contextStudent ? (
@@ -1349,6 +1355,7 @@ export function StudentsWorkspace() {
             avatarMode: entitySurface.avatarMode,
           }}
           actions={contextStudentQuickActions}
+          copyText={`${contextStudent.fullName} ${contextStudent.admissionNo ?? ""}`.trim()}
           onClose={() => setContextStudentId(null)}
         />
       ) : null}
@@ -1365,6 +1372,28 @@ export function StudentsWorkspace() {
           visualStyle={entitySurface.visualStyle}
           effectsPreset={entitySurface.effectsPreset}
           shapePreset={entitySurface.shapePreset}
+          colorMode={entitySurface.colorMode}
+          entityKey="students"
+          previewCard={selectedStudentPreview ? {
+            title: selectedStudentPreview.title,
+            subtitle: showStudentCardDetails ? selectedStudentPreview.subtitle : undefined,
+            description: showStudentCardDetails ? selectedStudentPreview.description : undefined,
+            avatar: selectedStudentPreview.avatar,
+            fields: showStudentCardDetails ? selectedStudentPreview.fields : undefined,
+            statusChips: showStudentCardDetails ? getStudentStatusChips(selectedStudent) : undefined,
+            viewMode: resolvedViewMode,
+            density: entitySurface.density,
+            richness: entitySurface.richness,
+            colorMode: entitySurface.colorMode,
+            visualStyle: entitySurface.visualStyle,
+            effectsPreset: entitySurface.effectsPreset,
+            shapePreset: entitySurface.shapePreset,
+            entityKey: "students",
+            inlineActionsMode: entitySurface.inlineActionsMode,
+            motionPreset: entitySurface.motionPreset,
+            reducedMotion: entitySurface.reducedMotion,
+            avatarMode: entitySurface.avatarMode,
+          } : undefined}
           onClose={() => setSelectedStudentId(null)}
         >
           <StudentDetailsContent
