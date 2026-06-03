@@ -1833,21 +1833,22 @@ export function StudentEnrollmentsWorkspace() {
           ) : null}
 
           {enrollments.length > 0 ? (
-            <EntitySurfaceRecords
-              title="قيود الطلاب"
-              description="إدارة قيود الطلاب مع عرض مجموعات وفلترة ذكية."
-              total={pagination?.total ?? 0}
-              loaded={enrollments.length}
-              isInitialLoading={enrollmentsQuery.isPending}
-              isFetching={enrollmentsQuery.isFetching}
-              isFetchingMore={enrollmentsQuery.isFetchingNextPage}
-              hasMore={enrollmentsQuery.hasNextPage}
-              error={enrollmentsQuery.error}
-              emptyTitle="لا توجد سجلات مطابقة."
-              emptyDescription="جرّب تغيير الفلاتر أو إنشاء قيد جديد."
-              onRefresh={() => void handleRefresh()}
-              onLoadMore={() => void enrollmentsQuery.fetchNextPage()}
-            >
+            <>
+              <EntitySurfaceRecords
+                title="قيود الطلاب"
+                description="إدارة قيود الطلاب مع عرض مجموعات وفلترة ذكية."
+                total={pagination?.total ?? 0}
+                loaded={enrollments.length}
+                isInitialLoading={enrollmentsQuery.isPending}
+                isFetching={enrollmentsQuery.isFetching}
+                isFetchingMore={enrollmentsQuery.isFetchingNextPage}
+                hasMore={enrollmentsQuery.hasNextPage}
+                error={enrollmentsQuery.error}
+                emptyTitle="لا توجد سجلات مطابقة."
+                emptyDescription="جرّب تغيير الفلاتر أو إنشاء قيد جديد."
+                onRefresh={() => void handleRefresh()}
+                onLoadMore={() => void enrollmentsQuery.fetchNextPage()}
+              >
               {groupedEnrollments.map((group) => (
                 <div key={group.key} className="space-y-3">
                   {sortState.groupByCriteria.some((groupBy) => groupBy !== "NONE") ? (
@@ -1999,6 +2000,8 @@ export function StudentEnrollmentsWorkspace() {
               </Button>
             </div>
           </div>
+            </>
+        ) : null}
         </CardContent>
         </Card>
       </div>
