@@ -19,6 +19,8 @@ import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { Input } from "@/components/ui/input";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectField } from "@/components/ui/select-field";
+import { ReportBarChart, ReportPieChart } from "@/components/ui/report-charts";
+import { WideMetricRow } from "@/components/ui/wide-metric-row";
 import { useAcademicTermOptionsQuery } from "@/features/results-decisions/grading-reports/hooks/use-academic-term-options-query";
 import { useAcademicYearOptionsQuery } from "@/features/results-decisions/grading-reports/hooks/use-academic-year-options-query";
 import { useGradingDetailedReportQuery } from "@/features/results-decisions/grading-reports/hooks/use-grading-detailed-report-query";
@@ -118,6 +120,18 @@ export function GradingReportsWorkspace() {
   const selectedTermOption = termOptionsQuery.data?.find(
     (item) => item.id === appliedFilters.academicTermId,
   );
+  const semesterStatusChartData =
+    report?.semesterPeriods.byStatus.map((item, index) => ({
+      name: translateGradingWorkflowStatus(item.status),
+      value: item.count,
+      fill: ["var(--app-accent-color)", "#0ea5e9", "#8b5cf6", "#10b981"][index % 4],
+    })) ?? [];
+  const annualStatusChartData =
+    report?.annualResults.byStatus.map((item, index) => ({
+      name: translateGradingWorkflowStatus(item.status),
+      value: item.count,
+      fill: ["#10b981", "#f59e0b", "#ef4444", "#0ea5e9"][index % 4],
+    })) ?? [];
 
   useDebounceEffect(() => {
       setSearch(searchInput.trim());
@@ -318,54 +332,64 @@ export function GradingReportsWorkspace() {
         {report ? (
           <>
             {(workspaceView === "overview" || workspaceView === "details") ? (
-            <Card className="border-border/70 bg-card/80">
-              <CardHeader className="space-y-1">
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5 text-primary" />
-                  ملخص حوكمة الدرجات
-                </CardTitle>
-                <CardDescription>
-                  نظرة مركزة على الفترات الفصلية والنهائية والنتائج السنوية.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-3 md:grid-cols-3">
-              <Card className="border-border/70 bg-card/80" data-testid="grading-report-semester-card">
-                <CardHeader className="space-y-1 pb-2">
-                  <CardTitle className="text-sm">الفترات الفصلية</CardTitle>
-                  <CardDescription>الإجمالي: {report.semesterPeriods.total}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-1 text-sm">
-                  <p>النشط: {report.semesterPeriods.active}</p>
-                  <p>المقفل: {report.semesterPeriods.locked}</p>
-                  <p>نسبة الإقفال: {toPercentageLabel(report.semesterPeriods.lockRate)}</p>
-                </CardContent>
-              </Card>
+              <>
+                <WideMetricRow
+                  items={[
+                    {
+                      label: "الفترات الفصلية",
+                      value: report.semesterPeriods.total,
+                      helper: `نسبة الإقفال ${toPercentageLabel(report.semesterPeriods.lockRate)}`,
+                      toneClassName: "border-cyan-500/15 bg-cyan-500/5",
+                    },
+                    {
+                      label: "الفترات النهائية",
+                      value: report.yearFinalPeriods.total,
+                      helper: `نسبة الإقفال ${toPercentageLabel(report.yearFinalPeriods.lockRate)}`,
+                      toneClassName: "border-violet-500/15 bg-violet-500/5",
+                    },
+                    {
+                      label: "النتائج السنوية",
+                      value: report.annualResults.total,
+                      helper: `جاهزية الترتيب ${report.rankingReadiness.fullyRanked}`,
+                      toneClassName: "border-emerald-500/15 bg-emerald-500/5",
+                    },
+                    {
+                      label: "التفاصيل",
+                      value: detailsPagination?.total ?? 0,
+                      helper: `الصفحة ${detailsPagination?.page ?? 1} من ${detailsPagination?.totalPages ?? 1}`,
+                      toneClassName: "border-amber-500/15 bg-amber-500/5",
+                    },
+                  ]}
+                />
 
-              <Card className="border-border/70 bg-card/80" data-testid="grading-report-year-final-card">
-                <CardHeader className="space-y-1 pb-2">
-                  <CardTitle className="text-sm">الفترات النهائية</CardTitle>
-                  <CardDescription>الإجمالي: {report.yearFinalPeriods.total}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-1 text-sm">
-                  <p>النشط: {report.yearFinalPeriods.active}</p>
-                  <p>المقفل: {report.yearFinalPeriods.locked}</p>
-                  <p>نسبة الإقفال: {toPercentageLabel(report.yearFinalPeriods.lockRate)}</p>
-                </CardContent>
-              </Card>
+                <section className="grid gap-5 xl:grid-cols-2">
+                  <Card className="rounded-[24px] border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.32)] backdrop-blur-sm">
+                    <CardContent className="p-5">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <h2 className="text-base font-semibold">توزيع الحالات الفصلية</h2>
+                          <p className="mt-1 text-sm text-muted-foreground">قراءة بصرية لحالة الإقفال والمتابعة.</p>
+                        </div>
+                        <BarChart3 className="h-5 w-5 text-[color:var(--app-accent-color)]" />
+                      </div>
+                      <ReportBarChart data={semesterStatusChartData} className="mt-4" />
+                    </CardContent>
+                  </Card>
 
-              <Card className="border-border/70 bg-card/80" data-testid="grading-report-annual-results-card">
-                <CardHeader className="space-y-1 pb-2">
-                  <CardTitle className="text-sm">النتائج السنوية</CardTitle>
-                  <CardDescription>الإجمالي: {report.annualResults.total}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-1 text-sm">
-                  <p>النشط: {report.annualResults.active}</p>
-                  <p>المقفل: {report.annualResults.locked}</p>
-                  <p>نسبة الإقفال: {toPercentageLabel(report.annualResults.lockRate)}</p>
-                </CardContent>
-              </Card>
-              </CardContent>
-            </Card>
+                  <Card className="rounded-[24px] border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.32)] backdrop-blur-sm">
+                    <CardContent className="p-5">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <h2 className="text-base font-semibold">توزيع النتائج السنوية</h2>
+                          <p className="mt-1 text-sm text-muted-foreground">دائرة توضح حالات النتائج.</p>
+                        </div>
+                        <Filter className="h-5 w-5 text-[color:var(--app-accent-color)]" />
+                      </div>
+                      <ReportPieChart data={annualStatusChartData} className="mt-4" />
+                    </CardContent>
+                  </Card>
+                </section>
+              </>
             ) : null}
 
             {workspaceView === "overview" ? (

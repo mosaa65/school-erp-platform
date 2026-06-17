@@ -27,7 +27,7 @@ export function FormField({
   contentClassName,
 }: FormFieldProps) {
   return (
-    <div className={cn("space-y-1.5", className)}>
+    <div className={cn("space-y-1.5 rounded-[20px] border border-border/50 bg-background/35 p-3", className)}>
       <Label required={required} className={labelClassName}>
         {label}
       </Label>

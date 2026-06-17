@@ -18,6 +18,8 @@ import { FilterDrawerActions } from "@/components/ui/filter-drawer-actions";
 import { FormBooleanField } from "@/components/ui/form-boolean-field";
 import { FilterTriggerButton } from "@/components/ui/filter-trigger-button";
 import { SelectField } from "@/components/ui/select-field";
+import { ReportBarChart } from "@/components/ui/report-charts";
+import { WideMetricRow } from "@/components/ui/wide-metric-row";
 import {
   FinanceAlert,
   FinanceAppliedFiltersSummary,
@@ -150,6 +152,13 @@ export function FinancialReportsWorkspace() {
   const report = reportQuery.data;
   const reportRows = report?.rows ?? [];
   const summaryEntries = report?.summary ? Object.entries(report.summary) : [];
+  const summaryChartData = summaryEntries
+    .map(([key, value], index) => ({
+      name: key,
+      value: typeof value === "number" ? value : Number(value) || 0,
+      fill: ["var(--app-accent-color)", "#0ea5e9", "#8b5cf6", "#10b981", "#f59e0b"][index % 5],
+    }))
+    .filter((item) => item.value > 0);
 
   const activeFiltersCount = React.useMemo(() => {
     const count = [
@@ -372,7 +381,7 @@ export function FinancialReportsWorkspace() {
         </div>
       </FilterDrawer>
 
-      <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+      <Card className="rounded-[24px] border-border/70 bg-card/80 backdrop-blur-sm">
         <CardHeader className="space-y-3">
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
@@ -403,11 +412,49 @@ export function FinancialReportsWorkspace() {
           ) : null}
 
           {report ? (
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <span>تم الإنشاء: {report.generatedAt ? new Date(report.generatedAt).toLocaleString() : "-"}</span>
-                <span>عدد الصفوف: {reportRows.length}</span>
-              </div>
+            <div className="space-y-4">
+              <WideMetricRow
+                items={[
+                  {
+                    label: "تم الإنشاء",
+                    value: report.generatedAt ? new Date(report.generatedAt).toLocaleDateString() : "-",
+                    helper: report.generatedAt ? new Date(report.generatedAt).toLocaleTimeString() : "-",
+                    toneClassName: "border-cyan-500/15 bg-cyan-500/5",
+                  },
+                  {
+                    label: "عدد الصفوف",
+                    value: reportRows.length,
+                    helper: "النتائج التفصيلية في هذا التقرير",
+                    toneClassName: "border-emerald-500/15 bg-emerald-500/5",
+                  },
+                  {
+                    label: "العناصر الملخصة",
+                    value: summaryEntries.length,
+                    helper: "حقول ملخص جاهزة للعرض السريع",
+                    toneClassName: "border-violet-500/15 bg-violet-500/5",
+                  },
+                  {
+                    label: "الصفوف المعروضة",
+                    value: Math.min(reportRows.length, 10),
+                    helper: "المعاينة المختصرة الظاهرة أسفل الصفحة",
+                    toneClassName: "border-amber-500/15 bg-amber-500/5",
+                  },
+                ]}
+              />
+
+              {summaryChartData.length > 0 ? (
+                <Card className="rounded-[24px] border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.32)]">
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h2 className="text-base font-semibold">ملخص بصري</h2>
+                        <p className="mt-1 text-sm text-muted-foreground">الحقول الرقمية في شكل أعمدة.</p>
+                      </div>
+                    </div>
+                    <ReportBarChart data={summaryChartData} className="mt-4" />
+                  </CardContent>
+                </Card>
+              ) : null}
 
               {summaryEntries.length > 0 ? (
                 <div className="flex flex-wrap gap-2">

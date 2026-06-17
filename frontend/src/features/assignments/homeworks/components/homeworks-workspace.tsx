@@ -730,7 +730,7 @@ export function HomeworksWorkspace() {
   return (
     <>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-background p-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[28px] border border-[color:var(--app-accent-strong)]/25 bg-gradient-to-br from-[color:var(--app-accent-soft)]/35 via-background/95 to-background p-4 shadow-[0_20px_60px_-46px_rgba(15,23,42,0.5)]">
           <div className="min-w-0">
             <p className="text-sm font-semibold">مركز تشغيل الواجبات</p>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -738,13 +738,13 @@ export function HomeworksWorkspace() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline" size="sm">
+            <Button asChild variant="outline" size="sm" className="rounded-2xl">
               <Link href="/app/homework-dashboard">
                 <BarChart3 />
                 لوحة التحكم
               </Link>
             </Button>
-            <Button asChild variant="outline" size="sm">
+            <Button asChild variant="outline" size="sm" className="rounded-2xl">
               <Link href="/app/homework-entry">
                 <ClipboardList />
                 الإدخال السريع
@@ -931,7 +931,7 @@ export function HomeworksWorkspace() {
           </div>
         </FilterDrawer>
 
-        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+        <Card className="rounded-[24px] border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.32)] backdrop-blur-sm">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <CardTitle>الواجبات</CardTitle>

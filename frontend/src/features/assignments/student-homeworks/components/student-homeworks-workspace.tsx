@@ -737,7 +737,7 @@ export function StudentHomeworksWorkspace() {
           onFilterClick={() => setIsFilterOpen(true)}
         />
 
-        <Card className="border-[color:var(--app-accent-strong)]/45 bg-gradient-to-br from-[color:var(--app-accent-soft)]/45 via-card/95 to-background/90 shadow-[0_24px_70px_-48px_rgba(15,23,42,0.55)]">
+        <Card className="rounded-[28px] border-[color:var(--app-accent-strong)]/35 bg-gradient-to-br from-[color:var(--app-accent-soft)]/40 via-card/95 to-background/90 shadow-[0_24px_70px_-48px_rgba(15,23,42,0.55)]">
           <CardHeader className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="space-y-1">
@@ -813,7 +813,7 @@ export function StudentHomeworksWorkspace() {
                 return (
                   <div
                     key={item.id}
-                    className="rounded-[24px] border border-border/70 bg-background/85 p-3 shadow-sm"
+                    className="rounded-[24px] border border-border/60 bg-background/85 p-3 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.32)]"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 space-y-1">

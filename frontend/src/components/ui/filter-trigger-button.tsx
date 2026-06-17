@@ -27,7 +27,11 @@ export function FilterTriggerButton({
       icon={icon ?? <ListFilter className="h-3.5 w-3.5" />}
       count={count}
       hideLabelOnMobile
-      className={cn(label === "" && "w-11 justify-center px-0", className)}
+      className={cn(
+        "rounded-2xl border border-[color:var(--app-accent-strong)]/30 bg-background/85 shadow-[0_14px_36px_-28px_rgba(15,23,42,0.35)] backdrop-blur-sm",
+        label === "" && "w-11 justify-center px-0",
+        className,
+      )}
       {...props}
     />
   );

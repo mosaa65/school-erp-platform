@@ -6,6 +6,7 @@ import {
   BellRing,
   BookOpenText,
   ClipboardList,
+  Medal,
   LockKeyhole,
   Settings2,
   SlidersHorizontal,
@@ -98,6 +99,12 @@ export function HomeworkSettingsWorkspace() {
               إدارة الأنواع
             </Link>
           </Button>
+          <Button asChild variant="outline">
+            <Link href="/app/homework-rubrics">
+              <Medal />
+              معايير التصحيح
+            </Link>
+          </Button>
         </div>
       </section>
 
@@ -164,6 +171,11 @@ export function HomeworkSettingsWorkspace() {
               icon={<ClipboardList />}
               title="قوالب الواجبات"
               description="تحويل القوالب الحالية إلى قوالب محفوظة في قاعدة البيانات."
+            />
+            <SettingPreview
+              icon={<Medal />}
+              title="معايير التصحيح"
+              description="بناء معايير تصحيح جاهزة تساعد في التصحيح المتسق والتغذية الراجعة."
             />
           </CardContent>
         </Card>

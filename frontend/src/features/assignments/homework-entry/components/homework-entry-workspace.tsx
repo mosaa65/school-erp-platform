@@ -304,8 +304,8 @@ export function HomeworkEntryWorkspace() {
 
   return (
     <div className="space-y-5">
-      <section className="overflow-hidden rounded-lg border bg-background">
-        <div className="grid gap-5 p-5 lg:grid-cols-[1.35fr_0.65fr]">
+      <section className="overflow-hidden rounded-[28px] border border-[color:var(--app-accent-strong)]/30 bg-gradient-to-br from-[color:var(--app-accent-soft)]/40 via-background/95 to-background shadow-[0_24px_70px_-52px_rgba(15,23,42,0.58)]">
+        <div className="grid gap-5 p-5 lg:grid-cols-[1.35fr_0.65fr] lg:p-6">
           <div className="space-y-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0 space-y-2">
@@ -355,7 +355,7 @@ export function HomeworkEntryWorkspace() {
               <label className="space-y-2 text-sm font-medium">
                 <span>الشعبة</span>
                 <select
-                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  className="h-11 w-full rounded-2xl border border-border/60 bg-background px-3 text-sm shadow-sm"
                   value={sectionId}
                   onChange={(event) => {
                     setSectionId(event.target.value);
@@ -375,7 +375,7 @@ export function HomeworkEntryWorkspace() {
               <label className="space-y-2 text-sm font-medium">
                 <span>المادة</span>
                 <select
-                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  className="h-11 w-full rounded-2xl border border-border/60 bg-background px-3 text-sm shadow-sm"
                   value={subjectId}
                   onChange={(event) => {
                     setSubjectId(event.target.value);
@@ -394,7 +394,7 @@ export function HomeworkEntryWorkspace() {
               <label className="space-y-2 text-sm font-medium">
                 <span>الواجب</span>
                 <select
-                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  className="h-11 w-full rounded-2xl border border-border/60 bg-background px-3 text-sm shadow-sm"
                   value={homeworkId}
                   onChange={(event) => setHomeworkId(event.target.value)}
                   disabled={homeworksQuery.isPending}
@@ -410,7 +410,7 @@ export function HomeworkEntryWorkspace() {
             </div>
           </div>
 
-          <div className="rounded-lg border bg-muted/25 p-4">
+          <div className="rounded-[24px] border border-border/60 bg-background/80 p-4 shadow-[0_16px_40px_-32px_rgba(15,23,42,0.36)] backdrop-blur-sm">
             <div className="mb-3 flex items-center justify-between gap-3">
               <span className="text-sm font-semibold">ملخص الواجب</span>
               {selectedHomework ? (

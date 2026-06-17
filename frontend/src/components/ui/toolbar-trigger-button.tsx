@@ -30,7 +30,7 @@ export function ToolbarTriggerButton({
     <button
       type={type}
       className={cn(
-        "group relative inline-flex h-11 items-center gap-2.5 rounded-full border border-[color:var(--app-accent-strong)]/20 bg-[color:var(--app-accent-soft)]/15 p-1 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-[color:var(--app-accent-soft)]/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--app-accent-ring)] focus-visible:ring-offset-2",
+        "group relative inline-flex h-11 items-center gap-2.5 rounded-full border border-[color:var(--app-accent-strong)]/25 bg-[color:var(--app-accent-soft)]/18 p-1 shadow-[0_14px_34px_-28px_rgba(15,23,42,0.32)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[color:var(--app-accent-soft)]/28 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--app-accent-ring)] focus-visible:ring-offset-2",
         hasLabel
           ? hideLabelOnMobile
             ? "w-11 justify-center px-0 sm:w-auto sm:justify-start sm:px-1"
@@ -41,8 +41,7 @@ export function ToolbarTriggerButton({
       aria-label={props["aria-label"] ?? label}
       {...props}
     >
-      {/* Simple Solid Icon Circle */}
-      <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-sm dark:bg-zinc-950">
+      <div className="relative flex h-9 w-9 items-center justify-center rounded-full border border-border/50 bg-background/90 shadow-sm backdrop-blur-sm dark:bg-zinc-950">
         <div className="h-4.5 w-4.5 flex items-center justify-center text-[color:var(--app-accent-color)] transition-transform group-hover:scale-110">
           {icon}
         </div>

@@ -49,19 +49,19 @@ export function FilterDrawer({
   const isDesktop = useMediaQuery(`(min-width: ${DESKTOP_BREAKPOINT}px)`);
 
   const drawerContent = (
-    <div
-      className={cn(
-        "relative flex w-full flex-col overflow-hidden border border-[color:var(--app-accent-strong)]/30 bg-background/40 shadow-2xl backdrop-blur-2xl transition-all duration-300",
-        isDesktop
+      <div
+        className={cn(
+          "relative flex w-full flex-col overflow-hidden border border-[color:var(--app-accent-strong)]/28 bg-background/55 shadow-2xl backdrop-blur-2xl transition-all duration-300",
+          isDesktop
           ? "h-[min(760px,calc(100vh-2rem))] max-w-[460px] rounded-[32px] border"
           : "h-[88dvh] max-h-[88dvh] rounded-t-[32px] rounded-b-none border-t",
-        className,
-      )}
+          className,
+        )}
       onClick={(event) => event.stopPropagation()}
     >
       <div
         className={cn(
-          "relative border-b border-border/40 bg-gradient-to-b from-[color:var(--app-accent-soft)]/20 via-background/40 to-background/20 px-5 backdrop-blur-md",
+          "relative border-b border-border/40 bg-gradient-to-b from-[color:var(--app-accent-soft)]/18 via-background/40 to-background/20 px-5 backdrop-blur-md",
           isDesktop ? "py-4" : "pt-2 pb-4",
         )}
       >
@@ -80,7 +80,7 @@ export function FilterDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="group flex h-10 w-10 items-center justify-center rounded-full border border-border/40 bg-background/40 text-muted-foreground shadow-sm transition-all hover:bg-background hover:text-foreground"
+            className="group flex h-10 w-10 items-center justify-center rounded-full border border-border/40 bg-background/55 text-muted-foreground shadow-sm transition-all hover:bg-background hover:text-foreground"
             aria-label="إغلاق"
           >
             <X className="h-5 w-5 transition-transform group-hover:rotate-90" />
@@ -98,7 +98,7 @@ export function FilterDrawer({
       </div>
 
       {actionButtons ? (
-        <div className="border-t border-border/40 bg-background/40 px-5 py-4 backdrop-blur-md">
+        <div className="border-t border-border/40 bg-background/55 px-5 py-4 backdrop-blur-md">
           <div className="flex flex-col-reverse gap-2.5 sm:flex-row sm:items-center sm:justify-end">
             {actionButtons}
           </div>

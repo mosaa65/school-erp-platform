@@ -667,6 +667,10 @@ model User {
   monthlyCustomComponentScoresUpdated MonthlyCustomComponentScore[]   @relation("monthly_custom_component_score_updated_by")
   homeworkTypesCreated                HomeworkType[]                  @relation("homework_type_created_by")
   homeworkTypesUpdated                HomeworkType[]                  @relation("homework_type_updated_by")
+  homeworkRubricsCreated              HomeworkRubric[]                @relation("homework_rubric_created_by")
+  homeworkRubricsUpdated              HomeworkRubric[]                @relation("homework_rubric_updated_by")
+  homeworkRubricCriteriaCreated       HomeworkRubricCriterion[]       @relation("homework_rubric_criterion_created_by")
+  homeworkRubricCriteriaUpdated       HomeworkRubricCriterion[]       @relation("homework_rubric_criterion_updated_by")
   homeworkTemplatesCreated            HomeworkTemplate[]              @relation("homework_template_created_by")
   homeworkTemplatesUpdated            HomeworkTemplate[]              @relation("homework_template_updated_by")
   homeworksCreated                    Homework[]                      @relation("homework_created_by")
@@ -2128,6 +2132,7 @@ model GradeLevel {
   gradingPolicies     GradingPolicy[]
   gradingOutcomeRules GradingOutcomeRule[]
   feeStructures       FeeStructure[]
+  homeworkRubrics     HomeworkRubric[]
 
   @@unique([stage, sequence])
   @@index([isActive, deletedAt])
@@ -2258,6 +2263,7 @@ model Subject {
   semesterGrades              SemesterGrade[]
   annualGrades                AnnualGrade[]
   studentPeriodResults        StudentPeriodResult[]
+  homeworkRubrics             HomeworkRubric[]
 
   @@index([category, deletedAt])
   @@index([isActive, deletedAt])
@@ -3445,6 +3451,7 @@ model HomeworkType {
   updatedBy User? @relation("homework_type_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
 
   homeworks Homework[]
+  homeworkRubrics HomeworkRubric[]
 
   @@index([isActive, deletedAt], map: "hwt_active_del_idx")
   @@index([deletedAt], map: "hwt_deleted_at_idx")
@@ -3532,6 +3539,67 @@ model HomeworkTemplate {
   @@index([isActive, deletedAt], map: "hwtpl_active_del_idx")
   @@index([deletedAt], map: "hwtpl_deleted_at_idx")
   @@map("homework_templates")
+}
+
+model HomeworkRubric {
+  id             String    @id @default(cuid()) @db.VarChar(191)
+  code           String    @unique @db.VarChar(50)
+  name           String    @db.VarChar(120)
+  description    String?   @db.Text
+  homeworkTypeId String?   @map("homework_type_id") @db.VarChar(191)
+  subjectId      String?   @map("subject_id") @db.VarChar(191)
+  gradeLevelId   String?   @map("grade_level_id") @db.VarChar(191)
+  difficulty     String    @default("BALANCED") @db.VarChar(20)
+  maxScore       Decimal   @default(10.00) @map("max_score") @db.Decimal(6, 2)
+  isSystem       Boolean   @default(false) @map("is_system")
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+  createdById    String?   @map("created_by") @db.VarChar(191)
+  updatedById    String?   @map("updated_by") @db.VarChar(191)
+
+  homeworkType HomeworkType? @relation(fields: [homeworkTypeId], references: [id], onDelete: SetNull)
+  subject      Subject?      @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  gradeLevel   GradeLevel?   @relation(fields: [gradeLevelId], references: [id], onDelete: SetNull)
+
+  createdBy User? @relation("homework_rubric_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("homework_rubric_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  criteria HomeworkRubricCriterion[]
+
+  @@index([homeworkTypeId, deletedAt], map: "hr_homework_type_del_idx")
+  @@index([subjectId, deletedAt], map: "hr_subject_del_idx")
+  @@index([gradeLevelId, deletedAt], map: "hr_grade_level_del_idx")
+  @@index([difficulty, deletedAt], map: "hr_difficulty_del_idx")
+  @@index([isActive, deletedAt], map: "hr_active_del_idx")
+  @@index([deletedAt], map: "hr_deleted_at_idx")
+  @@map("homework_rubrics")
+}
+
+model HomeworkRubricCriterion {
+  id               String    @id @default(cuid()) @db.VarChar(191)
+  homeworkRubricId String    @map("homework_rubric_id") @db.VarChar(191)
+  title            String    @db.VarChar(120)
+  description      String?   @db.Text
+  maxScore         Decimal   @map("max_score") @db.Decimal(6, 2)
+  weight           Decimal   @db.Decimal(6, 2)
+  sortOrder        Int       @default(1) @map("sort_order")
+  isActive         Boolean   @default(true) @map("is_active")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  deletedAt        DateTime? @map("deleted_at")
+  createdById      String?   @map("created_by") @db.VarChar(191)
+  updatedById      String?   @map("updated_by") @db.VarChar(191)
+
+  homeworkRubric HomeworkRubric @relation(fields: [homeworkRubricId], references: [id], onDelete: Cascade)
+  createdBy      User?          @relation("homework_rubric_criterion_created_by", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy      User?          @relation("homework_rubric_criterion_updated_by", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([homeworkRubricId, deletedAt], map: "hrc_rubric_del_idx")
+  @@index([isActive, deletedAt], map: "hrc_active_del_idx")
+  @@index([deletedAt], map: "hrc_deleted_at_idx")
+  @@map("homework_rubric_criteria")
 }
 
 model StudentHomework {

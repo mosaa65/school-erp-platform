@@ -128,6 +128,7 @@ const RESOURCE_CATEGORIES: Record<string, string> = {
   "student-exam-scores": "academics",
   "homework-types": "academics",
   "homework-templates": "academics",
+  "homework-rubrics": "academics",
   homeworks: "academics",
   "homework-reports": "academics",
   "homework-settings": "academics",

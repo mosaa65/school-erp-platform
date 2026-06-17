@@ -99,15 +99,15 @@ export function HomeworkDashboardWorkspace() {
 
   return (
     <div className="space-y-5">
-      <section className="overflow-hidden rounded-lg border bg-background">
-        <div className="grid gap-5 p-5 lg:grid-cols-[1.2fr_0.8fr]">
+      <section className="overflow-hidden rounded-[28px] border border-[color:var(--app-accent-strong)]/30 bg-gradient-to-br from-[color:var(--app-accent-soft)]/45 via-background/95 to-background shadow-[0_26px_80px_-60px_rgba(15,23,42,0.6)]">
+        <div className="grid gap-5 p-5 lg:grid-cols-[1.2fr_0.8fr] lg:p-6">
           <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 rounded-full border bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
               <BarChart3 className="h-3.5 w-3.5" />
               مركز قيادة الواجبات
             </div>
             <div className="space-y-2">
-              <h1 className="text-2xl font-bold tracking-normal text-foreground">
+              <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl">
                 لوحة تحكم نظام الواجبات
               </h1>
               <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
@@ -116,13 +116,13 @@ export function HomeworkDashboardWorkspace() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button asChild>
+              <Button asChild className="rounded-2xl">
                 <Link href="/app/homework-entry">
                   <ClipboardCheck />
                   إدخال سريع
                 </Link>
               </Button>
-              <Button asChild variant="outline">
+              <Button asChild variant="outline" className="rounded-2xl">
                 <Link href="/app/homeworks">
                   <ClipboardList />
                   إدارة الواجبات
@@ -131,6 +131,7 @@ export function HomeworkDashboardWorkspace() {
               <Button
                 type="button"
                 variant="outline"
+                className="rounded-2xl"
                 onClick={() => void dashboardQuery.refetch()}
                 disabled={dashboardQuery.isFetching}
               >
@@ -140,7 +141,7 @@ export function HomeworkDashboardWorkspace() {
             </div>
           </div>
 
-          <div className="rounded-lg border bg-muted/20 p-4">
+          <div className="rounded-[24px] border border-border/60 bg-background/80 p-4 shadow-[0_16px_40px_-32px_rgba(15,23,42,0.36)] backdrop-blur-sm">
             <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
               <Search className="h-4 w-4 text-[color:var(--app-accent-color)]" />
               نطاق المتابعة
@@ -233,7 +234,7 @@ export function HomeworkDashboardWorkspace() {
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[0.75fr_1.25fr]">
-        <Card className="rounded-lg shadow-none">
+        <Card className="rounded-[24px] border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.32)] backdrop-blur-sm">
           <CardContent className="space-y-5 p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -258,8 +259,8 @@ export function HomeworkDashboardWorkspace() {
           </CardContent>
         </Card>
 
-        <div className="rounded-lg border bg-background">
-          <div className="flex items-center justify-between gap-3 border-b p-4">
+        <div className="rounded-[24px] border border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.32)]">
+          <div className="flex items-center justify-between gap-3 border-b border-border/60 p-4">
             <div>
               <h2 className="font-semibold">أعلى واجبات تحتاج متابعة</h2>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -297,8 +298,8 @@ export function HomeworkDashboardWorkspace() {
         </div>
       </section>
 
-      <section className="rounded-lg border bg-background">
-        <div className="border-b p-4">
+      <section className="rounded-[24px] border border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.32)]">
+        <div className="border-b border-border/60 p-4">
           <h2 className="font-semibold">آخر الواجبات</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             أحدث الواجبات المنشأة حسب النطاق الحالي.
@@ -338,13 +339,13 @@ function MetricCard({
   return (
     <div
       className={cn(
-        "rounded-lg border bg-background p-4",
-        tone === "danger" && "border-rose-500/25 bg-rose-500/5",
+        "rounded-[22px] border bg-background/80 p-4 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.32)] backdrop-blur-sm",
+        tone === "danger" && "border-rose-500/25 bg-rose-500/8",
       )}
     >
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm text-muted-foreground">{label}</span>
-        <span className="rounded-md border bg-background p-2 text-[color:var(--app-accent-color)] [&_svg]:h-4 [&_svg]:w-4">
+        <span className="rounded-xl border bg-background p-2 text-[color:var(--app-accent-color)] [&_svg]:h-4 [&_svg]:w-4">
           {icon}
         </span>
       </div>
@@ -357,7 +358,7 @@ function MetricCard({
 
 function SmallStat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-md border bg-muted/20 p-3 text-center">
+    <div className="rounded-xl border border-border/60 bg-background/70 p-3 text-center">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="mt-1 font-bold">{value}</div>
     </div>
@@ -368,7 +369,7 @@ function RecentHomeworkCard({ homework }: { homework: HomeworkListItem }) {
   const completionCount = homework._count.studentHomeworks;
 
   return (
-    <Card className="rounded-lg shadow-none">
+    <Card className="rounded-[22px] border-border/60 bg-background/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.28)]">
       <CardContent className="space-y-3 p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -397,7 +398,7 @@ function RecentHomeworkCard({ homework }: { homework: HomeworkListItem }) {
 
 function SmallInfo({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border bg-muted/20 p-2">
+    <div className="rounded-xl border border-border/60 bg-background/70 p-2">
       <div className="text-muted-foreground">{label}</div>
       <div className="mt-1 truncate font-medium">{value}</div>
     </div>
@@ -417,7 +418,7 @@ function LoadingCards() {
   return (
     <>
       {[0, 1, 2].map((item) => (
-        <div key={item} className="h-36 animate-pulse rounded-lg border bg-muted/30" />
+        <div key={item} className="h-36 animate-pulse rounded-[22px] border border-border/50 bg-muted/30" />
       ))}
     </>
   );
@@ -425,7 +426,7 @@ function LoadingCards() {
 
 function EmptyLine({ text }: { text: string }) {
   return (
-    <div className="rounded-lg border border-dashed bg-muted/20 p-6 text-center text-sm text-muted-foreground">
+    <div className="rounded-[22px] border border-dashed border-border/60 bg-muted/20 p-6 text-center text-sm text-muted-foreground">
       <CheckCircle2 className="mx-auto mb-2 h-5 w-5 text-emerald-600" />
       {text}
     </div>

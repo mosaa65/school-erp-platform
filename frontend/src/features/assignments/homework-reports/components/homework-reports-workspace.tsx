@@ -16,6 +16,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ReportBarChart, ReportPieChart } from "@/components/ui/report-charts";
+import { WideMetricRow } from "@/components/ui/wide-metric-row";
 import { useHomeworksDashboardQuery } from "@/features/assignments/homework-dashboard/hooks/use-homeworks-dashboard-query";
 import { useSendHomeworkLateNotificationsMutation } from "@/features/assignments/homeworks/hooks/use-homeworks-mutations";
 import { useRbac } from "@/features/auth/hooks/use-rbac";
@@ -39,17 +41,43 @@ export function HomeworkReportsWorkspace() {
   const metrics = dashboardQuery.data?.metrics;
   const pendingRows = dashboardQuery.data?.topPendingHomeworks ?? [];
   const recentRows = dashboardQuery.data?.recentHomeworks ?? [];
+  const subjectChartData =
+    dashboardQuery.data?.reports.bySubject.slice(0, 6).map((row, index) => ({
+      name: row.code ? `${row.label} (${row.code})` : row.label,
+      value: row.total,
+      fill: [
+        "var(--app-accent-color)",
+        "#0ea5e9",
+        "#8b5cf6",
+        "#10b981",
+        "#f59e0b",
+        "#ef4444",
+      ][index % 6],
+    })) ?? [];
+  const sectionChartData =
+    dashboardQuery.data?.reports.bySection.slice(0, 6).map((row, index) => ({
+      name: row.code ? `${row.label} (${row.code})` : row.label,
+      value: row.pending + row.completed,
+      fill: [
+        "var(--app-accent-color)",
+        "#0ea5e9",
+        "#8b5cf6",
+        "#10b981",
+        "#f59e0b",
+        "#ef4444",
+      ][index % 6],
+    })) ?? [];
 
   return (
     <div className="space-y-5">
-      <section className="rounded-lg border bg-background p-5">
+      <section className="rounded-[28px] border border-[color:var(--app-accent-strong)]/30 bg-gradient-to-br from-[color:var(--app-accent-soft)]/45 via-background/95 to-background p-5 shadow-[0_22px_70px_-52px_rgba(15,23,42,0.58)]">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-full border bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-700 dark:text-cyan-300">
+            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-700 dark:text-cyan-300">
               <FileText className="h-3.5 w-3.5" />
               تقارير الواجبات
             </div>
-            <h1 className="text-2xl font-bold tracking-normal">تقارير وتحليل الواجبات</h1>
+            <h1 className="text-3xl font-bold tracking-tight md:text-4xl">تقارير وتحليل الواجبات</h1>
             <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
               ملخصات إدارية جاهزة عن الالتزام، التعثر، النشاط الأخير، والواجبات
               التي تحتاج متابعة.
@@ -72,28 +100,61 @@ export function HomeworkReportsWorkspace() {
         </div>
       </section>
 
-      <section className="grid gap-3 md:grid-cols-3">
-        <ReportCard
-          title="تقرير الالتزام العام"
-          description="نسبة إنجاز الطلاب للواجبات ضمن النطاق الحالي."
-          value={`${metrics?.completionRate ?? 0}%`}
-          icon={<PieChart />}
-          loading={dashboardQuery.isPending}
-        />
-        <ReportCard
-          title="تقرير التعثر"
-          description="عدد سجلات الطلاب التي لم تنفذ حتى الآن."
-          value={metrics?.pendingStudentRows ?? 0}
-          icon={<TrendingDown />}
-          loading={dashboardQuery.isPending}
-        />
-        <ReportCard
-          title="تقرير النشاط"
-          description="عدد الواجبات النشطة التي تدخل في المتابعة."
-          value={metrics?.totalHomeworks ?? 0}
-          icon={<BookOpenCheck />}
-          loading={dashboardQuery.isPending}
-        />
+      <WideMetricRow
+        items={[
+          {
+            label: "تقرير الالتزام العام",
+            value: dashboardQuery.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : `${metrics?.completionRate ?? 0}%`,
+            helper: "نسبة إنجاز الطلاب للواجبات ضمن النطاق الحالي.",
+            toneClassName: "border-cyan-500/15 bg-cyan-500/5",
+          },
+          {
+            label: "تقرير التعثر",
+            value: dashboardQuery.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : metrics?.pendingStudentRows ?? 0,
+            helper: "عدد سجلات الطلاب التي لم تنفذ حتى الآن.",
+            toneClassName: "border-rose-500/15 bg-rose-500/5",
+          },
+          {
+            label: "تقرير النشاط",
+            value: dashboardQuery.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : metrics?.totalHomeworks ?? 0,
+            helper: "عدد الواجبات النشطة التي تدخل في المتابعة.",
+            toneClassName: "border-emerald-500/15 bg-emerald-500/5",
+          },
+          {
+            label: "تنبيهات جاهزة",
+            value: dashboardQuery.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : pendingRows.length,
+            helper: "الواجبات التي يمكن إرسال تنبيه لها مباشرة.",
+            toneClassName: "border-amber-500/15 bg-amber-500/5",
+          },
+        ]}
+      />
+
+      <section className="grid gap-5 xl:grid-cols-2">
+        <Card className="rounded-[24px] border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.32)] backdrop-blur-sm">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold">أعمدة حسب المادة</h2>
+                <p className="mt-1 text-sm text-muted-foreground">توزيع حجم الواجبات خلال التقرير الحالي.</p>
+              </div>
+              <BarChart3 className="h-5 w-5 text-[color:var(--app-accent-color)]" />
+            </div>
+            <ReportBarChart data={subjectChartData} className="mt-4" />
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-[24px] border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.32)] backdrop-blur-sm">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold">دائرة حسب الشعبة</h2>
+                <p className="mt-1 text-sm text-muted-foreground">صورة سريعة للنطاقات الأوسع نشاطًا.</p>
+              </div>
+              <PieChart className="h-5 w-5 text-[color:var(--app-accent-color)]" />
+            </div>
+            <ReportPieChart data={sectionChartData} className="mt-4" />
+          </CardContent>
+        </Card>
       </section>
 
       <section className="grid gap-5 xl:grid-cols-2">
@@ -110,8 +171,8 @@ export function HomeworkReportsWorkspace() {
       </section>
 
       <section className="grid gap-5 xl:grid-cols-2">
-        <div className="rounded-lg border bg-background">
-          <div className="border-b p-4">
+        <div className="rounded-[24px] border border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.32)]">
+          <div className="border-b border-border/60 p-4">
             <h2 className="font-semibold">كشف الواجبات المتعثرة</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               مناسب للإدارة أو المرشد لمتابعة الطلاب غير المنجزين.
@@ -159,8 +220,8 @@ export function HomeworkReportsWorkspace() {
           </div>
         </div>
 
-        <div className="rounded-lg border bg-background">
-          <div className="border-b p-4">
+        <div className="rounded-[24px] border border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.32)]">
+          <div className="border-b border-border/60 p-4">
             <h2 className="font-semibold">كشف النشاط الأخير</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               أحدث واجبات منشأة مع عدد سجلات الطلاب المرتبطة.
@@ -253,39 +314,6 @@ function GroupedReport({
         )}
       </div>
     </div>
-  );
-}
-
-function ReportCard({
-  title,
-  description,
-  value,
-  icon,
-  loading,
-}: {
-  title: string;
-  description: string;
-  value: React.ReactNode;
-  icon: React.ReactNode;
-  loading?: boolean;
-}) {
-  return (
-    <Card className="rounded-lg shadow-none">
-      <CardContent className="space-y-4 p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="font-semibold">{title}</h2>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">{description}</p>
-          </div>
-          <span className="rounded-md border bg-background p-2 text-[color:var(--app-accent-color)] [&_svg]:h-4 [&_svg]:w-4">
-            {icon}
-          </span>
-        </div>
-        <div className="text-3xl font-bold">
-          {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : value}
-        </div>
-      </CardContent>
-    </Card>
   );
 }
 

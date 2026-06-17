@@ -7,14 +7,16 @@ import {
   ArrowUpLeft,
   BellRing,
   CalendarClock,
+  CalendarDays,
   CheckCircle2,
   ClipboardCheck,
-  ClipboardList,
   Coins,
   Gauge,
   GraduationCap,
   HeartPulse,
   Layers3,
+  Inbox,
+  Medal,
   RefreshCw,
   ShieldCheck,
   Sparkles,
@@ -58,12 +60,36 @@ const QUICK_ACTIONS: DashboardAction[] = [
     tone: "border-emerald-300/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
   },
   {
-    title: "إنشاء واجب جديد",
-    description: "تجهيز واجب للشعبة والمادة مع تعبئة الطلاب تلقائيًا.",
-    href: "/app/homeworks",
-    icon: ClipboardList,
+    title: "استوديو الواجبات",
+    description: "تصميم الواجب مع القالب والدرجة والتجهيز الذكي.",
+    href: "/app/homework-studio",
+    icon: Sparkles,
+    permissions: ["homeworks.create", "homeworks.read"],
+    tone: "border-violet-300/60 bg-violet-500/10 text-violet-700 dark:text-violet-300",
+  },
+  {
+    title: "التسليمات والتصحيح",
+    description: "مراجعة السجلات، الدرجات، والملاحظات بسرعة.",
+    href: "/app/homework-submissions",
+    icon: Inbox,
+    permissions: ["student-homeworks.read", "student-homeworks.bulk-update"],
+    tone: "border-emerald-300/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  },
+  {
+    title: "تقويم الواجبات",
+    description: "رؤية الحمل والواجبات القادمة قبل أن تتكدس.",
+    href: "/app/homework-calendar",
+    icon: CalendarDays,
     permission: "homeworks.read",
-    tone: "border-sky-300/60 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+    tone: "border-cyan-300/60 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300",
+  },
+  {
+    title: "معايير التصحيح",
+    description: "إنشاء معايير تصحيح ذكية مرتبطة بالمواد والصفوف.",
+    href: "/app/homework-rubrics",
+    icon: Medal,
+    permission: "homework-rubrics.read",
+    tone: "border-fuchsia-300/60 bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-300",
   },
   {
     title: "قيود الطلاب",
@@ -243,20 +269,25 @@ export default function AppDashboardPage() {
 
   return (
     <div className="space-y-5">
-      <section className="overflow-hidden rounded-[28px] border border-[color:var(--app-accent-strong)]/40 bg-gradient-to-br from-[color:var(--app-accent-soft)]/55 via-background/95 to-background p-4 shadow-[0_28px_90px_-62px_rgba(15,23,42,0.65)] md:p-6">
+      <section className="overflow-hidden rounded-[28px] border border-[color:var(--app-accent-strong)]/30 bg-gradient-to-br from-[color:var(--app-accent-soft)]/65 via-background/95 to-background p-4 shadow-[0_28px_90px_-62px_rgba(15,23,42,0.65)] md:p-6">
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
           <div className="space-y-5">
-            <div className="space-y-2">
-              <Badge variant="outline" className="w-fit border-[color:var(--app-accent-strong)] bg-background/70">
-                {todayLabel}
-              </Badge>
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline" className="w-fit border-[color:var(--app-accent-strong)] bg-background/75 px-3 py-1 text-[11px]">
+                  {todayLabel}
+                </Badge>
+                <Badge variant="secondary" className="w-fit px-3 py-1 text-[11px]">
+                  {user.roleCodes.length} أدوار
+                </Badge>
+              </div>
               <div className="space-y-1">
-                <h1 className="text-2xl font-bold tracking-tight md:text-4xl">
+                <h1 className="text-3xl font-bold tracking-tight md:text-5xl">
                   مرحبًا {displayName || user.email}
                 </h1>
                 <p className="max-w-3xl text-sm leading-7 text-muted-foreground md:text-base">
-                  هذه لوحة تشغيل يومية تجمع أهم المسارات، المؤشرات، والإجراءات السريعة
-                  بدل صفحة الاختبار القديمة.
+                  لوحة قيادة يومية هادئة وواضحة تجمع أهم المسارات والمؤشرات والإجراءات
+                  السريعة في مساحة واحدة قابلة للقراءة بسرعة.
                 </p>
               </div>
             </div>
@@ -267,7 +298,7 @@ export default function AppDashboardPage() {
                 return (
                   <div
                     key={metric.label}
-                    className="rounded-[22px] border border-border/70 bg-background/80 p-4"
+                    className="rounded-[22px] border border-border/60 bg-background/75 p-4 shadow-[0_16px_40px_-28px_rgba(15,23,42,0.35)] backdrop-blur-sm"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <span
@@ -278,7 +309,7 @@ export default function AppDashboardPage() {
                       >
                         <Icon className={cn("h-5 w-5", healthQuery.isFetching && Icon === RefreshCw ? "animate-spin" : "")} />
                       </span>
-                      <p className="text-2xl font-bold">{metric.value}</p>
+                      <p className="text-2xl font-bold tracking-tight">{metric.value}</p>
                     </div>
                     <div className="mt-3 space-y-1">
                       <p className="text-sm font-semibold">{metric.label}</p>
@@ -290,7 +321,7 @@ export default function AppDashboardPage() {
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-border/70 bg-background/80 p-4">
+          <div className="rounded-[24px] border border-border/60 bg-background/75 p-4 shadow-[0_16px_40px_-28px_rgba(15,23,42,0.35)] backdrop-blur-sm">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold">مركز اليوم</p>
@@ -306,7 +337,7 @@ export default function AppDashboardPage() {
                     key={action.href}
                     asChild
                     variant="outline"
-                    className="h-auto justify-between rounded-2xl px-3 py-3 text-right"
+                    className="h-auto justify-between rounded-2xl border-border/70 px-3 py-3 text-right transition hover:border-[color:var(--app-accent-strong)] hover:bg-[color:var(--app-accent-soft)]/30"
                   >
                     <Link href={action.href}>
                       <span className="flex min-w-0 items-center gap-2">
@@ -337,7 +368,7 @@ export default function AppDashboardPage() {
             <Link
               key={action.href}
               href={action.href}
-              className="group rounded-[24px] border border-border/70 bg-card/80 p-4 transition hover:-translate-y-0.5 hover:border-[color:var(--app-accent-strong)] hover:bg-[color:var(--app-accent-soft)]/25"
+              className="group rounded-[24px] border border-border/60 bg-card/80 p-4 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.38)] transition hover:-translate-y-0.5 hover:border-[color:var(--app-accent-strong)] hover:bg-[color:var(--app-accent-soft)]/30"
             >
               <div className="flex items-start justify-between gap-3">
                 <span className={cn("flex h-12 w-12 items-center justify-center rounded-2xl border", action.tone)}>
@@ -376,7 +407,7 @@ export default function AppDashboardPage() {
               return (
                 <div
                   key={group.id}
-                  className="rounded-[24px] border border-border/70 bg-card/80 p-4"
+                  className="rounded-[24px] border border-border/60 bg-card/80 p-4 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.32)]"
                 >
                   <div className="flex items-center gap-3">
                     <span

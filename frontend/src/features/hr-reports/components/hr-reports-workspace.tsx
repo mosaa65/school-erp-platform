@@ -14,6 +14,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { SelectField } from "@/components/ui/select-field";
 import { FilterDrawer } from "@/components/ui/filter-drawer";
+import { ReportBarChart, ReportPieChart } from "@/components/ui/report-charts";
+import { WideMetricRow } from "@/components/ui/wide-metric-row";
 import { useEmployeeOptionsQuery } from "@/features/hr-reports/hooks/use-employee-options-query";
 import { useHrSummaryReportQuery } from "@/features/hr-reports/hooks/use-hr-summary-report-query";
 import type {
@@ -78,6 +80,18 @@ export function HrReportsWorkspace() {
     ].reduce((acc, value) => acc + value, 0);
     return count;
   }, [appliedFilters.employeeId, appliedFilters.fromDate, appliedFilters.toDate]);
+  const attendanceChartData =
+    report?.attendance.byStatus.map((item, index) => ({
+      name: translateAttendanceStatus(item.status as EmployeeAttendanceStatus),
+      value: item.count,
+      fill: ["var(--app-accent-color)", "#0ea5e9", "#8b5cf6", "#10b981", "#f59e0b"][index % 5],
+    })) ?? [];
+  const violationChartData =
+    report?.violations.bySeverity.map((item, index) => ({
+      name: translateViolationSeverity(item.severity),
+      value: item.count,
+      fill: ["#ef4444", "#f59e0b", "#8b5cf6", "#0ea5e9"][index % 4],
+    })) ?? [];
 
   React.useEffect(() => {
     if (!isFilterOpen) {
@@ -214,6 +228,63 @@ export function HrReportsWorkspace() {
 
       {report ? (
         <>
+          <WideMetricRow
+            items={[
+              {
+                label: "الموظفون",
+                value: report.employees.total,
+                helper: `نشط: ${report.employees.active} | غير نشط: ${report.employees.inactive}`,
+                toneClassName: "border-sky-500/15 bg-sky-500/5",
+              },
+              {
+                label: "الحضور",
+                value: report.attendance.total,
+                helper: `نسبة الحضور ${formatPercent(report.attendance.indicators.presentRate)}`,
+                toneClassName: "border-emerald-500/15 bg-emerald-500/5",
+              },
+              {
+                label: "المخالفات",
+                value: report.violations.total,
+                helper: `مع إنذار: ${report.violations.withWarning}`,
+                toneClassName: "border-rose-500/15 bg-rose-500/5",
+              },
+              {
+                label: "التقييمات",
+                value: report.performance.totalEvaluations,
+                helper: `نطاق العبء: ${report.compliance.thresholdDays} يوم`,
+                toneClassName: "border-violet-500/15 bg-violet-500/5",
+              },
+            ]}
+          />
+
+          <section className="grid gap-5 xl:grid-cols-2">
+            <Card className="rounded-[24px] border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.32)] backdrop-blur-sm">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-base font-semibold">توزيع الحضور</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">قراءة سريعة للحالات التشغيلية.</p>
+                  </div>
+                  <BarChart3 className="h-5 w-5 text-[color:var(--app-accent-color)]" />
+                </div>
+                <ReportBarChart data={attendanceChartData} className="mt-4" />
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-[24px] border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.32)] backdrop-blur-sm">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-base font-semibold">مستويات المخالفات</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">شكل دائري يوضح وزن كل شدة.</p>
+                  </div>
+                  <RefreshCw className="h-5 w-5 text-[color:var(--app-accent-color)]" />
+                </div>
+                <ReportPieChart data={violationChartData} className="mt-4" />
+              </CardContent>
+            </Card>
+          </section>
+
           <div className="grid gap-3 md:grid-cols-3">
             <Card className="border-border/70 bg-card/80" data-testid="hr-report-employees-card">
               <CardHeader className="space-y-1 pb-2">

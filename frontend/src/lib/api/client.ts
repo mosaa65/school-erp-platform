@@ -1863,6 +1863,76 @@ export type HomeworkTemplateListItem = {
   } | null;
 };
 
+export type HomeworkRubricDifficulty =
+  | "FOUNDATION"
+  | "BALANCED"
+  | "CHALLENGE";
+
+export type HomeworkRubricCriterionListItem = {
+  id: string;
+  homeworkRubricId: string;
+  title: string;
+  description: string | null;
+  maxScore: number;
+  weight: number;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: {
+    id: string;
+    email: string;
+  } | null;
+  updatedBy: {
+    id: string;
+    email: string;
+  } | null;
+};
+
+export type HomeworkRubricListItem = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  homeworkTypeId: string | null;
+  subjectId: string | null;
+  gradeLevelId: string | null;
+  difficulty: HomeworkRubricDifficulty;
+  maxScore: number;
+  isSystem: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: {
+    id: string;
+    email: string;
+  } | null;
+  updatedBy: {
+    id: string;
+    email: string;
+  } | null;
+  homeworkType: {
+    id: string;
+    code: string;
+    name: string;
+    isActive: boolean;
+  } | null;
+  subject: {
+    id: string;
+    code: string;
+    name: string;
+    isActive: boolean;
+  } | null;
+  gradeLevel: {
+    id: string;
+    code: string;
+    name: string;
+    stage: GradeStage;
+    isActive: boolean;
+  } | null;
+  criteria: HomeworkRubricCriterionListItem[];
+};
+
 export type HomeworkListItem = {
   id: string;
   academicYearId: string;
@@ -4701,6 +4771,36 @@ export type CreateHomeworkTemplatePayload = {
 
 export type UpdateHomeworkTemplatePayload =
   Partial<CreateHomeworkTemplatePayload>;
+
+export type HomeworkRubricCriterionPayload = {
+  id?: string;
+  title: string;
+  description?: string;
+  maxScore: number;
+  weight: number;
+  sortOrder?: number;
+  isActive?: boolean;
+};
+
+export type CreateHomeworkRubricPayload = {
+  code?: string;
+  name: string;
+  description?: string;
+  homeworkTypeId?: string | null;
+  subjectId?: string | null;
+  gradeLevelId?: string | null;
+  difficulty?: HomeworkRubricDifficulty;
+  maxScore?: number;
+  criteria: HomeworkRubricCriterionPayload[];
+  isSystem?: boolean;
+  isActive?: boolean;
+};
+
+export type UpdateHomeworkRubricPayload = Partial<
+  Omit<CreateHomeworkRubricPayload, "criteria">
+> & {
+  criteria?: HomeworkRubricCriterionPayload[];
+};
 
 export type CreateHomeworkPayload = {
   academicYearId: string;
@@ -10942,6 +11042,63 @@ export const apiClient = {
   deleteHomeworkTemplate: (homeworkTemplateId: string) =>
     request<DeleteEntityResponse>(
       `/homework-templates/${homeworkTemplateId}`,
+      "DELETE",
+      {
+        withAuth: true,
+      },
+    ),
+  listHomeworkRubrics: (query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    homeworkTypeId?: string;
+    subjectId?: string;
+    gradeLevelId?: string;
+    difficulty?: HomeworkRubricDifficulty;
+    isSystem?: boolean;
+    isActive?: boolean;
+  }) =>
+    request<PaginatedResponse<HomeworkRubricListItem>>(
+      `/homework-rubrics${buildQueryString({
+        page: query?.page,
+        limit: query?.limit,
+        search: query?.search,
+        homeworkTypeId: query?.homeworkTypeId,
+        subjectId: query?.subjectId,
+        gradeLevelId: query?.gradeLevelId,
+        difficulty: query?.difficulty,
+        isSystem: query?.isSystem,
+        isActive: query?.isActive,
+      })}`,
+      "GET",
+      {
+        withAuth: true,
+      },
+    ),
+  getHomeworkRubric: (homeworkRubricId: string) =>
+    request<HomeworkRubricListItem>(`/homework-rubrics/${homeworkRubricId}`, "GET", {
+      withAuth: true,
+    }),
+  createHomeworkRubric: (payload: CreateHomeworkRubricPayload) =>
+    request<HomeworkRubricListItem>("/homework-rubrics", "POST", {
+      withAuth: true,
+      json: payload,
+    }),
+  updateHomeworkRubric: (
+    homeworkRubricId: string,
+    payload: UpdateHomeworkRubricPayload,
+  ) =>
+    request<HomeworkRubricListItem>(
+      `/homework-rubrics/${homeworkRubricId}`,
+      "PATCH",
+      {
+        withAuth: true,
+        json: payload,
+      },
+    ),
+  deleteHomeworkRubric: (homeworkRubricId: string) =>
+    request<DeleteEntityResponse>(
+      `/homework-rubrics/${homeworkRubricId}`,
       "DELETE",
       {
         withAuth: true,

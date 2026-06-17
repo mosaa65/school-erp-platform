@@ -38,6 +38,7 @@ const TEACHER_READ_RESOURCES = new Set([
   'parent-notifications',
   'homework-types',
   'homework-templates',
+  'homework-rubrics',
   'homeworks',
   'student-homeworks',
   'exam-periods',
@@ -97,6 +98,7 @@ const CLASS_SUPERVISOR_EXTRA_WRITE_RESOURCES = new Set([
 const SUPERVISOR_EXTRA_WRITE_RESOURCES = new Set([
   'homework-types',
   'homework-templates',
+  'homework-rubrics',
   'homeworks',
   'student-homeworks',
   'student-attendance',

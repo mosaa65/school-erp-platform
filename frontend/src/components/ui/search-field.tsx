@@ -72,7 +72,12 @@ export function SearchField({
       <input
         ref={inputRef}
         type="text"
-        className={cn(FIELD_SURFACE_CLASS_NAME, "pl-14 pr-12", className)}
+        className={cn(
+          FIELD_SURFACE_CLASS_NAME,
+          "pl-14 pr-12",
+          "selection:bg-[color:var(--app-accent-color)]/20 selection:text-foreground",
+          className,
+        )}
         {...props}
         value={value}
         onChange={handleChange}

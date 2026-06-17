@@ -25,6 +25,7 @@ import {
   Settings2,
   ShieldCheck,
   HeartPulse,
+  Inbox,
   Sparkles,
   UserRound,
   Users,
@@ -482,6 +483,27 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         requiredPermission: "homeworks.dashboard",
       },
       {
+        href: "/app/homework-studio",
+        label: "استوديو الواجبات",
+        icon: Sparkles,
+        requiredAnyPermission: ["homeworks.create", "homeworks.read"],
+      },
+      {
+        href: "/app/homework-calendar",
+        label: "تقويم وحمل الواجبات",
+        icon: CalendarDays,
+        requiredAnyPermission: ["homeworks.read", "homeworks.dashboard"],
+      },
+      {
+        href: "/app/homework-submissions",
+        label: "التسليمات والتصحيح",
+        icon: Inbox,
+        requiredAnyPermission: [
+          "student-homeworks.read",
+          "student-homeworks.bulk-update",
+        ],
+      },
+      {
         href: "/app/homework-supervision",
         label: "إشراف الواجبات",
         icon: School,
@@ -500,7 +522,18 @@ export const APP_NAV_GROUPS: AppNavGroup[] = [
         requiredAnyPermission: [
           "homework-templates.read",
           "homework-types.read",
+          "homework-rubrics.read",
           "homework-settings.manage",
+        ],
+      },
+      {
+        href: "/app/homework-rubrics",
+        label: "معايير التصحيح",
+        icon: Medal,
+        requiredAnyPermission: [
+          "homework-rubrics.read",
+          "homework-settings.manage",
+          "homework-templates.read",
         ],
       },
       {

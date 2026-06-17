@@ -46,7 +46,7 @@ export function ManagementToolbar({
   return (
     <div
       className={cn(
-        "rounded-[1.75rem] border border-[color:var(--app-accent-strong)]/35 bg-gradient-to-br from-[color:var(--app-accent-soft)]/45 via-background/96 to-background/86 p-2.5 shadow-[0_24px_60px_-44px_rgba(15,23,42,0.45)] backdrop-blur-xl",
+        "rounded-[1.75rem] border border-[color:var(--app-accent-strong)]/30 bg-gradient-to-br from-[color:var(--app-accent-soft)]/42 via-background/96 to-background/86 p-2.5 shadow-[0_24px_60px_-44px_rgba(15,23,42,0.45)] backdrop-blur-xl",
         className,
       )}
     >
