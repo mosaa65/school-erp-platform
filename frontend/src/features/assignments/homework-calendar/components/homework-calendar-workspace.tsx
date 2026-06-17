@@ -254,10 +254,10 @@ export function HomeworkCalendarWorkspace() {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-lg border bg-background p-5">
+      <section className="rounded-[28px] border border-[color:var(--app-accent-strong)]/25 bg-gradient-to-br from-[color:var(--app-accent-soft)]/35 via-background/95 to-background p-5 shadow-[0_22px_60px_-48px_rgba(15,23,42,0.55)]">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-md border bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-700 dark:text-cyan-300">
+            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-700 dark:text-cyan-300">
               <CalendarDays className="h-3.5 w-3.5" />
               تقويم وحمل الواجبات
             </div>
@@ -296,7 +296,7 @@ export function HomeworkCalendarWorkspace() {
         <MetricCard label="الأيام المعروضة" value={DAY_COUNT} icon={<CalendarDays />} />
       </section>
 
-      <section className="rounded-lg border bg-background">
+      <section className="overflow-hidden rounded-[24px] border border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.28)]">
         <div className="grid gap-3 p-4 lg:grid-cols-[1fr_220px_220px]">
           <Input
             icon={<Search />}
@@ -335,8 +335,8 @@ export function HomeworkCalendarWorkspace() {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="rounded-lg border bg-background">
-          <div className="flex items-center justify-between gap-3 border-b p-4">
+        <div className="overflow-hidden rounded-[24px] border border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.28)]">
+          <div className="flex items-center justify-between gap-3 border-b border-border/60 bg-background/60 p-4">
             <h2 className="font-semibold">الأيام القادمة</h2>
             <Badge variant="outline">{DAY_COUNT} يوم</Badge>
           </div>
@@ -362,14 +362,14 @@ export function HomeworkCalendarWorkspace() {
         </div>
 
         <aside className="space-y-4">
-          <Card className="rounded-lg shadow-none">
+          <Card className="rounded-[24px] border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.28)] backdrop-blur-sm">
             <CardContent className="space-y-4 p-4">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="font-semibold">تنبيهات الحمل</h2>
                 <Badge variant="outline">{overloadedDays.length}</Badge>
               </div>
               {overloadedDays.length === 0 ? (
-                <div className="rounded-md border border-dashed bg-muted/15 p-4 text-sm text-muted-foreground">
+                <div className="rounded-xl border border-dashed bg-muted/15 p-4 text-sm text-muted-foreground">
                   لا يوجد ضغط واضح في الأيام القادمة.
                 </div>
               ) : (
@@ -377,7 +377,7 @@ export function HomeworkCalendarWorkspace() {
                   {overloadedDays.map((item) => (
                     <div
                       key={item.day}
-                      className="rounded-md border border-amber-500/25 bg-amber-500/10 p-3 text-sm"
+                      className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-sm"
                     >
                       <div className="flex items-center justify-between gap-3">
                         <span className="font-medium">{formatDayTitle(item.day)}</span>
@@ -390,7 +390,7 @@ export function HomeworkCalendarWorkspace() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-lg shadow-none">
+          <Card className="rounded-[24px] border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.28)] backdrop-blur-sm">
             <CardContent className="space-y-4 p-4">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="font-semibold">أقرب الواجبات</h2>
@@ -398,7 +398,7 @@ export function HomeworkCalendarWorkspace() {
               </div>
               <div className="grid gap-2">
                 {upcoming.length === 0 ? (
-                  <div className="rounded-md border border-dashed bg-muted/15 p-4 text-sm text-muted-foreground">
+                  <div className="rounded-xl border border-dashed bg-muted/15 p-4 text-sm text-muted-foreground">
                     لا توجد واجبات قريبة في النطاق الحالي.
                   </div>
                 ) : (
@@ -406,7 +406,7 @@ export function HomeworkCalendarWorkspace() {
                     <Link
                       key={homework.id}
                       href="/app/homework-submissions"
-                      className="rounded-md border bg-background p-3 transition-colors hover:bg-muted/35"
+                    className="rounded-xl border bg-background p-3 transition-all duration-200 hover:-translate-y-0.5 hover:bg-muted/35"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <span className="line-clamp-2 font-medium">{homework.title}</span>
@@ -441,7 +441,7 @@ function MetricCard({
   return (
     <div
       className={cn(
-        "rounded-lg border bg-background p-4",
+        "rounded-[22px] border bg-background/80 p-4 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.28)]",
         danger && "border-amber-500/25 bg-amber-500/10",
       )}
     >
@@ -468,7 +468,7 @@ function DayColumn({
   return (
     <div
       className={cn(
-        "min-h-52 rounded-lg border p-3",
+        "min-h-52 rounded-[22px] border p-3",
         tone === "quiet" && "bg-muted/10",
         tone === "normal" && "border-emerald-500/20 bg-emerald-500/5",
         tone === "busy" && "border-amber-500/25 bg-amber-500/10",
@@ -487,12 +487,12 @@ function DayColumn({
 
       <div className="mt-3 grid gap-2">
         {homeworks.length === 0 ? (
-          <div className="rounded-md border border-dashed bg-background/60 p-3 text-sm text-muted-foreground">
+          <div className="rounded-xl border border-dashed bg-background/60 p-3 text-sm text-muted-foreground">
             لا توجد واجبات.
           </div>
         ) : (
           homeworks.map((homework) => (
-            <div key={homework.id} className="rounded-md border bg-background p-3">
+            <div key={homework.id} className="rounded-xl border bg-background p-3">
               <div className="line-clamp-2 text-sm font-medium">{homework.title}</div>
               <div className="mt-2 flex flex-wrap gap-1.5 text-xs text-muted-foreground">
                 <Badge variant="outline">
@@ -510,7 +510,7 @@ function DayColumn({
 
 function LoadingBlock({ text }: { text: string }) {
   return (
-    <div className="md:col-span-2 2xl:col-span-3 flex min-h-48 items-center justify-center rounded-lg border border-dashed bg-muted/15 p-4 text-sm text-muted-foreground">
+    <div className="md:col-span-2 2xl:col-span-3 flex min-h-48 items-center justify-center rounded-xl border border-dashed bg-muted/15 p-4 text-sm text-muted-foreground">
       <RefreshCw className="ml-2 h-4 w-4 animate-spin" />
       {text}
     </div>

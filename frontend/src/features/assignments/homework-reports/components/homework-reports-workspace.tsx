@@ -5,12 +5,10 @@ import Link from "next/link";
 import {
   BarChart3,
   BellRing,
-  BookOpenCheck,
   ClipboardCheck,
   FileText,
   Loader2,
   PieChart,
-  TrendingDown,
   Users,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";

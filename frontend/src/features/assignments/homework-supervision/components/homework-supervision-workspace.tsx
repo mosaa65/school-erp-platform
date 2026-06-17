@@ -44,10 +44,10 @@ export function HomeworkSupervisionWorkspace() {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-lg border bg-background p-5">
+      <section className="rounded-[28px] border border-[color:var(--app-accent-strong)]/25 bg-gradient-to-br from-[color:var(--app-accent-soft)]/35 via-background/95 to-background p-5 shadow-[0_22px_60px_-48px_rgba(15,23,42,0.55)]">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-full border bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
+            <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
               <School className="h-3.5 w-3.5" />
               إشراف الإدارة
             </div>
@@ -106,8 +106,8 @@ export function HomeworkSupervisionWorkspace() {
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="rounded-lg border bg-background">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
+        <div className="overflow-hidden rounded-[24px] border border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.28)]">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 bg-background/60 p-4">
             <div>
               <h2 className="font-semibold">قائمة التعثر العاجلة</h2>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -166,7 +166,7 @@ export function HomeworkSupervisionWorkspace() {
           </div>
         </div>
 
-        <Card className="rounded-lg shadow-none">
+        <Card className="rounded-[24px] border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.28)] backdrop-blur-sm">
           <CardContent className="space-y-4 p-5">
             <div>
               <h2 className="font-semibold">إجراءات إشرافية مقترحة</h2>
@@ -196,8 +196,8 @@ export function HomeworkSupervisionWorkspace() {
         </Card>
       </section>
 
-      <section className="rounded-lg border bg-background">
-        <div className="border-b p-4">
+      <section className="overflow-hidden rounded-[24px] border border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.28)]">
+        <div className="border-b border-border/60 bg-background/60 p-4">
           <h2 className="font-semibold">آخر نشاط واجبات</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             يساعدك على معرفة حركة المعلمين والمواد مؤخرا.
@@ -212,7 +212,7 @@ export function HomeworkSupervisionWorkspace() {
             </div>
           ) : (
             recentHomeworks.map((homework) => (
-              <div key={homework.id} className="rounded-lg border bg-muted/15 p-4">
+              <div key={homework.id} className="rounded-xl border bg-muted/15 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="truncate font-semibold">{homework.title}</div>
@@ -250,7 +250,7 @@ function SupervisionMetric({
   return (
     <div
       className={cn(
-        "rounded-lg border bg-background p-4",
+        "rounded-[22px] border bg-background/80 p-4 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.28)]",
         danger && "border-rose-500/25 bg-rose-500/5",
       )}
     >
@@ -281,7 +281,7 @@ function ActionLink({
   return (
     <Link
       href={href}
-      className="flex items-start gap-3 rounded-lg border bg-muted/15 p-3 transition-colors hover:bg-muted/30"
+      className="flex items-start gap-3 rounded-xl border bg-muted/15 p-3 transition-all duration-200 hover:-translate-y-0.5 hover:bg-muted/30"
     >
       <span className="rounded-md border bg-background p-2 text-[color:var(--app-accent-color)] [&_svg]:h-4 [&_svg]:w-4">
         {icon}
@@ -307,7 +307,7 @@ function LoadingBlock() {
 
 function EmptyBlock({ text }: { text: string }) {
   return (
-    <div className="m-4 rounded-lg border border-dashed bg-muted/20 p-6 text-center text-sm text-muted-foreground">
+    <div className="m-4 rounded-xl border border-dashed bg-muted/20 p-6 text-center text-sm text-muted-foreground">
       {text}
     </div>
   );
@@ -317,7 +317,7 @@ function LoadingCards() {
   return (
     <>
       {[0, 1, 2].map((item) => (
-        <div key={item} className="h-28 animate-pulse rounded-lg border bg-muted/30" />
+        <div key={item} className="h-28 animate-pulse rounded-xl border bg-muted/30" />
       ))}
     </>
   );

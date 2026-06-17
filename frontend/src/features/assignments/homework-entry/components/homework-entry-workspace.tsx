@@ -309,7 +309,7 @@ export function HomeworkEntryWorkspace() {
           <div className="space-y-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0 space-y-2">
-                <div className="inline-flex items-center gap-2 rounded-full border bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
                   <BookOpenCheck className="h-3.5 w-3.5" />
                   إدخال سريع للواجبات
                 </div>
@@ -602,7 +602,7 @@ function MetricCard({
   return (
     <div
       className={cn(
-        "rounded-lg border bg-background p-4",
+        "rounded-[22px] border bg-background/80 p-4 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.28)]",
         tone === "success" && "border-emerald-500/25 bg-emerald-500/5",
         tone === "danger" && "border-rose-500/25 bg-rose-500/5",
       )}
@@ -620,7 +620,7 @@ function MetricCard({
 
 function EmptyState({ text }: { text: string }) {
   return (
-    <div className="flex min-h-48 items-center justify-center rounded-lg border border-dashed bg-muted/20 p-6 text-center text-sm text-muted-foreground">
+      <div className="flex min-h-48 items-center justify-center rounded-xl border border-dashed bg-muted/20 p-6 text-center text-sm text-muted-foreground">
       {text}
     </div>
   );
@@ -647,7 +647,7 @@ function StudentHomeworkCard({
   return (
     <Card
       className={cn(
-        "rounded-lg shadow-none transition-colors",
+        "rounded-[24px] border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.28)] transition-all duration-200",
         currentDraft.isCompleted
           ? "border-emerald-500/25 bg-emerald-500/5"
           : "border-rose-500/20 bg-rose-500/5",
@@ -730,7 +730,7 @@ function StudentHomeworkCard({
             <button
               key={note}
               type="button"
-              className="rounded-md border bg-background px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted"
+              className="rounded-xl border bg-background px-2.5 py-1 text-xs text-muted-foreground transition-all duration-200 hover:-translate-y-0.5 hover:bg-muted"
               onClick={() => onChange({ teacherNotes: note })}
               disabled={!canUpdate}
             >

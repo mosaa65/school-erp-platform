@@ -403,7 +403,7 @@ export function HomeworkTypesWorkspace() {
           </div>
         </FilterDrawer>
 
-        <Card className="border-border/70 bg-card/80 backdrop-blur-sm">
+        <Card className="rounded-[24px] border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.28)] backdrop-blur-sm">
           <CardHeader className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <CardTitle>أنواع الواجبات</CardTitle>
@@ -414,13 +414,13 @@ export function HomeworkTypesWorkspace() {
 
           <CardContent className="space-y-3">
           {homeworkTypesQuery.isPending ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+            <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
               جارٍ تحميل البيانات...
             </div>
           ) : null}
 
           {homeworkTypesQuery.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
               {homeworkTypesQuery.error instanceof Error
                 ? homeworkTypesQuery.error.message
                 : "تعذّر تحميل البيانات."}
@@ -428,7 +428,7 @@ export function HomeworkTypesWorkspace() {
           ) : null}
 
           {!homeworkTypesQuery.isPending && homeworkTypes.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+            <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
               لا توجد نتائج مطابقة.
             </div>
           ) : null}
@@ -436,7 +436,7 @@ export function HomeworkTypesWorkspace() {
           {homeworkTypes.map((item) => (
             <div
               key={item.id}
-              className="space-y-3 rounded-lg border border-border/70 bg-background/70 p-3"
+              className="space-y-3 rounded-xl border border-border/70 bg-background/70 p-3"
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="space-y-1">
@@ -557,7 +557,7 @@ export function HomeworkTypesWorkspace() {
         showFooter={false}
       >
         {!canCreate && !isEditing ? (
-          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+          <div className="rounded-xl border border-dashed p-3 text-sm text-muted-foreground">
             لا تملك الصلاحية المطلوبة: <code>homework-types.create</code>.
           </div>
         ) : (
@@ -617,18 +617,18 @@ export function HomeworkTypesWorkspace() {
             </div>
 
             {formError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+              <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
                 {formError}
               </div>
             ) : null}
 
             {mutationError ? (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+              <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
                 {mutationError}
               </div>
             ) : null}
             {actionSuccess ? (
-              <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
+              <div className="rounded-xl border border-emerald-300/40 bg-emerald-500/10 p-2 text-xs text-emerald-700 dark:text-emerald-300">
                 {actionSuccess}
               </div>
             ) : null}

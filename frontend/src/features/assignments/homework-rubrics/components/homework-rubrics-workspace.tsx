@@ -504,7 +504,7 @@ export function HomeworkRubricsWorkspace() {
   }
 
   const messageClassName = cn(
-    "rounded-md border px-4 py-3 text-sm",
+    "rounded-xl border px-4 py-3 text-sm",
     statusBanner?.tone === "success" &&
       "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
     statusBanner?.tone === "error" &&
@@ -515,10 +515,10 @@ export function HomeworkRubricsWorkspace() {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-lg border bg-background p-5">
+      <section className="rounded-[28px] border border-[color:var(--app-accent-strong)]/25 bg-gradient-to-br from-[color:var(--app-accent-soft)]/35 via-background/95 to-background p-5 shadow-[0_22px_60px_-48px_rgba(15,23,42,0.55)]">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-md border bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-700 dark:text-violet-300">
+            <div className="inline-flex items-center gap-2 rounded-full border border-violet-500/20 bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-700 dark:text-violet-300">
               <Medal className="h-3.5 w-3.5" />
               معايير التصحيح
             </div>
@@ -546,8 +546,8 @@ export function HomeworkRubricsWorkspace() {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <main className="rounded-lg border bg-background">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
+        <main className="overflow-hidden rounded-[24px] border border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.28)]">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 bg-background/60 p-4">
             <div>
               <h2 className="font-semibold">بناء معيار تصحيح</h2>
               <p className="text-xs text-muted-foreground">
@@ -666,7 +666,7 @@ export function HomeworkRubricsWorkspace() {
                     key={level}
                     type="button"
                     className={cn(
-                      "h-10 rounded-md border px-3 text-sm transition-colors",
+                      "h-10 rounded-xl border px-3 text-sm transition-colors",
                       formState.difficulty === level
                         ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
                         : "bg-background text-muted-foreground hover:bg-muted/35",
@@ -693,7 +693,7 @@ export function HomeworkRubricsWorkspace() {
 
             <div className="space-y-1.5 text-sm font-medium">
               <span>الحالة</span>
-              <div className="flex h-11 items-center justify-between rounded-md border px-3">
+              <div className="flex h-11 items-center justify-between rounded-xl border px-3">
                 <div className="space-y-0.5">
                   <div className="text-sm font-medium">نشط</div>
                   <div className="text-xs text-muted-foreground">
@@ -750,9 +750,9 @@ export function HomeworkRubricsWorkspace() {
 
             <div className="grid gap-3">
               {formState.criteria.map((criterion, index) => (
-                <Card key={criterion.id} className="rounded-lg shadow-none">
+                <Card key={criterion.id} className="rounded-[24px] border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.28)] backdrop-blur-sm">
                   <CardContent className="grid gap-3 p-4 lg:grid-cols-[32px_minmax(0,1fr)_120px_120px_auto]">
-                    <div className="flex h-10 items-center justify-center rounded-md border bg-muted/20 text-muted-foreground">
+                    <div className="flex h-10 items-center justify-center rounded-xl border bg-muted/20 text-muted-foreground">
                       <GripVertical className="h-4 w-4" />
                     </div>
                     <div className="grid gap-2">
@@ -826,7 +826,7 @@ export function HomeworkRubricsWorkspace() {
         </main>
 
         <aside className="space-y-4">
-          <Card className="rounded-lg shadow-none">
+          <Card className="rounded-[24px] border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.28)] backdrop-blur-sm">
             <CardContent className="space-y-4 p-4">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="font-semibold">المعايير المحفوظة</h2>
@@ -834,21 +834,21 @@ export function HomeworkRubricsWorkspace() {
               </div>
 
               {rubricsQuery.isPending ? (
-                <div className="rounded-md border border-dashed bg-muted/15 p-4 text-sm text-muted-foreground">
+                <div className="rounded-xl border border-dashed bg-muted/15 p-4 text-sm text-muted-foreground">
                   جارٍ تحميل معايير التصحيح...
                 </div>
               ) : rubricsQuery.isError ? (
-                <div className="rounded-md border border-rose-500/25 bg-rose-500/10 p-4 text-sm text-rose-700 dark:text-rose-300">
+                <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 p-4 text-sm text-rose-700 dark:text-rose-300">
                   {getApiErrorMessage(rubricsQuery.error)}
                 </div>
               ) : rubrics.length === 0 ? (
-                <div className="rounded-md border border-dashed bg-muted/15 p-4 text-sm text-muted-foreground">
+                <div className="rounded-xl border border-dashed bg-muted/15 p-4 text-sm text-muted-foreground">
                   لا توجد معايير محفوظة بعد.
                 </div>
               ) : (
                 <div className="grid gap-2">
                   {rubrics.map((rubric) => (
-                    <div key={rubric.id} className="rounded-md border bg-background p-3">
+                    <div key={rubric.id} className="rounded-xl border bg-background p-3">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
@@ -940,10 +940,10 @@ export function HomeworkRubricsWorkspace() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-lg shadow-none">
+          <Card className="rounded-[24px] border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.28)] backdrop-blur-sm">
             <CardContent className="space-y-3 p-4">
               <h2 className="font-semibold">ملاحظات تنفيذية</h2>
-              <div className="rounded-md border bg-muted/15 p-3 text-sm leading-6 text-muted-foreground">
+              <div className="rounded-xl border bg-muted/15 p-3 text-sm leading-6 text-muted-foreground">
                 هذا القسم مرتبط مباشرة بقاعدة البيانات، لذلك أي معيار تصحيح يتم
                 حفظه هنا يظهر لباقي الفريق فورًا ويمكن إعادة استخدامه في الواجبات
                 والتصحيح.
