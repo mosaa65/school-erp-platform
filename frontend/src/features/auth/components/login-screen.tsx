@@ -7,6 +7,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { startAuthentication } from "@simplewebauthn/browser";
 
+import { useSystemMessage } from "@/hooks/use-system-message";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,6 +76,8 @@ function getOrCreateDeviceId(): string {
   return generated;
 }
 
+const AUTO_FINGERPRINT_DISABLED_KEY = "school_erp_login_auto_fingerprint_disabled";
+
 function buildDeviceLabel(): string {
   if (typeof navigator === "undefined") {
     return "Web Client";
@@ -96,9 +100,11 @@ export function LoginScreen() {
   const searchParams = useSearchParams();
   const auth = useAuth();
   const loginMutation = useLoginMutation();
+  const { notify } = useSystemMessage();
   const nextPath = sanitizeNextPath(searchParams.get("next"));
 
   const [loginMethod, setLoginMethod] = React.useState<LoginMethod>("phone");
+  const [autoFingerprintAttempted, setAutoFingerprintAttempted] = React.useState(false);
   const [email, setEmail] = React.useState("");
   const [phoneCountryIso2, setPhoneCountryIso2] = React.useState("YE");
   const [phoneNationalNumber, setPhoneNationalNumber] = React.useState("");
@@ -142,13 +148,13 @@ export function LoginScreen() {
       script.async = true;
       script.defer = true;
       script.onload = () => resolve();
-      script.onerror = () => reject(new Error("Failed to load reCAPTCHA"));
+      script.onerror = () => reject(new Error("فشل تحميل reCAPTCHA"));
       document.head.appendChild(script);
     });
 
     const grecaptcha = (window as Window & { grecaptcha?: Grecaptcha }).grecaptcha;
     if (!grecaptcha?.execute) {
-      throw new Error("reCAPTCHA not available");
+      throw new Error("reCAPTCHA غير متاحة");
     }
 
     return grecaptcha;
@@ -241,12 +247,20 @@ export function LoginScreen() {
       auth.signIn(session);
       router.replace(nextPath);
     },
+    onError: (error) => {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "فشل تسجيل الدخول باستخدام البصمة. حاول مرة أخرى أو استخدم كلمة المرور.";
+
+      notify.error(message);
+    },
   });
 
   const verifyWebAuthnMutation = useMutation({
     mutationFn: async () => {
       if (!webauthnChallenge) {
-        throw new Error("Missing WebAuthn challenge.");
+        throw new Error("تحدي WebAuthn مفقود.");
       }
 
       const assertion = await startAuthentication({
@@ -266,13 +280,55 @@ export function LoginScreen() {
       auth.signIn(session);
       router.replace(nextPath);
     },
+    onError: (error) => {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "فشل التحقق من البصمة. حاول مرة أخرى.";
+
+      notify.error(message);
+    },
   });
+
+
 
   React.useEffect(() => {
     if (auth.isHydrated && auth.isAuthenticated) {
       router.replace(nextPath);
     }
   }, [auth.isAuthenticated, auth.isHydrated, nextPath, router]);
+
+  React.useEffect(() => {
+    if (
+      !auth.isHydrated ||
+      auth.isAuthenticated ||
+      autoFingerprintAttempted ||
+      passkeyLoginMutation.isPending ||
+      typeof window === "undefined" ||
+      typeof window.PublicKeyCredential === "undefined" ||
+      window.localStorage.getItem(AUTO_FINGERPRINT_DISABLED_KEY) === "1" ||
+      mfaChallenge !== null ||
+      activationChallenge !== null ||
+      deviceApprovalChallenge !== null ||
+      webauthnChallenge !== null
+    ) {
+      return;
+    }
+
+    setAutoFingerprintAttempted(true);
+    notify.info("جارٍ طلب المصادقة بالبصمة...");
+    passkeyLoginMutation.mutate();
+  }, [
+    auth.isAuthenticated,
+    auth.isHydrated,
+    autoFingerprintAttempted,
+    notify,
+    passkeyLoginMutation,
+    mfaChallenge,
+    activationChallenge,
+    deviceApprovalChallenge,
+    webauthnChallenge,
+  ]);
 
   const handlePrimarySubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -415,6 +471,7 @@ export function LoginScreen() {
         const message =
           error instanceof Error ? error.message : "تعذر التحقق من reCAPTCHA.";
         setCaptchaError(message);
+        notify.error(message);
       });
   };
 
@@ -727,7 +784,7 @@ export function LoginScreen() {
                       autoComplete="email"
                       value={email}
                       onChange={(event) => setEmail(event.target.value)}
-                      placeholder="name@example.com"
+                      placeholder="example@domain.com"
                       required
                       icon={<Mail className="h-4 w-4" />}
                       className="h-11 rounded-2xl text-right"

@@ -80,10 +80,10 @@ export function HomeworkSettingsWorkspace() {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-lg border bg-background p-5">
+      <section className="rounded-[28px] border border-[color:var(--app-accent-strong)]/25 bg-gradient-to-br from-[color:var(--app-accent-soft)]/35 via-background/95 to-background p-5 shadow-[0_22px_60px_-48px_rgba(15,23,42,0.55)]">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-full border bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-700 dark:text-sky-300">
+            <div className="inline-flex items-center gap-2 rounded-full border border-sky-500/20 bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-700 dark:text-sky-300">
               <Settings2 className="h-3.5 w-3.5" />
               إعدادات التشغيل
             </div>
@@ -109,7 +109,7 @@ export function HomeworkSettingsWorkspace() {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[1fr_1fr]">
-        <Card className="rounded-lg shadow-none">
+        <Card className="rounded-[24px] border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.28)] backdrop-blur-sm">
           <CardContent className="space-y-4 p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -122,14 +122,14 @@ export function HomeworkSettingsWorkspace() {
             </div>
             <div className="grid gap-2">
               {homeworkTypes.length === 0 ? (
-                <div className="rounded-lg border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
+                <div className="rounded-xl border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
                   لا توجد أنواع واجبات متاحة.
                 </div>
               ) : (
                 homeworkTypes.slice(0, 8).map((type) => (
                   <div
                     key={type.id}
-                    className="flex items-center justify-between gap-3 rounded-lg border bg-muted/15 p-3"
+                    className="flex items-center justify-between gap-3 rounded-xl border bg-muted/15 p-3"
                   >
                     <span className="font-medium">
                       {formatNameCodeLabel(type.name, type.code)}
@@ -144,7 +144,7 @@ export function HomeworkSettingsWorkspace() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-lg shadow-none">
+        <Card className="rounded-[24px] border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.28)] backdrop-blur-sm">
           <CardContent className="space-y-4 p-5">
             <div>
               <h2 className="font-semibold">سياسات النظام القادمة</h2>
@@ -181,8 +181,8 @@ export function HomeworkSettingsWorkspace() {
         </Card>
       </section>
 
-      <section className="rounded-lg border bg-background">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
+      <section className="overflow-hidden rounded-[24px] border border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.28)]">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 bg-background/60 p-4">
           <div>
             <h2 className="font-semibold">قوالب الواجبات</h2>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -191,7 +191,7 @@ export function HomeworkSettingsWorkspace() {
           </div>
           <Badge variant="outline">{homeworkTemplates.length}</Badge>
         </div>
-        <form className="grid gap-3 border-b p-4 lg:grid-cols-6" onSubmit={handleCreateTemplate}>
+        <form className="grid gap-3 border-b border-border/60 p-4 lg:grid-cols-6" onSubmit={handleCreateTemplate}>
           <Input
             value={templateForm.code}
             onChange={(event) =>
@@ -255,12 +255,12 @@ export function HomeworkSettingsWorkspace() {
         </form>
         <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-4">
           {homeworkTemplates.length === 0 ? (
-            <div className="md:col-span-2 xl:col-span-4 rounded-lg border border-dashed bg-muted/20 p-6 text-center text-sm text-muted-foreground">
+            <div className="md:col-span-2 xl:col-span-4 rounded-xl border border-dashed bg-muted/20 p-6 text-center text-sm text-muted-foreground">
               لا توجد قوالب واجبات محفوظة بعد.
             </div>
           ) : (
             homeworkTemplates.map((template) => (
-              <div key={template.id} className="rounded-lg border bg-muted/15 p-4">
+              <div key={template.id} className="rounded-xl border bg-muted/15 p-4 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="truncate font-semibold">{template.name}</div>
@@ -310,7 +310,7 @@ function SettingPreview({
   description: string;
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-lg border bg-muted/15 p-3">
+    <div className="flex items-start gap-3 rounded-xl border bg-muted/15 p-3">
       <span className="rounded-md border bg-background p-2 text-[color:var(--app-accent-color)] [&_svg]:h-4 [&_svg]:w-4">
         {icon}
       </span>

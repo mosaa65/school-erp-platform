@@ -448,11 +448,14 @@ export function HomeworkSubmissionsWorkspace() {
       <section className="rounded-[28px] border border-[color:var(--app-accent-strong)]/25 bg-gradient-to-br from-[color:var(--app-accent-soft)]/35 via-background/95 to-background p-5 shadow-[0_22px_60px_-48px_rgba(15,23,42,0.55)]">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-md border bg-teal-500/10 px-3 py-1 text-xs font-semibold text-teal-700 dark:text-teal-300">
+            <div className="inline-flex items-center gap-2 rounded-full border border-teal-500/20 bg-teal-500/10 px-3 py-1 text-xs font-semibold text-teal-700 dark:text-teal-300">
               <Inbox className="h-3.5 w-3.5" />
               صندوق التسليمات
             </div>
             <h1 className="text-2xl font-semibold">التسليمات والتصحيح</h1>
+            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+              فرز سريع، تصحيح جماعي، ومراجعة واضحة لكل طالب داخل واجب واحد.
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline">
@@ -506,9 +509,12 @@ export function HomeworkSubmissionsWorkspace() {
 
       <section className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
         <aside className="space-y-4">
-          <div className="rounded-lg border bg-background">
-            <div className="border-b p-4">
+          <div className="overflow-hidden rounded-[24px] border border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.28)]">
+            <div className="border-b border-border/60 bg-background/60 p-4">
               <h2 className="font-semibold">اختيار الواجب</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                فلترة حسب الشعبة والمادة ثم اختيار الواجب المطلوب.
+              </p>
             </div>
             <div className="space-y-3 p-4">
               <SelectField
@@ -560,10 +566,10 @@ export function HomeworkSubmissionsWorkspace() {
                     key={homework.id}
                     type="button"
                     className={cn(
-                      "w-full rounded-md border p-3 text-right transition-colors",
+                      "w-full rounded-xl border p-3 text-right transition-all duration-200",
                       homework.id === homeworkId
-                        ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)]"
-                        : "bg-background hover:bg-muted/35",
+                        ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] shadow-sm"
+                        : "bg-background hover:-translate-y-0.5 hover:bg-muted/35",
                     )}
                     onClick={() => setHomeworkId(homework.id)}
                   >
@@ -628,7 +634,7 @@ export function HomeworkSubmissionsWorkspace() {
                 <MiniMetric label="الإنجاز" value={`${stats.completionRate}%`} icon={<CheckCircle2 />} />
               </div>
             </div>
-            <div className="grid gap-2 border-t p-4 md:grid-cols-5">
+            <div className="grid gap-2 border-t border-border/60 bg-background/55 p-4 md:grid-cols-5">
               <QueueButton
                 active={queueFilter === "all"}
                 label="الكل"
@@ -814,10 +820,10 @@ function QueueButton({
     <button
       type="button"
       className={cn(
-        "flex h-11 items-center justify-between rounded-md border px-3 text-sm transition-colors",
+        "flex h-11 items-center justify-between rounded-xl border px-3 text-sm transition-all duration-200",
         active
-          ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)]"
-          : "bg-background text-muted-foreground hover:bg-muted/35",
+          ? "border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-soft)] text-[color:var(--app-accent-color)] shadow-sm"
+          : "bg-background text-muted-foreground hover:-translate-y-0.5 hover:bg-muted/35",
       )}
       onClick={onClick}
     >
@@ -973,7 +979,7 @@ function SubmissionRow({
 
 function LoadingBlock({ text }: { text: string }) {
   return (
-    <div className="flex min-h-32 items-center justify-center rounded-md border border-dashed bg-muted/15 p-4 text-sm text-muted-foreground">
+    <div className="flex min-h-32 items-center justify-center rounded-xl border border-dashed bg-muted/15 p-4 text-sm text-muted-foreground">
       <Loader2 className="ml-2 h-4 w-4 animate-spin" />
       {text}
     </div>
@@ -982,7 +988,7 @@ function LoadingBlock({ text }: { text: string }) {
 
 function EmptyBlock({ text }: { text: string }) {
   return (
-    <div className="flex min-h-32 items-center justify-center rounded-md border border-dashed bg-muted/15 p-4 text-center text-sm text-muted-foreground">
+    <div className="flex min-h-32 items-center justify-center rounded-xl border border-dashed bg-muted/15 p-4 text-center text-sm text-muted-foreground">
       {text}
     </div>
   );

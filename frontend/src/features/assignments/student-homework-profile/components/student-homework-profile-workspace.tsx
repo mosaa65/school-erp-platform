@@ -56,10 +56,10 @@ export function StudentHomeworkProfileWorkspace() {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-lg border bg-background p-5">
+      <section className="rounded-[28px] border border-[color:var(--app-accent-strong)]/25 bg-gradient-to-br from-[color:var(--app-accent-soft)]/35 via-background/95 to-background p-5 shadow-[0_22px_60px_-48px_rgba(15,23,42,0.55)]">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-full border bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-700 dark:text-violet-300">
+            <div className="inline-flex items-center gap-2 rounded-full border border-violet-500/20 bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-700 dark:text-violet-300">
               <UserRound className="h-3.5 w-3.5" />
               ملف الطالب
             </div>
@@ -101,7 +101,7 @@ export function StudentHomeworkProfileWorkspace() {
         <StudentMetric label="متأخر" value={overdueCount} tone="danger" />
       </section>
 
-      <section className="rounded-lg border bg-background p-4">
+      <section className="rounded-[24px] border border-border/60 bg-card/80 p-4 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.32)] backdrop-blur-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold">نسبة الإنجاز</h2>
@@ -120,7 +120,7 @@ export function StudentHomeworkProfileWorkspace() {
       </section>
 
       {selectedStudent ? (
-        <section className="rounded-lg border bg-background p-4">
+        <section className="rounded-[24px] border border-border/60 bg-card/80 p-4 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.28)]">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="font-semibold">{selectedStudent.fullName}</h2>
@@ -133,8 +133,8 @@ export function StudentHomeworkProfileWorkspace() {
         </section>
       ) : null}
 
-      <section className="rounded-lg border bg-background">
-        <div className="border-b p-4">
+      <section className="overflow-hidden rounded-[24px] border border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.28)]">
+        <div className="border-b border-border/60 bg-background/60 p-4">
           <h2 className="font-semibold">سجل الواجبات</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             آخر واجبات الطالب حسب التاريخ والحالة.
@@ -214,7 +214,7 @@ function StudentMetric({
   tone?: "success" | "danger";
 }) {
   return (
-    <div className="rounded-lg border bg-background p-4">
+    <div className="rounded-[22px] border border-border/60 bg-background/80 p-4 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.28)]">
       <div className="text-sm text-muted-foreground">{label}</div>
       <div
         className={
@@ -233,7 +233,7 @@ function StudentMetric({
 
 function EmptyLine({ text }: { text: string }) {
   return (
-    <div className="m-4 rounded-lg border border-dashed bg-muted/20 p-6 text-center text-sm text-muted-foreground">
+    <div className="m-4 rounded-xl border border-dashed bg-muted/20 p-6 text-center text-sm text-muted-foreground">
       {text}
     </div>
   );

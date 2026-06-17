@@ -17,6 +17,12 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, containerClassName, type, icon, ...props }, ref) => {
     const resolvedIcon =
       icon ?? (props.required ? <Asterisk className="text-rose-500" /> : null);
+    const isDateLike =
+      type === "date" ||
+      type === "datetime-local" ||
+      type === "month" ||
+      type === "week" ||
+      type === "time";
     const renderedIcon =
       resolvedIcon && React.isValidElement(resolvedIcon)
         ? React.cloneElement(resolvedIcon as React.ReactElement<{ className?: string }>, {
@@ -30,7 +36,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
 
     return (
       <div className={cn("group relative w-full min-w-0", containerClassName)}>
-        {renderedIcon ? (
+        {renderedIcon && !isDateLike ? (
           <div
             className={cn(
               FIELD_ICON_BADGE_CLASS_NAME,
@@ -45,7 +51,8 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           type={type}
           className={cn(
             FIELD_SURFACE_CLASS_NAME,
-            renderedIcon ? "pr-14" : "pr-4",
+            renderedIcon && !isDateLike ? "pr-14" : "pr-4",
+            isDateLike && "pl-4 pr-4 text-left rtl:text-right",
             className,
           )}
           ref={ref}

@@ -43,15 +43,15 @@ export function BottomSheetForm({
   contentRef,
 }: BottomSheetFormProps) {
   const content = (
-      <div
+    <div
       className={cn(
-        "relative flex w-full flex-col overflow-hidden border border-border/40 bg-background/58 shadow-2xl backdrop-blur-2xl transition-all duration-300",
+        "relative flex w-full flex-col overflow-hidden border border-border/40 bg-background/40 shadow-2xl backdrop-blur-2xl transition-all duration-300",
         "h-[92dvh] max-h-[92dvh] rounded-t-[32px] rounded-b-none md:h-[min(860px,calc(100vh-2rem))] md:max-w-[520px] md:rounded-[32px] md:border",
         panelClassName,
       )}
       onClick={(event) => event.stopPropagation()}
     >
-      <div className="relative border-b border-border/40 bg-gradient-to-b from-[color:var(--app-accent-soft)]/18 via-background/40 to-background/20 px-5 pb-4 pt-3 backdrop-blur-md md:py-5">
+      <div className="relative border-b border-border/40 bg-gradient-to-b from-[color:var(--app-accent-soft)]/20 via-background/40 to-background/20 px-5 pb-4 pt-3 backdrop-blur-md md:py-5">
         <div className="mb-2.5 flex justify-center md:hidden">
           <div className="h-1.5 w-12 rounded-full bg-border/60" />
         </div>
@@ -70,7 +70,7 @@ export function BottomSheetForm({
           <button
             type="button"
             onClick={onClose}
-            className="group flex h-10 w-10 items-center justify-center rounded-full border border-border/40 bg-background/55 text-muted-foreground shadow-sm transition-all hover:bg-background hover:text-foreground"
+            className="group flex h-10 w-10 items-center justify-center rounded-full border border-border/40 bg-background/40 text-muted-foreground shadow-sm transition-all hover:bg-background hover:text-foreground"
             aria-label="إغلاق"
           >
             <X className="h-5 w-5 transition-transform group-hover:rotate-90" />
@@ -89,7 +89,7 @@ export function BottomSheetForm({
       </div>
 
       {showFooter ? (
-        <div className="border-t border-border/40 bg-background/55 px-5 py-4 backdrop-blur-md">
+        <div className="border-t border-border/40 bg-background/40 px-5 py-4 backdrop-blur-md">
           <div className="flex flex-col-reverse gap-2.5 sm:flex-row sm:items-center sm:justify-end">
             {showCancelButton ? (
               <Button

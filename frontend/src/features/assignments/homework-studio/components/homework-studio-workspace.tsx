@@ -706,16 +706,19 @@ export function HomeworkStudioWorkspace() {
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <form
-          className="rounded-lg border bg-background"
+          className="overflow-hidden rounded-[28px] border border-border/60 bg-card/85 shadow-[0_18px_48px_-36px_rgba(15,23,42,0.35)] backdrop-blur-sm"
           onSubmit={(event) => {
             event.preventDefault();
             void handleSubmit("draft");
           }}
         >
-          <div className="border-b p-4">
+          <div className="border-b border-border/60 bg-gradient-to-r from-[color:var(--app-accent-soft)]/15 to-background/0 p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="font-semibold">بيانات الواجب</h2>
+                <h2 className="text-lg font-semibold">بيانات الواجب</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  جهّز النطاق، المحتوى، والدرجة في مكان واحد واضح وسريع.
+                </p>
               </div>
               <Badge variant="outline">
                 <Target className="ml-1 h-3.5 w-3.5" />
@@ -724,7 +727,7 @@ export function HomeworkStudioWorkspace() {
             </div>
           </div>
 
-          <div className="grid gap-4 p-4 lg:grid-cols-2">
+          <div className="grid gap-4 p-5 lg:grid-cols-2">
             <FormField label="العام الدراسي" required>
               <SelectField
                 icon={<School />}
@@ -984,7 +987,7 @@ export function HomeworkStudioWorkspace() {
             </div>
           )}
 
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 bg-background/55 p-5">
             <div className="flex flex-wrap gap-2">
               {readinessItems.map((item) => (
                 <Badge
@@ -1037,6 +1040,9 @@ export function HomeworkStudioWorkspace() {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h2 className="font-semibold">مؤشرات قبل الحفظ</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    مراجعة سريعة قبل إنشاء الواجب أو اعتماده.
+                  </p>
                 </div>
                 <Button
                   type="button"

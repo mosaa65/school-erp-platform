@@ -96,6 +96,19 @@ export function HomeworkDashboardWorkspace() {
 
   const metrics = dashboardQuery.data?.metrics;
   const isLoading = dashboardQuery.isPending;
+  const completionRate = metrics?.completionRate ?? 0;
+  const pendingRate =
+    (metrics?.totalStudentRows ?? 0) === 0
+      ? 0
+      : Math.round(
+          ((metrics?.pendingStudentRows ?? 0) / (metrics?.totalStudentRows ?? 0)) * 100,
+        );
+  const workloadTone =
+    (metrics?.overdueHomeworks ?? 0) > 0
+      ? "danger"
+      : (metrics?.dueSoonHomeworks ?? 0) > 0
+        ? "warn"
+        : "good";
 
   return (
     <div className="space-y-5">
@@ -233,6 +246,37 @@ export function HomeworkDashboardWorkspace() {
         />
       </section>
 
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <InsightCard
+          title="نسبة الإكمال"
+          value={`${completionRate}%`}
+          description="متوسط تنفيذ الطلاب للواجبات داخل النطاق الحالي."
+          tone={completionRate >= 80 ? "good" : completionRate >= 50 ? "warn" : "danger"}
+          icon={<CheckCircle2 className="h-4 w-4" />}
+        />
+        <InsightCard
+          title="نسبة الانتظار"
+          value={`${pendingRate}%`}
+          description="النسبة المتبقية التي تحتاج متابعة أو تدخل."
+          tone={pendingRate <= 20 ? "good" : pendingRate <= 50 ? "warn" : "danger"}
+          icon={<ClipboardCheck className="h-4 w-4" />}
+        />
+        <InsightCard
+          title="الواجبات العاجلة"
+          value={`${metrics?.overdueHomeworks ?? 0}`}
+          description="واجبات متأخرة تحتاج مراجعة مباشرة."
+          tone={workloadTone}
+          icon={<AlertTriangle className="h-4 w-4" />}
+        />
+        <InsightCard
+          title="نافذة الاستحقاق"
+          value={`${metrics?.dueSoonHomeworks ?? 0}`}
+          description="واجبات ستصل لموعدها خلال الأيام القادمة."
+          tone={(metrics?.dueSoonHomeworks ?? 0) > 0 ? "warn" : "good"}
+          icon={<TimerReset className="h-4 w-4" />}
+        />
+      </section>
+
       <section className="grid gap-5 xl:grid-cols-[0.75fr_1.25fr]">
         <Card className="rounded-[24px] border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.32)] backdrop-blur-sm">
           <CardContent className="space-y-5 p-5">
@@ -352,6 +396,40 @@ function MetricCard({
       <div className="mt-3 text-2xl font-bold">
         {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : value}
       </div>
+    </div>
+  );
+}
+
+function InsightCard({
+  title,
+  value,
+  description,
+  icon,
+  tone,
+}: {
+  title: string;
+  value: string;
+  description: string;
+  icon: React.ReactNode;
+  tone: "good" | "warn" | "danger";
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-[22px] border bg-background/80 p-4 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.28)] backdrop-blur-sm",
+        tone === "good" && "border-emerald-500/20",
+        tone === "warn" && "border-amber-500/20",
+        tone === "danger" && "border-rose-500/25 bg-rose-500/8",
+      )}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm font-medium text-muted-foreground">{title}</span>
+        <span className="rounded-xl border border-border/60 bg-background p-2 text-[color:var(--app-accent-color)] [&_svg]:h-4 [&_svg]:w-4">
+          {icon}
+        </span>
+      </div>
+      <div className="mt-3 text-2xl font-bold">{value}</div>
+      <p className="mt-1 text-sm leading-6 text-muted-foreground">{description}</p>
     </div>
   );
 }

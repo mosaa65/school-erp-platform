@@ -9,6 +9,8 @@ import {
   saveAuthSession,
 } from "@/lib/auth/session";
 
+const AUTO_FINGERPRINT_DISABLED_KEY = "school_erp_login_auto_fingerprint_disabled";
+
 type AuthContextValue = {
   session: AuthSession | null;
   isHydrated: boolean;
@@ -33,12 +35,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const signIn = React.useCallback((nextSession: AuthSession) => {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(AUTO_FINGERPRINT_DISABLED_KEY);
+    }
+
     saveAuthSession(nextSession);
     setSession(nextSession);
   }, []);
 
   const signOut = React.useCallback(() => {
     void apiClient.logout().catch(() => undefined);
+
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(AUTO_FINGERPRINT_DISABLED_KEY, "1");
+    }
+
     clearAuthSession();
     setSession(null);
   }, []);

@@ -47,7 +47,7 @@ const TextareaField = React.forwardRef<HTMLTextAreaElement, TextareaFieldProps>(
           rows={rows}
           className={cn(
             FIELD_TEXTAREA_SURFACE_CLASS_NAME,
-            "resize-y",
+            "resize-y text-[16px] sm:text-sm",
             renderedIcon ? "pr-14" : "pr-4",
             className,
           )}

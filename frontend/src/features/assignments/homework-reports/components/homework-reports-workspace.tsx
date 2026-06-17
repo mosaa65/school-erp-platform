@@ -277,8 +277,8 @@ function GroupedReport({
   loading?: boolean;
 }) {
   return (
-    <div className="rounded-lg border bg-background">
-      <div className="border-b p-4">
+    <div className="overflow-hidden rounded-[24px] border border-border/60 bg-card/80 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.32)] backdrop-blur-sm">
+      <div className="border-b border-border/60 bg-background/60 p-4">
         <h2 className="font-semibold">{title}</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           إجمالي، منفذ، متعثر، ونسبة الإنجاز.
@@ -328,7 +328,7 @@ function LoadingLine() {
 
 function EmptyLine({ text }: { text: string }) {
   return (
-    <div className="m-4 rounded-lg border border-dashed bg-muted/20 p-6 text-center text-sm text-muted-foreground">
+    <div className="m-4 rounded-xl border border-dashed bg-muted/20 p-6 text-center text-sm text-muted-foreground">
       {text}
     </div>
   );
